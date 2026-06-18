@@ -1,0 +1,170 @@
+language: "ko-KR"
+tone_instructions: "1. 리뷰 시 변경 사항의 문제점이나 한계점을 구체적으로 짚어주고,
+  2. 왜 비효율적이거나 권장되지 않는지 명확한 근거와 함께 설명해주세요.
+  3. 대안 제시 시 선택지와 각각의 장단점을 논리적으로 설명해주세요.
+  4. 단순 지적보다 개선 방향에 집중하고, 학습적 관점에서 이해를 돕는 코멘트를 남겨주세요.
+  5. 지나치게 딱딱하지 않되, 논리의 흐름이 분명하게 전달되도록 해주세요."
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_instructions: |
+    다음 PR 템플릿 구조를 따라 요약을 작성해주세요.
+    구현 세부를 단순 나열하지 말고,
+    왜 이 변경이 필요했는지, 어떤 선택을 했는지,
+    기존 코드 흐름에서 무엇이 달라졌는지를 중심으로 작성합니다.
+
+    아래 모든 섹션을 채우되, 정보가 부족하거나 확실하지 않은 경우
+    임의로 추측하지 말고 "측정하지 않음"으로 명시합니다.
+
+    ---
+
+    ## 🔗 관련 이슈
+    - close #{이슈번호}
+
+    ## 📝 작업 내용
+    - 이 PR에서 해결하려는 문제를 요약합니다.
+    - 기존 구조에서 불편했던 점이나 한계를 함께 설명합니다.
+
+    ### 주요 변경사항
+    1. 구조적 또는 책임 관점에서 가장 큰 변화
+    2. 데이터 흐름, 예외 처리, API 계약 등에서 달라진 점
+    3. 리뷰 시 특히 주의 깊게 봐주었으면 하는 변경 또는 트레이드오프
+
+    ### 📊 변경 효과 요약 (가능한 경우에만)
+    - 코드 라인/파일 수 변화, 단위 테스트 추가 수 등 측정 가능한 수치만 포함합니다.
+    - 도출이 어렵거나 의미가 작으면 "정량 지표는 이번 PR에서 측정하지 않음"으로 명시합니다.
+    ---
+  sequence_diagrams: false
+  changed_files_summary: false
+  suggested_labels: false
+  suggested_reviewers: false
+  poem: false
+  abort_on_close: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "dev"
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+  path_filters:
+    - "!build/**"
+    - "!target/**"
+    - "!.gradle/**"
+    - "!**/*.class"
+    - "!**/*.jar"
+  path_instructions:
+    - path: "src/main/java/**/controller/api/**"
+      instructions: |
+        - 컨트롤러 인터페이스에 Swagger 문서화(@Tag, @Operation, @ApiResponses)가 되어 있는지 확인
+        - @ApiResponse에 성공/실패 케이스(200, 400, 404 등)가 모두 정의되어 있는지 확인
+        - @Parameter 어노테이션으로 파라미터 설명이 있는지 확인
+        - 인터페이스에 비즈니스 로직이 포함되어 있으면 반드시 지적
+
+    - path: "src/main/java/**/controller/**"
+      instructions: |
+        - 컨트롤러 구현체는 반드시 인터페이스(Api)를 구현해야 함
+        - @RestController, @RequestMapping, @RequiredArgsConstructor 어노테이션 확인
+        - API 호출 시점에 로깅이 되어 있는지 확인 (예: log.info("Request API: ..."))
+        - @RequestBody에 @Valid 어노테이션 누락 시 반드시 지적
+        - REST 네이밍 규칙 준수 (명사 기반 URL, 적절한 HTTP 메서드)
+        - 올바른 HTTP 상태코드 반환 확인 (ResponseEntity 사용)
+        - 비즈니스 로직이 Controller에 있으면 반드시 지적
+
+    - path: "src/main/java/**/service/**"
+      instructions: |
+        - 단일 책임 원칙 위반 시 반드시 지적
+        - @Transactional 누락 또는 잘못된 사용 시 지적
+        - 필드 주입(@Autowired) 사용 시 생성자 주입(@RequiredArgsConstructor)으로 변경 요청
+        - 비즈니스 로직이 Controller 또는 Repository로 누출되면 지적
+        - 예외 처리 누락 시 반드시 지적
+        - 도메인별 exception 패키지의 커스텀 예외 사용 권장
+        - 데이터 영속화(DB 저장/수정/삭제) 성공 시점에 로깅이 되어 있는지 확인
+        - BusinessException 발생 시, 두 번째 파라미터에 식별자 정보를 포함하는지 확인
+
+    - path: "src/main/java/**/repository/**"
+      instructions: |
+        - N+1 쿼리 문제 발생 가능성 반드시 체크
+        - 대용량 데이터 조회 시 페이지네이션 없으면 지적
+        - 복잡한 쿼리는 @Query 사용 권장
+        - 인덱스 누락 가능성 체크
+
+    - path: "src/main/java/**/entity/**"
+      instructions: |
+        - JPA 어노테이션 누락 체크
+        - equals/hashCode 구현 확인
+        - 엔티티에 비즈니스 로직 있으면 지적
+        - 양방향 연관관계 불필요한 경우 지적
+        - @Data 사용 금지, @Getter/@Setter 개별 사용 권장
+
+    - path: "src/main/java/**/dto/**"
+      instructions: |
+        - Request DTO는 반드시 Request 접미사 사용
+        - Response DTO는 반드시 Response 접미사 사용
+        - @Valid 검증 어노테이션 누락 시 지적
+        - DTO에 비즈니스 로직 포함 시 지적
+
+    - path: "src/main/java/**/global/**"
+      instructions: |
+        - 공통 예외 처리(@RestControllerAdvice) 누락 시 지적
+        - GlobalExceptionHandler가 모든 도메인 예외를 일괄 처리하고 있는지 확인
+        - 유틸 클래스는 인스턴스화 방지(private 생성자) 확인
+
+    - path: "src/test/java/**"
+      instructions: |
+        - @DisplayName("어떤 행동 성공") 또는 @DisplayName("어떤 행동 실패") 네이밍 규칙 준수
+        - 테스트 패키지 구조가 메인 패키지 구조와 동일한지 확인
+        - Mockito 적절한 사용 여부 확인
+        - 성공 케이스뿐만 아니라 실패/예외 케이스 테스트 누락 시 반드시 지적
+        - 테스트 커버리지 낮으면 추가 테스트 요청
+        - 들여쓰기는 4 spaces 사용 (tab 사용 금지)
+        - continuation indent는 8 spaces 사용
+        - Google Style 기반 포맷 준수
+        - Push 전 IntelliJ 포맷터 적용 필수 (option + command + L)
+
+    - path: "src/main/resources/**"
+      instructions: |
+        - 하드코딩된 민감정보(비밀번호, API키, DB URL 등) 발견 시 즉시 지적
+        - 환경변수 또는 @ConfigurationProperties 사용 권장
+
+chat:
+  auto_reply: true
+
+code_generation:
+  docstrings:
+    language: ko-KR
+    path_instructions:
+      - path: "src/main/java/**"
+        instructions: |
+          - JavaDoc 공식 형식으로, 한글로 Docstring을 작성해주세요.
+          - 메서드 목적, 파라미터, 반환값, 예외 정보를 명확하게 기술해 주세요.
+          - 외부 API 등 공개 메서드는 상세히, 내부용은 핵심만 요약해 주세요.
+  unit_tests:
+    path_instructions:
+      - path: "src/main/java/**"
+        instructions: |
+          - Controller는 통합 테스트(Testcontainers + MockMvc) 작성
+          - Service, 도메인 로직은 단위 테스트 작성
+          - Given-When-Then 패턴을 적용
+          - 성공 케이스와 실패/예외 케이스 모두 포함
+
+tools:
+  gitleaks:
+    enabled: true
+  yamllint:
+    enabled: true
+  markdownlint:
+    enabled: true
+  sqlfluff:
+    enabled: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "docs/backend-convention.md"
