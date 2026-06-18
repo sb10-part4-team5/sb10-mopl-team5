@@ -1,0 +1,39 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    clean-disabled: false
+
+  kafka:
+    consumer:
+      group-id: mopl-test
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  docker:
+    compose:
+      enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.codeit.team5.mopl: INFO
+    org.testcontainers: INFO
+    com.github.dockerjava: WARN
+    org.hibernate.SQL: WARN
