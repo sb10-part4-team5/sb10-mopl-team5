@@ -52,6 +52,15 @@ reviews:
       enabled: true
     unit_tests:
       enabled: true
+  tools:
+    gitleaks:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    sqlfluff:
+      enabled: true
   path_filters:
     - "!build/**"
     - "!target/**"
@@ -152,16 +161,6 @@ code_generation:
           - Service, 도메인 로직은 단위 테스트 작성
           - Given-When-Then 패턴을 적용
           - 성공 케이스와 실패/예외 케이스 모두 포함
-
-tools:
-  gitleaks:
-    enabled: true
-  yamllint:
-    enabled: true
-  markdownlint:
-    enabled: true
-  sqlfluff:
-    enabled: true
 
 knowledge_base:
   code_guidelines:
