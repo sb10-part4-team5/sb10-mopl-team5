@@ -1,0 +1,185 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- gen_random_uuid()
+
+-- ---------- 1. 사용자 / 인증 ----------
+
+CREATE TABLE users (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email             VARCHAR(255) NOT NULL,
+    password          VARCHAR(255),
+    name              VARCHAR(100) NOT NULL,
+    profile_image_url VARCHAR(512),
+    role              VARCHAR(20)  NOT NULL DEFAULT 'USER',
+    locked            BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT ck_users_role  CHECK (role IN ('USER', 'ADMIN'))
+);
+
+CREATE TABLE social_accounts (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID         NOT NULL,
+    provider         VARCHAR(20)  NOT NULL,
+    provider_user_id VARCHAR(255) NOT NULL,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT fk_social_user     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT ck_social_provider CHECK (provider IN ('GOOGLE', 'KAKAO')),
+    CONSTRAINT uq_social_provider UNIQUE (provider, provider_user_id)
+);
+CREATE INDEX idx_social_user ON social_accounts (user_id);
+
+CREATE TABLE temporary_passwords (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID         NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    expires_at    TIMESTAMPTZ  NOT NULL,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT fk_temppw_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_temppw_user UNIQUE (user_id)
+);
+CREATE INDEX idx_temppw_expires ON temporary_passwords (expires_at);
+
+-- ---------- 2. 콘텐츠 / 평가 ----------
+
+CREATE TABLE contents (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type          VARCHAR(20)  NOT NULL,
+    title         VARCHAR(500) NOT NULL,
+    description   TEXT,
+    thumbnail_url VARCHAR(512),
+    tags          TEXT[]       NOT NULL DEFAULT '{}',
+    source        VARCHAR(20)  NOT NULL,
+    external_id   VARCHAR(100) NOT NULL,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT ck_contents_type   CHECK (type IN ('movie', 'tvSeries', 'sport')),
+    CONSTRAINT ck_contents_source CHECK (source IN ('TMDB', 'SPORTS_DB')),
+    CONSTRAINT uq_contents_source UNIQUE (source, external_id)
+);
+CREATE INDEX idx_contents_type  ON contents (type);
+CREATE INDEX idx_contents_title ON contents (title);
+CREATE INDEX idx_contents_tags  ON contents USING GIN (tags);
+
+CREATE TABLE reviews (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content_id  UUID             NOT NULL,
+    user_id     UUID             NOT NULL,
+    text        TEXT,
+    rating      DOUBLE PRECISION NOT NULL,
+    created_at  TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    CONSTRAINT fk_review_content FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE,
+    CONSTRAINT fk_review_user    FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
+    CONSTRAINT ck_review_rating  CHECK (rating >= 0 AND rating <= 5),
+    CONSTRAINT uq_review_user    UNIQUE (content_id, user_id)
+);
+CREATE INDEX idx_review_content ON reviews (content_id);
+CREATE INDEX idx_review_user    ON reviews (user_id);
+
+-- ---------- 3. 플레이리스트 / 구독 ----------
+
+CREATE TABLE playlists (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id    UUID         NOT NULL,
+    title       VARCHAR(255) NOT NULL,
+    description TEXT         NOT NULL,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT fk_playlist_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_playlist_owner ON playlists (owner_id);
+
+CREATE TABLE playlist_items (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    playlist_id UUID        NOT NULL,
+    content_id  UUID        NOT NULL,
+    position    INTEGER     NOT NULL DEFAULT 0,
+    added_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_item_playlist FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+    CONSTRAINT fk_item_content  FOREIGN KEY (content_id)  REFERENCES contents(id)  ON DELETE CASCADE,
+    CONSTRAINT uq_item_unique   UNIQUE (playlist_id, content_id)
+);
+CREATE INDEX idx_item_playlist ON playlist_items (playlist_id);
+
+CREATE TABLE playlist_subscriptions (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    playlist_id   UUID        NOT NULL,
+    subscriber_id UUID        NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_sub_playlist   FOREIGN KEY (playlist_id)   REFERENCES playlists(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sub_subscriber FOREIGN KEY (subscriber_id) REFERENCES users(id)     ON DELETE CASCADE,
+    CONSTRAINT uq_sub_unique     UNIQUE (playlist_id, subscriber_id)
+);
+CREATE INDEX idx_sub_subscriber ON playlist_subscriptions (subscriber_id);
+
+-- ---------- 4. 팔로우 / 실시간 시청 ----------
+
+CREATE TABLE follows (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    follower_id UUID        NOT NULL,
+    followee_id UUID        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_follow_follower FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_follow_followee FOREIGN KEY (followee_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_follow_unique   UNIQUE (follower_id, followee_id),
+    CONSTRAINT ck_follow_self     CHECK (follower_id <> followee_id)
+);
+CREATE INDEX idx_follow_followee ON follows (followee_id);
+
+CREATE TABLE watching_sessions (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id        UUID        NOT NULL,
+    content_id     UUID        NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_active_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ended_at       TIMESTAMPTZ,
+    CONSTRAINT fk_watch_user    FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
+    CONSTRAINT fk_watch_content FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX uq_watch_active_user    ON watching_sessions (user_id)    WHERE ended_at IS NULL;
+CREATE INDEX        idx_watch_active_content ON watching_sessions (content_id) WHERE ended_at IS NULL;
+
+-- ---------- 5. DM (쪽지) ----------
+
+CREATE TABLE conversations (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    participant1 UUID        NOT NULL,
+    participant2 UUID        NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_conv_p1    FOREIGN KEY (participant1) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_conv_p2    FOREIGN KEY (participant2) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT ck_conv_order CHECK (participant1 < participant2),
+    CONSTRAINT uq_conv_pair  UNIQUE (participant1, participant2)
+);
+CREATE INDEX idx_conv_p1 ON conversations (participant1);
+CREATE INDEX idx_conv_p2 ON conversations (participant2);
+
+CREATE TABLE direct_messages (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID        NOT NULL,
+    sender_id       UUID        NOT NULL,
+    receiver_id     UUID        NOT NULL,
+    content         TEXT        NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    read_at         TIMESTAMPTZ,
+    CONSTRAINT fk_dm_conversation FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_dm_sender       FOREIGN KEY (sender_id)       REFERENCES users(id)         ON DELETE CASCADE,
+    CONSTRAINT fk_dm_receiver     FOREIGN KEY (receiver_id)     REFERENCES users(id)         ON DELETE CASCADE
+);
+CREATE INDEX idx_dm_conversation ON direct_messages (conversation_id, created_at);
+
+-- ---------- 6. 알림 (SSE) ----------
+
+CREATE TABLE notifications (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    receiver_id UUID         NOT NULL,
+    title       VARCHAR(255) NOT NULL,
+    content     TEXT,
+    level       VARCHAR(20)  NOT NULL DEFAULT 'INFO',
+    is_read     BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT fk_noti_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT ck_noti_level    CHECK (level IN ('INFO', 'WARNING', 'ERROR'))
+);
+CREATE INDEX idx_noti_receiver ON notifications (receiver_id, created_at DESC);
+CREATE INDEX idx_noti_unread   ON notifications (receiver_id) WHERE is_read = FALSE;
