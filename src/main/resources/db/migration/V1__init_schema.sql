@@ -24,7 +24,7 @@ CREATE TABLE social_accounts
     created_at       TIMESTAMPTZ  NOT NULL,
     CONSTRAINT fk_social_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT ck_social_provider CHECK (provider IN ('GOOGLE', 'KAKAO')),
-    CONSTRAINT uk_social_accounts_provider_user_id_provider UNIQUE (provider, provider_user_id)
+    CONSTRAINT uk_social_accounts_provider_provider_user_id UNIQUE (provider, provider_user_id)
 );
 CREATE INDEX idx_social_user ON social_accounts (user_id);
 
@@ -99,7 +99,7 @@ CREATE TABLE playlist_items
     playlist_id UUID        NOT NULL,
     content_id  UUID        NOT NULL,
     position    INTEGER     NOT NULL DEFAULT 0,
-    added_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    added_at    TIMESTAMPTZ NOT NULL,
     CONSTRAINT fk_item_playlist FOREIGN KEY (playlist_id) REFERENCES playlists (id) ON DELETE CASCADE,
     CONSTRAINT fk_item_content FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE,
     CONSTRAINT uk_playlist_items_playlist_id_content_id UNIQUE (playlist_id, content_id)
