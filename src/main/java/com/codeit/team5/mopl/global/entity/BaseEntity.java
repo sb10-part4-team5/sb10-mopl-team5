@@ -19,7 +19,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Getter
 @EqualsAndHashCode(of = "id")
 @NoArgsConstructor
-abstract class BaseEntity {
+public abstract class BaseEntity {
     @Id
     @Column(columnDefinition = "uuid", updatable=false)
     private UUID id = UUID.randomUUID();
