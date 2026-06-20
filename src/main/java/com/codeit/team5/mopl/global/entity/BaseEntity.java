@@ -21,7 +21,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 abstract class BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "uuid", updatable=false)
     private UUID id = UUID.randomUUID();
 
