@@ -7,7 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 
 @Getter
 @RequiredArgsConstructor
-public abstract class BaseUpdatableEntity extends BaseEntity{
+abstract class BaseUpdatableEntity extends BaseEntity{
     @LastModifiedDate
     private Instant updatedAt;
 }
