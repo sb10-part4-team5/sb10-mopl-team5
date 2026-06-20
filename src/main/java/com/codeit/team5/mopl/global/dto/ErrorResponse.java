@@ -1,12 +1,13 @@
 package com.codeit.team5.mopl.global.dto;
 
 import com.codeit.team5.mopl.global.exception.ErrorCode;
+import java.util.List;
 import java.util.Map;
 
 public record ErrorResponse(
     String exceptionName,
     String message,
-    Map<String, String> details
+    Map<String, List<String>> details
 ) {
 
     public static ErrorResponse of(ErrorCode errorCode) {
@@ -25,7 +26,7 @@ public record ErrorResponse(
         );
     }
 
-    public static ErrorResponse of(ErrorCode errorCode, Map<String, String> details) {
+    public static ErrorResponse of(ErrorCode errorCode, Map<String, List<String>> details) {
         return new ErrorResponse(
             errorCode.name(),
             errorCode.getMessage(),

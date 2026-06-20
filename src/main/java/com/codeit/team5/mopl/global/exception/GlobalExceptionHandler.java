@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.global.exception;
 
 import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +17,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.warn("BusinessException: {}", e.getMessage());
         ErrorCode errorCode = e.getErrorCode();
+        log.warn("BusinessException [{}]", errorCode.name());
         return ResponseEntity
             .status(errorCode.getHttpStatus())
             .body(ErrorResponse.of(errorCode, e.getMessage()));
@@ -25,12 +26,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        log.warn("MethodArgumentNotValidException: {}", e.getMessage());
-        Map<String, String> details = e.getBindingResult().getFieldErrors().stream()
-            .collect(Collectors.toMap(
+        int fieldCount = e.getBindingResult().getFieldErrorCount();
+        log.warn("MethodArgumentNotValidException: {} field(s) failed", fieldCount);
+        Map<String, List<String>> details = e.getBindingResult().getFieldErrors().stream()
+            .collect(Collectors.groupingBy(
                 org.springframework.validation.FieldError::getField,
-                error -> error.getDefaultMessage() == null ? "" : error.getDefaultMessage(),
-                (existing, replacement) -> existing
+                Collectors.mapping(
+                    error -> error.getDefaultMessage() == null ? "" : error.getDefaultMessage(),
+                    Collectors.toList()
+                )
             ));
         return ResponseEntity
             .status(ErrorCode.INVALID_INPUT.getHttpStatus())
@@ -39,12 +43,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException e) {
-        log.warn("ConstraintViolationException: {}", e.getMessage());
-        Map<String, String> details = e.getConstraintViolations().stream()
-            .collect(Collectors.toMap(
+        int violationCount = e.getConstraintViolations().size();
+        log.warn("ConstraintViolationException: {} violation(s)", violationCount);
+        Map<String, List<String>> details = e.getConstraintViolations().stream()
+            .collect(Collectors.groupingBy(
                 v -> v.getPropertyPath().toString(),
-                v -> v.getMessage(),
-                (existing, replacement) -> existing
+                Collectors.mapping(
+                    v -> v.getMessage(),
+                    Collectors.toList()
+                )
             ));
         return ResponseEntity
             .status(ErrorCode.INVALID_INPUT.getHttpStatus())
