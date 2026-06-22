@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.global.exception;
 
+import java.util.Objects;
 import lombok.Getter;
 
 @Getter
@@ -8,12 +9,13 @@ public class BusinessException extends RuntimeException {
     private final ErrorCode errorCode;
 
     public BusinessException(ErrorCode errorCode) {
-        super(errorCode.getMessage());
+        super(Objects.requireNonNull(errorCode, "errorCode must not be null").getMessage());
         this.errorCode = errorCode;
     }
 
     public BusinessException(ErrorCode errorCode, String detailMessage) {
         super(detailMessage);
+        Objects.requireNonNull(errorCode, "errorCode must not be null");
         this.errorCode = errorCode;
     }
 }
