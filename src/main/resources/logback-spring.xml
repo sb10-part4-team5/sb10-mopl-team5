@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 로그 파일 저장 경로: 기본값은 프로젝트 루트의 .logs, 환경변수 LOG_PATH로 override 가능 -->
+    <property name="LOG_PATH" value="${LOG_PATH:-.logs}"/>
+
+    <!-- 파일용 패턴 (색상 없음): 년-월-일 시:분:초.밀리초 [스레드] 레벨 [requestId] [clientIp] 로거 - 메시지 -->
+    <property name="FILE_PATTERN"
+              value="%d{yy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:-system}] [%X{clientIp:-internal}] %logger{36} - %msg%n"/>
+
+    <!-- 콘솔용 패턴 (레벨에 색상 적용) -->
+    <property name="CONSOLE_PATTERN"
+              value="%d{yy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) [%X{requestId:-system}] [%X{clientIp:-internal}] %cyan(%logger{36}) - %msg%n"/>
+
+    <!-- 콘솔 출력 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 파일 출력: 일자별 롤링 + gzip 압축 + 로컬 7일 보관 (장기 보관은 S3에서 담당) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/mopl.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/mopl.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!--
+      ============================================================
+      [예정] KAFKA appender (방식 B: 앱 → Kafka → Kafka Connect S3 Sink → S3)
+      활성화 시 필요한 작업:
+        1) build.gradle 의존성 추가
+           - com.github.danielwegener:logback-kafka-appender
+           - net.logstash.logback:logstash-logback-encoder (JSON 인코딩)
+        2) 아래 appender 주석 해제 후 brokers/topic 설정
+        3) AsyncAppender로 감싸 비동기 전송 + Kafka 장애 시 CONSOLE로 fallback
+           (로깅이 앱 요청 처리를 블로킹하지 않도록)
+        4) 운영(prod) 프로파일에서만 root에 등록
+
+      <appender name="KAFKA" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+          <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+          <topic>app-logs</topic>
+          <keyingStrategy class="com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy"/>
+          <deliveryStrategy class="com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy"/>
+          <producerConfig>bootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS}</producerConfig>
+          <appender-ref ref="CONSOLE"/>
+      </appender>
+      ============================================================
+    -->
+
+    <!-- 개발 환경: 콘솔 + 파일 -->
+    <springProfile name="dev">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- 운영 환경: 콘솔 + 파일 (추후 KAFKA appender-ref 추가 예정) -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- 프로파일 미지정 시 기본 동작 -->
+    <springProfile name="!dev &amp; !prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+</configuration>
