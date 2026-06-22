@@ -1,13 +1,17 @@
 package com.codeit.team5.mopl.global.entity;
 
+import jakarta.persistence.MappedSuperclass;
 import java.time.Instant;
+import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.LastModifiedDate;
 
 @Getter
-@RequiredArgsConstructor
-abstract class BaseUpdatableEntity extends BaseEntity{
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@MappedSuperclass
+public abstract class BaseUpdatableEntity extends BaseEntity {
+
     @LastModifiedDate
     private Instant updatedAt;
 }
