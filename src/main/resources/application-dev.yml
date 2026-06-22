@@ -3,6 +3,10 @@ spring:
     activate:
       on-profile: dev
 
+  docker:
+    compose:
+      lifecycle-management: start-only   # 앱 종료 시 컨테이너를 stop하지 않음
+
   datasource:
     url: jdbc:postgresql://localhost:5432/mopl
     username: mopl
