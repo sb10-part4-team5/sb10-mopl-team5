@@ -27,10 +27,18 @@ public record ErrorResponse(
     }
 
     public static ErrorResponse of(ErrorCode errorCode, Map<String, List<String>> details) {
+        Map<String, List<String>> immutableDetails = details == null
+                ? Map.of()
+                : details.entrySet().stream()
+                    .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                            e -> List.copyOf(e.getValue())
+                ));
+
         return new ErrorResponse(
             errorCode.name(),
             errorCode.getMessage(),
-            details
+            immutableDetails
         );
     }
 }
