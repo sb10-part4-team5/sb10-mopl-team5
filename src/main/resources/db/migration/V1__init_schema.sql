@@ -214,7 +214,11 @@ CREATE TABLE direct_messages
     created_at      TIMESTAMPTZ NOT NULL,
     CONSTRAINT fk_dm_conversation FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
     CONSTRAINT fk_dm_sender FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_dm_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+    CONSTRAINT fk_dm_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT ck_dm_read_state CHECK (
+        (is_read = FALSE AND read_at IS NULL) OR
+        (is_read = TRUE  AND read_at IS NOT NULL)
+    )
 );
 CREATE INDEX idx_dm_conversation ON direct_messages (conversation_id, created_at);
 CREATE INDEX idx_dm_unread ON direct_messages (receiver_id) WHERE is_read = FALSE;
@@ -241,7 +245,11 @@ CREATE TABLE notifications
                                             'FOLLOWED',
                                             'DIRECT_MESSAGE',
                                             'WATCHING_ACTIVITY'
-        ))
+        )),
+    CONSTRAINT ck_noti_read_state CHECK (
+        (is_read = FALSE AND read_at IS NULL) OR
+        (is_read = TRUE  AND read_at IS NOT NULL)
+    )
 );
 CREATE INDEX idx_noti_receiver ON notifications (receiver_id, created_at DESC);
 CREATE INDEX idx_noti_unread   ON notifications (receiver_id) WHERE is_read = FALSE;
