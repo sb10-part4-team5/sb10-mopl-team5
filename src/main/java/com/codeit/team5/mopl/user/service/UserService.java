@@ -9,6 +9,7 @@ import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,15 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-//    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
         validateDuplicateEmail(request.email());
 
         User user = userMapper.toEntity(request);
-//        String encodedPassword = passwordEncoder.encode(request.password());
-//        user.updatePassword(encodedPassword);
+        String encodedPassword = passwordEncoder.encode(request.password());
+        user.updatePassword(encodedPassword);
 
         User savedUser = userRepository.save(user);
         log.info("User created: 회원이 성공적으로 생성되었습니다. userId={}, email={}", savedUser.getId(), savedUser.getEmail());
