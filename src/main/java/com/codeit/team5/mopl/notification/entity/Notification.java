@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,6 +40,10 @@ public class Notification extends BaseEntity {
     // 알림 읽기 여부
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
+
+    // 읽은 시각
+    @Column(name = "read_at", nullable = true);
+    private Instant readAt;
 
     // 생성자
     public Notification(UUID receiverId, String title, String content, NotificationLevel level) {
