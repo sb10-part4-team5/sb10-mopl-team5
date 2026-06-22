@@ -52,6 +52,7 @@ public class Notification extends BaseEntity {
         this.content = content;
         this.level = level != null ? level : NotificationLevel.INFO;
         this.isRead = false;
+        this.readAt = null;
     }
 
     // 알림 읽기 처리 메서드
