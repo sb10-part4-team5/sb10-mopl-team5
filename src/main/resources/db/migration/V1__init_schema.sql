@@ -15,6 +15,15 @@ CREATE TABLE users
     CONSTRAINT ck_users_role CHECK (role IN ('USER', 'ADMIN'))
 );
 
+CREATE TABLE user_stats
+(
+    user_id         UUID PRIMARY KEY,
+    follower_count  INTEGER     NOT NULL DEFAULT 0,
+    following_count INTEGER     NOT NULL DEFAULT 0,
+    updated_at      TIMESTAMPTZ NOT NULL,
+    CONSTRAINT fk_user_stats_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 CREATE TABLE social_accounts
 (
     id               UUID PRIMARY KEY,
@@ -40,7 +49,7 @@ CREATE TABLE temporary_passwords
 );
 CREATE INDEX idx_temppw_expires ON temporary_passwords (expires_at);
 
--- ---------- 2. 콘텐츠 / 평가 ----------
+-- ---------- 2. 콘텐츠 / 태그 / 평가 ----------
 
 CREATE TABLE contents
 (
@@ -49,7 +58,8 @@ CREATE TABLE contents
     title         VARCHAR(500) NOT NULL,
     description   TEXT,
     thumbnail_url VARCHAR(512),
-    tags          TEXT[]       NOT NULL DEFAULT '{}',
+    released_at   TIMESTAMPTZ,                           -- 개봉일 / 경기 일시
+    metadata      JSONB,                                 -- 영화:runtime,genres,language / 스포츠:league,season,homeTeam,awayTeam
     source        VARCHAR(20)  NOT NULL,
     external_id   VARCHAR(100) NOT NULL,
     created_at    TIMESTAMPTZ  NOT NULL,
@@ -58,9 +68,38 @@ CREATE TABLE contents
     CONSTRAINT ck_contents_source CHECK (source IN ('TMDB', 'SPORTS_DB')),
     CONSTRAINT uk_contents_source_external_id UNIQUE (source, external_id)
 );
-CREATE INDEX idx_contents_type ON contents (type);
-CREATE INDEX idx_contents_title ON contents (title);
-CREATE INDEX idx_contents_tags ON contents USING GIN (tags);
+CREATE INDEX idx_contents_type     ON contents (type);
+CREATE INDEX idx_contents_title    ON contents (title);
+CREATE INDEX idx_contents_metadata ON contents USING GIN (metadata);
+
+-- 리뷰/시청 도메인 이벤트로 갱신되는 집계
+CREATE TABLE content_stats
+(
+    content_id    UUID PRIMARY KEY,
+    review_count  INTEGER          NOT NULL DEFAULT 0,
+    rating_sum    DOUBLE PRECISION NOT NULL DEFAULT 0,
+    watcher_count INTEGER          NOT NULL DEFAULT 0,
+    updated_at    TIMESTAMPTZ      NOT NULL,
+    CONSTRAINT fk_content_stats_content FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE
+);
+
+-- 태그
+CREATE TABLE tags
+(
+    id   UUID PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    CONSTRAINT uk_tags_name UNIQUE (name)
+);
+
+CREATE TABLE content_tags
+(
+    content_id UUID NOT NULL,
+    tag_id     UUID NOT NULL,
+    CONSTRAINT pk_content_tags PRIMARY KEY (content_id, tag_id),
+    CONSTRAINT fk_ct_content FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ct_tag     FOREIGN KEY (tag_id)     REFERENCES tags (id)     ON DELETE CASCADE
+);
+CREATE INDEX idx_ct_tag ON content_tags (tag_id);
 
 CREATE TABLE reviews
 (
@@ -83,12 +122,13 @@ CREATE INDEX idx_review_user ON reviews (user_id);
 
 CREATE TABLE playlists
 (
-    id          UUID PRIMARY KEY,
-    owner_id    UUID         NOT NULL,
-    title       VARCHAR(255) NOT NULL,
-    description TEXT         NOT NULL,
-    created_at  TIMESTAMPTZ  NOT NULL,
-    updated_at  TIMESTAMPTZ  NOT NULL,
+    id               UUID PRIMARY KEY,
+    owner_id         UUID         NOT NULL,
+    title            VARCHAR(255) NOT NULL,
+    description      TEXT         NOT NULL,
+    subscriber_count INTEGER      NOT NULL DEFAULT 0,
+    created_at       TIMESTAMPTZ  NOT NULL,
+    updated_at       TIMESTAMPTZ  NOT NULL,
     CONSTRAINT fk_playlist_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
 );
 CREATE INDEX idx_playlist_owner ON playlists (owner_id);
@@ -169,13 +209,15 @@ CREATE TABLE direct_messages
     sender_id       UUID        NOT NULL,
     receiver_id     UUID        NOT NULL,
     content         TEXT        NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL,
+    is_read         BOOLEAN     NOT NULL DEFAULT FALSE,
     read_at         TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL,
     CONSTRAINT fk_dm_conversation FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
     CONSTRAINT fk_dm_sender FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_dm_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
 );
 CREATE INDEX idx_dm_conversation ON direct_messages (conversation_id, created_at);
+CREATE INDEX idx_dm_unread ON direct_messages (receiver_id) WHERE is_read = FALSE;
 
 -- ---------- 6. 알림 (SSE) ----------
 
@@ -183,13 +225,23 @@ CREATE TABLE notifications
 (
     id          UUID PRIMARY KEY,
     receiver_id UUID         NOT NULL,
+    type        VARCHAR(30)  NOT NULL,
     title       VARCHAR(255) NOT NULL,
     content     TEXT,
     level       VARCHAR(20)  NOT NULL DEFAULT 'INFO',
     is_read     BOOLEAN      NOT NULL DEFAULT FALSE,
+    read_at     TIMESTAMPTZ,
     created_at  TIMESTAMPTZ  NOT NULL,
     CONSTRAINT fk_noti_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT ck_noti_level CHECK (level IN ('INFO', 'WARNING', 'ERROR'))
+    CONSTRAINT ck_noti_level CHECK (level IN ('INFO', 'WARNING', 'ERROR')),
+    CONSTRAINT ck_noti_type CHECK (type IN (
+                                            'ROLE_CHANGED',
+                                            'PLAYLIST_SUBSCRIBED',
+                                            'PLAYLIST_UPDATED',
+                                            'FOLLOWED',
+                                            'DIRECT_MESSAGE',
+                                            'WATCHING_ACTIVITY'
+        ))
 );
 CREATE INDEX idx_noti_receiver ON notifications (receiver_id, created_at DESC);
-CREATE INDEX idx_noti_unread ON notifications (receiver_id) WHERE is_read = FALSE;
+CREATE INDEX idx_noti_unread   ON notifications (receiver_id) WHERE is_read = FALSE;
