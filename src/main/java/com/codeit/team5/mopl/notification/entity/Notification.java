@@ -42,7 +42,7 @@ public class Notification extends BaseEntity {
     private boolean isRead;
 
     // 읽은 시각
-    @Column(name = "read_at", nullable = true);
+    @Column(name = "read_at", nullable = true)
     private Instant readAt;
 
     // 생성자
