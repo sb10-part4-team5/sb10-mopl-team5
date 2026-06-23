@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.user.exception.InvalidUsernameException;
 import com.codeit.team5.mopl.user.exception.SameLockStatusException;
 import com.codeit.team5.mopl.user.exception.SameRoleAssignmentException;
 import jakarta.persistence.*;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -78,6 +79,7 @@ public class User extends BaseUpdatableEntity {
     }
 
     public void updateRole(UserRole role) {
+        Objects.requireNonNull(role, "role must not be null");
         if (role == this.role) {
             throw new SameRoleAssignmentException();
         }
@@ -85,6 +87,7 @@ public class User extends BaseUpdatableEntity {
     }
 
     public void updateLocked(boolean locked) {
+        Objects.requireNonNull(role, "lock status must not be null");
         if (locked == this.locked) {
             throw new SameLockStatusException();
         }
