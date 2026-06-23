@@ -39,4 +39,14 @@ public class ContentStats {
 
     @Column(nullable = false)
     private Instant updatedAt;
+
+    public static ContentStats create(Content content) {
+        ContentStats stats = new ContentStats();
+        stats.content = content;
+        stats.reviewCount = 0;
+        stats.ratingSum = 0.0;
+        stats.watcherCount = 0;
+        stats.updatedAt = Instant.now();
+        return stats;
+    }
 }

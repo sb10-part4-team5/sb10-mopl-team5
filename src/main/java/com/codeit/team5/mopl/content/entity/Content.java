@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.content.entity;
 
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
+import com.codeit.team5.mopl.tag.entity.Tag;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +14,7 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -63,11 +65,16 @@ public class Content extends BaseUpdatableEntity {
     @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ContentTag> contentTags = new ArrayList<>();
 
-    public static Content create(ContentType type, String title, String description) {
+    public static Content create(ContentType type, String title, String description, ContentSource source) {
         Content content = new Content();
         content.type = type;
         content.title = title;
         content.description = description;
+        content.source = source;
+        // ADMIN이 생성 시 random UUID 값 할당 (uk_contents_source_external_id 때문에 값이 필수임)
+        content.externalId = source == ContentSource.ADMIN
+                ? UUID.randomUUID().toString()
+                : null;
         return content;
     }
 
