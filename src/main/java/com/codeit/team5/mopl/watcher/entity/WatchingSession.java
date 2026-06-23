@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.watcher.entity;
 
+import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.global.entity.BaseEntity;
+import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -32,5 +34,9 @@ public class WatchingSession extends BaseEntity {
     public WatchingSession(User user, Content content) {
         this.user = user;
         this.content = content;
+    }
+
+    public static WatchingSession of(User user, Content content) {
+        return new WatchingSession(user, content);
     }
 }
