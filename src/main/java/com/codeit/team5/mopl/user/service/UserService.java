@@ -7,6 +7,7 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,9 +26,17 @@ public class UserService {
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
-        validateDuplicateEmail(request.email());
+        String normalizedEmail = normalizeEmail(request.email());
 
-        User user = userMapper.toEntity(request);
+        validateDuplicateEmail(normalizedEmail);
+
+        UserRegisterRequest normalizedRequest = new UserRegisterRequest(
+                request.name(),
+                normalizedEmail,
+                request.password()
+        );
+
+        User user = userMapper.toEntity(normalizedRequest);
         String encodedPassword = passwordEncoder.encode(request.password());
         user.updatePassword(encodedPassword);
 
@@ -43,7 +52,7 @@ public class UserService {
         } catch (DataIntegrityViolationException e) {
             log.warn(
                     "Duplicated email: 저장 중 이메일 중복 충돌 발생. email={}",
-                    maskEmail(request.email()),
+                    maskEmail(normalizedEmail),
                     e
             );
             throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS);
@@ -58,6 +67,10 @@ public class UserService {
             );
             throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
+    }
+
+    private String normalizeEmail(String email) {
+        return email.toLowerCase(Locale.ROOT);
     }
 
     private String maskEmail(String email) {
