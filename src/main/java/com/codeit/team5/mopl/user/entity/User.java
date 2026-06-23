@@ -62,17 +62,13 @@ public class User extends BaseUpdatableEntity {
             String newName,
             String profileImageUrl
     ) {
-        if (newName == null || newName.isBlank()) {
-            throw new InvalidUsernameException();
-        }
+        // 추후 서비스 계층에서 예외처리 진행
         this.name = newName;
         this.profileImageUrl = profileImageUrl;
     }
 
     public void updatePassword(String newPassword) {
-        if (newPassword == null || newPassword.isBlank()) {
-            throw new InvalidPasswordException();
-        }
+        // 추후 서비스 계층에서 예외처리 진행
         this.password = newPassword;
     }
 
