@@ -67,6 +67,9 @@ public class Notification extends BaseEntity {
 
     // 알림 읽기 처리 메서드
     public void markAsRead() {
+        if(this.isRead) {
+            return;
+        }
         this.isRead = true;
         this.readAt = Instant.now();
     }
