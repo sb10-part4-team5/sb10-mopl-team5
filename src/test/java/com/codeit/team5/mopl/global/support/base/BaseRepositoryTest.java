@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.global.support.base;
 
+import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.global.support.config.HibernateConfig;
 import com.codeit.team5.mopl.global.support.inspector.QueryInspector;
 import java.time.Instant;
@@ -10,7 +11,6 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import com.codeit.team5.mopl.TestcontainersConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
@@ -25,8 +25,11 @@ public abstract class BaseRepositoryTest {
     @Autowired
     protected QueryInspector queryInspector;
 
-    protected void flushAndClear() {
+    protected void flush() {
         entityManager.flush();
+    }
+
+    protected void clear() {
         entityManager.clear();
         queryInspector.clear();
     }

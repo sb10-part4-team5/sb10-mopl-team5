@@ -1,5 +1,8 @@
 package com.codeit.team5.mopl.watcher.constant;
 
+import com.codeit.team5.mopl.watcher.exception.WatcherErrorCode;
+import com.codeit.team5.mopl.watcher.exception.WatcherException;
+import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -7,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum SortByType {
     CREATED_AT("createdAt"),
-    ID("id"),
     ;
     private final String value;
 
@@ -17,6 +19,6 @@ public enum SortByType {
                 return type;
             }
         }
-        return null;
+        throw new WatcherException(WatcherErrorCode.INCORRECT_SORT_BY, Map.of("sortBy", text));
     }
 }

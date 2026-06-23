@@ -11,6 +11,7 @@ public enum WatcherErrorCode implements ErrorCodeSuggestion {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User를 찾을 수 없습니다."),
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Content를 찾을 수 없습니다."),
     WATCHING_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "User의 시청 세션을 찾을 수 없습니다."),
+    INCORRECT_SORT_BY(HttpStatus.BAD_REQUEST, "SortBy 입력값이 올바르지 않습니다."),
     ;
 
     private final HttpStatus status;

@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.global.exception.suggestion;
 
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.exception.suggestion.util.ViolationExceptionUtils;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -47,8 +48,7 @@ public class GlobalExceptionHandlerSuggestion {
                 .collect(Collectors.joining(" | "));
         log.warn("제약조건 위반 (ConstraintViolationException) -> {}", detailedErrorLog);
 
-        boolean isFromController = e.getConstraintViolations().stream()
-                .anyMatch(v -> v.getRootBeanClass().getSimpleName().endsWith("Controller"));
+        boolean isFromController = ViolationExceptionUtils.isFromController(e);
         HttpStatus status =
                 isFromController ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
         return ResponseEntity

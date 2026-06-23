@@ -2,12 +2,14 @@ package com.codeit.team5.mopl.watcher.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,18 +23,24 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private WatchingSessionRepository repository;
 
-    // 1. findByUser_Id
+    @BeforeEach
+    void setUp() {
+        clear();
+    }
+
+    // 1. findByUserId
     @Test
     @DisplayName("세션이 존재할 때 1번의 쿼리로 연관관계까지 조회_성공")
-    void findByUser_Id_성공() {
+    void findByUserId_성공() {
         // given
         User user = createUser();
         Content content = createContent();
         createSession(user, content);
-        flushAndClear();
+        flush();
+        clear();
 
         // when
-        Optional<WatchingSession> result = repository.findByUser_Id(user.getId());
+        Optional<WatchingSession> result = repository.findByUserId(user.getId());
 
         // then
         assertThat(result).isPresent();
@@ -42,38 +50,40 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    @DisplayName("세션이 없을 때 빈 Optional 반환_실패")
-    void findByUser_Id_NotFound_실패() {
+    @DisplayName("세션이 없을 때 빈 Optional 반환")
+    void findByUserId_NotFound() {
         // given
         UUID randomUserId = UUID.randomUUID();
-        flushAndClear();
+        flush();
+        clear();
 
         // when
-        Optional<WatchingSession> result = repository.findByUser_Id(randomUserId);
+        Optional<WatchingSession> result = repository.findByUserId(randomUserId);
 
         // then
         assertThat(result).isEmpty();
         ensureQueryCount(1);
     }
 
-    // 2. findByContent_Id
+    // 2. findByContentId
     @Test
     @DisplayName("조회 결과가 Limit보다 많아 hasNext가 true_성공")
-    void findByContent_Id_HasNextTrue_성공() {
+    void findByContentId_HasNextTrue_성공() {
         // given
         User user1 = createUser("test1@test.com");
         User user2 = createUser("test2@test.com");
         Content content = createContent();
         createSession(user1, content);
         createSession(user2, content);
-        flushAndClear();
+        flush();
+        clear();
 
         ScrollPosition position = ScrollPosition.keyset();
         Limit limit = Limit.of(1); // 1개만 조회하여 다음 페이지가 존재하도록 함
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
 
         // when
-        Window<WatchingSession> result = repository.findByContent_Id(content.getId(), position,
+        Window<WatchingSession> result = repository.findByContentId(content.getId(), position,
                 limit, sort);
 
         // then
@@ -85,19 +95,20 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
 
     @Test
     @DisplayName("조회 결과가 Limit보다 적어 hasNext가 false_성공")
-    void findByContent_Id_HasNextFalse_성공() {
+    void findByContentId_HasNextFalse_성공() {
         // given
         User user = createUser();
         Content content = createContent();
         createSession(user, content);
-        flushAndClear();
+        flush();
+        clear();
 
         ScrollPosition position = ScrollPosition.keyset();
         Limit limit = Limit.of(10);
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
 
         // when
-        Window<WatchingSession> result = repository.findByContent_Id(content.getId(), position,
+        Window<WatchingSession> result = repository.findByContentId(content.getId(), position,
                 limit, sort);
 
         // then
@@ -109,18 +120,17 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    @DisplayName("컨텐츠가 없을 때 빈 리스트 반환_실패")
-    void findByContent_Id_NotFound_실패() {
+    @DisplayName("컨텐츠가 없을 때 빈 리스트 반환")
+    void findByContentId_NotFound() {
         // given
         UUID randomContentId = UUID.randomUUID();
-        flushAndClear();
 
         ScrollPosition position = ScrollPosition.keyset();
         Limit limit = Limit.of(10);
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
 
         // when
-        Window<WatchingSession> result = repository.findByContent_Id(randomContentId, position,
+        Window<WatchingSession> result = repository.findByContentId(randomContentId, position,
                 limit, sort);
 
         // then
@@ -136,22 +146,22 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         User user = createUser();
         Content content = createContent();
         createSession(user, content);
-        flushAndClear();
+        flush();
+        clear();
 
         // when
         repository.deleteByUserIdDirectly(user.getId());
 
         // then
-        assertThat(repository.existsByUser_Id(user.getId())).isFalse();
+        assertThat(repository.existsByUserId(user.getId())).isFalse();
         ensureQueryCount(2); // DELETE 1번 + exists 1번 = 2번
     }
 
     @Test
-    @DisplayName("조건에 맞는 데이터가 없을 때 삭제되지 않음_실패")
-    void deleteByUserIdDirectly_NotFound_실패() {
+    @DisplayName("조건에 맞는 데이터가 없을 때 삭제되지 않음")
+    void deleteByUserIdDirectly_NotFound() {
         // given
         UUID randomUserId = UUID.randomUUID();
-        flushAndClear();
 
         // when
         repository.deleteByUserIdDirectly(randomUserId);
@@ -160,18 +170,19 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         ensureQueryCount(1); // DELETE 1번
     }
 
-    // 4. existsByUser_Id
+    // 4. existsByUserId
     @Test
     @DisplayName("세션이 존재하면 true 반환_성공")
-    void existsByUser_Id_성공() {
+    void existsByUserId_성공() {
         // given
         User user = createUser();
         Content content = createContent();
         createSession(user, content);
-        flushAndClear();
+        flush();
+        clear();
 
         // when
-        boolean exists = repository.existsByUser_Id(user.getId());
+        boolean exists = repository.existsByUserId(user.getId());
 
         // then
         assertThat(exists).isTrue();
@@ -179,14 +190,13 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    @DisplayName("세션이 존재하지 않으면 false 반환_실패")
-    void existsByUser_Id_NotFound_실패() {
+    @DisplayName("세션이 존재하지 않으면 false 반환")
+    void existsByUserId_NotFound() {
         // given
         UUID randomUserId = UUID.randomUUID();
-        flushAndClear();
 
         // when
-        boolean exists = repository.existsByUser_Id(randomUserId);
+        boolean exists = repository.existsByUserId(randomUserId);
 
         // then
         assertThat(exists).isFalse();
@@ -208,7 +218,7 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         content.setTitle("test title");
         content.setSource("TMDB");
         content.setExternalId("ext-id-123");
-        content.setUpdatedAt(java.time.Instant.now());
+        content.setUpdatedAt(Instant.now());
         return persistAndFlush(content);
     }
 

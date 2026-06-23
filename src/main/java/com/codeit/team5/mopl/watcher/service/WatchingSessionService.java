@@ -35,6 +35,8 @@ public class WatchingSessionService {
     private final UserRepository userRepository;
     private final ContentRepository contentRepository;
 
+    private static final String SECONDARY_SORT_FIELD = "id";
+
     @Transactional
     public WatchingSessionResponse create(WatchingSessionCreatedRequest request) {
         if (!userRepository.existsById(request.watcherId())) {
@@ -53,7 +55,7 @@ public class WatchingSessionService {
     }
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
-        return mapper.toDto(repository.findByUser_Id(watcherId)
+        return mapper.toDto(repository.findByUserId(watcherId)
                 .orElseThrow(() -> new WatcherException(WatcherErrorCode.WATCHING_SESSION_NOT_FOUND,
                         Map.of("UserId", watcherId))));
     }
@@ -63,16 +65,17 @@ public class WatchingSessionService {
         Sort.Direction direction = request.sortDirection();
         SortByType sortBy = request.sortBy();
         Sort sort = Sort.by(direction, sortBy.getValue())
-                .and(Sort.by(direction, SortByType.ID.getValue()));
+                .and(Sort.by(direction, SECONDARY_SORT_FIELD));
         ScrollPosition scrollPosition = createScrollPosition(request);
-        Window<WatchingSession> result = repository.findByContent_Id(
+        Window<WatchingSession> result = repository.findByContentId(
                 contentId, scrollPosition, Limit.of(request.limit()), sort);
-        return mapper.toCursor(result, sortBy, direction);
+        Long totalCount = repository.countByContentId(contentId);
+        return mapper.toCursor(result, totalCount, sortBy, direction);
     }
 
     @Transactional
     public void delete(UUID userId) {
-        if (repository.existsByUser_Id(userId)) {
+        if (repository.existsByUserId(userId)) {
             repository.deleteByUserIdDirectly(userId);
             return;
         }
@@ -88,7 +91,7 @@ public class WatchingSessionService {
         }
         Map<String, Object> keyset = Map.of(
                 request.sortBy().getValue(), cursor,
-                SortByType.ID.getValue(), UUID.fromString(idAfter)
+                SECONDARY_SORT_FIELD, UUID.fromString(idAfter)
         );
         return ScrollPosition.of(keyset, Direction.FORWARD);
     }

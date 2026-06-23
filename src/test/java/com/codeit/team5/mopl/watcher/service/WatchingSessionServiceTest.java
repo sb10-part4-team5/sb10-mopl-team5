@@ -85,8 +85,8 @@ class WatchingSessionServiceTest {
     }
 
     @Test
-    @DisplayName("유저가 존재하지 않을 때 세션 생성_실패")
-    void create_UserNotFound_실패() {
+    @DisplayName("유저가 존재하지 않을 때 세션 생성")
+    void create_UserNotFound() {
         // given
         UUID watcherId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
@@ -102,8 +102,8 @@ class WatchingSessionServiceTest {
     }
 
     @Test
-    @DisplayName("컨텐츠가 존재하지 않을 때 세션 생성_실패")
-    void create_ContentNotFound_실패() {
+    @DisplayName("컨텐츠가 존재하지 않을 때 세션 생성")
+    void create_ContentNotFound() {
         // given
         UUID watcherId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
@@ -129,22 +129,22 @@ class WatchingSessionServiceTest {
         Content content = createDummyContent(UUID.randomUUID());
         WatchingSession session = createDummySession(user, content);
 
-        when(repository.findByUser_Id(watcherId)).thenReturn(Optional.of(session));
+        when(repository.findByUserId(watcherId)).thenReturn(Optional.of(session));
 
         // when
         WatchingSessionResponse result = service.findSessionByWatchId(watcherId);
 
         // then
         assertThat(result).isNotNull();
-        verify(repository).findByUser_Id(watcherId);
+        verify(repository).findByUserId(watcherId);
     }
 
     @Test
-    @DisplayName("존재하지 않는 워쳐 ID로 세션 조회_실패")
-    void findSessionByWatchId_NotFound_실패() {
+    @DisplayName("존재하지 않는 워쳐 ID로 세션 조회")
+    void findSessionByWatchId_NotFound() {
         // given
         UUID watcherId = UUID.randomUUID();
-        when(repository.findByUser_Id(watcherId)).thenReturn(Optional.empty());
+        when(repository.findByUserId(watcherId)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> service.findSessionByWatchId(watcherId))
@@ -164,9 +164,10 @@ class WatchingSessionServiceTest {
         @SuppressWarnings("unchecked")
         Window<WatchingSession> window = mock(Window.class);
 
-        when(repository.findByContent_Id(eq(contentId), any(ScrollPosition.class), any(Limit.class),
+        when(repository.findByContentId(eq(contentId), any(ScrollPosition.class), any(Limit.class),
                 any(Sort.class)))
                 .thenReturn(window);
+        when(repository.countByContentId(contentId)).thenReturn(1L);
 
         // when
         CursorResponse<WatchingSessionResponse> result = service.findSessionByContentId(contentId,
@@ -177,13 +178,13 @@ class WatchingSessionServiceTest {
 
         org.mockito.ArgumentCaptor<Sort> sortCaptor = org.mockito.ArgumentCaptor.forClass(
                 Sort.class);
-        verify(repository).findByContent_Id(eq(contentId), any(ScrollPosition.class),
+        verify(repository).findByContentId(eq(contentId), any(ScrollPosition.class),
                 any(Limit.class), sortCaptor.capture());
 
         Sort capturedSort = sortCaptor.getValue();
         assertThat(capturedSort.getOrderFor(SortByType.CREATED_AT.getValue())
                 .getDirection()).isEqualTo(Sort.Direction.DESC);
-        assertThat(capturedSort.getOrderFor(SortByType.ID.getValue()).getDirection()).isEqualTo(
+        assertThat(capturedSort.getOrderFor("id").getDirection()).isEqualTo(
                 Sort.Direction.DESC);
     }
 
@@ -203,9 +204,10 @@ class WatchingSessionServiceTest {
         @SuppressWarnings("unchecked")
         Window<WatchingSession> window = mock(Window.class);
 
-        when(repository.findByContent_Id(eq(contentId), any(ScrollPosition.class), any(Limit.class),
+        when(repository.findByContentId(eq(contentId), any(ScrollPosition.class), any(Limit.class),
                 any(Sort.class)))
                 .thenReturn(window);
+        when(repository.countByContentId(contentId)).thenReturn(11L);
 
         // when
         CursorResponse<WatchingSessionResponse> result = service.findSessionByContentId(contentId,
@@ -216,13 +218,13 @@ class WatchingSessionServiceTest {
 
         org.mockito.ArgumentCaptor<Sort> sortCaptor = org.mockito.ArgumentCaptor.forClass(
                 Sort.class);
-        verify(repository).findByContent_Id(eq(contentId), any(ScrollPosition.class),
+        verify(repository).findByContentId(eq(contentId), any(ScrollPosition.class),
                 any(Limit.class), sortCaptor.capture());
 
         Sort capturedSort = sortCaptor.getValue();
         assertThat(capturedSort.getOrderFor(SortByType.CREATED_AT.getValue())
                 .getDirection()).isEqualTo(Sort.Direction.DESC);
-        assertThat(capturedSort.getOrderFor(SortByType.ID.getValue()).getDirection()).isEqualTo(
+        assertThat(capturedSort.getOrderFor("id").getDirection()).isEqualTo(
                 Sort.Direction.DESC);
     }
 
@@ -232,7 +234,7 @@ class WatchingSessionServiceTest {
     void delete_성공() {
         // given
         UUID watcherId = UUID.randomUUID();
-        when(repository.existsByUser_Id(watcherId)).thenReturn(true);
+        when(repository.existsByUserId(watcherId)).thenReturn(true);
 
         // when
         service.delete(watcherId);
@@ -242,11 +244,11 @@ class WatchingSessionServiceTest {
     }
 
     @Test
-    @DisplayName("유저 ID에 해당하는 세션이 없을 때 세션 삭제_실패")
-    void delete_NotFound_실패() {
+    @DisplayName("유저 ID에 해당하는 세션이 없을 때 세션 삭제")
+    void delete_NotFound() {
         // given
         UUID watcherId = UUID.randomUUID();
-        when(repository.existsByUser_Id(watcherId)).thenReturn(false);
+        when(repository.existsByUserId(watcherId)).thenReturn(false);
 
         // when & then
         assertThatThrownBy(() -> service.delete(watcherId))

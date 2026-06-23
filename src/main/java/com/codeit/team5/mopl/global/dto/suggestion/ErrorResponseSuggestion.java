@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.global.dto.suggestion;
 
 import com.codeit.team5.mopl.global.exception.suggestion.BusinessExceptionSuggestion;
+import com.codeit.team5.mopl.global.exception.suggestion.util.ViolationExceptionUtils;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
@@ -8,7 +9,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.RestController;
 
 public record ErrorResponseSuggestion(String exceptionType, String message, Object details) {
 
@@ -21,7 +21,7 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
                 .collect(Collectors.groupingBy(
                         FieldError::getField,
                         Collectors.mapping(
-                                error -> error.getDefaultMessage() == null ? ""
+                                error -> error.getDefaultMessage() == null ? "유효하지 않은 입력값입니다."
                                         : error.getDefaultMessage(),
                                 Collectors.toList()
                         )
@@ -30,9 +30,7 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
     }
 
     public static ErrorResponseSuggestion from(ConstraintViolationException ex) {
-        boolean isFromController = ex.getConstraintViolations().stream()
-                .anyMatch(v -> v.getRootBeanClass().getSimpleName().endsWith("Controller")
-                        || v.getRootBeanClass().isAnnotationPresent(RestController.class));
+        boolean isFromController = ViolationExceptionUtils.isFromController(ex);
         if (isFromController) {
             Map<String, List<String>> details = ex.getConstraintViolations().stream()
                     .collect(Collectors.groupingBy(

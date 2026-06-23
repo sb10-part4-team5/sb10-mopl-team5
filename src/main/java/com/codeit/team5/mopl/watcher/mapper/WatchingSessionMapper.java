@@ -23,7 +23,7 @@ public interface WatchingSessionMapper {
     WatchingSessionResponse toDto(WatchingSession entity);
 
     default CursorResponse<WatchingSessionResponse> toCursor(Window<WatchingSession> window,
-            SortByType sortBy, Direction sortDirection) {
+            Long totalCount, SortByType sortBy, Direction sortDirection) {
         if (window == null) {
             return null;
         }
@@ -43,7 +43,7 @@ public interface WatchingSessionMapper {
                 nextCursor,
                 nextIdAfter,
                 window.hasNext(),
-                0L,
+                totalCount,
                 sortBy.toString(),
                 sortDirection.toString()
         );
