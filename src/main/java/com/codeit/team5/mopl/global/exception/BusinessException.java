@@ -1,39 +1,20 @@
 package com.codeit.team5.mopl.global.exception;
 
-import java.util.Map;
-import java.util.StringJoiner;
-import java.util.stream.Collectors;
+import java.util.Objects;
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
 
 @Getter
-public abstract class BusinessException extends RuntimeException {
+public class BusinessException extends RuntimeException {
 
-    private final HttpStatus status;
-    private final String exceptionType;
-    private final String message; // client 에게 보낼 message
-    private String detailMessage; // logging 을 위한 message
+    private final ErrorCode errorCode;
 
     public BusinessException(ErrorCode errorCode) {
-        super(errorCode.getMessage());
-        this.status = errorCode.getStatus();
-        this.exceptionType = this.getClass().getSimpleName();
-        this.message = errorCode.getMessage();
-        this.detailMessage = this.message;
+        super(Objects.requireNonNull(errorCode, "errorCode must not be null").getMessage());
+        this.errorCode = errorCode;
     }
 
-    public BusinessException(ErrorCode errorCode, Map<String, Object> details) {
-        this(errorCode);
-        this.detailMessage = details.entrySet().stream()
-                .map(entry -> entry.getKey() + ": " + entry.getValue().toString())
-                .collect(Collectors.joining(", ", "[", "]"));
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", this.exceptionType + "[", "]")
-                .add("HttpStatus=" + status)
-                .add("detailMessage='" + detailMessage + "'")
-                .toString();
+    public BusinessException(ErrorCode errorCode, String detailMessage) {
+        super(detailMessage != null ? detailMessage : Objects.requireNonNull(errorCode, "errorCode must not be null").getMessage());
+        this.errorCode = Objects.requireNonNull(errorCode, "errorCode must not be null");
     }
 }
