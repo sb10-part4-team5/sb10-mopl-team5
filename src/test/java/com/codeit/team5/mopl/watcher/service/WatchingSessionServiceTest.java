@@ -255,7 +255,7 @@ class WatchingSessionServiceTest {
     }
 
     private User createDummyUser(UUID id) {
-        User user = new User();
+        User user = User.create("test@example.com", "password", "testName");
         ReflectionTestUtils.setField(user, "id", id);
         return user;
     }

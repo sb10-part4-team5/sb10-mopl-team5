@@ -198,11 +198,7 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
     }
 
     private User createUser(String email) {
-        User user = new User();
-        user.setEmail(email);
-        user.setName("testUser");
-        user.setRole("USER");
-        user.setLocked(false);
+        User user = User.create(email, "test-password", "testUser");
         return persistAndFlush(user);
     }
 
