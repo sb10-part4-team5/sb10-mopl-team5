@@ -50,12 +50,15 @@ public class UserService {
 
             return userMapper.toDto(savedUser);
         } catch (DataIntegrityViolationException e) {
-            log.warn(
-                    "Duplicated email: 저장 중 이메일 중복 충돌 발생. email={}",
-                    maskEmail(normalizedEmail),
-                    e
-            );
-            throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            if (userRepository.existsByEmail(normalizedEmail)) {
+                log.warn(
+                        "Duplicated email: 저장 중 이메일 중복 충돌 발생. email={}",
+                        maskEmail(normalizedEmail),
+                        e
+                );
+                throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            }
+            throw e;
         }
     }
 
