@@ -192,7 +192,9 @@ public class Playlist {
 ### 엔티티 생성 — 정적 팩토리 메서드
 
 - 엔티티 인스턴스 생성은 **정적 팩토리 메서드**로 한다. 관용적으로 `create`를 쓰며 `of`도 허용한다.
-- 생성자는 `protected`/`private`로 감추고 외부 직접 호출을 막는다.
+- 기본 생성자는 `@NoArgsConstructor(access = AccessLevel.PROTECTED)`로 둔다.
+  (Jakarta Persistence 표준상 엔티티 no-arg 생성자는 public/protected만 허용 — `private` 불가)
+  외부에서 `new`로 직접 만들지 못하게 막고, 생성은 정적 팩토리로만 한다.
 - 빌더(`@Builder`)보다 정적 팩토리를 우선한다 — 생성 의도를 메서드명으로 드러낸다.
 
 ```java
@@ -481,7 +483,7 @@ public Playlist create(PlaylistCreateRequest request) {
 
 | 테스트 유형 | 대상 | 작성 기준 |
 |---|---|---|
-| 슬라이스 테스트 | Repository, Controller(`@WebMvcTest`) | 계층별 단위 검증 |
+| 슬라이스 테스트 | Repository(`@DataJpaTest`), Controller(`@WebMvcTest`) | 계층별 단위 검증 |
 | 단위 테스트 | Service / 도메인 로직 | 복잡한 비즈니스 로직 |
 | 통합 테스트 | 전체 흐름 (Controller~DB) | 모든 API 엔드포인트 |
 

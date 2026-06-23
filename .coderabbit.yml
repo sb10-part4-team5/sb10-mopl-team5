@@ -69,7 +69,6 @@ reviews:
     - "!**/*.jar"
 
   # 리뷰 컨벤션은 docs/backend-convention.md(knowledge_base)를 단일 소스(SSOT)로 사용한다.
-  # path별 상세 지침은 중복/불일치 방지를 위해 제거했다.
 
 chat:
   auto_reply: true
