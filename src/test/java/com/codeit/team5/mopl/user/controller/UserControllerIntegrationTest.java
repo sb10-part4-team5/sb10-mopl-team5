@@ -88,7 +88,7 @@ class UserControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.exceptionName").value("EMAIL_ALREADY_EXISTS"))
-                .andExpect(jsonPath("$.message").value("이미 사용 중인 이메일입니다."))
+                .andExpect(jsonPath("$.message").value(request.email()))
                 .andExpect(jsonPath("$.details").isEmpty());
 
         assertThat(userRepository.findAll())
