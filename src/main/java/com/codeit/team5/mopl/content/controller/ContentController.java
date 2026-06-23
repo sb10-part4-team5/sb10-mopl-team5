@@ -24,6 +24,7 @@ public class ContentController implements ContentApi {
 
     private final ContentService contentService;
 
+    @Override
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ContentResponse> postContent(
             @Valid @RequestPart("request") ContentCreateRequest request,
