@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.content.entity;
 
-import com.codeit.team5.mopl.content.exception.ContentException;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import com.codeit.team5.mopl.content.exception.InvalidContentTypeException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -28,6 +27,6 @@ public enum ContentType {
                 return type;
             }
         }
-        throw new ContentException(ErrorCode.INVALID_INPUT, "알 수 없는 콘텐츠 타입입니다: " + value);
+        throw new InvalidContentTypeException(value);
     }
 }
