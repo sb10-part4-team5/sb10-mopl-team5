@@ -6,11 +6,11 @@
 
     <!-- 파일용 패턴 (색상 없음): 년-월-일 시:분:초.밀리초 [스레드] 레벨 [requestId] [clientIp] 로거 - 메시지 -->
     <property name="FILE_PATTERN"
-              value="%d{yy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:-system}] [%X{clientIp:-internal}] %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:-system}] [%X{clientIp:-internal}] %logger{36} - %msg%n"/>
 
     <!-- 콘솔용 패턴 (레벨에 색상 적용) -->
     <property name="CONSOLE_PATTERN"
-              value="%d{yy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) [%X{requestId:-system}] [%X{clientIp:-internal}] %cyan(%logger{36}) - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) [%X{requestId:-system}] [%X{clientIp:-internal}] %cyan(%logger{36}) - %msg%n"/>
 
     <!-- 콘솔 출력 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -25,6 +25,7 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/mopl.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>7</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <pattern>${FILE_PATTERN}</pattern>
@@ -54,28 +55,16 @@
       ============================================================
     -->
 
-    <!-- 개발 환경: 콘솔 + 파일 -->
-    <springProfile name="dev">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="FILE"/>
-        </root>
-    </springProfile>
+    <!-- 콘솔 + 파일 출력 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
 
-    <!-- 운영 환경: 콘솔 + 파일 (추후 KAFKA appender-ref 추가 예정) -->
-    <springProfile name="prod">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="FILE"/>
-        </root>
-    </springProfile>
-
-    <!-- 프로파일 미지정 시 기본 동작 -->
-    <springProfile name="!dev &amp; !prod">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="FILE"/>
-        </root>
-    </springProfile>
+    <!--
+      [예정] prod 전용 Kafka 활성화:
+      위 KAFKA appender 주석 해제 후, prod에서만 등록하도록 분기 추가
+      (예: <springProfile name="prod"> 내에서 별도 root로 KAFKA appender-ref 포함)
+    -->
 
 </configuration>
