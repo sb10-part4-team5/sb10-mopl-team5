@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.content.entity;
+package com.codeit.team5.mopl.tag.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

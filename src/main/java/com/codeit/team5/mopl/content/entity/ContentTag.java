@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.content.entity;
 
+import com.codeit.team5.mopl.tag.entity.Tag;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
