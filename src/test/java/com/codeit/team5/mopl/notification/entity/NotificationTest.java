@@ -67,6 +67,15 @@ class NotificationTest {
                 UUID.randomUUID(), NotificationType.FOLLOWED, "  ", "내용", NotificationLevel.INFO))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+    @Test
+    @DisplayName("title이 null이면 예외가 발생한다")
+
+    void create_titleNull_exception() {
+        // when & then
+        assertThatThrownBy(() -> Notification.create(
+            UUID.randomUUID(), NotificationType.FOLLOWED, null, "내용", NotificationLevel.INFO))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test
     @DisplayName("읽음 처리하면 isRead가 true가 되고 readAt이 기록된다")
