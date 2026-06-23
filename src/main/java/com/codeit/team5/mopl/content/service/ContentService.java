@@ -39,6 +39,7 @@ public class ContentService {
         // todo 썸네일 스토리지 업로드 후 URL 반영
 
         request.tags().stream()
+                .distinct()
                 .map(tagName -> tagRepository.findByName(tagName)
                         .orElseGet(() -> tagRepository.save(Tag.create(tagName))))
                 .forEach(content::addTag);
