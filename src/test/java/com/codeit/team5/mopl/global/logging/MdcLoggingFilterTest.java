@@ -31,7 +31,7 @@ class MdcLoggingFilterTest {
     class RequestId {
 
         @Test
-        @DisplayName("X-Request-Id 헤더가 없으면 새 UUID를 생성하고 응답 헤더에 담는다")
+        @DisplayName("X-Request-Id 헤더가 없으면 새 UUID를 생성하고 응답 헤더에 담기 성공")
         void generatesNewIdWhenHeaderMissing() throws Exception {
             MockHttpServletRequest request = new MockHttpServletRequest();
             MockHttpServletResponse response = new MockHttpServletResponse();
@@ -47,7 +47,7 @@ class MdcLoggingFilterTest {
         }
 
         @Test
-        @DisplayName("유효한 X-Request-Id 헤더가 들어오면 그대로 재사용한다")
+        @DisplayName("유효한 X-Request-Id 헤더가 들어오면 재사용 성공")
         void reusesValidIncomingId() throws Exception {
             String incoming = "abc-123-DEF";
             MockHttpServletRequest request = new MockHttpServletRequest();
@@ -62,7 +62,7 @@ class MdcLoggingFilterTest {
         }
 
         @Test
-        @DisplayName("안전하지 않은 문자(로그 인젝션)가 포함된 ID는 무시하고 새로 생성한다")
+        @DisplayName("안전하지 않은 문자(로그 인젝션)가 포함된 ID는 무시하고 새로 새로 생성 성공")
         void regeneratesWhenIncomingIdHasUnsafeChars() throws Exception {
             String malicious = "bad\nINJECTED-LOG";
             MockHttpServletRequest request = new MockHttpServletRequest();
@@ -77,7 +77,7 @@ class MdcLoggingFilterTest {
         }
 
         @Test
-        @DisplayName("최대 길이(64자)를 초과한 ID는 무시하고 새로 생성한다")
+        @DisplayName("최대 길이(64자)를 초과한 ID는 무시하고 새로 생성 성공")
         void regeneratesWhenIncomingIdTooLong() throws Exception {
             String tooLong = "a".repeat(65);
             MockHttpServletRequest request = new MockHttpServletRequest();
@@ -97,36 +97,8 @@ class MdcLoggingFilterTest {
     class ClientIp {
 
         @Test
-        @DisplayName("X-Forwarded-For가 있으면 맨 앞의 원 클라이언트 IP를 사용한다")
-        void usesFirstIpFromXForwardedFor() throws Exception {
-            MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader("X-Forwarded-For", "203.0.113.5, 70.41.3.18, 150.172.238.178");
-            request.setRemoteAddr("10.0.0.1");
-            MockHttpServletResponse response = new MockHttpServletResponse();
-            CapturingFilterChain chain = new CapturingFilterChain();
-
-            filter.doFilter(request, response, chain);
-
-            assertThat(chain.clientIp).isEqualTo("203.0.113.5");
-        }
-
-        @Test
-        @DisplayName("X-Forwarded-For가 없고 X-Real-IP가 있으면 그 값을 사용한다")
-        void fallsBackToXRealIp() throws Exception {
-            MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader("X-Real-IP", "203.0.113.7");
-            request.setRemoteAddr("10.0.0.1");
-            MockHttpServletResponse response = new MockHttpServletResponse();
-            CapturingFilterChain chain = new CapturingFilterChain();
-
-            filter.doFilter(request, response, chain);
-
-            assertThat(chain.clientIp).isEqualTo("203.0.113.7");
-        }
-
-        @Test
-        @DisplayName("프록시 헤더가 없으면 remoteAddr을 사용한다")
-        void fallsBackToRemoteAddr() throws Exception {
+        @DisplayName("remoteAddr을 clientIp로 사용 성공")
+        void usesRemoteAddr() throws Exception {
             MockHttpServletRequest request = new MockHttpServletRequest();
             request.setRemoteAddr("192.168.0.1");
             MockHttpServletResponse response = new MockHttpServletResponse();
@@ -138,7 +110,7 @@ class MdcLoggingFilterTest {
         }
 
         @Test
-        @DisplayName("clientIp는 응답 헤더로 노출하지 않는다 (로그/MDC 전용)")
+        @DisplayName("clientIp는 응답 헤더로 노출하지 않기 성공 (로그/MDC 전용)")
         void doesNotExposeClientIpInResponseHeader() throws Exception {
             MockHttpServletRequest request = new MockHttpServletRequest();
             request.setRemoteAddr("192.168.0.1");

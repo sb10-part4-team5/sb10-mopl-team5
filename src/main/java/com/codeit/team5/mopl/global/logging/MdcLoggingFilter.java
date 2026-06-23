@@ -37,7 +37,7 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
         try {
             String requestId = resolveRequestId(request);
             MDC.put(MdcKey.REQUEST_ID, requestId);
-            MDC.put(MdcKey.CLIENT_IP, resolveClientIp(request));
+            MDC.put(MdcKey.CLIENT_IP, request.getRemoteAddr());
 
             // 클라이언트가 응답의 ID로 서버 로그를 추적할 수 있도록 헤더로 반환
             response.setHeader(MdcKey.REQUEST_ID_HEADER, requestId);
@@ -51,7 +51,7 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
 
     /**
      * 외부에서 유효한 X-Request-Id가 들어오면 재사용
-     * 없거나 형식이 안전하지 않으면 새로 생성한다.
+     * 없거나 형식이 안전하지 않으면 새로 생성
      */
     private String resolveRequestId(HttpServletRequest request) {
         String requestId = request.getHeader(MdcKey.REQUEST_ID_HEADER);
@@ -66,21 +66,4 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
             && SAFE_REQUEST_ID.matcher(requestId).matches();
     }
 
-    /**
-     * 클라이언트 IP 추출.
-     * EC2 + 로드밸런서(ALB) 환경을 고려하여
-     * X-Forwarded-For -> X-Real-IP -> remoteAddr 순으로 확인
-     */
-    private String resolveClientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwardedFor)) {
-            // "client, proxy1, proxy2" 형태로 들어오므로 맨 앞이 원 클라이언트
-            return forwardedFor.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (StringUtils.hasText(realIp)) {
-            return realIp;
-        }
-        return request.getRemoteAddr();
-    }
 }

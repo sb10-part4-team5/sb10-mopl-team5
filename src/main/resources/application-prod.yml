@@ -38,6 +38,9 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
 
+server:
+  forward-headers-strategy: native
+
 logging:
   level:
     root: INFO
