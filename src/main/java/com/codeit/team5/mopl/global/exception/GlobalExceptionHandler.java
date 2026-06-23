@@ -2,10 +2,9 @@ package com.codeit.team5.mopl.global.exception;
 
 import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -17,52 +16,53 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        ErrorCode errorCode = e.getErrorCode();
-        log.warn("BusinessException [{}]", errorCode.name());
+        log.warn(e.toString());
         return ResponseEntity
-            .status(errorCode.getHttpStatus())
-            .body(ErrorResponse.of(errorCode, e.getMessage()));
+                .status(e.getStatus())
+                .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        int fieldCount = e.getBindingResult().getFieldErrorCount();
-        log.warn("MethodArgumentNotValidException: {} field(s) failed", fieldCount);
-        Map<String, List<String>> details = e.getBindingResult().getFieldErrors().stream()
-            .collect(Collectors.groupingBy(
-                org.springframework.validation.FieldError::getField,
-                Collectors.mapping(
-                    error -> error.getDefaultMessage() == null ? "" : error.getDefaultMessage(),
-                    Collectors.toList()
-                )
-            ));
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException e) {
+        String detailedErrorLog = e.getBindingResult().getFieldErrors().stream()
+                .map(error -> String.format("필드 [%s] - 입력값: [%s], 원인: [%s]",
+                        error.getField(),
+                        error.getRejectedValue(),
+                        error.getDefaultMessage()))
+                .collect(Collectors.joining(" | "));
+        log.warn("유효성 검사 실패 (MethodArgumentNotValidException) -> {}", detailedErrorLog);
         return ResponseEntity
-            .status(ErrorCode.INVALID_INPUT.getHttpStatus())
-            .body(ErrorResponse.of(ErrorCode.INVALID_INPUT, details));
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException e) {
-        int violationCount = e.getConstraintViolations().size();
-        log.warn("ConstraintViolationException: {} violation(s)", violationCount);
-        Map<String, List<String>> details = e.getConstraintViolations().stream()
-            .collect(Collectors.groupingBy(
-                v -> v.getPropertyPath().toString(),
-                Collectors.mapping(
-                    v -> v.getMessage(),
-                    Collectors.toList()
-                )
-            ));
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
+            ConstraintViolationException e) {
+        String detailedErrorLog = e.getConstraintViolations().stream()
+                .map(v -> String.format("경로 [%s] - 입력값: [%s], 원인: [%s]",
+                        v.getPropertyPath(),
+                        v.getInvalidValue(),
+                        v.getMessage()))
+                .collect(Collectors.joining(" | "));
+        log.warn("제약조건 위반 (ConstraintViolationException) -> {}", detailedErrorLog);
+
+        boolean isFromController = e.getConstraintViolations().stream()
+                .anyMatch(v -> v.getRootBeanClass().getSimpleName().endsWith("Controller"));
+        HttpStatus status =
+                isFromController ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
         return ResponseEntity
-            .status(ErrorCode.INVALID_INPUT.getHttpStatus())
-            .body(ErrorResponse.of(ErrorCode.INVALID_INPUT, details));
+                .status(status)
+                .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("Unexpected exception", e);
         return ResponseEntity
-            .status(ErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus())
-            .body(ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR));
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("INTERNAL_SERVER_ERROR",
+                        "서버 내부 에러가 발생했습니다.", null));
     }
 }
