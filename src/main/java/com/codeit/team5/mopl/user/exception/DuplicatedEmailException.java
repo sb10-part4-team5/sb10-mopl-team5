@@ -4,7 +4,7 @@ import com.codeit.team5.mopl.global.exception.ErrorCode;
 
 public class DuplicatedEmailException extends UserException {
 
-    public DuplicatedEmailException(ErrorCode errorCode) {
-        super(errorCode);
+    public DuplicatedEmailException(ErrorCode errorCode, String detailMessage) {
+        super(errorCode, detailMessage);
     }
 }

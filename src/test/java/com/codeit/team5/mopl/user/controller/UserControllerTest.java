@@ -193,7 +193,7 @@ class UserControllerTest {
         UserRegisterRequest request =
                 new UserRegisterRequest("사용자", "duplicate@example.com", "password1");
         given(userService.create(any(UserRegisterRequest.class)))
-                .willThrow(new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS));
+                .willThrow(new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS, "duplicate@example.com"));
 
         // When & Then
         mockMvc.perform(post("/api/users")

@@ -19,7 +19,7 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
     INVALID_ROLE_CHANGE(HttpStatus.CONFLICT, "현재 사용자의 역할과 변경할 역할이 동일합니다."),
     LOCK_STATUS_ALREADY_SET(HttpStatus.CONFLICT, "현재 사용자의 잠금 상태와 변경할 잠금 상태가 동일합니다."),
-    INVALID_USERNAME(HttpStatus.UNAUTHORIZED, "사용자 이름은 공백일 수 없습니다."),
+    INVALID_USERNAME(HttpStatus.BAD_REQUEST, "사용자 이름은 공백일 수 없습니다."),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "비밀번호가 올바르지 않습니다."),
     ACCOUNT_LOCKED(HttpStatus.FORBIDDEN, "잠긴 계정입니다."),
 

@@ -33,26 +33,14 @@ public class UserService {
         String encodedPassword = passwordEncoder.encode(request.password());
         User user = User.create(normalizedEmail, encodedPassword, request.name());
 
-        try {
-            User savedUser = userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-            log.info(
-                    "User created: 회원이 성공적으로 생성되었습니다. userId={}",
-                    savedUser.getId()
-            );
+        log.info(
+                "User created: 회원이 성공적으로 생성되었습니다. userId={}",
+                savedUser.getId()
+        );
 
-            return userMapper.toDto(savedUser);
-        } catch (DataIntegrityViolationException e) {
-            if (userRepository.existsByEmail(normalizedEmail)) {
-                log.warn(
-                        "Duplicated email: 저장 중 이메일 중복 충돌 발생. email={}",
-                        normalizedEmail,
-                        e
-                );
-                throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS);
-            }
-            throw e;
-        }
+        return userMapper.toDto(savedUser);
     }
 
     private void validateDuplicateEmail(String email) {
@@ -61,7 +49,7 @@ public class UserService {
                     "Duplicated email: detail={}",
                     "이미 사용중인 이메일로 유저 생성 실패"
             );
-            throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS, email);
         }
     }
 
