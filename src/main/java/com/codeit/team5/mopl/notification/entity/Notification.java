@@ -24,6 +24,11 @@ public class Notification extends BaseEntity {
     @Column(name = "receiver_id", nullable = false, columnDefinition = "uuid")
     private UUID receiverId;
 
+    // 알림 종류
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private NotificationType type;
+
     // 알림 제목
     @Column(nullable = false, length = 255)
     private String title;
@@ -46,18 +51,25 @@ public class Notification extends BaseEntity {
     private Instant readAt;
 
     public static Notification create(
-        UUID receiverId, String title, String content, NotificationLevel level) {
+        UUID receiverId, NotificationType type, String title, String content,
+        NotificationLevel level) {
         if (receiverId == null) {
             throw new IllegalArgumentException("receiverId는 필수입니다.");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("type은 필수입니다.");
         }
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("title은 비어 있을 수 없습니다.");
         }
-        return new Notification(receiverId, title, content, level);
+        return new Notification(receiverId, type, title, content, level);
     }
+
     // 생성자
-    private Notification(UUID receiverId, String title, String content, NotificationLevel level) {
+    private Notification(UUID receiverId, NotificationType type, String title, String content,
+        NotificationLevel level) {
         this.receiverId = receiverId;
+        this.type = type;
         this.title = title;
         this.content = content;
         this.level = level != null ? level : NotificationLevel.INFO;
