@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.global.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,7 +17,7 @@ import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-@DisplayName("MdcLoggingFilter 단위 테스트")
+@DisplayName("MdcLoggingFilter 동작 검증")
 class MdcLoggingFilterTest {
 
     private final MdcLoggingFilter filter = new MdcLoggingFilter();
@@ -120,6 +121,24 @@ class MdcLoggingFilterTest {
 
             filter.doFilter(request, response, chain);
 
+            assertThat(MDC.get(MdcKey.REQUEST_ID)).isNull();
+            assertThat(MDC.get(MdcKey.CLIENT_IP)).isNull();
+        }
+
+        @Test
+        @DisplayName("필터 체인 예외 발생 후에도 MDC 정리 성공")
+        void mdcClearedWhenChainThrows() {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setRemoteAddr("192.168.0.1");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            // 체인에서 예외가 나도 finally의 MDC.clear()가 동작해야 한다
+            FilterChain throwingChain = (req, res) -> {
+                throw new ServletException("boom");
+            };
+
+            assertThatThrownBy(() -> filter.doFilter(request, response, throwingChain))
+                .isInstanceOf(ServletException.class);
             assertThat(MDC.get(MdcKey.REQUEST_ID)).isNull();
             assertThat(MDC.get(MdcKey.CLIENT_IP)).isNull();
         }
