@@ -8,20 +8,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.constant.SortByType;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionCreatedRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
-import com.codeit.team5.mopl.content.entity.Content;
-import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.exception.WatcherErrorCode;
+import com.codeit.team5.mopl.watcher.exception.WatcherException;
 import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapper;
-import com.codeit.team5.mopl.content.repository.ContentRepository;
-import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapperImpl;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -96,7 +97,8 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(WatcherException.class)
+                .hasMessage(WatcherErrorCode.USER_NOT_FOUND.getMessage());
     }
 
     @Test
@@ -113,7 +115,8 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(WatcherException.class)
+                .hasMessage(WatcherErrorCode.CONTENT_NOT_FOUND.getMessage());
     }
 
     // --- READ (findSessionByWatchId) ---
@@ -145,7 +148,8 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.findSessionByWatchId(watcherId))
-                .isInstanceOf(NoSuchElementException.class);
+                .isInstanceOf(WatcherException.class)
+                .hasMessage(WatcherErrorCode.WATCHING_SESSION_NOT_FOUND.getMessage());
     }
 
     // --- READ (findSessionByContentId) ---
@@ -170,8 +174,17 @@ class WatchingSessionServiceTest {
 
         // then
         assertThat(result).isNotNull();
+
+        org.mockito.ArgumentCaptor<Sort> sortCaptor = org.mockito.ArgumentCaptor.forClass(
+                Sort.class);
         verify(repository).findByContent_Id(eq(contentId), any(ScrollPosition.class),
-                any(Limit.class), any(Sort.class));
+                any(Limit.class), sortCaptor.capture());
+
+        Sort capturedSort = sortCaptor.getValue();
+        assertThat(capturedSort.getOrderFor(SortByType.CREATED_AT.getValue())
+                .getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(capturedSort.getOrderFor(SortByType.ID.getValue()).getDirection()).isEqualTo(
+                Sort.Direction.DESC);
     }
 
     @Test
@@ -180,7 +193,11 @@ class WatchingSessionServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         WatchingSessionCursorRequest request = new WatchingSessionCursorRequest(
-                null, "cursorValue", UUID.randomUUID().toString(), 10, Sort.Direction.DESC,
+                null,
+                "cursorValue",
+                UUID.randomUUID().toString(),
+                10,
+                Sort.Direction.DESC,
                 SortByType.CREATED_AT);
 
         @SuppressWarnings("unchecked")
@@ -196,8 +213,17 @@ class WatchingSessionServiceTest {
 
         // then
         assertThat(result).isNotNull();
+
+        org.mockito.ArgumentCaptor<Sort> sortCaptor = org.mockito.ArgumentCaptor.forClass(
+                Sort.class);
         verify(repository).findByContent_Id(eq(contentId), any(ScrollPosition.class),
-                any(Limit.class), any(Sort.class));
+                any(Limit.class), sortCaptor.capture());
+
+        Sort capturedSort = sortCaptor.getValue();
+        assertThat(capturedSort.getOrderFor(SortByType.CREATED_AT.getValue())
+                .getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(capturedSort.getOrderFor(SortByType.ID.getValue()).getDirection()).isEqualTo(
+                Sort.Direction.DESC);
     }
 
     // --- DELETE ---
@@ -224,7 +250,8 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.delete(watcherId))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(WatcherException.class)
+                .hasMessage(WatcherErrorCode.WATCHING_SESSION_NOT_FOUND.getMessage());
     }
 
     private User createDummyUser(UUID id) {
