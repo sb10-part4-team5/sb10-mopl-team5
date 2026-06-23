@@ -23,4 +23,10 @@ public class Tag {
 
     @Column(nullable = false, unique = true, length = 50)
     private String name;
+
+    public static Tag create(String name) {
+        Tag tag = new Tag();
+        tag.name = name;
+        return tag;
+    }
 }

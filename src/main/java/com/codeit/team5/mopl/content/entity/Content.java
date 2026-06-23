@@ -1,13 +1,18 @@
 package com.codeit.team5.mopl.content.entity;
 
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -54,4 +59,34 @@ public class Content extends BaseUpdatableEntity {
 
     @Column(name = "external_id", nullable = false, length = 100)
     private String externalId;
+
+    @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ContentTag> contentTags = new ArrayList<>();
+
+    public static Content create(ContentType type, String title, String description) {
+        Content content = new Content();
+        content.type = type;
+        content.title = title;
+        content.description = description;
+        return content;
+    }
+
+    public void addTag(Tag tag) {
+        if (tag == null) {
+            return;
+        }
+
+        boolean alreadyExists = this.contentTags.stream()
+                .anyMatch(ct -> {
+                    Tag existing = ct.getTag();
+                    if (existing.getId() == null || tag.getId() == null) {
+                        return existing == tag;
+                    }
+                    return existing.getId().equals(tag.getId());
+                });
+
+        if (!alreadyExists) {
+            contentTags.add(ContentTag.create(this, tag));
+        }
+    }
 }

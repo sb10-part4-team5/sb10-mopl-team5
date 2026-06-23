@@ -34,10 +34,12 @@ public class ContentTag {
     @JoinColumn(name = "tag_id")
     private Tag tag;
 
-    public ContentTag(Content content, Tag tag) {
-        this.id = new ContentTagId(content.getId(), tag.getId());
-        this.content = content;
-        this.tag = tag;
+    public static ContentTag create(Content content, Tag tag) {
+        ContentTag contentTag = new ContentTag();
+        contentTag.id = new ContentTagId(content.getId(), tag.getId());
+        contentTag.content = content;
+        contentTag.tag = tag;
+        return contentTag;
     }
 
     @Embeddable
