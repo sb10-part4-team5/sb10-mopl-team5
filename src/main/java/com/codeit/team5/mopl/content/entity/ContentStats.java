@@ -35,7 +35,7 @@ public class ContentStats {
     private double ratingSum;
 
     @Column(nullable = false)
-    private int watcherCount;
+    private long watcherCount;
 
     @Column(nullable = false)
     private Instant updatedAt;
