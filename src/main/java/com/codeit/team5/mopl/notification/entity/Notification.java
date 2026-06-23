@@ -45,8 +45,18 @@ public class Notification extends BaseEntity {
     @Column(name = "read_at", nullable = true)
     private Instant readAt;
 
+    public static Notification create(
+        UUID receiverId, String title, String content, NotificationLevel level) {
+        if (receiverId == null) {
+            throw new IllegalArgumentException("receiverId는 필수입니다.");
+        }
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("title은 비어 있을 수 없습니다.");
+        }
+        return new Notification(receiverId, title, content, level);
+    }
     // 생성자
-    public Notification(UUID receiverId, String title, String content, NotificationLevel level) {
+    private Notification(UUID receiverId, String title, String content, NotificationLevel level) {
         this.receiverId = receiverId;
         this.title = title;
         this.content = content;
@@ -58,5 +68,6 @@ public class Notification extends BaseEntity {
     // 알림 읽기 처리 메서드
     public void markAsRead() {
         this.isRead = true;
+        this.readAt = Instant.now();
     }
 }
