@@ -72,3 +72,6 @@ $RECYCLE.BIN/
 
 ### Gradle Wrapper 예외 ###
 !gradle/wrapper/gradle-wrapper.jar
+
+### 로그 디렉토리 ###
+.logs/
