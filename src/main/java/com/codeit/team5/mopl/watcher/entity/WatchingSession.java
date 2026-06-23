@@ -31,7 +31,7 @@ public class WatchingSession extends BaseEntity {
     @JoinColumn(name = "content_id", nullable = false)
     private Content content;
 
-    public WatchingSession(User user, Content content) {
+    private WatchingSession(User user, Content content) {
         this.user = user;
         this.content = content;
     }

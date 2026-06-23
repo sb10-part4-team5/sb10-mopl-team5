@@ -10,6 +10,8 @@ import com.codeit.team5.mopl.watcher.dto.WatchingSessionCreatedRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.exception.WatcherErrorCode;
+import com.codeit.team5.mopl.watcher.exception.WatcherException;
 import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.Map;
@@ -36,10 +38,12 @@ public class WatchingSessionService {
     @Transactional
     public WatchingSessionResponse create(WatchingSessionCreatedRequest request) {
         if (!userRepository.existsById(request.watcherId())) {
-            throw new IllegalArgumentException();
+            throw new WatcherException(WatcherErrorCode.USER_NOT_FOUND,
+                    Map.of("UserId", request.watcherId()));
         }
         if (!contentRepository.existsById(request.contentId())) {
-            throw new IllegalArgumentException();
+            throw new WatcherException(WatcherErrorCode.CONTENT_NOT_FOUND,
+                    Map.of("ContentId", request.contentId()));
         }
         User user = userRepository.getReferenceById(request.watcherId());
         Content content = contentRepository.getReferenceById(request.contentId());
@@ -49,7 +53,9 @@ public class WatchingSessionService {
     }
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
-        return mapper.toDto(repository.findByUser_Id(watcherId).orElseThrow());
+        return mapper.toDto(repository.findByUser_Id(watcherId)
+                .orElseThrow(() -> new WatcherException(WatcherErrorCode.NOT_FOUND,
+                        Map.of("UserId", watcherId))));
     }
 
     public CursorResponse<WatchingSessionResponse> findSessionByContentId(UUID contentId,
@@ -70,16 +76,19 @@ public class WatchingSessionService {
             repository.deleteByUserIdDirectly(userId);
             return;
         }
-        throw new IllegalArgumentException();
+        throw new WatcherException(WatcherErrorCode.NOT_FOUND,
+                Map.of("UserId", userId));
     }
 
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {
-        if (request.cursor() == null || request.idAfter() == null) {
+        String cursor = request.cursor();
+        String idAfter = request.idAfter();
+        if (cursor == null || idAfter == null) {
             return ScrollPosition.keyset();
         }
         Map<String, Object> keyset = Map.of(
-                request.sortBy().getValue(), request.cursor(),
-                SortByType.ID.getValue(), UUID.fromString(request.idAfter())
+                request.sortBy().getValue(), cursor,
+                SortByType.ID.getValue(), UUID.fromString(idAfter)
         );
         return ScrollPosition.of(keyset, Direction.FORWARD);
     }
