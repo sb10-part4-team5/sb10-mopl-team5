@@ -182,4 +182,28 @@ class ContentServiceTest {
         // Then
         verify(tagRepository, times(2)).save(any(Tag.class));
     }
+
+    @Test
+    @DisplayName("중복된 태그가 요청에 포함되어도 한 번만 저장한다")
+    void create_duplicateTags_savesOnce() {
+        // Given
+        ContentCreateRequest request = new ContentCreateRequest(
+                ContentType.MOVIE,
+                "테스트 영화",
+                null,
+                List.of("액션", "액션")
+        );
+
+        when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
+        when(tagRepository.findByName("액션")).thenReturn(Optional.empty());
+        when(tagRepository.save(any(Tag.class))).then(returnsFirstArg());
+        when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
+        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
+
+        // When
+        contentService.create(request, null);
+
+        // Then
+        verify(tagRepository, times(1)).save(any(Tag.class));
+    }
 }
