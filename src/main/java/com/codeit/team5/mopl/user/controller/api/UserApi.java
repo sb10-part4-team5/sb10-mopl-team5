@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.user.controller.api;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,5 +21,7 @@ public interface UserApi {
             @ApiResponse(responseCode = "409", description = "이메일 중복"),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류")
     })
-    ResponseEntity<UserResponse> registerUser(@Valid @RequestBody UserRegisterRequest userRegisterRequest);
+    ResponseEntity<UserResponse> registerUser(
+            @Parameter(description = "회원가입 요청 본문", required = true)
+            @Valid @RequestBody UserRegisterRequest userRegisterRequest);
 }
