@@ -31,8 +31,8 @@ class MdcLoggingFilterTest {
     class RequestId {
 
         @Test
-        @DisplayName("X-Request-Id 헤더가 없으면 새 UUID를 생성하고 응답 헤더에 담기 성공")
-        void generatesNewIdWhenHeaderMissing() throws Exception {
+        @DisplayName("새 UUID를 생성하고 응답 헤더에 담기 성공")
+        void generatesNewId() throws Exception {
             MockHttpServletRequest request = new MockHttpServletRequest();
             MockHttpServletResponse response = new MockHttpServletResponse();
             CapturingFilterChain chain = new CapturingFilterChain();
@@ -47,47 +47,16 @@ class MdcLoggingFilterTest {
         }
 
         @Test
-        @DisplayName("유효한 X-Request-Id 헤더가 들어오면 재사용 성공")
-        void reusesValidIncomingId() throws Exception {
-            String incoming = "abc-123-DEF";
+        @DisplayName("X-Request-Id 헤더가 들어와도 무시하고 새로 생성 성공")
+        void ignoresIncomingHeader() throws Exception {
             MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader(MdcKey.REQUEST_ID_HEADER, incoming);
+            request.addHeader(MdcKey.REQUEST_ID_HEADER, "incoming-id-123");
             MockHttpServletResponse response = new MockHttpServletResponse();
             CapturingFilterChain chain = new CapturingFilterChain();
 
             filter.doFilter(request, response, chain);
 
-            assertThat(chain.requestId).isEqualTo(incoming);
-            assertThat(response.getHeader(MdcKey.REQUEST_ID_HEADER)).isEqualTo(incoming);
-        }
-
-        @Test
-        @DisplayName("안전하지 않은 문자(로그 인젝션)가 포함된 ID는 무시하고 새로 새로 생성 성공")
-        void regeneratesWhenIncomingIdHasUnsafeChars() throws Exception {
-            String malicious = "bad\nINJECTED-LOG";
-            MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader(MdcKey.REQUEST_ID_HEADER, malicious);
-            MockHttpServletResponse response = new MockHttpServletResponse();
-            CapturingFilterChain chain = new CapturingFilterChain();
-
-            filter.doFilter(request, response, chain);
-
-            assertThat(chain.requestId).isNotEqualTo(malicious);
-            assertThat(isUuid(chain.requestId)).isTrue();
-        }
-
-        @Test
-        @DisplayName("최대 길이(64자)를 초과한 ID는 무시하고 새로 생성 성공")
-        void regeneratesWhenIncomingIdTooLong() throws Exception {
-            String tooLong = "a".repeat(65);
-            MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader(MdcKey.REQUEST_ID_HEADER, tooLong);
-            MockHttpServletResponse response = new MockHttpServletResponse();
-            CapturingFilterChain chain = new CapturingFilterChain();
-
-            filter.doFilter(request, response, chain);
-
-            assertThat(chain.requestId).isNotEqualTo(tooLong);
+            assertThat(chain.requestId).isNotEqualTo("incoming-id-123");
             assertThat(isUuid(chain.requestId)).isTrue();
         }
     }

@@ -6,12 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -22,20 +20,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class MdcLoggingFilter extends OncePerRequestFilter {
 
-    /** 외부에서 들어온 requestId 재사용 시 허용하는 최대 길이 */
-    private static final int MAX_REQUEST_ID_LENGTH = 64;
-
-    /** 로그 인젝션 방지를 위해 영숫자/하이픈만 허용 */
-    private static final Pattern SAFE_REQUEST_ID = Pattern.compile("[A-Za-z0-9\\-]+");
-
     @Override
-    protected void doFilterInternal (
+    protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
         try {
-            String requestId = resolveRequestId(request);
+            String requestId = UUID.randomUUID().toString();
             MDC.put(MdcKey.REQUEST_ID, requestId);
             MDC.put(MdcKey.CLIENT_IP, request.getRemoteAddr());
 
@@ -48,22 +40,4 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
             MDC.clear();
         }
     }
-
-    /**
-     * 외부에서 유효한 X-Request-Id가 들어오면 재사용
-     * 없거나 형식이 안전하지 않으면 새로 생성
-     */
-    private String resolveRequestId(HttpServletRequest request) {
-        String requestId = request.getHeader(MdcKey.REQUEST_ID_HEADER);
-        if (StringUtils.hasText(requestId) && isSafeRequestId(requestId)) {
-            return requestId;
-        }
-        return UUID.randomUUID().toString();
-    }
-
-    private boolean isSafeRequestId(String requestId) {
-        return requestId.length() <= MAX_REQUEST_ID_LENGTH
-            && SAFE_REQUEST_ID.matcher(requestId).matches();
-    }
-
 }
