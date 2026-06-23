@@ -54,20 +54,20 @@ public class WatchingSessionService {
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
         return mapper.toDto(repository.findByUser_Id(watcherId)
-                .orElseThrow(() -> new WatcherException(WatcherErrorCode.NOT_FOUND,
+                .orElseThrow(() -> new WatcherException(WatcherErrorCode.WATCHING_SESSION_NOT_FOUND,
                         Map.of("UserId", watcherId))));
     }
 
     public CursorResponse<WatchingSessionResponse> findSessionByContentId(UUID contentId,
             WatchingSessionCursorRequest request) {
-
-        Sort sort = Sort.by(request.sortDirection(), request.sortBy().getValue())
-                .and(Sort.by(request.sortDirection(), SortByType.ID.getValue()));
+        Sort.Direction direction = request.sortDirection();
+        SortByType sortBy = request.sortBy();
+        Sort sort = Sort.by(direction, sortBy.getValue())
+                .and(Sort.by(direction, SortByType.ID.getValue()));
         ScrollPosition scrollPosition = createScrollPosition(request);
-
         Window<WatchingSession> result = repository.findByContent_Id(
                 contentId, scrollPosition, Limit.of(request.limit()), sort);
-        return mapper.toCursor(result);
+        return mapper.toCursor(result, sortBy, direction);
     }
 
     @Transactional
@@ -76,7 +76,7 @@ public class WatchingSessionService {
             repository.deleteByUserIdDirectly(userId);
             return;
         }
-        throw new WatcherException(WatcherErrorCode.NOT_FOUND,
+        throw new WatcherException(WatcherErrorCode.WATCHING_SESSION_NOT_FOUND,
                 Map.of("UserId", userId));
     }
 

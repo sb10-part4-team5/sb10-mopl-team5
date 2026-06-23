@@ -6,6 +6,10 @@ import java.util.Map;
 
 public class WatcherException extends BusinessException {
 
+    public WatcherException(ErrorCode errorCode) {
+        super(errorCode);
+    }
+
     public WatcherException(ErrorCode errorCode, Map<String, Object> details) {
         super(errorCode, details);
     }
