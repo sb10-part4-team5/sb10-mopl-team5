@@ -1,9 +1,10 @@
 package com.codeit.team5.mopl.user.entity;
 
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.exception.InvalidPasswordException;
 import com.codeit.team5.mopl.user.exception.InvalidUsernameException;
+import com.codeit.team5.mopl.user.exception.SameLockStatusException;
+import com.codeit.team5.mopl.user.exception.SameRoleAssignmentException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -62,21 +63,31 @@ public class User extends BaseUpdatableEntity {
             String newName,
             String profileImageUrl
     ) {
-        // 추후 서비스 계층에서 예외처리 진행
+        if (newName == null || newName.isBlank()) {
+            throw new InvalidUsernameException();
+        }
         this.name = newName;
         this.profileImageUrl = profileImageUrl;
     }
 
     public void updatePassword(String newPassword) {
-        // 추후 서비스 계층에서 예외처리 진행
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new InvalidPasswordException();
+        }
         this.password = newPassword;
     }
 
     public void updateRole(UserRole role) {
+        if (role == this.role) {
+            throw new SameRoleAssignmentException();
+        }
         this.role = role;
     }
 
     public void updateLocked(boolean locked) {
+        if (locked == this.locked) {
+            throw new SameLockStatusException();
+        }
         this.locked = locked;
     }
 }

@@ -14,8 +14,4 @@ import org.mapstruct.ReportingPolicy;
 public interface UserMapper {
     @Mapping(target = "role", source = "user.role")
     UserResponse toDto(User user);
-
-    default User toEntity(UserRegisterRequest request) {
-        return User.create(request.email(), request.password(), request.name());
-    }
 }

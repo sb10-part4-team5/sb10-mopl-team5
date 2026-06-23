@@ -30,15 +30,8 @@ public class UserService {
 
         validateDuplicateEmail(normalizedEmail);
 
-        UserRegisterRequest normalizedRequest = new UserRegisterRequest(
-                request.name(),
-                normalizedEmail,
-                request.password()
-        );
-
-        User user = userMapper.toEntity(normalizedRequest);
         String encodedPassword = passwordEncoder.encode(request.password());
-        user.updatePassword(encodedPassword);
+        User user = User.create(normalizedEmail, encodedPassword, request.name());
 
         try {
             User savedUser = userRepository.save(user);
@@ -53,7 +46,7 @@ public class UserService {
             if (userRepository.existsByEmail(normalizedEmail)) {
                 log.warn(
                         "Duplicated email: 저장 중 이메일 중복 충돌 발생. email={}",
-                        maskEmail(normalizedEmail),
+                        normalizedEmail,
                         e
                 );
                 throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS);
@@ -74,21 +67,5 @@ public class UserService {
 
     private String normalizeEmail(String email) {
         return email.toLowerCase(Locale.ROOT);
-    }
-
-    private String maskEmail(String email) {
-        if (email == null || !email.contains("@")) {
-            return "***";
-        }
-
-        String[] parts = email.split("@");
-        String localPart = parts[0];
-        String domain = parts[1];
-
-        if (localPart.length() <= 2) {
-            return "***@" + domain;
-        }
-
-        return localPart.substring(0, 2) + "***@" + domain;
     }
 }

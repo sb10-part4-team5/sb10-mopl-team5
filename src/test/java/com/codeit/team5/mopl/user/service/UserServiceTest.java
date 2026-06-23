@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -46,12 +47,12 @@ class UserServiceTest {
     void createUser_success() {
         // Given
         UserRegisterRequest request =
-                new UserRegisterRequest("사용자", "user@example.com", "password1");
-        User user = User.create(request.email(), request.password(), request.name());
+                new UserRegisterRequest("사용자", "User@Example.COM", "password1");
+        String normalizedEmail = "user@example.com";
         UserResponse expectedResponse = new UserResponse(
                 UUID.randomUUID(),
                 Instant.parse("2026-06-22T00:00:00Z"),
-                request.email(),
+                normalizedEmail,
                 request.name(),
                 null,
                 "USER",
@@ -59,11 +60,10 @@ class UserServiceTest {
         );
         String encodedPassword = "encoded-password";
 
-        when(userRepository.existsByEmail(request.email())).thenReturn(false);
-        when(userMapper.toEntity(request)).thenReturn(user);
+        when(userRepository.existsByEmail(normalizedEmail)).thenReturn(false);
         when(passwordEncoder.encode(request.password())).thenReturn(encodedPassword);
-        when(userRepository.save(user)).thenReturn(user);
-        when(userMapper.toDto(user)).thenReturn(expectedResponse);
+        when(userRepository.save(any(User.class))).then(returnsFirstArg());
+        when(userMapper.toDto(any(User.class))).thenReturn(expectedResponse);
 
         // When
         UserResponse result = userService.create(request);
@@ -72,14 +72,17 @@ class UserServiceTest {
         assertThat(result).isSameAs(expectedResponse);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).existsByEmail(request.email());
-        verify(userMapper).toEntity(request);
+        verify(userRepository).existsByEmail(normalizedEmail);
         verify(passwordEncoder).encode(request.password());
         verify(userRepository).save(userCaptor.capture());
-        verify(userMapper).toDto(user);
 
-        assertThat(userCaptor.getValue()).isSameAs(user);
-        assertThat(userCaptor.getValue().getPassword()).isEqualTo(encodedPassword);
+        User savedUser = userCaptor.getValue();
+        verify(userMapper).toDto(savedUser);
+        assertThat(savedUser.getEmail()).isEqualTo(normalizedEmail);
+        assertThat(savedUser.getPassword()).isEqualTo(encodedPassword);
+        assertThat(savedUser.getName()).isEqualTo(request.name());
+        assertThat(savedUser.getRole().name()).isEqualTo("USER");
+        assertThat(savedUser.isLocked()).isFalse();
     }
 
     @Test
