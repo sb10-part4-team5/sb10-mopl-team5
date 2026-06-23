@@ -25,7 +25,7 @@ public class UserController implements UserApi {
     @PostMapping
     public ResponseEntity<UserResponse> registerUser(
             @Valid @RequestBody UserRegisterRequest userRegisterRequest) {
-        log.info("User register request: POST /api/users, email={}", userRegisterRequest.email());
+        log.info("User register request: POST /api/users");
 
         UserResponse response = userService.create(userRegisterRequest);
 
