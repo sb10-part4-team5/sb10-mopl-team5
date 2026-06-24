@@ -8,8 +8,8 @@ import com.codeit.team5.mopl.content.exception.ContentException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.tag.entity.Tag;
+import org.springframework.http.HttpStatus;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +50,7 @@ public class ContentService {
                 .toList();
 
         if (tagNames.isEmpty()) {
-            throw new ContentException(ErrorCode.INVALID_INPUT, "정규화 후 유효한 태그가 없습니다.");
+            throw new ContentException(HttpStatus.BAD_REQUEST, "정규화 후 유효한 태그가 없습니다.");
         }
 
         Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
