@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -15,6 +16,7 @@ import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -226,6 +228,52 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.details").isEmpty());
 
         verify(userService).create(request);
+    }
+
+    @Test
+    @DisplayName("사용자 상세 조회 성공")
+    void getUser_success() throws Exception {
+        // Given
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        UserResponse response = new UserResponse(
+                userId,
+                Instant.parse("2026-06-23T00:00:00Z"),
+                "user@example.com",
+                "사용자",
+                null,
+                "USER",
+                false
+        );
+        given(userService.getById(userId)).willReturn(response);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/{userId}", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId.toString()))
+                .andExpect(jsonPath("$.createdAt").value("2026-06-23T00:00:00Z"))
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.name").value("사용자"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.locked").value(false));
+
+        verify(userService).getById(userId);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자 조회 실패")
+    void getUser_notFound() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        given(userService.getById(userId)).willThrow(new UserNotFoundException(userId));
+
+        // When & Then
+        // 예외 핸들러 마이그레이션 전이라 상태코드는 에러(>=400)로만 일반화 검증
+        // (핸들러 활성화 후 404 + ErrorResponseSuggestion 형식으로 강화 예정)
+        mockMvc.perform(get("/api/users/{userId}", userId))
+                .andExpect(result ->
+                        assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+
+        verify(userService).getById(userId);
     }
 
 }
