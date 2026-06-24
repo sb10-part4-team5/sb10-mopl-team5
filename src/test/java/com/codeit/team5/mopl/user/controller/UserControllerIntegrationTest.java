@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.user.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -154,5 +155,23 @@ class UserControllerIntegrationTest {
                         .value("비밀번호는 영문자와 숫자를 포함하여 8자 이상이어야 합니다."));
 
         assertThat(userRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("사용자 상세 조회 성공")
+    void getUser_success() throws Exception {
+        // Given
+        User savedUser = userRepository.saveAndFlush(
+                User.create("user@example.com", "encoded-password", "사용자"));
+
+        // When & Then
+        mockMvc.perform(get("/api/users/{userId}", savedUser.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(savedUser.getId().toString()))
+                .andExpect(jsonPath("$.createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.name").value("사용자"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.locked").value(false));
     }
 }

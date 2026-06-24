@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -226,6 +227,35 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.details").isEmpty());
 
         verify(userService).create(request);
+    }
+
+    @Test
+    @DisplayName("사용자 상세 조회 성공")
+    void getUser_success() throws Exception {
+        // Given
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        UserResponse response = new UserResponse(
+                userId,
+                Instant.parse("2026-06-23T00:00:00Z"),
+                "user@example.com",
+                "사용자",
+                null,
+                "USER",
+                false
+        );
+        given(userService.getById(userId)).willReturn(response);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/{userId}", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId.toString()))
+                .andExpect(jsonPath("$.createdAt").value("2026-06-23T00:00:00Z"))
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.name").value("사용자"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.locked").value(false));
+
+        verify(userService).getById(userId);
     }
 
 }
