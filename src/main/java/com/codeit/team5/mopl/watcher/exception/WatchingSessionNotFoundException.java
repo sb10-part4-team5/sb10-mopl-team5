@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 
 public class WatchingSessionNotFoundException extends WatcherException {
 
-    public WatchingSessionNotFoundException(UUID watcherId) {
-        super(HttpStatus.NOT_FOUND, "User의 시청 세션을 찾을 수 없습니다.", Map.of("watcherId", watcherId));
+    public WatchingSessionNotFoundException(String targetName, UUID targetId) {
+        super(HttpStatus.NOT_FOUND, "User의 시청 세션을 찾을 수 없습니다.", Map.of(targetName, targetId));
     }
 }

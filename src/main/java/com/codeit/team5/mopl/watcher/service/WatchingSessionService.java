@@ -10,9 +10,7 @@ import com.codeit.team5.mopl.watcher.dto.WatchingSessionCreatedRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionContentNotFound;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionUserNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.Map;
@@ -41,10 +39,10 @@ public class WatchingSessionService {
     @Transactional
     public WatchingSessionResponse create(WatchingSessionCreatedRequest request) {
         if (!userRepository.existsById(request.watcherId())) {
-            throw new WatchingSessionUserNotFoundException(request.watcherId());
+            throw new WatchingSessionNotFoundException("userId", request.watcherId());
         }
         if (!contentRepository.existsById(request.contentId())) {
-            throw new WatchingSessionContentNotFound(request.contentId());
+            throw new WatchingSessionNotFoundException("contentId", request.contentId());
         }
         User user = userRepository.getReferenceById(request.watcherId());
         Content content = contentRepository.getReferenceById(request.contentId());
@@ -55,7 +53,7 @@ public class WatchingSessionService {
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
         return mapper.toDto(repository.findByUserId(watcherId)
-                .orElseThrow(() -> new WatchingSessionNotFoundException(watcherId)));
+                .orElseThrow(() -> new WatchingSessionNotFoundException("userId", watcherId)));
     }
 
     public CursorResponse<WatchingSessionResponse> findSessionByContentId(UUID contentId,
@@ -77,7 +75,7 @@ public class WatchingSessionService {
             repository.deleteByUserIdDirectly(userId);
             return;
         }
-        throw new WatchingSessionUserNotFoundException(userId);
+        throw new WatchingSessionNotFoundException("userId", userId);
     }
 
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {
