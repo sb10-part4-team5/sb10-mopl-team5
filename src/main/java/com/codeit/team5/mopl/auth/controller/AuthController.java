@@ -1,0 +1,29 @@
+package com.codeit.team5.mopl.auth.controller;
+
+import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
+import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
+import com.codeit.team5.mopl.auth.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RequestMapping("/api/auth")
+@RestController
+@RequiredArgsConstructor
+public class AuthController {
+    private final AuthService authService;
+
+    @PostMapping("/sign-in")
+    public ResponseEntity<JwtResponse> login(
+            @Valid @RequestBody SignInRequest request
+    ) {
+        JwtResponse response = authService.login(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+}
