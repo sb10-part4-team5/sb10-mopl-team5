@@ -14,15 +14,15 @@ public abstract class BusinessExceptionSuggestion extends RuntimeException {
     private final String message; // client 에게 보낼 message
     private final String detailMessage; // logging 을 위한 message
 
-    public BusinessExceptionSuggestion(ErrorCodeSuggestion errorCode) {
-        this(errorCode, null);
+    public BusinessExceptionSuggestion(HttpStatus status, String message) {
+        this(status, message, null);
     }
 
-    public BusinessExceptionSuggestion(ErrorCodeSuggestion errorCode, Map<String, Object> details) {
-        super(errorCode.getMessage());
-        this.status = errorCode.getStatus();
+    public BusinessExceptionSuggestion(HttpStatus status, String message, Map<String, Object> details) {
+        super(message);
+        this.status = status;
         this.exceptionType = this.getClass().getSimpleName();
-        this.message = errorCode.getMessage();
+        this.message = message;
         this.detailMessage = formatDetailMessage(this.message, details);
     }
 
