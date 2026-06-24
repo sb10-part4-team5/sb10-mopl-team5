@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.content.entity.ContentType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record ContentCreateRequest(
@@ -11,6 +12,7 @@ public record ContentCreateRequest(
         ContentType type,
 
         @NotBlank(message = "제목은 필수입니다.")
+        @Size(max = 500, message = "제목은 500자를 초과할 수 없습니다.")
         String title,
 
         String description,

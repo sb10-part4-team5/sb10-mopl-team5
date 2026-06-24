@@ -78,7 +78,7 @@ public class Content extends BaseUpdatableEntity {
 
     public static Content createByExternalSource(ContentType type, String title, String description,
             ContentSource source, String externalId, Instant releasedAt, String metadata) {
-        if (source == ContentSource.ADMIN) {
+        if (source == null || source == ContentSource.ADMIN) {
             throw new InvalidContentSourceException("외부 소스 생성에 ADMIN 소스는 사용할 수 없습니다.");
         }
         if (externalId == null || externalId.isBlank()) {
