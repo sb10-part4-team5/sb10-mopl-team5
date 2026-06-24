@@ -15,8 +15,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,9 +40,9 @@ public class AuthService {
     @Transactional
     public JwtResponse login(SignInRequest request) {
         User user = findByEmailOrElseThrow(normalizeEmail(request.username()));
-        String encodedPassword = passwordEncoder.encode(request.password());
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            log.warn("Login failed: id={}", user.getId());
             throw new InvalidCredentialsException("비밀번호가 일치하지 않습니다.");
         }
 
@@ -56,11 +59,27 @@ public class AuthService {
                 .plus(jwtProperties.refreshTokenExpirationMinutes(), ChronoUnit.MINUTES);
         refreshTokenStore.save(user.getId(), refreshToken, refreshExpiresAt);
 
+        log.info("Login success: id={}", user.getId());
+
         return authMapper.toDto(user, accessToken);
     }
 
+    @Transactional
     public void logout() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("Logout failed: unauthenticated request");
+            return;
+        }
+
+        UUID userId = (UUID) authentication.getPrincipal();
+
+        refreshTokenStore.deleteByUserId(userId);
+
+        SecurityContextHolder.clearContext();
+
+        log.info("Logout success: id={}", userId);
     }
 
     private User findByEmailOrElseThrow(String email) {
