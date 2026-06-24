@@ -2,12 +2,14 @@ package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
+import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
 import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserException;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -38,7 +40,7 @@ public class AuthService {
         String encodedPassword = passwordEncoder.encode(request.password());
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new UserException(ErrorCode.INVALID_PASSWORD);
+            throw new InvalidCredentialsException("비밀번호가 일치하지 않습니다.");
         }
 
         Map<String, Object> claims = Map.of(
@@ -63,7 +65,7 @@ public class AuthService {
 
     private User findByEmailOrElseThrow(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserNotFoundException(email));
     }
 
     private String normalizeEmail(String email) {
