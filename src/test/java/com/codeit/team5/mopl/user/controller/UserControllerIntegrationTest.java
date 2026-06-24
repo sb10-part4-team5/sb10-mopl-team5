@@ -12,6 +12,7 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -173,5 +174,19 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.name").value("사용자"))
                 .andExpect(jsonPath("$.role").value("USER"))
                 .andExpect(jsonPath("$.locked").value(false));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자 조회 실패")
+    void getUser_notFound() throws Exception {
+        // Given
+        UUID unknownId = UUID.randomUUID();
+
+        // When & Then
+        // 예외 핸들러 마이그레이션 전이라 상태코드는 에러(>=400)로만 일반화 검증
+        // (핸들러 활성화 후 404 + ErrorResponseSuggestion 형식으로 강화 예정)
+        mockMvc.perform(get("/api/users/{userId}", unknownId))
+                .andExpect(result ->
+                        assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
     }
 }
