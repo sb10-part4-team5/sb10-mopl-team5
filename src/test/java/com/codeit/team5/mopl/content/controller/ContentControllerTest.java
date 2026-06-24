@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.service.ContentService;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
@@ -63,7 +64,8 @@ class ContentControllerTest {
                 ContentType.MOVIE,
                 "테스트 영화",
                 "테스트 설명",
-                null,
+                "http://localhost:8080/thumbnails/11111111-1111-1111-1111-111111111111/test.jpg",
+                BinaryContentUploadStatus.PENDING,
                 List.of("액션", "드라마"),
                 0.0, 0, 0
         );
@@ -92,6 +94,8 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.type").value("movie"))
                 .andExpect(jsonPath("$.title").value("테스트 영화"))
                 .andExpect(jsonPath("$.description").value("테스트 설명"))
+                .andExpect(jsonPath("$.thumbnailUrl").value(response.thumbnailUrl()))
+                .andExpect(jsonPath("$.thumbnailUploadStatus").value("PENDING"))
                 .andExpect(jsonPath("$.tags[0]").value("액션"))
                 .andExpect(jsonPath("$.tags[1]").value("드라마"))
                 .andExpect(jsonPath("$.averageRating").value(0.0))
@@ -106,7 +110,6 @@ class ContentControllerTest {
         assertThat(captured.tags()).containsExactly("액션", "드라마");
     }
 
-    //todo 현재는 썸네일 처리 로직이 없기에 썸네일이 있는 테스트 코드와 다르지 않음
     @Test
     @DisplayName("thumbnail 없이 콘텐츠 생성 요청이면 201 응답을 반환한다")
     void postContent_withoutThumbnail_success() throws Exception {
@@ -122,6 +125,7 @@ class ContentControllerTest {
                 ContentType.TV_SERIES,
                 "테스트 드라마",
                 "테스트 설명",
+                null,
                 null,
                 List.of("로맨스"),
                 0.0, 0, 0

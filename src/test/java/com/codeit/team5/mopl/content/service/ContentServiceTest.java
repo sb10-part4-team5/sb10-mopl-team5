@@ -10,18 +10,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentType;
-import com.codeit.team5.mopl.content.exception.ContentException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -49,6 +50,12 @@ class ContentServiceTest {
     @Mock
     private ContentMapper contentMapper;
 
+    @Mock
+    private BinaryContentStorage binaryContentStorage;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private ContentService contentService;
 
@@ -71,6 +78,7 @@ class ContentServiceTest {
                 ContentType.MOVIE,
                 "테스트 영화",
                 "테스트 설명",
+                null,
                 null,
                 List.of("액션", "드라마"),
                 0.0, 0, 0
@@ -117,6 +125,7 @@ class ContentServiceTest {
                 UUID.randomUUID(),
                 ContentType.TV_SERIES,
                 "테스트 드라마",
+                null,
                 null,
                 null,
                 List.of("로맨스"),
