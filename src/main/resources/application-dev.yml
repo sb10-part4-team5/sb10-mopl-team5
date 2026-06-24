@@ -40,6 +40,16 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+  web:
+    resources:
+      static-locations: classpath:/static/, file:./uploads/
+
+storage:
+  type: ${STORAGE_TYPE:local}
+  local:
+    base-url: http://localhost:8080
+    upload-dir: ./uploads
+
 logging:
   level:
     root: INFO
