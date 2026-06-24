@@ -11,11 +11,12 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -68,8 +69,12 @@ public class Content extends BaseUpdatableEntity {
     @Column(name = "external_id", nullable = false, length = 100)
     private String externalId;
 
+    //@OneToOne은 연관 관계의 주인이 아닌 쪽에서 FetchType.LAZY가 적용되지 않음
+    @OneToOne(mappedBy = "content", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval= true)
+    private ContentStats stats;
+
     @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ContentTag> contentTags = new ArrayList<>();
+    private Set<ContentTag> contentTags = new HashSet<>();
 
     public static Content createByAdmin(ContentType type, String title, String description) {
         Content content = new Content();
@@ -117,18 +122,6 @@ public class Content extends BaseUpdatableEntity {
         if (tag == null) {
             return;
         }
-
-        boolean alreadyExists = this.contentTags.stream()
-                .anyMatch(ct -> {
-                    Tag existing = ct.getTag();
-                    if (existing.getId() != null && tag.getId() != null) {
-                        return existing.getId().equals(tag.getId());
-                    }
-                    return existing.getName().equals(tag.getName());
-                });
-
-        if (!alreadyExists) {
-            contentTags.add(ContentTag.create(this, tag));
-        }
+        contentTags.add(ContentTag.create(this, tag));
     }
 }
