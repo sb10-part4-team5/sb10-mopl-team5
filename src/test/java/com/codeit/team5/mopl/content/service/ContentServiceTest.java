@@ -77,7 +77,7 @@ class ContentServiceTest {
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
         when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
-        when(tagRepository.save(any(Tag.class))).thenReturn(dramaTag);
+        when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(expectedResponse);
 
@@ -95,7 +95,9 @@ class ContentServiceTest {
         assertThat(savedContent.getDescription()).isEqualTo("테스트 설명");
 
         verify(tagRepository).findByNameIn(List.of("액션", "드라마"));
-        verify(tagRepository, times(1)).save(any(Tag.class));
+        ArgumentCaptor<List<Tag>> saveAllCaptor = ArgumentCaptor.forClass(List.class);
+        verify(tagRepository).saveAll(saveAllCaptor.capture());
+        assertThat(saveAllCaptor.getValue()).hasSize(1);
         verify(contentStatsRepository).save(any(ContentStats.class));
     }
 
@@ -155,7 +157,7 @@ class ContentServiceTest {
         contentService.create(request, null);
 
         // Then
-        verify(tagRepository, never()).save(any(Tag.class));
+        verify(tagRepository, never()).saveAll(anyList());
     }
 
     @Test
@@ -171,7 +173,7 @@ class ContentServiceTest {
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
         when(tagRepository.findByNameIn(anyList())).thenReturn(List.of());
-        when(tagRepository.save(any(Tag.class))).then(returnsFirstArg());
+        when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
 
@@ -179,7 +181,9 @@ class ContentServiceTest {
         contentService.create(request, null);
 
         // Then
-        verify(tagRepository, times(2)).save(any(Tag.class));
+        ArgumentCaptor<List<Tag>> saveAllCaptor = ArgumentCaptor.forClass(List.class);
+        verify(tagRepository).saveAll(saveAllCaptor.capture());
+        assertThat(saveAllCaptor.getValue()).hasSize(2);
     }
 
     @Test
@@ -195,7 +199,7 @@ class ContentServiceTest {
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of());
-        when(tagRepository.save(any(Tag.class))).then(returnsFirstArg());
+        when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
 
@@ -203,7 +207,9 @@ class ContentServiceTest {
         contentService.create(request, null);
 
         // Then
-        verify(tagRepository, times(1)).save(any(Tag.class));
+        ArgumentCaptor<List<Tag>> saveAllCaptor = ArgumentCaptor.forClass(List.class);
+        verify(tagRepository).saveAll(saveAllCaptor.capture());
+        assertThat(saveAllCaptor.getValue()).hasSize(1);
     }
 
     @Test
@@ -224,7 +230,7 @@ class ContentServiceTest {
                 .isInstanceOf(ContentException.class);
 
         verify(tagRepository, never()).findByNameIn(anyList());
-        verify(tagRepository, never()).save(any(Tag.class));
+        verify(tagRepository, never()).saveAll(anyList());
     }
 
     @Test
@@ -240,7 +246,7 @@ class ContentServiceTest {
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
         when(tagRepository.findByNameIn(List.of("action", "drama"))).thenReturn(List.of());
-        when(tagRepository.save(any(Tag.class))).then(returnsFirstArg());
+        when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
 
