@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentTag;
+import java.util.Collections;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -18,7 +19,7 @@ public interface ContentMapper {
     ContentResponse toDto(Content content, List<ContentTag> contentTags, ContentStats stats);
 
     default List<String> toTagNames(List<ContentTag> contentTags) {
-        if (contentTags == null) return List.of();
+        if (contentTags == null) return Collections.emptyList();
         return contentTags.stream()
                 .map(ct -> ct.getTag().getName())
                 .toList();

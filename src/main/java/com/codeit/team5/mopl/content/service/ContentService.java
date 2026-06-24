@@ -56,9 +56,14 @@ public class ContentService {
         Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
                 .collect(Collectors.toMap(Tag::getName, Function.identity()));
 
-        tagNames.stream()
-                .map(name -> existingTags.computeIfAbsent(name, n -> tagRepository.save(Tag.create(n))))
-                .forEach(content::addTag);
+        List<Tag> newTags = tagNames.stream()
+                .filter(name -> !existingTags.containsKey(name))
+                .map(Tag::create)
+                .toList();
+
+        tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
+
+        tagNames.forEach(name -> content.addTag(existingTags.get(name)));
 
         ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
 

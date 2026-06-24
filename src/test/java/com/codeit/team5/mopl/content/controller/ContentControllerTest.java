@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.content.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -41,6 +44,9 @@ class ContentControllerTest {
 
     @MockitoBean
     private ContentService contentService;
+
+    @Captor
+    private ArgumentCaptor<ContentCreateRequest> requestCaptor;
 
     @Test
     @DisplayName("정상적인 콘텐츠 생성 요청이면 생성된 콘텐츠와 201 응답을 반환한다")
@@ -92,7 +98,12 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.reviewCount").value(0))
                 .andExpect(jsonPath("$.watcherCount").value(0));
 
-        verify(contentService).create(any(ContentCreateRequest.class), any(MultipartFile.class));
+        verify(contentService).create(requestCaptor.capture(), any(MultipartFile.class));
+        ContentCreateRequest captured = requestCaptor.getValue();
+        assertThat(captured.type()).isEqualTo(ContentType.MOVIE);
+        assertThat(captured.title()).isEqualTo("테스트 영화");
+        assertThat(captured.description()).isEqualTo("테스트 설명");
+        assertThat(captured.tags()).containsExactly("액션", "드라마");
     }
 
     //todo 현재는 썸네일 처리 로직이 없기에 썸네일이 있는 테스트 코드와 다르지 않음
@@ -135,7 +146,12 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.averageRating").value(0.0))
                 .andExpect(jsonPath("$.reviewCount").value(0))
                 .andExpect(jsonPath("$.watcherCount").value(0));
-        verify(contentService).create(any(ContentCreateRequest.class), isNull());
+        verify(contentService).create(requestCaptor.capture(), isNull());
+        ContentCreateRequest captured = requestCaptor.getValue();
+        assertThat(captured.type()).isEqualTo(ContentType.TV_SERIES);
+        assertThat(captured.title()).isEqualTo("테스트 드라마");
+        assertThat(captured.description()).isEqualTo("테스트 설명");
+        assertThat(captured.tags()).containsExactly("로맨스");
     }
 
     @Test
