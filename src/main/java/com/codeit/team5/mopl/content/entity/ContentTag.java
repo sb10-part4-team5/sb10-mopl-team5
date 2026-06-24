@@ -37,7 +37,7 @@ public class ContentTag {
 
     public static ContentTag create(Content content, Tag tag) {
         ContentTag contentTag = new ContentTag();
-        contentTag.id = new ContentTagId(content.getId(), tag.getId());
+        contentTag.id = new ContentTagId();
         contentTag.content = content;
         contentTag.tag = tag;
         return contentTag;

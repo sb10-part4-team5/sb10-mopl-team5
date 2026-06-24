@@ -3,7 +3,7 @@ package com.codeit.team5.mopl.content.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -20,7 +20,6 @@ import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -75,8 +74,7 @@ class ContentServiceTest {
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByName("액션")).thenReturn(Optional.of(actionTag));
-        when(tagRepository.findByName("드라마")).thenReturn(Optional.empty());
+        when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
         when(tagRepository.save(any(Tag.class))).thenReturn(dramaTag);
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(expectedResponse);
@@ -94,8 +92,7 @@ class ContentServiceTest {
         assertThat(savedContent.getTitle()).isEqualTo("테스트 영화");
         assertThat(savedContent.getDescription()).isEqualTo("테스트 설명");
 
-        verify(tagRepository).findByName("액션");
-        verify(tagRepository).findByName("드라마");
+        verify(tagRepository).findByNameIn(List.of("액션", "드라마"));
         verify(tagRepository, times(1)).save(any(Tag.class));
         verify(contentStatsRepository).save(any(ContentStats.class));
     }
@@ -122,7 +119,7 @@ class ContentServiceTest {
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByName("로맨스")).thenReturn(Optional.of(romanceTag));
+        when(tagRepository.findByNameIn(List.of("로맨스"))).thenReturn(List.of(romanceTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(expectedResponse);
 
@@ -148,9 +145,9 @@ class ContentServiceTest {
         Tag existingTag = Tag.create("액션");
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByName("액션")).thenReturn(Optional.of(existingTag));
+        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(existingTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(any());
+        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
 
         // When
         contentService.create(request, null);
@@ -171,10 +168,10 @@ class ContentServiceTest {
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByName(anyString())).thenReturn(Optional.empty());
+        when(tagRepository.findByNameIn(anyList())).thenReturn(List.of());
         when(tagRepository.save(any(Tag.class))).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(any());
+        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
 
         // When
         contentService.create(request, null);
@@ -195,7 +192,7 @@ class ContentServiceTest {
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByName("액션")).thenReturn(Optional.empty());
+        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of());
         when(tagRepository.save(any(Tag.class))).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);

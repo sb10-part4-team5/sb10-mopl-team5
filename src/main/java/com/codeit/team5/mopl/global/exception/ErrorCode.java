@@ -29,6 +29,9 @@ public enum ErrorCode {
     // Content
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다."),
 
+    // Tag
+    INVALID_TAG_NAME(HttpStatus.BAD_REQUEST, "유효하지 않은 태그 이름입니다."),
+
     // Review
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 콘텐츠에 리뷰를 작성했습니다."),

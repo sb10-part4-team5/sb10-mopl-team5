@@ -65,16 +65,26 @@ public class Content extends BaseUpdatableEntity {
     @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ContentTag> contentTags = new ArrayList<>();
 
-    public static Content create(ContentType type, String title, String description, ContentSource source) {
+    public static Content createByAdmin(ContentType type, String title, String description) {
+        Content content = new Content();
+        content.type = type;
+        content.title = title;
+        content.description = description;
+        content.source = ContentSource.ADMIN;
+        content.externalId = UUID.randomUUID().toString();
+        return content;
+    }
+
+    public static Content createByExternalSource(ContentType type, String title, String description,
+            ContentSource source, String externalId, Instant releasedAt, String metadata) {
         Content content = new Content();
         content.type = type;
         content.title = title;
         content.description = description;
         content.source = source;
-        // ADMIN이 생성 시 random UUID 값 할당 (uk_contents_source_external_id 때문에 값이 필수임)
-        content.externalId = source == ContentSource.ADMIN
-                ? UUID.randomUUID().toString()
-                : null;
+        content.externalId = externalId;
+        content.releasedAt = releasedAt;
+        content.metadata = metadata;
         return content;
     }
 
@@ -86,10 +96,10 @@ public class Content extends BaseUpdatableEntity {
         boolean alreadyExists = this.contentTags.stream()
                 .anyMatch(ct -> {
                     Tag existing = ct.getTag();
-                    if (existing.getId() == null || tag.getId() == null) {
-                        return existing == tag;
+                    if (existing.getId() != null && tag.getId() != null) {
+                        return existing.getId().equals(tag.getId());
                     }
-                    return existing.getId().equals(tag.getId());
+                    return existing.getName().equals(tag.getName());
                 });
 
         if (!alreadyExists) {
