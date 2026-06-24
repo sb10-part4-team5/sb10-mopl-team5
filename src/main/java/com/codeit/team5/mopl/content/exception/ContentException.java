@@ -1,15 +1,11 @@
 package com.codeit.team5.mopl.content.exception;
 
-import com.codeit.team5.mopl.global.exception.BusinessException;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import com.codeit.team5.mopl.global.exception.suggestion.BusinessExceptionSuggestion;
+import org.springframework.http.HttpStatus;
 
-public class ContentException extends BusinessException {
+public class ContentException extends BusinessExceptionSuggestion {
 
-    public ContentException(ErrorCode errorCode) {
-        super(errorCode);
-    }
-
-    public ContentException(ErrorCode errorCode, String detailMessage) {
-        super(errorCode, detailMessage);
+    public ContentException(HttpStatus status, String message) {
+        super(status, message);
     }
 }

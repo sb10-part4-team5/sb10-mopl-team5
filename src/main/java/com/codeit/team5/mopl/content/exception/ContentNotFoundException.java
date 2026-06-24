@@ -1,10 +1,10 @@
 package com.codeit.team5.mopl.content.exception;
 
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import org.springframework.http.HttpStatus;
 
 public class ContentNotFoundException extends ContentException {
 
     public ContentNotFoundException() {
-        super(ErrorCode.CONTENT_NOT_FOUND);
+        super(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다.");
     }
 }
