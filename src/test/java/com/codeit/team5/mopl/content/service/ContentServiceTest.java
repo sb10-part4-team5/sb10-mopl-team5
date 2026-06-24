@@ -16,6 +16,7 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.exception.ContentException;
+import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
@@ -227,7 +228,7 @@ class ContentServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> contentService.create(request, null))
-                .isInstanceOf(ContentException.class);
+                .isInstanceOf(EmptyTagException.class);
 
         verify(tagRepository, never()).findByNameIn(anyList());
         verify(tagRepository, never()).saveAll(anyList());
