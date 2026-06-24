@@ -3,6 +3,13 @@ spring:
     activate:
       on-profile: prod
 
+  # Redis/Kafka 인프라 미구축 상태 — autoconfig 비활성
+  # (추가 시: 아래 exclude 제거 + data.redis/kafka 설정 주석 해제)
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -19,27 +26,36 @@ spring:
         show_sql: false
         format_sql: false
 
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      timeout: 3000ms
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    consumer:
-      group-id: ${KAFKA_CONSUMER_GROUP:mopl-prod}
-      auto-offset-reset: latest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      acks: all
+  # Redis/Kafka 추가 시 주석 해제 (+ 위 autoconfigure.exclude 제거)
+  # data:
+  #   redis:
+  #     host: ${REDIS_HOST}
+  #     port: ${REDIS_PORT:6379}
+  #     password: ${REDIS_PASSWORD:}
+  #     timeout: 3000ms
+  #
+  # kafka:
+  #   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+  #   consumer:
+  #     group-id: ${KAFKA_CONSUMER_GROUP:mopl-prod}
+  #     auto-offset-reset: latest
+  #     key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  #     value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  #   producer:
+  #     key-serializer: org.apache.kafka.common.serialization.StringSerializer
+  #     value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  #     acks: all
 
 server:
   forward-headers-strategy: native
+
+# 배포 환경: 이미지를 S3에 저장
+mopl:
+  storage:
+    type: s3
+    s3:
+      bucket: ${S3_BUCKET:mopl-bucket-433041915727}
+      region: ${AWS_REGION:ap-northeast-2}
 
 logging:
   level:
