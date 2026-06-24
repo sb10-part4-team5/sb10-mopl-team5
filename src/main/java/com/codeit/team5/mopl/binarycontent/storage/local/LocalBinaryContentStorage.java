@@ -7,11 +7,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
@@ -25,13 +23,6 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
         this.uploadDir = Paths.get(properties.uploadDir()).toAbsolutePath().normalize();
         this.baseUrl = properties.baseUrl();
         init();
-    }
-
-    @Override
-    public String generateKey(UUID contentId, String originalFilename) {
-        String extension = StringUtils.getFilenameExtension(originalFilename);
-        String filename = UUID.randomUUID() + (extension != null ? "." + extension : "");
-        return "thumbnails/" + contentId + "/" + filename;
     }
 
     @Override

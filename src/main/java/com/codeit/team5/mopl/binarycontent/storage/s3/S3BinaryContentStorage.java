@@ -1,10 +1,8 @@
 package com.codeit.team5.mopl.binarycontent.storage.s3;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
-import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 @Component
 @ConditionalOnProperty(name = "storage.type", havingValue = "s3")
@@ -14,13 +12,6 @@ public class S3BinaryContentStorage implements BinaryContentStorage {
 
     public S3BinaryContentStorage(S3StorageProperties properties) {
         this.properties = properties;
-    }
-
-    @Override
-    public String generateKey(UUID contentId, String originalFilename) {
-        String extension = StringUtils.getFilenameExtension(originalFilename);
-        String filename = UUID.randomUUID() + (extension != null ? "." + extension : "");
-        return "thumbnails/" + contentId + "/" + filename;
     }
 
     @Override
