@@ -25,7 +25,10 @@ public class BinaryContentUploadListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(BinaryContentUploadEvent event) {
         Content content = contentRepository.findById(event.contentId())
-                .orElseThrow(ContentNotFoundException::new);
+                .orElseThrow(() -> {
+                    log.error("파일 업로드 대상 콘텐츠를 찾을 수 없음 - contentId: {}", event.contentId());
+                    return new ContentNotFoundException();
+                });
         try {
             binaryContentStorage.store(event.key(), event.bytes());
             content.completeThumbnailUpload();
