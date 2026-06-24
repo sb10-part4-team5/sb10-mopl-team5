@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "storage.s3")
 public record S3StorageProperties(
         String accessKey,
-        String privateKey,
+        String secretKey,
         String bucketName,
         String region
 ) {
