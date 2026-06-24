@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.content.entity;
 
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.tag.entity.Tag;
@@ -49,6 +50,10 @@ public class Content extends BaseUpdatableEntity {
     @Column(name = "thumbnail_url", length = 512)
     private String thumbnailUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "thumbnail_upload_status", length = 20)
+    private BinaryContentUploadStatus thumbnailUploadStatus;
+
     @Column(name = "released_at")
     private Instant releasedAt;
 
@@ -93,6 +98,19 @@ public class Content extends BaseUpdatableEntity {
         content.releasedAt = releasedAt;
         content.metadata = metadata;
         return content;
+    }
+
+    public void initThumbnail(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
+        this.thumbnailUploadStatus = BinaryContentUploadStatus.PENDING;
+    }
+
+    public void completeThumbnailUpload() {
+        this.thumbnailUploadStatus = BinaryContentUploadStatus.COMPLETED;
+    }
+
+    public void failThumbnailUpload() {
+        this.thumbnailUploadStatus = BinaryContentUploadStatus.FAILED;
     }
 
     public void addTag(Tag tag) {

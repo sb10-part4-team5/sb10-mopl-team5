@@ -16,6 +16,7 @@ public interface ContentMapper {
     @Mapping(target = "averageRating", source = "stats")
     @Mapping(target = "reviewCount", source = "stats.reviewCount")
     @Mapping(target = "watcherCount", source = "stats.watcherCount")
+    @Mapping(target = "thumbnailUploadStatus", source = "content.thumbnailUploadStatus")
     ContentResponse toDto(Content content, List<ContentTag> contentTags, ContentStats stats);
 
     default List<String> toTagNames(List<ContentTag> contentTags) {
