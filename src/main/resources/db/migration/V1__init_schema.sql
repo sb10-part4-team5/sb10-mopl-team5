@@ -58,8 +58,8 @@ CREATE TABLE contents
     title         VARCHAR(500) NOT NULL,
     description   TEXT,
     thumbnail_url VARCHAR(512),
-    released_at   TIMESTAMPTZ,                           -- 개봉일 / 경기 일시
-    metadata      JSONB,                                 -- 영화:runtime,genres,language / 스포츠:league,season,homeTeam,awayTeam
+    released_at   TIMESTAMPTZ, -- 개봉일 / 경기 일시
+    metadata      JSONB,       -- 영화:runtime,genres,language / 스포츠:league,season,homeTeam,awayTeam
     source        VARCHAR(20)  NOT NULL,
     external_id   VARCHAR(100) NOT NULL,
     created_at    TIMESTAMPTZ  NOT NULL,
@@ -68,8 +68,8 @@ CREATE TABLE contents
     CONSTRAINT ck_contents_source CHECK (source IN ('TMDB', 'SPORTS_DB')),
     CONSTRAINT uk_contents_source_external_id UNIQUE (source, external_id)
 );
-CREATE INDEX idx_contents_type     ON contents (type);
-CREATE INDEX idx_contents_title    ON contents (title);
+CREATE INDEX idx_contents_type ON contents (type);
+CREATE INDEX idx_contents_title ON contents (title);
 CREATE INDEX idx_contents_metadata ON contents USING GIN (metadata);
 
 -- 리뷰/시청 도메인 이벤트로 갱신되는 집계
@@ -97,7 +97,7 @@ CREATE TABLE content_tags
     tag_id     UUID NOT NULL,
     CONSTRAINT pk_content_tags PRIMARY KEY (content_id, tag_id),
     CONSTRAINT fk_ct_content FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE,
-    CONSTRAINT fk_ct_tag     FOREIGN KEY (tag_id)     REFERENCES tags (id)     ON DELETE CASCADE
+    CONSTRAINT fk_ct_tag FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
 );
 CREATE INDEX idx_ct_tag ON content_tags (tag_id);
 
@@ -178,13 +178,11 @@ CREATE TABLE watching_sessions
     user_id    UUID        NOT NULL,
     content_id UUID        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-    ended_at   TIMESTAMPTZ,
     CONSTRAINT fk_watch_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_watch_content FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX uk_watching_sessions_user_id ON watching_sessions (user_id) WHERE ended_at IS NULL;
-CREATE INDEX idx_watch_active_content ON watching_sessions (content_id) WHERE ended_at IS NULL;
+CREATE UNIQUE INDEX uk_watching_sessions_user_id ON watching_sessions (user_id);
+CREATE INDEX uk_watching_sessions_content_id ON watching_sessions (content_id);
 
 -- ---------- 5. DM (쪽지) ----------
 
@@ -217,8 +215,8 @@ CREATE TABLE direct_messages
     CONSTRAINT fk_dm_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT ck_dm_read_state CHECK (
         (is_read = FALSE AND read_at IS NULL) OR
-        (is_read = TRUE  AND read_at IS NOT NULL)
-    )
+        (is_read = TRUE AND read_at IS NOT NULL)
+        )
 );
 CREATE INDEX idx_dm_conversation ON direct_messages (conversation_id, created_at);
 CREATE INDEX idx_dm_unread ON direct_messages (receiver_id) WHERE is_read = FALSE;
@@ -248,8 +246,8 @@ CREATE TABLE notifications
         )),
     CONSTRAINT ck_noti_read_state CHECK (
         (is_read = FALSE AND read_at IS NULL) OR
-        (is_read = TRUE  AND read_at IS NOT NULL)
-    )
+        (is_read = TRUE AND read_at IS NOT NULL)
+        )
 );
 CREATE INDEX idx_noti_receiver ON notifications (receiver_id, created_at DESC);
-CREATE INDEX idx_noti_unread   ON notifications (receiver_id) WHERE is_read = FALSE;
+CREATE INDEX idx_noti_unread ON notifications (receiver_id) WHERE is_read = FALSE;
