@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.auth.mapper;
 
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
+import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import org.mapstruct.Mapper;
@@ -11,14 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
         componentModel = "spring",
         unmappedTargetPolicy = ReportingPolicy.ERROR
 )
-public abstract class AuthMapper {
-    @Autowired
-    protected UserMapper userMapper;
+public interface AuthMapper {
 
-    public JwtResponse toDto(User user, String accessToken) {
-        return new JwtResponse(
-                userMapper.toDto(user),
-                accessToken
-        );
-    }
+    JwtResponse toDto(UserResponse userDto, String accessToken);
 }

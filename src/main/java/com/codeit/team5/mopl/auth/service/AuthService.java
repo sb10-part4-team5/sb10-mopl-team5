@@ -2,25 +2,20 @@ package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
-import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
-import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserException;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
-import com.codeit.team5.mopl.user.repository.UserRepository;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class AuthService {
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
     private final RefreshTokenStore refreshTokenStore;
     private final AuthMapper authMapper;
 
@@ -39,29 +33,28 @@ public class AuthService {
 
     @Transactional
     public JwtResponse login(SignInRequest request) {
-        User user = findByEmailOrElseThrow(normalizeEmail(request.username()));
-
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            log.warn("Login failed: id={}", user.getId());
-            throw new InvalidCredentialsException("비밀번호가 일치하지 않습니다.");
-        }
-
-        Map<String, Object> claims = Map.of(
-                "email", user.getEmail(),
-                "role", user.getRole().name()
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        normalizeEmail(request.username()),
+                        request.password()
+                )
         );
 
-        String subject = user.getId().toString();
+        MoplUserDetails principals = (MoplUserDetails) authentication.getPrincipal();
 
-        String accessToken = jwtTokenizer.generateAccessToken(claims, subject);
-        String refreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
+        String accessToken = jwtTokenizer.generateAccessToken(
+                principals.getUserDto().id().toString(),
+                principals.getUserDto().email(),
+                principals.getUserDto().role()
+        );
+        String refreshToken = jwtTokenizer.generateRefreshToken(principals.getUserDto().id().toString());
         Instant refreshExpiresAt = Instant.now()
                 .plus(jwtProperties.refreshTokenExpirationMinutes(), ChronoUnit.MINUTES);
-        refreshTokenStore.save(user.getId(), refreshToken, refreshExpiresAt);
+        refreshTokenStore.save(principals.getUserDto().id(), refreshToken, refreshExpiresAt);
 
-        log.info("Login success: id={}", user.getId());
+        log.info("Login success: id={}", principals.getUserDto().id());
 
-        return authMapper.toDto(user, accessToken);
+        return authMapper.toDto(principals.getUserDto(), accessToken);
     }
 
     @Transactional
@@ -73,18 +66,14 @@ public class AuthService {
             return;
         }
 
-        UUID userId = (UUID) authentication.getPrincipal();
+        MoplUserDetails principal = (MoplUserDetails) authentication.getPrincipal();
+        UUID userId = principal.getId();
 
         refreshTokenStore.deleteByUserId(userId);
 
         SecurityContextHolder.clearContext();
 
         log.info("Logout success: id={}", userId);
-    }
-
-    private User findByEmailOrElseThrow(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException(email));
     }
 
     private String normalizeEmail(String email) {

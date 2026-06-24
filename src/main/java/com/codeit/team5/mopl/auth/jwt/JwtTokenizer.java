@@ -20,35 +20,46 @@ public class JwtTokenizer {
 
     private final JwtProperties jwtProperties;
 
-    public String generateAccessToken(Map<String, Object> claims, String subject) {
+    // subject = userId 사용
+    public String generateAccessToken(String subject, String email, String role) {
         return Jwts.builder()
-                .setClaims(claims)
                 .setSubject(subject)
+                .claim("email", email)
+                .claim("role", role)
                 .setIssuedAt(new Date())
                 .setExpiration(getTokenExpiration(jwtProperties.accessTokenExpirationMinutes()))
-                .signWith(getKey())
+                .signWith(getAccessKey())
                 .compact();
     }
 
     public String generateRefreshToken(String subject) {
         return Jwts.builder()
                 .setSubject(subject)
+                .claim("tokenType", "REFRESH")
                 .setIssuedAt(new Date())
                 .setExpiration(getTokenExpiration(jwtProperties.refreshTokenExpirationMinutes()))
-                .signWith(getKey())
+                .signWith(getRefreshKey())
                 .compact();
     }
 
     public Jws<Claims> getClaims(String jws) {
         return Jwts.parserBuilder()
-                .setSigningKey(getKey())
+                .setSigningKey(getAccessKey())
                 .build()
                 .parseClaimsJws(jws);
     }
 
-    private Key getKey() {
+    private Key getAccessKey() {
+        return getKey(jwtProperties.accessSecretKey());
+    }
+
+    private Key getRefreshKey() {
+        return getKey(jwtProperties.refreshSecretKey());
+    }
+
+    private Key getKey(String secretKey) {
         String base64EncodedSecretKey =
-                Encoders.BASE64.encode(jwtProperties.secretKey().getBytes(StandardCharsets.UTF_8));
+                Encoders.BASE64.encode(secretKey.getBytes(StandardCharsets.UTF_8));
 
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(base64EncodedSecretKey));
     }
