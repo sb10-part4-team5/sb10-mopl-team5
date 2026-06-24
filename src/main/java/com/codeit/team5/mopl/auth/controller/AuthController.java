@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.controller;
 
+import com.codeit.team5.mopl.auth.controller.api.AuthApi;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.service.AuthService;
@@ -16,14 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 @RestController
 @RequiredArgsConstructor
-public class AuthController {
+public class AuthController implements AuthApi {
     private final AuthService authService;
 
     @PostMapping("/sign-in")
     public ResponseEntity<JwtResponse> login(
             @Valid @RequestBody SignInRequest request
     ) {
-        log.info("Login request: POST /api/auth/sign-in, email={}", request.username());
+        log.info("Login request: POST /api/auth/sign-in");
         JwtResponse response = authService.login(request);
 
         return ResponseEntity.ok(response);
