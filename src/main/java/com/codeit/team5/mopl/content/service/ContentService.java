@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.content.service;
 
+import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
@@ -10,12 +12,14 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +34,8 @@ public class ContentService {
     private final ContentStatsRepository contentStatsRepository;
     private final TagRepository tagRepository;
     private final ContentMapper contentMapper;
+    private final BinaryContentStorage binaryContentStorage;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ContentResponse create(ContentCreateRequest request, MultipartFile thumbnail) {
@@ -39,7 +45,16 @@ public class ContentService {
                 request.description()
         ));
 
-        // todo 썸네일 스토리지 업로드 후 URL 반영
+        if (thumbnail != null && !thumbnail.isEmpty()) {
+            try {
+                String key = binaryContentStorage.generateKey(content.getId(), thumbnail.getOriginalFilename());
+                content.initThumbnail(binaryContentStorage.toUrl(key));
+                eventPublisher.publishEvent(new BinaryContentUploadEvent(content.getId(), key, thumbnail.getBytes()));
+            } catch (IOException e) {
+                log.warn("썸네일 바이트 읽기 실패 - contentId: {}", content.getId(), e);
+                content.failThumbnailUpload();
+            }
+        }
 
         List<String> tagNames = request.tags().stream()
                 .map(String::trim)
@@ -70,4 +85,5 @@ public class ContentService {
 
         return contentMapper.toDto(content, content.getContentTags(), stats);
     }
+
 }
