@@ -189,4 +189,17 @@ class UserControllerIntegrationTest {
                 .andExpect(result ->
                         assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
     }
+
+    @Test
+    @DisplayName("잘못된 형식의 userId 조회 실패")
+    void getUser_invalidUuid() throws Exception {
+        // Given: UUID로 변환 불가능한 경로 변수
+
+        // When & Then
+        // 타입 변환 실패는 에러 응답(>=400)으로만 일반화 검증
+        // (핸들러에 MethodArgumentTypeMismatch -> 400 처리 추가 시 정확한 400으로 강화 예정)
+        mockMvc.perform(get("/api/users/{userId}", "invalid-uuid"))
+                .andExpect(result ->
+                        assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+    }
 }
