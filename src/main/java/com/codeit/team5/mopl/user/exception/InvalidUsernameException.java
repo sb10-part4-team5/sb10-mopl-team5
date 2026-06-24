@@ -1,10 +1,10 @@
 package com.codeit.team5.mopl.user.exception;
 
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import org.springframework.http.HttpStatus;
 
 public class InvalidUsernameException extends UserException {
 
     public InvalidUsernameException() {
-        super(ErrorCode.INVALID_USERNAME);
+        super(HttpStatus.BAD_REQUEST, "사용자 이름은 공백일 수 없습니다.");
     }
 }

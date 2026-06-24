@@ -1,10 +1,10 @@
 package com.codeit.team5.mopl.user.exception;
 
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import org.springframework.http.HttpStatus;
 
 public class InvalidPasswordException extends UserException {
 
     public InvalidPasswordException() {
-        super(ErrorCode.INVALID_PASSWORD);
+        super(HttpStatus.BAD_REQUEST, "비밀번호는 공백일 수 없습니다.");
     }
 }
