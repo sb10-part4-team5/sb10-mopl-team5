@@ -3,10 +3,11 @@ package com.codeit.team5.mopl.watcher.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentSource;
+import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -213,12 +214,15 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
     }
 
     private Content createContent() {
-        Content content = new Content();
-        content.setType("MOVIE");
-        content.setTitle("test title");
-        content.setSource("TMDB");
-        content.setExternalId("ext-id-123");
-        content.setUpdatedAt(Instant.now());
+        Content content = Content.createByExternalSource(
+                ContentType.MOVIE,
+                "test title",
+                null,
+                ContentSource.TMDB,
+                "ext-id-123",
+                null,
+                null
+        );
         return persistAndFlush(content);
     }
 

@@ -1,38 +1,51 @@
 package com.codeit.team5.mopl.content.entity;
 
+import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
+import com.codeit.team5.mopl.tag.entity.Tag;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Getter
-@Setter
 @Entity
-@Table(name = "contents")
+@Table(
+        name = "contents",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_contents_source_external_id",
+                        columnNames = {"source", "external_id"}
+                )
+        }
+)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Content extends BaseUpdatableEntity {
 
-    @Size(max = 20)
-    @NotNull
-    @Column(name = "type", nullable = false, length = 20)
-    private String type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ContentType type;
 
-    @Size(max = 500)
-    @NotNull
-    @Column(name = "title", nullable = false, length = 500)
+    @Column(nullable = false, length = 500)
     private String title;
 
-    @Column(name = "description", length = Integer.MAX_VALUE)
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Size(max = 512)
     @Column(name = "thumbnail_url", length = 512)
     private String thumbnailUrl;
 
@@ -40,20 +53,64 @@ public class Content extends BaseUpdatableEntity {
     private Instant releasedAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata")
-    private Map<String, Object> metadata;
+    @Column(columnDefinition = "JSONB")
+    private String metadata;
 
-    @Size(max = 20)
-    @NotNull
-    @Column(name = "source", nullable = false, length = 20)
-    private String source;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ContentSource source;
 
-    @Size(max = 100)
-    @NotNull
     @Column(name = "external_id", nullable = false, length = 100)
     private String externalId;
 
-    @NotNull
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ContentTag> contentTags = new ArrayList<>();
+
+    public static Content createByAdmin(ContentType type, String title, String description) {
+        Content content = new Content();
+        content.type = type;
+        content.title = title;
+        content.description = description;
+        content.source = ContentSource.ADMIN;
+        content.externalId = UUID.randomUUID().toString();
+        return content;
+    }
+
+    public static Content createByExternalSource(ContentType type, String title, String description,
+            ContentSource source, String externalId, Instant releasedAt, String metadata) {
+        if (source == null || source == ContentSource.ADMIN) {
+            throw new InvalidContentSourceException("외부 소스 생성에 ADMIN 소스는 사용할 수 없습니다.");
+        }
+        if (externalId == null || externalId.isBlank()) {
+            throw new InvalidContentSourceException("외부 소스 콘텐츠는 externalId가 필수입니다.");
+        }
+        Content content = new Content();
+        content.type = type;
+        content.title = title;
+        content.description = description;
+        content.source = source;
+        content.externalId = externalId;
+        content.releasedAt = releasedAt;
+        content.metadata = metadata;
+        return content;
+    }
+
+    public void addTag(Tag tag) {
+        if (tag == null) {
+            return;
+        }
+
+        boolean alreadyExists = this.contentTags.stream()
+                .anyMatch(ct -> {
+                    Tag existing = ct.getTag();
+                    if (existing.getId() != null && tag.getId() != null) {
+                        return existing.getId().equals(tag.getId());
+                    }
+                    return existing.getName().equals(tag.getName());
+                });
+
+        if (!alreadyExists) {
+            contentTags.add(ContentTag.create(this, tag));
+        }
+    }
 }
