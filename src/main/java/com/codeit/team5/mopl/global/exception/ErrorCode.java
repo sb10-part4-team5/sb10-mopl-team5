@@ -28,6 +28,7 @@ public enum ErrorCode {
 
     // Content
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다."),
+    INVALID_CONTENT_SOURCE(HttpStatus.BAD_REQUEST, "유효하지 않은 콘텐츠 소스입니다."),
 
     // Tag
     INVALID_TAG_NAME(HttpStatus.BAD_REQUEST, "유효하지 않은 태그 이름입니다."),

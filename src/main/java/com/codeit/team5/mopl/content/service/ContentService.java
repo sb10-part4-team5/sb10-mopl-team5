@@ -4,9 +4,11 @@ import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
+import com.codeit.team5.mopl.content.exception.ContentException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
@@ -46,6 +48,10 @@ public class ContentService {
                 .map(String::toLowerCase)
                 .distinct()
                 .toList();
+
+        if (tagNames.isEmpty()) {
+            throw new ContentException(ErrorCode.INVALID_INPUT, "정규화 후 유효한 태그가 없습니다.");
+        }
 
         Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
                 .collect(Collectors.toMap(Tag::getName, Function.identity()));

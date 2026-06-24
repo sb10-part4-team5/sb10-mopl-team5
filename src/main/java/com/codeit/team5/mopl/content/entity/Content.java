@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.content.entity;
 
+import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import jakarta.persistence.CascadeType;
@@ -77,6 +78,12 @@ public class Content extends BaseUpdatableEntity {
 
     public static Content createByExternalSource(ContentType type, String title, String description,
             ContentSource source, String externalId, Instant releasedAt, String metadata) {
+        if (source == ContentSource.ADMIN) {
+            throw new InvalidContentSourceException("외부 소스 생성에 ADMIN 소스는 사용할 수 없습니다.");
+        }
+        if (externalId == null || externalId.isBlank()) {
+            throw new InvalidContentSourceException("외부 소스 콘텐츠는 externalId가 필수입니다.");
+        }
         Content content = new Content();
         content.type = type;
         content.title = title;

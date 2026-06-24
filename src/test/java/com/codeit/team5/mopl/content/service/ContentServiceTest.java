@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.content.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -14,6 +15,7 @@ import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.exception.ContentException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
@@ -202,5 +204,50 @@ class ContentServiceTest {
 
         // Then
         verify(tagRepository, times(1)).save(any(Tag.class));
+    }
+
+    @Test
+    @DisplayName("정규화 후 유효한 태그가 없으면 예외를 던진다")
+    void create_allBlankTags_throwsException() {
+        // Given
+        ContentCreateRequest request = new ContentCreateRequest(
+                ContentType.MOVIE,
+                "테스트 영화",
+                null,
+                List.of("   ", " ")
+        );
+
+        when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
+
+        // When & Then
+        assertThatThrownBy(() -> contentService.create(request, null))
+                .isInstanceOf(ContentException.class);
+
+        verify(tagRepository, never()).findByNameIn(anyList());
+        verify(tagRepository, never()).save(any(Tag.class));
+    }
+
+    @Test
+    @DisplayName("태그는 앞뒤 공백 제거 및 소문자로 정규화되어 저장된다")
+    void create_tagsNormalized() {
+        // Given
+        ContentCreateRequest request = new ContentCreateRequest(
+                ContentType.MOVIE,
+                "테스트 영화",
+                null,
+                List.of("  Action  ", "DRAMA")
+        );
+
+        when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
+        when(tagRepository.findByNameIn(List.of("action", "drama"))).thenReturn(List.of());
+        when(tagRepository.save(any(Tag.class))).then(returnsFirstArg());
+        when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
+        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
+
+        // When
+        contentService.create(request, null);
+
+        // Then
+        verify(tagRepository).findByNameIn(List.of("action", "drama"));
     }
 }

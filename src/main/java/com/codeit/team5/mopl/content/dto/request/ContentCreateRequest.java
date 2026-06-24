@@ -17,6 +17,6 @@ public record ContentCreateRequest(
 
         @NotNull(message = "콘텐츠 태그는 필수 입니다.")
         @NotEmpty(message = "콘텐츠 태그 목록은 비어있을 수 없습니다.")
-        List<String> tags
+        List<@NotBlank(message = "태그는 공백일 수 없습니다.") String> tags
 ) {
 }
