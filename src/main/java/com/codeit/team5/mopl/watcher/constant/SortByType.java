@@ -1,8 +1,6 @@
 package com.codeit.team5.mopl.watcher.constant;
 
-import com.codeit.team5.mopl.watcher.exception.WatcherErrorCode;
-import com.codeit.team5.mopl.watcher.exception.WatcherException;
-import java.util.Map;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionIncorrectSortByException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -19,6 +17,6 @@ public enum SortByType {
                 return type;
             }
         }
-        throw new WatcherException(WatcherErrorCode.INCORRECT_SORT_BY, Map.of("sortBy", text));
+        throw new WatchingSessionIncorrectSortByException(text);
     }
 }

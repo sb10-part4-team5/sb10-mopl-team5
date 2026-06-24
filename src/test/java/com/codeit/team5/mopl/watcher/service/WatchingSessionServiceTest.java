@@ -18,8 +18,9 @@ import com.codeit.team5.mopl.watcher.dto.WatchingSessionCreatedRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
-import com.codeit.team5.mopl.watcher.exception.WatcherErrorCode;
-import com.codeit.team5.mopl.watcher.exception.WatcherException;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionContentNotFound;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionUserNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapperImpl;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
@@ -97,8 +98,7 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(WatcherException.class)
-                .hasMessage(WatcherErrorCode.USER_NOT_FOUND.getMessage());
+                .isInstanceOf(WatchingSessionUserNotFoundException.class);
     }
 
     @Test
@@ -115,8 +115,7 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(WatcherException.class)
-                .hasMessage(WatcherErrorCode.CONTENT_NOT_FOUND.getMessage());
+                .isInstanceOf(WatchingSessionContentNotFound.class);
     }
 
     // --- READ (findSessionByWatchId) ---
@@ -148,8 +147,7 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.findSessionByWatchId(watcherId))
-                .isInstanceOf(WatcherException.class)
-                .hasMessage(WatcherErrorCode.WATCHING_SESSION_NOT_FOUND.getMessage());
+                .isInstanceOf(WatchingSessionNotFoundException.class);
     }
 
     // --- READ (findSessionByContentId) ---
@@ -252,8 +250,7 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.delete(watcherId))
-                .isInstanceOf(WatcherException.class)
-                .hasMessage(WatcherErrorCode.WATCHING_SESSION_NOT_FOUND.getMessage());
+                .isInstanceOf(WatchingSessionUserNotFoundException.class);
     }
 
     private User createDummyUser(UUID id) {
