@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentSource;
+import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.entity.User;
@@ -258,7 +260,15 @@ class WatchingSessionServiceTest {
     }
 
     private Content createDummyContent(UUID id) {
-        Content content = new Content();
+        Content content = Content.createByExternalSource(
+                ContentType.MOVIE,
+                "test title",
+                null,
+                ContentSource.TMDB,
+                "ext-id-123",
+                null,
+                null
+        );
         ReflectionTestUtils.setField(content, "id", id);
         return content;
     }
