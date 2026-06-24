@@ -61,7 +61,9 @@ public class ContentService {
                 .map(Tag::create)
                 .toList();
 
-        tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
+        if (!newTags.isEmpty()) {
+            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
+        }
 
         tagNames.forEach(name -> content.addTag(existingTags.get(name)));
 
