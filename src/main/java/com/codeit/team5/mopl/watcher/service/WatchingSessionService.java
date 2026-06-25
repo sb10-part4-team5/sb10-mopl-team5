@@ -1,17 +1,19 @@
 package com.codeit.team5.mopl.watcher.service;
 
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.constant.SortByType;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCreatedRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCreatedRequest;
+import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapper;
+import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.Map;
 import java.util.UUID;
@@ -38,14 +40,11 @@ public class WatchingSessionService {
 
     @Transactional
     public WatchingSessionResponse create(WatchingSessionCreatedRequest request) {
-        if (!userRepository.existsById(request.watcherId())) {
-            throw new WatchingSessionNotFoundException("userId", request.watcherId());
-        }
-        if (!contentRepository.existsById(request.contentId())) {
-            throw new WatchingSessionNotFoundException("contentId", request.contentId());
-        }
-        User user = userRepository.getReferenceById(request.watcherId());
-        Content content = contentRepository.getReferenceById(request.contentId());
+        UUID watcherId = request.watcherId();
+        User user = userRepository.findById(watcherId)
+                .orElseThrow(() -> new UserNotFoundException(watcherId));
+        Content content = contentRepository.findById(request.contentId())
+                .orElseThrow(ContentNotFoundException::new);
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
         return mapper.toDto(session);

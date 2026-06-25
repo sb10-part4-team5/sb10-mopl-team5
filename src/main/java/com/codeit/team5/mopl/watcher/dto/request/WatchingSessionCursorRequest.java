@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.watcher.dto;
+package com.codeit.team5.mopl.watcher.dto.request;
 
 import com.codeit.team5.mopl.watcher.constant.SortByType;
 import jakarta.validation.constraints.NotNull;

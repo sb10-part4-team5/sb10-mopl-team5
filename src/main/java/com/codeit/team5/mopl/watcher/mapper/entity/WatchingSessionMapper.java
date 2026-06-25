@@ -1,23 +1,17 @@
-package com.codeit.team5.mopl.watcher.mapper;
+package com.codeit.team5.mopl.watcher.mapper.entity;
 
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.watcher.constant.SortByType;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.mapper.config.WatcherMapperConfig;
 import java.util.List;
-import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
-import org.mapstruct.MappingConstants;
-import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.mapstruct.ReportingPolicy;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.domain.Window;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        unmappedTargetPolicy = ReportingPolicy.IGNORE,
-        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
-        injectionStrategy = InjectionStrategy.CONSTRUCTOR)
+@Mapper(config = WatcherMapperConfig.class, uses = {WatcherMapper.class,
+        WatcherContentMapper.class})
 public interface WatchingSessionMapper {
 
     WatchingSessionResponse toDto(WatchingSession entity);

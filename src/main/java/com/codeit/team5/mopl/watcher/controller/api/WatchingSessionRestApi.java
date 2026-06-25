@@ -1,8 +1,8 @@
 package com.codeit.team5.mopl.watcher.controller.api;
 
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
