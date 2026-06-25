@@ -102,6 +102,17 @@ public class ContentService {
         return contentMapper.toDto(content);
     }
 
+    @Transactional
+    public void delete(UUID contentId) {
+        Content content = contentRepository.findWithStatsAndTagsById(contentId)
+                .orElseThrow(ContentNotFoundException::new);
+        BinaryContent oldThumbnail = content.getThumbnail();
+        if (oldThumbnail != null) {
+            oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.PENDING);
+        }
+        contentRepository.delete(content);
+    }
+
     private void attachTags(Content content, List<String> rawTagNames) {
         List<String> tagNames = rawTagNames.stream()
                 .map(String::trim)
