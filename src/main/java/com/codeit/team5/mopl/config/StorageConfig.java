@@ -29,8 +29,8 @@ public class StorageConfig {
 
         boolean hasAccessKey = accessKey != null && !accessKey.isBlank();
         boolean hasSecretKey = secretKey != null && !secretKey.isBlank();
-        if (hasAccessKey && !hasSecretKey) {
-            throw new IllegalStateException("accessKey 설정 시 secretKey도 함께 설정해야 합니다");
+        if (hasAccessKey != hasSecretKey) {
+            throw new IllegalStateException("accessKey와 secretKey는 함께 설정해야 합니다");
         }
 
         AwsCredentialsProvider credentialsProvider = hasAccessKey

@@ -112,7 +112,10 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.reviewCount").value(0))
                 .andExpect(jsonPath("$.watcherCount").value(0));
 
-        verify(contentService).create(requestCaptor.capture(), any(FileRequest.class));
+        ArgumentCaptor<FileRequest> thumbnailCaptor = ArgumentCaptor.forClass(FileRequest.class);
+        verify(contentService).create(requestCaptor.capture(), thumbnailCaptor.capture());
+        assertThat(thumbnailCaptor.getValue().filename()).isEqualTo("test.jpg");
+        assertThat(thumbnailCaptor.getValue().bytes()).containsExactly(1, 2, 3);
         ContentCreateRequest captured = requestCaptor.getValue();
         assertThat(captured.type()).isEqualTo(ContentType.MOVIE);
         assertThat(captured.title()).isEqualTo("테스트 영화");
