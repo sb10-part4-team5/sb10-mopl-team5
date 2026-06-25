@@ -9,8 +9,10 @@ import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.notification.exception.CursorIdAfterNotTogetherException;
 import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -170,6 +172,22 @@ class NotificationRepositoryTest {
         assertThat(second).extracting(Notification::getId)
                 .doesNotContainAnyElementsOf(first.stream().map(Notification::getId).toList());
         assertThat(notificationRepository.countByReceiverId(receiverId)).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("cursor와 idAfter 중 하나만 주어지면 예외가 발생한다")
+    void findPageByReceiverDesc_cursorIdAfterNotTogether_exception() {
+        // Given
+        UUID receiverId = UUID.randomUUID();
+
+        // When & Then
+        assertThatThrownBy(() -> notificationRepository
+                .findPageByReceiverDesc(receiverId, Instant.now(), null, Limit.of(2)))
+                .isInstanceOf(CursorIdAfterNotTogetherException.class);
+
+        assertThatThrownBy(() -> notificationRepository
+                .findPageByReceiverDesc(receiverId, null, UUID.randomUUID(), Limit.of(2)))
+                .isInstanceOf(CursorIdAfterNotTogetherException.class);
     }
 
     @Test

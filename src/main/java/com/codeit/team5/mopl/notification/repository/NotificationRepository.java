@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.notification.repository;
 
 import com.codeit.team5.mopl.notification.entity.Notification;
+import com.codeit.team5.mopl.notification.exception.CursorIdAfterNotTogetherException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -15,13 +16,21 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     // 수신자별 알림 목록 (커서 페이지네이션, 최신순). cursor=null 이면 첫 페이지.
     default List<Notification> findPageByReceiverDesc(
             UUID receiverId, Instant cursor, UUID idAfter, Limit limit) {
-        return findPageByReceiverDescInternal(receiverId, cursor == null, cursor, idAfter, limit);
+        if((cursor == null) != (idAfter == null)){
+            throw new CursorIdAfterNotTogetherException();
+        }
+        boolean firstPage = (cursor == null);
+        return findPageByReceiverDescInternal(receiverId, firstPage, cursor, idAfter, limit);
     }
 
     // 수신자별 알림 목록 (커서 페이지네이션, 오래된순). cursor=null 이면 첫 페이지.
     default List<Notification> findPageByReceiverAsc(
             UUID receiverId, Instant cursor, UUID idAfter, Limit limit) {
-        return findPageByReceiverAscInternal(receiverId, cursor == null, cursor, idAfter, limit);
+        if((cursor == null) != (idAfter == null)){
+            throw new CursorIdAfterNotTogetherException();
+        }
+        boolean firstPage = (cursor == null);
+        return findPageByReceiverAscInternal(receiverId, firstPage, cursor, idAfter, limit);
     }
 
     // (createdAt, id) 복합 커서로 동일 시각 tie-break. firstPage 플래그로 첫 페이지를 구분
