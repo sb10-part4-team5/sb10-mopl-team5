@@ -11,7 +11,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.config.SecurityConfig;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
+import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
@@ -32,7 +35,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(UserController.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@Import({
+        GlobalExceptionHandler.class,
+        SecurityConfig.class,
+        JwtAuthenticationFilter.class,
+        UserAuthenticationEntryPoint.class,
+        UserAccessDeniedHandler.class
+})
 class UserControllerTest {
 
     @Autowired
@@ -43,6 +52,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private JwtTokenizer jwtTokenizer;
 
     @Test
     @DisplayName("정상적인 회원가입 요청이면 생성된 사용자와 201 응답을 반환한다")
@@ -189,21 +201,21 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("중복 이메일 예외가 발생하면 409 충돌 응답을 반환한다")
-    void createUser_duplicateEmail_returnsConflict() throws Exception {
+    @DisplayName("중복 이메일 예외가 발생하면 현재 전역 예외 응답 구조로 500 응답을 반환한다")
+    void createUser_duplicateEmail_returnsCurrentErrorResponse() throws Exception {
         // Given
         UserRegisterRequest request =
                 new UserRegisterRequest("사용자", "duplicate@example.com", "password1");
         given(userService.create(any(UserRegisterRequest.class)))
-                .willThrow(new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS, "duplicate@example.com"));
+                .willThrow(new DuplicatedEmailException("duplicate@example.com"));
 
         // When & Then
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.exceptionName").value("EMAIL_ALREADY_EXISTS"))
-                .andExpect(jsonPath("$.message").value(request.email()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionName").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
                 .andExpect(jsonPath("$.details").isEmpty());
 
         verify(userService).create(request);

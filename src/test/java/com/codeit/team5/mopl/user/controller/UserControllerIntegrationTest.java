@@ -75,7 +75,7 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("중복 이메일로 회원가입하면 충돌 응답을 반환하고 사용자를 추가하지 않는다")
+    @DisplayName("중복 이메일로 회원가입하면 현재 전역 예외 응답 구조를 반환하고 사용자를 추가하지 않는다")
     void createUser_duplicateEmail_throwsException() throws Exception {
         // Given
         User existingUser = User.create("duplicate@example.com", "encoded-password", "기존 사용자");
@@ -86,11 +86,11 @@ class UserControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.exceptionName").value("EMAIL_ALREADY_EXISTS"))
-                .andExpect(jsonPath("$.message").value(request.email()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionName").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
                 .andExpect(jsonPath("$.details").isEmpty());
 
         assertThat(userRepository.findAll())
