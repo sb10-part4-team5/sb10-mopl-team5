@@ -58,6 +58,33 @@ class LocalBinaryContentStorageTest {
     }
 
     @Test
+    @DisplayName("generateKey는 허용되지 않는 확장자는 제거한다")
+    void generateKey_disallowedExtension_returnsKeyWithoutExtension() {
+        // given
+        UUID contentId = UUID.randomUUID();
+
+        // when
+        String key = storage.generateKey(contentId, "malicious.exe");
+
+        // then
+        assertThat(key).startsWith("thumbnails/" + contentId + "/");
+        assertThat(key).doesNotContain(".exe");
+    }
+
+    @Test
+    @DisplayName("generateKey는 확장자를 소문자로 정규화한다")
+    void generateKey_uppercaseExtension_normalizesToLowercase() {
+        // given
+        UUID contentId = UUID.randomUUID();
+
+        // when
+        String key = storage.generateKey(contentId, "photo.JPG");
+
+        // then
+        assertThat(key).endsWith(".jpg");
+    }
+
+    @Test
     @DisplayName("toUrl은 baseUrl과 key를 조합한 URL을 반환한다")
     void toUrl_returnsCombinedUrl() {
         // given
