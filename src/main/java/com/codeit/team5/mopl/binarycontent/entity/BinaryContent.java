@@ -30,11 +30,7 @@ public class BinaryContent extends BaseUpdatableEntity {
         return bc;
     }
 
-    public void completeUpload() {
-        this.uploadStatus = BinaryContentUploadStatus.COMPLETED;
-    }
-
-    public void failUpload() {
-        this.uploadStatus = BinaryContentUploadStatus.FAILED;
+    public void updateUploadStatus(BinaryContentUploadStatus status) {
+        this.uploadStatus = status;
     }
 }
