@@ -48,7 +48,7 @@ public class ContentTag {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof ContentTag other)) return false;
-        return Objects.equals(id, other.id);
+        return Objects.equals(id, other.getId());
     }
 
     @Override
