@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.StoragePrefix;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
@@ -201,7 +203,8 @@ class UserServiceTest {
                 "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
         );
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(binaryContentStorage.generateKey(any(), any(), any())).thenReturn("profiles/key.jpg");
+        when(binaryContentStorage.generateKey(eq(StoragePrefix.PROFILE), eq(user.getId()), eq("profile.jpg")))
+                .thenReturn("profiles/key.jpg");
         when(binaryContentStorage.toUrl("profiles/key.jpg"))
                 .thenReturn("http://localhost/profiles/key.jpg");
         when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());

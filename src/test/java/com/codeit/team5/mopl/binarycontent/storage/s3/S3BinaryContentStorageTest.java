@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -39,7 +40,12 @@ class S3BinaryContentStorageTest {
         storage.store("profiles/abc.jpg", new byte[]{1, 2, 3});
 
         // Then
-        verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
+        PutObjectRequest request = captor.getValue();
+        assertThat(request.bucket()).isEqualTo("mopl-bucket");
+        assertThat(request.key()).isEqualTo("profiles/abc.jpg");
+        assertThat(request.contentType()).isEqualTo("image/jpeg");
     }
 
     @Test
