@@ -26,6 +26,12 @@ variable "github_repo" {
   default     = "sb10-mopl-team5"
 }
 
+variable "app_image_tag" {
+  description = "task def 부트스트랩 이미지 태그. 실배포는 CD가 커밋 sha로 교체(service lifecycle ignore_changes)"
+  type        = string
+  default     = "latest"
+}
+
 variable "create_github_oidc_provider" {
   description = "GitHub OIDC Provider 생성 여부 (신규 계정은 true, 이미 있으면 false 로 기존 것 참조). 실수 방지를 위해 기본값 없이 명시 입력"
   type        = bool

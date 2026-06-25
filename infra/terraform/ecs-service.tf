@@ -10,7 +10,7 @@ resource "aws_ecs_task_definition" "mopl" {
 
   container_definitions = jsonencode([{
     name      = "mopl"
-    image     = "${aws_ecr_repository.mopl.repository_url}:latest"
+    image     = "${aws_ecr_repository.mopl.repository_url}:${var.app_image_tag}"
     essential = true
 
     portMappings = [{
