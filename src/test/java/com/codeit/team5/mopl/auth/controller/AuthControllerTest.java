@@ -148,6 +148,25 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("로그인 요청의 이메일이 공백이면 400 응답을 반환한다")
+    void login_blankEmail_returnsBadRequest() throws Exception {
+        // Given
+        SignInRequest request = new SignInRequest("   ", "password1");
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.username").isArray())
+                .andExpect(jsonPath("$.details.username").isNotEmpty());
+
+        verify(authService, never()).login(any());
+    }
+
+    @Test
     @DisplayName("로그인 요청에서 비밀번호가 누락되면 400 응답을 반환한다")
     void login_missingPassword_returnsBadRequest() throws Exception {
         // Given
@@ -161,6 +180,24 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/sign-in")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.password[0]").value("비밀번호는 필수입니다."));
+
+        verify(authService, never()).login(any());
+    }
+
+    @Test
+    @DisplayName("로그인 요청의 비밀번호가 공백이면 400 응답을 반환한다")
+    void login_blankPassword_returnsBadRequest() throws Exception {
+        // Given
+        SignInRequest request = new SignInRequest("user@example.com", "   ");
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
