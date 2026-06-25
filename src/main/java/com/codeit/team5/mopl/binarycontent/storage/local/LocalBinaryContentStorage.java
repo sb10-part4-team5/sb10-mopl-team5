@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@ConditionalOnProperty(name = "storage.type", havingValue = "local", matchIfMissing = true)
+@ConditionalOnProperty(name = "mopl.storage.type", havingValue = "memory", matchIfMissing = true)
 public class LocalBinaryContentStorage implements BinaryContentStorage {
 
     private final Path uploadDir;
