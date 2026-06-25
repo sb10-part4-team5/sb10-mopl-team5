@@ -170,8 +170,8 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("인증 실패 예외가 발생하면 현재 전역 예외 응답 구조로 500 응답을 반환한다")
-    void login_invalidCredentials_returnsCurrentErrorResponse() throws Exception {
+    @DisplayName("인증 실패 예외가 발생하면 401 인증 실패 응답을 반환한다")
+    void login_invalidCredentials_returnsUnauthorized() throws Exception {
         // Given
         SignInRequest request = new SignInRequest("user@example.com", "wrong-password");
         given(authService.login(any(SignInRequest.class)))
@@ -220,8 +220,8 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("로그아웃 서비스 예외가 발생하면 현재 전역 예외 응답 구조로 500 응답을 반환한다")
-    void logout_serviceException_returnsCurrentErrorResponse() throws Exception {
+    @DisplayName("로그아웃 서비스 예외가 발생하면 500 서버 오류 응답을 반환한다")
+    void logout_serviceException_returnsInternalServerError() throws Exception {
         // Given
         String accessToken = "valid-access-token";
         mockAccessToken(accessToken);

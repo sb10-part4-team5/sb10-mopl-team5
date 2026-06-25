@@ -213,8 +213,8 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("중복 이메일 예외가 발생하면 현재 전역 예외 응답 구조로 500 응답을 반환한다")
-    void createUser_duplicateEmail_returnsCurrentErrorResponse() throws Exception {
+    @DisplayName("중복 이메일 예외가 발생하면 409 충돌 응답을 반환한다")
+    void createUser_duplicateEmail_returnsConflict() throws Exception {
         // Given
         UserRegisterRequest request =
                 new UserRegisterRequest("사용자", "duplicate@example.com", "password1");

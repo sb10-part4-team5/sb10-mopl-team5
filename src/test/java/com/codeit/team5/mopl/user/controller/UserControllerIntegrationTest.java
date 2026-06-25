@@ -75,8 +75,8 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("중복 이메일로 회원가입하면 현재 전역 예외 응답 구조를 반환하고 사용자를 추가하지 않는다")
-    void createUser_duplicateEmail_throwsException() throws Exception {
+    @DisplayName("중복 이메일로 회원가입하면 409 충돌 응답을 반환하고 사용자를 추가하지 않는다")
+    void createUser_duplicateEmail_returnsConflict() throws Exception {
         // Given
         User existingUser = User.create("duplicate@example.com", "encoded-password", "기존 사용자");
         userRepository.saveAndFlush(existingUser);
