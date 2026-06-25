@@ -86,8 +86,7 @@ public class ContentService {
             try {
                 BinaryContent oldThumbnail = content.getThumbnail();
                 if (oldThumbnail != null) {
-                    // 기존 썸네일 상태를 PENDING으로 변경 > 추후 스케줄러로 모아서 정리
-                    oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.PENDING);
+                    oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
                 }
                 String key = binaryContentStorage.generateKey(contentId, thumbnail.getOriginalFilename());
                 BinaryContent binaryContent = binaryContentRepository.save(
@@ -108,7 +107,7 @@ public class ContentService {
                 .orElseThrow(ContentNotFoundException::new);
         BinaryContent oldThumbnail = content.getThumbnail();
         if (oldThumbnail != null) {
-            oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.PENDING);
+            oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
         }
         contentRepository.delete(content);
     }

@@ -118,15 +118,15 @@ public class Content extends BaseUpdatableEntity {
         contentTags.add(contentTag);
     }
 
+    public void clearTags() {
+        contentTags.clear();
+    }
+
     public void update(String title, String description) {
         if (title == null || title.isBlank()) {
             throw new InvalidContentTitleException();
         }
         this.title = title;
         this.description = description;
-    }
-
-    public void clearTags() {
-        contentTags.clear();
     }
 }
