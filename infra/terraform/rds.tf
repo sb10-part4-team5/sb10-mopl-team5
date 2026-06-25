@@ -1,9 +1,14 @@
-# RDS를 배치할 서브넷 그룹 (2개 AZ의 서브넷)
+# RDS를 배치할 서브넷 그룹 (DB 전용 프라이빗 서브넷, 2개 AZ)
 resource "aws_db_subnet_group" "mopl" {
-  name       = "mopl-db-subnet"
-  subnet_ids = aws_subnet.public[*].id
+  name       = "mopl-db-private-subnet"
+  subnet_ids = aws_subnet.private[*].id
 
-  tags = { Name = "mopl-db-subnet" }
+  tags = { Name = "mopl-db-private-subnet" }
+
+  # 새 그룹 먼저 생성 → RDS 이전 → 기존 그룹 삭제 (사용 중 삭제 충돌 방지)
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # RDS 방화벽 — VPC 내부에서만 5432 접근 허용 (나중에 앱 SG로 더 좁힐 수 있음)
