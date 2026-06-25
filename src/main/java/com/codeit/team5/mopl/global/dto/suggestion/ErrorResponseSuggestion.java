@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.global.dto.suggestion;
 
-import com.codeit.team5.mopl.global.exception.suggestion.BusinessExceptionSuggestion;
-import com.codeit.team5.mopl.global.exception.suggestion.util.ViolationExceptionUtils;
+import com.codeit.team5.mopl.global.exception.BusinessException;
+import com.codeit.team5.mopl.global.exception.util.ViolationExceptionUtils;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 public record ErrorResponseSuggestion(String exceptionType, String message, Object details) {
 
-    public static ErrorResponseSuggestion from(BusinessExceptionSuggestion ex) {
+    public static ErrorResponseSuggestion from(BusinessException ex) {
         return new ErrorResponseSuggestion(ex.getExceptionType(), ex.getMessage(), null);
     }
 

@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.global.exception.suggestion.util;
+package com.codeit.team5.mopl.global.exception.util;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.AccessLevel;
