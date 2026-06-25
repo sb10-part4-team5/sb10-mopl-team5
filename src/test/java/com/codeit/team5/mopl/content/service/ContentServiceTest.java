@@ -36,8 +36,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
+import com.codeit.team5.mopl.global.dto.FileResource;
 
 @ExtendWith(MockitoExtension.class)
 class ContentServiceTest {
@@ -73,7 +72,7 @@ class ContentServiceTest {
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.MOVIE, "테스트 영화", "테스트 설명", List.of("액션", "드라마")
         );
-        MultipartFile thumbnail = new MockMultipartFile("thumbnail", "test.jpg", "image/jpeg", new byte[]{1, 2, 3});
+        FileResource thumbnail = new FileResource(new byte[]{1, 2, 3}, "test.jpg", "image/jpeg");
         Tag actionTag = Tag.create("액션");
         Tag dramaTag = Tag.create("드라마");
         ContentResponse expectedResponse = new ContentResponse(
@@ -85,7 +84,7 @@ class ContentServiceTest {
         when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
         when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(binaryContentStorage.generateKey(any(), eq("test.jpg"))).thenReturn("thumbnails/test.jpg");
+        when(binaryContentStorage.generateKey(any(), any(), eq("test.jpg"))).thenReturn("thumbnails/test.jpg");
         when(binaryContentStorage.toUrl("thumbnails/test.jpg")).thenReturn("http://localhost:8080/thumbnails/test.jpg");
         when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);

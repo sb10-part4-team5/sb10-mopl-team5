@@ -1,21 +1,24 @@
 package com.codeit.team5.mopl.binarycontent;
 
+import com.codeit.team5.mopl.binarycontent.exception.InvalidImageExtensionException;
 import java.util.Locale;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.util.StringUtils;
 
 public interface BinaryContentStorage {
 
-    Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
-
-    default String generateKey(UUID contentId, String originalFilename) {
+    default String generateKey(StoragePrefix prefix, UUID ownerId, String originalFilename) {
         String extension = StringUtils.getFilenameExtension(originalFilename);
-        String lowerExt = extension != null ? extension.toLowerCase(Locale.ROOT) : null;
-        String normalizedExt = (lowerExt != null && ALLOWED_EXTENSIONS.contains(lowerExt))
-                ? "." + lowerExt
-                : "";
-        return "thumbnails/" + contentId + "/" + UUID.randomUUID() + normalizedExt;
+        String normalizedExt = ImageExtension.from(extension)
+                .map(e -> "." + e.name().toLowerCase(Locale.ROOT))
+                .orElse("");
+        return prefix.value() + "/" + ownerId + "/" + UUID.randomUUID() + normalizedExt;
+    }
+
+    default ImageExtension validateImageKey(String key) {
+        String extension = StringUtils.getFilenameExtension(key);
+        return ImageExtension.from(extension)
+                .orElseThrow(() -> new InvalidImageExtensionException(extension));
     }
 
     String toUrl(String key);

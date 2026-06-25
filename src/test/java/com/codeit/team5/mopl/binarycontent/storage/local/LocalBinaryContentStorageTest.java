@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.binarycontent.storage.local;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeit.team5.mopl.binarycontent.StoragePrefix;
 import com.codeit.team5.mopl.binarycontent.exception.FileStorageException;
 import com.codeit.team5.mopl.binarycontent.exception.UploadDirectoryInitException;
 import java.io.IOException;
@@ -37,7 +38,7 @@ class LocalBinaryContentStorageTest {
         UUID contentId = UUID.randomUUID();
 
         // when
-        String key = storage.generateKey(contentId, "test.jpg");
+        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId,"test.jpg");
 
         // then
         assertThat(key).startsWith("thumbnails/" + contentId + "/");
@@ -51,7 +52,7 @@ class LocalBinaryContentStorageTest {
         UUID contentId = UUID.randomUUID();
 
         // when
-        String key = storage.generateKey(contentId, "testfile");
+        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId,"testfile");
 
         // then
         assertThat(key).startsWith("thumbnails/" + contentId + "/");
@@ -65,7 +66,7 @@ class LocalBinaryContentStorageTest {
         UUID contentId = UUID.randomUUID();
 
         // when
-        String key = storage.generateKey(contentId, "malicious.exe");
+        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId,"malicious.exe");
 
         // then
         assertThat(key).startsWith("thumbnails/" + contentId + "/");
@@ -79,7 +80,7 @@ class LocalBinaryContentStorageTest {
         UUID contentId = UUID.randomUUID();
 
         // when
-        String key = storage.generateKey(contentId, "photo.JPG");
+        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId,"photo.JPG");
 
         // then
         assertThat(key).endsWith(".jpg");
@@ -103,7 +104,7 @@ class LocalBinaryContentStorageTest {
     void store_savesFileToCorrectPath() throws IOException {
         // given
         UUID contentId = UUID.randomUUID();
-        String key = storage.generateKey(contentId, "test.jpg");
+        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId,"test.jpg");
         byte[] bytes = new byte[]{1, 2, 3};
 
         // when

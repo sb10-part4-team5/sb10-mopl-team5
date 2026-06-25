@@ -54,7 +54,7 @@ mopl:
   storage:
     type: s3
     s3:
-      bucket: ${S3_BUCKET:mopl-bucket-433041915727}
+      bucket-name: ${S3_BUCKET:mopl-bucket-433041915727}
       region: ${AWS_REGION:ap-northeast-2}
 
 logging:
