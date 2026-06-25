@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.global.config;
+package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.binarycontent.storage.local.LocalStorageProperties;
 import com.codeit.team5.mopl.binarycontent.storage.s3.S3StorageProperties;
@@ -24,14 +24,17 @@ public class StorageConfig {
     public S3Client s3Client(S3StorageProperties props) {
         String region = Objects.requireNonNull(props.region(), "mopl.storage.s3.region 설정이 필요합니다");
 
-        boolean hasAccessKey = props.accessKey() != null && !props.accessKey().isBlank();
-        if (hasAccessKey && (props.secretKey() == null || props.secretKey().isBlank())) {
+        String accessKey = props.accessKey();
+        String secretKey = props.secretKey();
+
+        boolean hasAccessKey = accessKey != null && !accessKey.isBlank();
+        boolean hasSecretKey = secretKey != null && !secretKey.isBlank();
+        if (hasAccessKey && !hasSecretKey) {
             throw new IllegalStateException("accessKey 설정 시 secretKey도 함께 설정해야 합니다");
         }
 
         AwsCredentialsProvider credentialsProvider = hasAccessKey
-                ? StaticCredentialsProvider.create(
-                AwsBasicCredentials.create(props.accessKey(), props.secretKey()))
+                ? StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
                 : DefaultCredentialsProvider.builder().build(); // prod: ECS task role 자격증명
 
         return S3Client.builder()

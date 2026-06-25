@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.global.config;
+package com.codeit.team5.mopl.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;

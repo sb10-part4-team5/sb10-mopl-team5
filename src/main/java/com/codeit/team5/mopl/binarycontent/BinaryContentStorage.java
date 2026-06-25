@@ -7,12 +7,12 @@ import org.springframework.util.StringUtils;
 
 public interface BinaryContentStorage {
 
-    default String generateKey(StoragePrefix prefix, UUID ownerId, String originalFilename) {
+    default String generateKey(StorageDirectory directory, UUID ownerId, String originalFilename) {
         String extension = StringUtils.getFilenameExtension(originalFilename);
         String normalizedExt = ImageExtension.from(extension)
                 .map(e -> "." + e.name().toLowerCase(Locale.ROOT))
                 .orElse("");
-        return prefix.value() + "/" + ownerId + "/" + UUID.randomUUID() + normalizedExt;
+        return directory.value() + "/" + ownerId + "/" + UUID.randomUUID() + normalizedExt;
     }
 
     default ImageExtension validateImageKey(String key) {

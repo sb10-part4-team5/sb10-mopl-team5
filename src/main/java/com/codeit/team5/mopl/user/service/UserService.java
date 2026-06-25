@@ -1,11 +1,11 @@
 package com.codeit.team5.mopl.user.service;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.StoragePrefix;
+import com.codeit.team5.mopl.binarycontent.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
-import com.codeit.team5.mopl.global.dto.FileResource;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
@@ -66,27 +66,31 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse update(UUID userId, UserUpdateRequest request, FileResource image) {
+    public UserResponse update(UUID userId, UserUpdateRequest request, FileRequest image) {
         User user = getUser(userId);
 
         // TODO: 인증 구현 후 본인 확인(현재 로그인 사용자 == userId) 추가, 불일치 시 403
 
-        BinaryContent profileImage = user.getProfileImage(); // 이미지 미첨부 시 기존 유지
+        user.updateName(request.name());
         if (image != null) {
-            // TODO(고아 정리): 기존 profileImage를 삭제 대상 상태로 표시 후 배치로 정리 (DB/S3 누적 방지)
-            String key = binaryContentStorage.generateKey(StoragePrefix.PROFILE, user.getId(), image.filename());
-            profileImage = binaryContentRepository.save(
-                    BinaryContent.pending(binaryContentStorage.toUrl(key)));
-
-            eventPublisher.publishEvent(
-                    new BinaryContentUploadEvent(profileImage.getId(), key, image.bytes()));
-            // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
+            user.updateProfileImage(storeProfileImage(user.getId(), image));
         }
-
-        user.updateProfile(request.name(), profileImage);
 
         log.info("User updated: userId={}", userId);
         return userMapper.toDto(user);
+    }
+
+    private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
+        // TODO(고아 정리): 기존 profileImage를 삭제 대상 상태로 표시 후 배치로 정리 (DB/S3 누적 방지)
+        String key = binaryContentStorage.generateKey(StorageDirectory.PROFILE, userId, image.filename());
+        BinaryContent profileImage = binaryContentRepository.save(
+                BinaryContent.pending(binaryContentStorage.toUrl(key)));
+
+        eventPublisher.publishEvent(
+                new BinaryContentUploadEvent(profileImage.getId(), key, image.bytes()));
+        // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
+
+        return profileImage;
     }
 
     private User getUser(UUID userId) {

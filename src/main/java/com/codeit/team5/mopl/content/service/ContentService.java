@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.content.service;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.StoragePrefix;
+import com.codeit.team5.mopl.binarycontent.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
@@ -14,7 +14,7 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.content.entity.ContentTag;
-import com.codeit.team5.mopl.global.dto.FileResource;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
@@ -42,7 +42,7 @@ public class ContentService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public ContentResponse create(ContentCreateRequest request, FileResource thumbnail) {
+    public ContentResponse create(ContentCreateRequest request, FileRequest thumbnail) {
         Content content = contentRepository.save(Content.createByAdmin(
                 request.type(),
                 request.title(),
@@ -50,7 +50,7 @@ public class ContentService {
         ));
 
         if (thumbnail != null) {
-            String key = binaryContentStorage.generateKey(StoragePrefix.THUMBNAIL, content.getId(), thumbnail.filename());
+            String key = binaryContentStorage.generateKey(StorageDirectory.THUMBNAIL, content.getId(), thumbnail.filename());
             BinaryContent binaryContent = binaryContentRepository.save(
                     BinaryContent.pending(binaryContentStorage.toUrl(key)));
             content.attachThumbnail(binaryContent);

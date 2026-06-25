@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.global.config;
+package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;

@@ -8,7 +8,7 @@ import java.util.Objects;
  * 서비스 계층이 web 타입에 의존하지 않도록 컨트롤러에서 변환하여 전달한다.
  * Content-Type은 클라이언트 값을 신뢰하지 않고 저장 시점에 확장자로 결정한다.
  */
-public record FileResource(
+public record FileRequest(
         byte[] bytes,
         String filename
 ) {
@@ -18,7 +18,7 @@ public record FileResource(
         if (this == o) {
             return true;
         }
-        if (!(o instanceof FileResource other)) {
+        if (!(o instanceof FileRequest other)) {
             return false;
         }
         return Arrays.equals(bytes, other.bytes) && Objects.equals(filename, other.filename);
@@ -31,7 +31,7 @@ public record FileResource(
 
     @Override
     public String toString() {
-        return "FileResource{filename='" + filename + "', size="
+        return "FileRequest{filename='" + filename + "', size="
                 + (bytes != null ? bytes.length : 0) + "}";
     }
 }

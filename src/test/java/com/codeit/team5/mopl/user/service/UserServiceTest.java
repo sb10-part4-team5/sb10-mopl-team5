@@ -11,11 +11,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.StoragePrefix;
+import com.codeit.team5.mopl.binarycontent.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
-import com.codeit.team5.mopl.global.dto.FileResource;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
@@ -197,13 +197,13 @@ class UserServiceTest {
         // Given
         UUID userId = UUID.randomUUID();
         User user = User.create("user@example.com", "encoded-password", "기존이름");
-        FileResource image = new FileResource(new byte[]{1, 2, 3}, "profile.jpg");
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
         UserResponse expected = new UserResponse(
                 userId, Instant.parse("2026-06-25T00:00:00Z"),
                 "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
         );
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(binaryContentStorage.generateKey(eq(StoragePrefix.PROFILE), eq(user.getId()), eq("profile.jpg")))
+        when(binaryContentStorage.generateKey(eq(StorageDirectory.PROFILE), eq(user.getId()), eq("profile.jpg")))
                 .thenReturn("profiles/key.jpg");
         when(binaryContentStorage.toUrl("profiles/key.jpg"))
                 .thenReturn("http://localhost/profiles/key.jpg");

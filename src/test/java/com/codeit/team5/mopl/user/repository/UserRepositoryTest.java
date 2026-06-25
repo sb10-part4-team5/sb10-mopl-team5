@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
-import com.codeit.team5.mopl.global.config.JpaAuditingConfig;
+import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;

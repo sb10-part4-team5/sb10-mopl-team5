@@ -60,11 +60,14 @@ public class User extends BaseUpdatableEntity {
         return user;
     }
 
-    public void updateProfile(String newName, BinaryContent profileImage) {
+    public void updateName(String newName) {
         if (newName == null || newName.isBlank()) {
             throw new InvalidUsernameException();
         }
         this.name = newName;
+    }
+
+    public void updateProfileImage(BinaryContent profileImage) {
         this.profileImage = profileImage;
     }
 
