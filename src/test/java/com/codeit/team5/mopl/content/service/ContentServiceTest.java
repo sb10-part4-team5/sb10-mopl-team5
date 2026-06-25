@@ -5,12 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
+import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
@@ -88,6 +91,10 @@ class ContentServiceTest {
         when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
         when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
+        when(binaryContentStorage.generateKey(any(), eq("test.jpg")))
+                .thenReturn("thumbnails/test-content/test.jpg");
+        when(binaryContentStorage.toUrl("thumbnails/test-content/test.jpg"))
+                .thenReturn("http://localhost:8080/thumbnails/test-content/test.jpg");
         when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(expectedResponse);
 
         // When
@@ -102,6 +109,11 @@ class ContentServiceTest {
         assertThat(savedContent.getType()).isEqualTo(ContentType.MOVIE);
         assertThat(savedContent.getTitle()).isEqualTo("테스트 영화");
         assertThat(savedContent.getDescription()).isEqualTo("테스트 설명");
+        assertThat(savedContent.getThumbnailUploadStatus()).isEqualTo(BinaryContentUploadStatus.PENDING);
+
+        ArgumentCaptor<BinaryContentUploadEvent> eventCaptor = ArgumentCaptor.forClass(BinaryContentUploadEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().key()).isEqualTo("thumbnails/test-content/test.jpg");
 
         verify(tagRepository).findByNameIn(List.of("액션", "드라마"));
         ArgumentCaptor<List<Tag>> saveAllCaptor = ArgumentCaptor.forClass(List.class);
@@ -144,6 +156,7 @@ class ContentServiceTest {
         assertThat(result).isSameAs(expectedResponse);
         verify(contentRepository).save(any(Content.class));
         verify(contentStatsRepository).save(any(ContentStats.class));
+        verifyNoInteractions(binaryContentStorage, eventPublisher);
     }
 
     @Test
