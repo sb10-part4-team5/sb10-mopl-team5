@@ -27,9 +27,8 @@ variable "github_repo" {
 }
 
 variable "create_github_oidc_provider" {
-  description = "GitHub OIDC Provider 생성 여부 (계정에 이미 있으면 false 로 두고 기존 것 참조)"
+  description = "GitHub OIDC Provider 생성 여부 (신규 계정은 true, 이미 있으면 false 로 기존 것 참조). 실수 방지를 위해 기본값 없이 명시 입력"
   type        = bool
-  default     = true
 }
 
 variable "s3_bucket" {

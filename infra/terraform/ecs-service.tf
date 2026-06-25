@@ -63,4 +63,9 @@ resource "aws_ecs_service" "mopl" {
   }
 
   depends_on = [aws_lb_listener.http]
+
+  # CD가 매 배포마다 새 task def revision(:sha)으로 갱신하므로 terraform은 무시
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 }

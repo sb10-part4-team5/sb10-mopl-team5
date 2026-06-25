@@ -23,18 +23,18 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # 액세스 키 없이 OIDC로 AWS 로그인 (mopl-github-actions-role)
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: arn:aws:iam::433041915727:role/mopl-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2
 
       - name: Build and push image
         env:
@@ -46,28 +46,25 @@ jobs:
           docker push $REGISTRY/$ECR_REPOSITORY:latest
           docker push $REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
 
-      # ECS 서비스를 새 이미지로 강제 재배포 (latest 다시 pull)
-      - name: Deploy to ECS
+      # 현재 task definition을 받아 이미지를 이번 커밋(sha)으로 교체
+      - name: Download task definition
         run: |
-          aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --force-new-deployment
+          aws ecs describe-task-definition --task-definition mopl \
+            --query 'taskDefinition' > task-definition.json
 
-      # 배포 결과 확인 — 안정화 대기 후 rolloutState 검사
-      # COMPLETED 가 아니면(롤백/실패) step 실패 처리하여 CD를 빨간불로
-      - name: Verify deployment
-        run: |
-          echo "서비스 안정화 대기 중..."
-          aws ecs wait services-stable \
-            --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE
-          STATE=$(aws ecs describe-services \
-            --cluster $ECS_CLUSTER --services $ECS_SERVICE \
-            --query 'services[0].deployments[0].rolloutState' --output text)
-          echo "rolloutState=$STATE"
-          if [ "$STATE" != "COMPLETED" ]; then
-            echo "::error::배포 실패 또는 롤백됨 (rolloutState=$STATE)"
-            exit 1
-          fi
-          echo "배포 성공"
+      - name: Render image (sha 태그로 고정)
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb # v1
+        with:
+          task-definition: task-definition.json
+          container-name: mopl
+          image: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+      # 새 task def revision 등록 + 서비스 배포 + 안정화 대기 (실패/롤백 시 에러)
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a310a830f5c14e583e35d84e4e1ec7dd177c3c9c # v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

@@ -80,6 +80,17 @@ resource "aws_iam_role_policy" "github_actions" {
         Action   = ["ecs:UpdateService", "ecs:DescribeServices"]
         Resource = "arn:aws:ecs:${var.aws_region}:${var.account_id}:service/${var.ecs_cluster}/${var.ecs_service}"
       },
+      # task definition 등록/조회 (CD가 sha 이미지로 새 revision 생성) — 리소스 한정 불가(AWS 사양)
+      {
+        Sid    = "EcsTaskDef"
+        Effect = "Allow"
+        Action = [
+          "ecs:RegisterTaskDefinition",
+          "ecs:DescribeTaskDefinition",
+          "ecs:DeregisterTaskDefinition"
+        ]
+        Resource = "*"
+      },
       # 특정 task role 에만 PassRole
       {
         Sid    = "PassRole"
