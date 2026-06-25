@@ -8,7 +8,6 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.constant.SortByType;
-import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCreatedRequest;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
@@ -39,11 +38,10 @@ public class WatchingSessionService {
     private static final String SECONDARY_SORT_FIELD = "id";
 
     @Transactional
-    public WatchingSessionResponse create(WatchingSessionCreatedRequest request) {
-        UUID watcherId = request.watcherId();
+    public WatchingSessionResponse create(UUID contentId, UUID watcherId) {
         User user = userRepository.findById(watcherId)
                 .orElseThrow(() -> new UserNotFoundException(watcherId));
-        Content content = contentRepository.findById(request.contentId())
+        Content content = contentRepository.findById(contentId)
                 .orElseThrow(ContentNotFoundException::new);
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
@@ -64,7 +62,7 @@ public class WatchingSessionService {
         ScrollPosition scrollPosition = createScrollPosition(request);
         Window<WatchingSession> result = repository.findByContentId(
                 contentId, scrollPosition, Limit.of(request.limit()), sort);
-        Long totalCount = repository.countByContentId(contentId);
+        Long totalCount = getCurrentWatchingContentView(contentId);
         return mapper.toCursor(result, totalCount, sortBy, direction);
     }
 
@@ -75,6 +73,10 @@ public class WatchingSessionService {
             return;
         }
         throw new WatchingSessionNotFoundException("userId", userId);
+    }
+
+    public Long getCurrentWatchingContentView(UUID contentId) {
+        return repository.countByContentId(contentId);
     }
 
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {

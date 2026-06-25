@@ -19,10 +19,10 @@ public class ContentChatService {
     private final UserRepository userRepository;
     private final ContentChatPayloadMapper payloadMapper;
 
-    public ContentChatPayload createContentChatPayload(UUID userId,
+    public ContentChatPayload createContentChatPayload(String email,
             ContentChatCreatedRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(email));
         return payloadMapper.toDto(user, request);
     }
 }
