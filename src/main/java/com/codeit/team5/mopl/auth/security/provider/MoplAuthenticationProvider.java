@@ -25,7 +25,12 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
     public Authentication authenticate(Authentication authentication)
             throws AuthenticationException {
         String email = authentication.getName();
-        String rawPassword = authentication.getCredentials().toString();
+        Object credentials = authentication.getCredentials();
+        if (credentials == null) {
+            throw new InvalidCredentialsException("비밀번호가 일치하지 않습니다.");
+        }
+        String rawPassword = credentials.toString();
+
 
         MoplUserDetails userDetails =
                 (MoplUserDetails) userDetailsService.loadUserByUsername(email);
