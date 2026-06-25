@@ -73,11 +73,14 @@ public class UserService {
 
         BinaryContent profileImage = user.getProfileImage(); // 이미지 미첨부 시 기존 유지
         if (image != null) {
+            // TODO(고아 정리): 기존 profileImage를 삭제 대상 상태로 표시 후 배치로 정리 (DB/S3 누적 방지)
             String key = binaryContentStorage.generateKey(StoragePrefix.PROFILE, user.getId(), image.filename());
             profileImage = binaryContentRepository.save(
                     BinaryContent.pending(binaryContentStorage.toUrl(key)));
+
             eventPublisher.publishEvent(
                     new BinaryContentUploadEvent(profileImage.getId(), key, image.bytes()));
+            // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
         }
 
         user.updateProfile(request.name(), profileImage);

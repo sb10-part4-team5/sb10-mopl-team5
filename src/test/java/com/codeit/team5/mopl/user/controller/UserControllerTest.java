@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,7 @@ import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
@@ -33,7 +35,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -298,6 +302,53 @@ class UserControllerTest {
                         assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
 
         verify(userService).getById(userId);
+    }
+
+    @Test
+    @DisplayName("프로필 변경 성공")
+    void updateUser_success() throws Exception {
+        // Given
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        UserResponse response = new UserResponse(
+                userId, Instant.parse("2026-06-25T00:00:00Z"),
+                "user@example.com", "새이름",
+                "http://localhost/profiles/key.jpg", "USER", false
+        );
+        given(userService.update(any(), any(), any())).willReturn(response);
+
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(new UserUpdateRequest("새이름")));
+        MockMultipartFile imagePart = new MockMultipartFile(
+                "image", "profile.jpg", MediaType.IMAGE_JPEG_VALUE, new byte[]{1, 2, 3});
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
+                        .file(requestPart).file(imagePart))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId.toString()))
+                .andExpect(jsonPath("$.name").value("새이름"))
+                .andExpect(jsonPath("$.profileImageUrl").value("http://localhost/profiles/key.jpg"));
+
+        verify(userService).update(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("프로필 변경 시 이름 공백 검증 실패")
+    void updateUser_blankName_returnsBadRequest() throws Exception {
+        // Given
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(new UserUpdateRequest("   ")));
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
+                        .file(requestPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"));
+
+        verify(userService, never()).update(any(), any(), any());
     }
 
 }

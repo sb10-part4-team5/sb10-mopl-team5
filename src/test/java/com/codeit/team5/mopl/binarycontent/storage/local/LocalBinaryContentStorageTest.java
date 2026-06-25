@@ -52,7 +52,7 @@ class LocalBinaryContentStorageTest {
         UUID contentId = UUID.randomUUID();
 
         // when
-        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId,"testfile");
+        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId, "testfile");
 
         // then
         assertThat(key).startsWith("thumbnails/" + contentId + "/");
@@ -66,7 +66,7 @@ class LocalBinaryContentStorageTest {
         UUID contentId = UUID.randomUUID();
 
         // when
-        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId,"malicious.exe");
+        String key = storage.generateKey(StoragePrefix.THUMBNAIL, contentId, "malicious.exe");
 
         // then
         assertThat(key).startsWith("thumbnails/" + contentId + "/");

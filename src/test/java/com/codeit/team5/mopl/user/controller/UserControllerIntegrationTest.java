@@ -2,12 +2,14 @@ package com.codeit.team5.mopl.user.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +21,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -201,5 +205,46 @@ class UserControllerIntegrationTest {
         mockMvc.perform(get("/api/users/{userId}", "invalid-uuid"))
                 .andExpect(result ->
                         assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+    }
+
+    @Test
+    @DisplayName("프로필 이름 변경 성공")
+    void updateUser_nameOnly_success() throws Exception {
+        // Given
+        User saved = userRepository.saveAndFlush(
+                User.create("user@example.com", "encoded-password", "기존이름"));
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(new UserUpdateRequest("변경된이름")));
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
+                        .file(requestPart))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(saved.getId().toString()))
+                .andExpect(jsonPath("$.name").value("변경된이름"));
+
+        User updated = userRepository.findById(saved.getId()).orElseThrow();
+        assertThat(updated.getName()).isEqualTo("변경된이름");
+    }
+
+    @Test
+    @DisplayName("프로필 변경 시 이름 공백 검증 실패")
+    void updateUser_blankName_returnsBadRequest() throws Exception {
+        // Given
+        User saved = userRepository.saveAndFlush(
+                User.create("user@example.com", "encoded-password", "기존이름"));
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(new UserUpdateRequest("   ")));
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
+                        .file(requestPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"));
+
+        User notUpdated = userRepository.findById(saved.getId()).orElseThrow();
+        assertThat(notUpdated.getName()).isEqualTo("기존이름");
     }
 }
