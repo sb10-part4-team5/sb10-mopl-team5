@@ -13,14 +13,13 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ContentMapper {
 
-    @Mapping(target = "id", source = "content.id")
     @Mapping(target = "tags", source = "contentTags")
     @Mapping(target = "averageRating", source = "stats")
     @Mapping(target = "reviewCount", source = "stats.reviewCount")
     @Mapping(target = "watcherCount", source = "stats.watcherCount")
-    @Mapping(target = "thumbnailUrl", source = "content.thumbnail.url")
-    @Mapping(target = "thumbnailUploadStatus", source = "content.thumbnail.uploadStatus")
-    ContentResponse toDto(Content content, Set<ContentTag> contentTags, ContentStats stats);
+    @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
+    @Mapping(target = "thumbnailUploadStatus", source = "thumbnail.uploadStatus")
+    ContentResponse toDto(Content content);
 
     default List<String> toTagNames(Set<ContentTag> contentTags) {
         if (contentTags == null) return Collections.emptyList();

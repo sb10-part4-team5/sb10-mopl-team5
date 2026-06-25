@@ -88,7 +88,7 @@ class ContentServiceTest {
         when(binaryContentStorage.generateKey(any(), eq("test.jpg"))).thenReturn("thumbnails/test.jpg");
         when(binaryContentStorage.toUrl("thumbnails/test.jpg")).thenReturn("http://localhost:8080/thumbnails/test.jpg");
         when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(expectedResponse);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);
 
         // when
         ContentResponse result = contentService.create(request, thumbnail);
@@ -127,7 +127,7 @@ class ContentServiceTest {
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
         when(tagRepository.findByNameIn(List.of("로맨스"))).thenReturn(List.of(romanceTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(expectedResponse);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);
 
         // when
         ContentResponse result = contentService.create(request, null);
@@ -147,7 +147,7 @@ class ContentServiceTest {
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(null);
 
         // when
         contentService.create(request, null);
@@ -167,7 +167,7 @@ class ContentServiceTest {
         when(tagRepository.findByNameIn(anyList())).thenReturn(List.of());
         when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(null);
 
         // when
         contentService.create(request, null);
@@ -189,7 +189,7 @@ class ContentServiceTest {
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of());
         when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(null);
 
         // when
         contentService.create(request, null);
@@ -228,7 +228,7 @@ class ContentServiceTest {
         when(tagRepository.findByNameIn(List.of("action", "drama"))).thenReturn(List.of());
         when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class), any(), any(ContentStats.class))).thenReturn(null);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(null);
 
         // when
         contentService.create(request, null);
