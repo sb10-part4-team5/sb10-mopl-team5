@@ -1,16 +1,9 @@
 package com.codeit.team5.mopl.content.entity;
 
+import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MapsId;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.Instant;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,15 +12,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "content_stats")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ContentStats {
-
-    @Id
-    private UUID contentId;
-
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "content_id")
-    private Content content;
+public class ContentStats extends BaseUpdatableEntity {
 
     @Column(nullable = false)
     private int reviewCount;
@@ -38,21 +23,11 @@ public class ContentStats {
     @Column(nullable = false)
     private long watcherCount;
 
-    @Column(nullable = false)
-    private Instant updatedAt;
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = Instant.now();
-    }
-
-    public static ContentStats create(Content content) {
+    public static ContentStats create() {
         ContentStats stats = new ContentStats();
-        stats.content = content;
         stats.reviewCount = 0;
         stats.ratingSum = 0.0;
         stats.watcherCount = 0;
-        stats.updatedAt = Instant.now();
         return stats;
     }
 }
