@@ -7,5 +7,12 @@ public record BinaryContentUploadEvent(
         String key,
         byte[] bytes
 ) {
+    public BinaryContentUploadEvent {
+        bytes = bytes.clone();
+    }
 
+    @Override
+    public byte[] bytes() {
+        return bytes.clone();
+    }
 }
