@@ -5,6 +5,7 @@ import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
@@ -83,6 +84,11 @@ public class ContentService {
 
         if (thumbnail != null && !thumbnail.isEmpty()) {
             try {
+                BinaryContent oldThumbnail = content.getThumbnail();
+                if (oldThumbnail != null) {
+                    // 기존 썸네일 상태를 PENDING으로 변경 > 추후 스케줄러로 모아서 정리
+                    oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.PENDING);
+                }
                 String key = binaryContentStorage.generateKey(contentId, thumbnail.getOriginalFilename());
                 BinaryContent binaryContent = binaryContentRepository.save(
                         BinaryContent.pending(binaryContentStorage.toUrl(key)));
