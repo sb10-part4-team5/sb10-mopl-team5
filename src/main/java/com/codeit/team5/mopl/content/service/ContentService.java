@@ -8,9 +8,11 @@ import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
@@ -21,6 +23,7 @@ import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +68,18 @@ public class ContentService {
 
         ContentStats stats = contentStatsRepository.save(ContentStats.create());
         content.attachStats(stats);
+
+        return contentMapper.toDto(content);
+    }
+
+    @Transactional
+    public ContentResponse update(UUID contentId, ContentUpdateRequest request) {
+        Content content = contentRepository.findWithStatsAndTagsById(contentId)
+                .orElseThrow(ContentNotFoundException::new);
+
+        content.update(request.title(), request.description());
+        content.clearTags();
+        attachTags(content, request.tags());
 
         return contentMapper.toDto(content);
     }

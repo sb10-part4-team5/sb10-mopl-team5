@@ -1,7 +1,9 @@
 package com.codeit.team5.mopl.content.entity;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.content.exception.InvalidContentDescriptionException;
 import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
+import com.codeit.team5.mopl.content.exception.InvalidContentTitleException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -115,5 +117,20 @@ public class Content extends BaseUpdatableEntity {
             return;
         }
         contentTags.add(contentTag);
+    }
+
+    public void update(String title, String description) {
+        if (title == null || title.isBlank()) {
+            throw new InvalidContentTitleException();
+        }
+        if (description == null || description.isBlank()) {
+            throw new InvalidContentDescriptionException();
+        }
+        this.title = title;
+        this.description = description;
+    }
+
+    public void clearTags() {
+        contentTags.clear();
     }
 }
