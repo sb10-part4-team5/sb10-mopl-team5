@@ -22,10 +22,13 @@ import com.codeit.team5.mopl.auth.service.AuthService;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,6 +66,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private MoplAuthenticationProvider moplAuthenticationProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("로그인에 성공하면 accessToken과 사용자 정보를 반환한다")
@@ -115,7 +121,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.username[0]").value("이메일은 필수입니다."));
 
@@ -133,7 +139,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.username").isArray())
                 .andExpect(jsonPath("$.details.username").isNotEmpty());
@@ -156,7 +162,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.password[0]").value("비밀번호는 필수입니다."));
 
@@ -173,12 +179,12 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionName").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.details").isEmpty());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("InvalidCredentialsException"))
+                .andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 올바르지 않습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
         verify(authService).login(request);
     }
@@ -225,11 +231,11 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-out")
-                        .header("Authorization", "Bearer " + accessToken))
+                .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionName").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.details").isEmpty());
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
         verify(authService).logout();
     }
@@ -248,10 +254,14 @@ class AuthControllerTest {
                 false
         );
         MoplUserDetails userDetails = new MoplUserDetails(userResponse, "encoded-password");
+        User user = User.create(userResponse.email(), "encoded-password", userResponse.name());
+        org.springframework.test.util.ReflectionTestUtils.setField(user, "id", userResponse.id());
 
         given(jwtTokenizer.getAccessClaims(accessToken)).willReturn(claimsJws);
         given(claimsJws.getBody()).willReturn(claims);
+        given(claims.getSubject()).willReturn(userResponse.id().toString());
         given(claims.get("email", String.class)).willReturn("user@example.com");
+        given(userRepository.findByEmail("user@example.com")).willReturn(Optional.of(user));
         given(userDetailsService.loadUserByUsername("user@example.com")).willReturn(userDetails);
     }
 }

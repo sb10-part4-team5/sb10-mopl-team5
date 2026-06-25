@@ -9,6 +9,7 @@ import com.codeit.team5.mopl.auth.entity.RefreshToken;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
 import com.codeit.team5.mopl.auth.token.RefreshTokenHasher;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.Optional;
@@ -29,6 +30,9 @@ class DbRefreshTokenStoreTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private RefreshTokenHasher refreshTokenHasher;
 
     @Mock
@@ -46,7 +50,7 @@ class DbRefreshTokenStoreTest {
         Instant expiresAt = Instant.parse("2026-06-24T12:00:00Z");
 
         when(refreshTokenHasher.hash("raw-refresh-token")).thenReturn("hashed-refresh-token");
-        when(entityManager.getReference(User.class, userId)).thenReturn(user);
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
 
         // When
         refreshTokenStore.save(userId, "raw-refresh-token", expiresAt);
@@ -54,8 +58,8 @@ class DbRefreshTokenStoreTest {
         // Then
         ArgumentCaptor<RefreshToken> refreshTokenCaptor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenHasher).hash("raw-refresh-token");
+        verify(userRepository).findByIdForUpdate(userId);
         verify(refreshTokenRepository).deleteByUser_Id(userId);
-        verify(entityManager).getReference(User.class, userId);
         verify(refreshTokenRepository).save(refreshTokenCaptor.capture());
 
         RefreshToken savedToken = refreshTokenCaptor.getValue();

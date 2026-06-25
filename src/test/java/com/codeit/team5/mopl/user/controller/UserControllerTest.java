@@ -22,6 +22,7 @@ import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.user.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -63,6 +64,9 @@ class UserControllerTest {
 
     @MockitoBean
     private MoplAuthenticationProvider moplAuthenticationProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("정상적인 회원가입 요청이면 생성된 사용자와 201 응답을 반환한다")
@@ -113,7 +117,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.name[0]").value("사용자명은 필수입니다."));
 
@@ -136,7 +140,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.email[0]").value("이메일은 필수입니다."));
 
@@ -155,7 +159,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.email").isArray())
                 .andExpect(jsonPath("$.details.email").isNotEmpty());
@@ -179,7 +183,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.password").isArray())
                 .andExpect(jsonPath("$.details.password")
@@ -200,7 +204,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.password[0]")
                         .value("비밀번호는 영문자와 숫자를 포함하여 8자 이상이어야 합니다."));
@@ -221,10 +225,10 @@ class UserControllerTest {
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionName").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.details").isEmpty());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.exceptionType").value("DuplicatedEmailException"))
+                .andExpect(jsonPath("$.message").value("이미 사용 중인 이메일입니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
         verify(userService).create(request);
     }
@@ -240,12 +244,12 @@ class UserControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionName").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.details").isEmpty());
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
         verify(userService).create(request);
     }
