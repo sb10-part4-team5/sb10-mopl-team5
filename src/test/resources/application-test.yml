@@ -32,7 +32,7 @@ spring:
 
 mopl:
   storage:
-    type: memory
+    type: local
     local:
       base-url: http://localhost:8080
       upload-dir: ./uploads-test
