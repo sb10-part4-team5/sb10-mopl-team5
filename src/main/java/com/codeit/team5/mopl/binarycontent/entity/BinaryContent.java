@@ -7,6 +7,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.util.Objects;
+import com.codeit.team5.mopl.binarycontent.exception.InvalidBinaryContentUrlException;
+import org.springframework.util.StringUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,7 +28,10 @@ public class BinaryContent extends BaseUpdatableEntity {
 
     public static BinaryContent pending(String url) {
         BinaryContent binaryContent = new BinaryContent();
-        binaryContent.url = Objects.requireNonNull(url, "url must not be null");
+        if (!StringUtils.hasText(url)) {
+            throw new InvalidBinaryContentUrlException();
+        }
+        binaryContent.url = url;
         binaryContent.uploadStatus = BinaryContentUploadStatus.PENDING;
         return binaryContent;
     }
