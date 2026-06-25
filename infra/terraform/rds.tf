@@ -1,7 +1,7 @@
 # RDS를 배치할 서브넷 그룹 (DB 전용 프라이빗 서브넷, 2개 AZ)
 resource "aws_db_subnet_group" "mopl" {
-  name       = "mopl-db-private-subnet"
-  subnet_ids = aws_subnet.private[*].id
+  name_prefix = "mopl-db-private-" # create_before_destroy와 호환 (고유 접미사 자동 부여)
+  subnet_ids  = aws_subnet.private[*].id
 
   tags = { Name = "mopl-db-private-subnet" }
 
