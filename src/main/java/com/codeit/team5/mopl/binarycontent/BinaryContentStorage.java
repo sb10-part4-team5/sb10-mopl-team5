@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.binarycontent;
 
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.util.StringUtils;
@@ -10,8 +11,9 @@ public interface BinaryContentStorage {
 
     default String generateKey(UUID contentId, String originalFilename) {
         String extension = StringUtils.getFilenameExtension(originalFilename);
-        String normalizedExt = (extension != null && ALLOWED_EXTENSIONS.contains(extension.toLowerCase()))
-                ? "." + extension.toLowerCase()
+        String lowerExt = extension != null ? extension.toLowerCase(Locale.ROOT) : null;
+        String normalizedExt = (lowerExt != null && ALLOWED_EXTENSIONS.contains(lowerExt))
+                ? "." + lowerExt
                 : "";
         return "thumbnails/" + contentId + "/" + UUID.randomUUID() + normalizedExt;
     }

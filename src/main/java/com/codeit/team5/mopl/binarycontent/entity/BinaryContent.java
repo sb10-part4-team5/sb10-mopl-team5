@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,13 +25,13 @@ public class BinaryContent extends BaseUpdatableEntity {
     private BinaryContentUploadStatus uploadStatus;
 
     public static BinaryContent pending(String url) {
-        BinaryContent bc = new BinaryContent();
-        bc.url = url;
-        bc.uploadStatus = BinaryContentUploadStatus.PENDING;
-        return bc;
+        BinaryContent binaryContent = new BinaryContent();
+        binaryContent.url = Objects.requireNonNull(url, "url must not be null");
+        binaryContent.uploadStatus = BinaryContentUploadStatus.PENDING;
+        return binaryContent;
     }
 
     public void updateUploadStatus(BinaryContentUploadStatus status) {
-        this.uploadStatus = status;
+        this.uploadStatus = Objects.requireNonNull(status, "status must not be null");
     }
 }
