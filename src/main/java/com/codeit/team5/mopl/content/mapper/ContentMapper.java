@@ -24,6 +24,7 @@ public interface ContentMapper {
         if (contentTags == null) return Collections.emptyList();
         return contentTags.stream()
                 .map(ct -> ct.getTag().getName())
+                .sorted()
                 .toList();
     }
 
