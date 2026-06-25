@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.codeit.team5.mopl.binarycontent.exception.FileStorageException;
+import com.codeit.team5.mopl.binarycontent.exception.UploadDirectoryInitException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -126,6 +127,23 @@ class LocalBinaryContentStorageTest {
 
         // then
         assertThat(Files.exists(tempDir.resolve(key))).isTrue();
+    }
+
+    @Test
+    @DisplayName("uploadDir 자리에 파일이 존재하면 생성자에서 UploadDirectoryInitException을 던진다")
+    void init_uploadDirIsFile_throwsUploadDirectoryInitException() throws IOException {
+        // given
+        Path filePath = tempDir.resolve("conflict-file");
+        Files.createFile(filePath);
+
+        LocalStorageProperties properties = new LocalStorageProperties(
+                "http://localhost:8080",
+                filePath.toString()
+        );
+
+        // when & then
+        assertThatThrownBy(() -> new LocalBinaryContentStorage(properties))
+                .isInstanceOf(UploadDirectoryInitException.class);
     }
 
     @Test
