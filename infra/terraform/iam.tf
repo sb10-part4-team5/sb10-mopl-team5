@@ -3,11 +3,22 @@
 # 런타임 앱의 S3 접근은 ECS task-role(ecs-iam.tf)이 담당한다.
 # =========================================================
 
-# 계정당 1회만 생성. 이미 있다면 data 소스로 참조하도록 변경할 것.
+# GitHub OIDC Provider는 계정당 1개만 존재 가능.
+# 이미 있는 계정에서는 create_github_oidc_provider=false 로 두고 기존 것을 참조한다.
 resource "aws_iam_openid_connect_provider" "github" {
+  count           = var.create_github_oidc_provider ? 1 : 0
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+
+data "aws_iam_openid_connect_provider" "github" {
+  count = var.create_github_oidc_provider ? 0 : 1
+  url   = "https://token.actions.githubusercontent.com"
+}
+
+locals {
+  github_oidc_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : data.aws_iam_openid_connect_provider.github[0].arn
 }
 
 resource "aws_iam_role" "github_actions" {
@@ -17,7 +28,7 @@ resource "aws_iam_role" "github_actions" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
+      Principal = { Federated = local.github_oidc_arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {

@@ -4,19 +4,23 @@ on:
   push:
     branches: [main]
 
+# 같은 브랜치 배포가 겹치면 이전 실행을 취소 (오래된 배포가 최신을 덮어쓰는 것 방지)
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: mopl
   ECS_CLUSTER: mopl-cluster
   ECS_SERVICE: mopl-service
 
-permissions:
-  id-token: write # OIDC 토큰 발급 (AWS 로그인용)
-  contents: read
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC 토큰 발급 (AWS 로그인용)
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4

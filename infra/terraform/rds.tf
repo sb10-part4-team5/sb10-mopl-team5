@@ -39,6 +39,7 @@ resource "aws_db_instance" "mopl" {
 
   allocated_storage = 20
   storage_type      = "gp3"
+  storage_encrypted = true # 저장소 암호화 (KMS 기본 키)
 
   db_name  = "mopl"
   username = var.db_username

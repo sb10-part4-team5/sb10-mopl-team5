@@ -26,10 +26,15 @@ variable "github_repo" {
   default     = "sb10-mopl-team5"
 }
 
+variable "create_github_oidc_provider" {
+  description = "GitHub OIDC Provider 생성 여부 (계정에 이미 있으면 false 로 두고 기존 것 참조)"
+  type        = bool
+  default     = true
+}
+
 variable "s3_bucket" {
-  description = "이미지 업로드용 S3 버킷명"
+  description = "이미지 업로드용 S3 버킷명 (전역 유일, terraform.tfvars 에 작성)"
   type        = string
-  default     = "mopl-bucket"
 }
 
 variable "ecr_repository" {

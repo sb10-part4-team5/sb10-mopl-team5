@@ -21,11 +21,13 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # egress는 VPC 내부 8080(앱)으로만 제한 (전체 개방 대신)
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "to app 8080 within VPC"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.mopl.cidr_block]
   }
 
   tags = { Name = "mopl-alb-sg" }
@@ -62,6 +64,8 @@ resource "aws_lb" "mopl" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = aws_subnet.public[*].id
+
+  drop_invalid_header_fields = true # 비정상 헤더 차단
 
   tags = { Name = "mopl-alb" }
 }

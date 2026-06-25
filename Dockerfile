@@ -18,5 +18,9 @@ WORKDIR /app
 # 빌드 산출물만 복사
 COPY --from=build /app/build/libs/*.jar app.jar
 
+# 비root 사용자로 실행 (컨테이너 탈취 시 권한 최소화)
+RUN useradd -r -u 1001 appuser && chown appuser:appuser /app/app.jar
+USER appuser
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

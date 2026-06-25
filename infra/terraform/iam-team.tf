@@ -31,13 +31,22 @@ resource "aws_iam_group_policy" "developers_ssm" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # 세션/포트포워딩 시작 (EC2 인스턴스 + 사용 문서 한정)
+      # 세션 시작: mopl ECS 인스턴스(AmazonECSManaged 태그)에만 허용
       {
-        Sid    = "StartSession"
+        Sid      = "StartSessionOnEcsInstances"
+        Effect   = "Allow"
+        Action   = ["ssm:StartSession"]
+        Resource = ["arn:aws:ec2:${var.aws_region}:${var.account_id}:instance/*"]
+        Condition = {
+          StringEquals = { "ssm:resourceTag/AmazonECSManaged" = "true" }
+        }
+      },
+      # 포트포워딩/셸 문서 사용
+      {
+        Sid    = "StartSessionDocuments"
         Effect = "Allow"
         Action = ["ssm:StartSession"]
         Resource = [
-          "arn:aws:ec2:${var.aws_region}:${var.account_id}:instance/*",
           "arn:aws:ssm:${var.aws_region}::document/AWS-StartPortForwardingSessionToRemoteHost",
           "arn:aws:ssm:${var.aws_region}::document/SSM-SessionManagerRunShell"
         ]

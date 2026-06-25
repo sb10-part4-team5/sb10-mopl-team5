@@ -1,6 +1,12 @@
 # ECS 클러스터
 resource "aws_ecs_cluster" "mopl" {
   name = var.ecs_cluster
+
+  # 운영 가시성(컨테이너 CPU/메모리/네트워크 메트릭)
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 # ECS 최적화 AMI (최신, SSM 파라미터로 자동 조회)
@@ -19,6 +25,13 @@ resource "aws_launch_template" "ecs" {
   }
 
   vpc_security_group_ids = [aws_security_group.app.id]
+
+  # IMDSv2 강제 (토큰 필수) — SSRF 등으로 메타데이터/자격증명 탈취 방지
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2 # 컨테이너(awsvpc)에서 메타데이터 접근 허용
+  }
 
   user_data = base64encode(<<-EOF
     #!/bin/bash

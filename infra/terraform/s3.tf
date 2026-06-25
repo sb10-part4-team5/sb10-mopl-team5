@@ -29,3 +29,27 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "mopl" {
     }
   }
 }
+
+# 전송 구간 TLS 강제 — HTTP(비암호화) 접근은 거부
+resource "aws_s3_bucket_policy" "mopl" {
+  bucket = aws_s3_bucket.mopl.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "DenyInsecureTransport"
+      Effect    = "Deny"
+      Principal = "*"
+      Action    = "s3:*"
+      Resource = [
+        aws_s3_bucket.mopl.arn,
+        "${aws_s3_bucket.mopl.arn}/*"
+      ]
+      Condition = {
+        Bool = { "aws:SecureTransport" = "false" }
+      }
+    }]
+  })
+
+  depends_on = [aws_s3_bucket_public_access_block.mopl]
+}
