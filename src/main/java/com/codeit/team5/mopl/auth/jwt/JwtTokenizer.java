@@ -71,10 +71,7 @@ public class JwtTokenizer {
     }
 
     private Key getKey(String secretKey) {
-        String base64EncodedSecretKey =
-                Encoders.BASE64.encode(secretKey.getBytes(StandardCharsets.UTF_8));
-
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(base64EncodedSecretKey));
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
     private Date getTokenExpiration(long expirationMinutes) {

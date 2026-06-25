@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.filter;
 
+import com.codeit.team5.mopl.auth.exception.AccountLockedException;
 import com.codeit.team5.mopl.auth.exception.AuthException;
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
@@ -63,12 +64,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 throw new JwtInvalidException("Invalid token email");
             }
 
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new UserNotFoundException(email));
-
-            validateSubject(claims, user);
-
             MoplUserDetails userDetails = (MoplUserDetails) userDetailsService.loadUserByUsername(email);
+            validateSubject(claims, userDetails.getId());
+
+            if (!userDetails.isAccountNonLocked()) {
+                throw new AccountLockedException("잠긴 계정입니다");
+            }
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -92,7 +93,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 && authorizationHeader.startsWith(BEARER_PREFIX);
     }
 
-    private void validateSubject(Claims claims, User user) {
+    private void validateSubject(Claims claims, UUID userId) {
         String subject = claims.getSubject();
 
         if (subject == null) {
@@ -102,7 +103,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             UUID subjectUserId = UUID.fromString(subject);
 
-            if (!subjectUserId.equals(user.getId())) {
+            if (!subjectUserId.equals(userId)) {
                 throw new JwtInvalidException("Invalid token subject");
             }
         } catch (IllegalArgumentException e) {
