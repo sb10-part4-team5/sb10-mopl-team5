@@ -21,7 +21,7 @@ public class BinaryContentUploadListener {
     private final BinaryContentStorage binaryContentStorage;
     private final ContentRepository contentRepository;
 
-    @Async
+    @Async("binaryContentUploadExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(BinaryContentUploadEvent event) {
         Content content = contentRepository.findById(event.contentId())
