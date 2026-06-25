@@ -15,6 +15,8 @@ import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
+import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
@@ -55,6 +57,12 @@ class UserControllerTest {
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
+
+    @MockitoBean
+    private MoplUserDetailsService userDetailsService;
+
+    @MockitoBean
+    private MoplAuthenticationProvider moplAuthenticationProvider;
 
     @Test
     @DisplayName("정상적인 회원가입 요청이면 생성된 사용자와 201 응답을 반환한다")
