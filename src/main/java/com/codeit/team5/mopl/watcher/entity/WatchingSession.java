@@ -23,14 +23,14 @@ public class WatchingSession extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private User watcher;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "content_id", nullable = false)
     private Content content;
 
-    private WatchingSession(User user, Content content) {
-        this.user = user;
+    private WatchingSession(User watcher, Content content) {
+        this.watcher = watcher;
         this.content = content;
     }
 

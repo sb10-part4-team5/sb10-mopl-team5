@@ -51,7 +51,7 @@ public class WatchingSessionService {
     }
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
-        return mapper.toDto(repository.findByUserId(watcherId)
+        return mapper.toDto(repository.findByWatcherId(watcherId)
                 .orElseThrow(() -> new WatchingSessionNotFoundException("userId", watcherId)));
     }
 
@@ -70,8 +70,8 @@ public class WatchingSessionService {
 
     @Transactional
     public void delete(UUID userId) {
-        if (repository.existsByUserId(userId)) {
-            repository.deleteByUserIdDirectly(userId);
+        if (repository.existsByWatcherId(userId)) {
+            repository.deleteByWatcherIdDirectly(userId);
             return;
         }
         throw new WatchingSessionNotFoundException("userId", userId);
