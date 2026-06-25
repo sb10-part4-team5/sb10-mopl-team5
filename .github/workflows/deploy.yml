@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false # OIDC 사용 — GITHUB_TOKEN을 .git에 저장하지 않음
 
       # 액세스 키 없이 OIDC로 AWS 로그인 (mopl-github-actions-role)
       - name: Configure AWS credentials (OIDC)
@@ -40,10 +42,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
-          docker build \
-            -t $REGISTRY/$ECR_REPOSITORY:latest \
-            -t $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
-          docker push $REGISTRY/$ECR_REPOSITORY:latest
+          docker build -t $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
           docker push $REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
 
       # 현재 task definition을 받아 이미지를 이번 커밋(sha)으로 교체

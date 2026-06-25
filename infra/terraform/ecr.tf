@@ -1,7 +1,7 @@
 # Docker 이미지 저장소
 resource "aws_ecr_repository" "mopl" {
   name                 = var.ecr_repository
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE" # 같은 태그 덮어쓰기 금지 (sha 태그로 롤백 추적)
 
   image_scanning_configuration {
     scan_on_push = true # push 시 취약점 스캔
