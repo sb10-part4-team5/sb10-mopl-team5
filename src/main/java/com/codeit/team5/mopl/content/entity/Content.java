@@ -50,7 +50,7 @@ public class Content extends BaseUpdatableEntity {
     private String description;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "thumbnail_id")
+    @JoinColumn(name = "thumbnail_id", unique = true)
     private BinaryContent thumbnail;
 
     @Column(name = "released_at")
