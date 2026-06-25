@@ -5,7 +5,6 @@ import com.codeit.team5.mopl.global.async.MdcTaskDecorator;
 import com.codeit.team5.mopl.global.async.SecurityContextTaskDecorator;
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -22,7 +21,6 @@ public class AsyncConfig {
         executor.setMaxPoolSize(5);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("binary-upload-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setTaskDecorator(new CompositeTaskDecorator(
                 List.of(new MdcTaskDecorator(), new SecurityContextTaskDecorator())));
         executor.initialize();
