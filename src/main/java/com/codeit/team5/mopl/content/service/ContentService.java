@@ -12,6 +12,7 @@ import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.io.IOException;
@@ -65,7 +66,7 @@ public class ContentService {
         ContentStats stats = contentStatsRepository.save(ContentStats.create());
         content.attachStats(stats);
 
-        return contentMapper.toDto(content, content.getContentTags(), stats);
+        return contentMapper.toDto(content);
     }
 
     private void attachTags(Content content, List<String> rawTagNames) {
@@ -92,6 +93,6 @@ public class ContentService {
             tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
         }
 
-        tagNames.forEach(name -> content.addTag(existingTags.get(name)));
+        tagNames.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
     }
 }

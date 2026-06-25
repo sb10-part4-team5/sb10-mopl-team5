@@ -3,7 +3,6 @@ package com.codeit.team5.mopl.content.entity;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
-import com.codeit.team5.mopl.tag.entity.Tag;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -111,10 +110,10 @@ public class Content extends BaseUpdatableEntity {
         this.stats = stats;
     }
 
-    public void addTag(Tag tag) {
-        if (tag == null) {
+    public void addTag(ContentTag contentTag) {
+        if (contentTag == null) {
             return;
         }
-        contentTags.add(ContentTag.create(this, tag));
+        contentTags.add(contentTag);
     }
 }
