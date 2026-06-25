@@ -15,6 +15,7 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
+import com.codeit.team5.mopl.content.exception.TooManyTagsException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
@@ -122,6 +123,9 @@ public class ContentService {
 
         if (tagNames.isEmpty()) {
             throw new EmptyTagException();
+        }
+        if (tagNames.size() > 10) {
+            throw new TooManyTagsException();
         }
 
         Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()

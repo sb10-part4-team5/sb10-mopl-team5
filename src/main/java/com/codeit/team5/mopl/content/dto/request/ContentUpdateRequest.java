@@ -15,6 +15,7 @@ public record ContentUpdateRequest(
 
         @NotNull(message = "콘텐츠 태그는 필수입니다.")
         @NotEmpty(message = "콘텐츠 태그 목록은 비어있을 수 없습니다.")
+        @Size(max = 10, message = "태그는 최대 10개까지 등록할 수 있습니다.")
         List<@NotBlank(message = "태그는 공백일 수 없습니다.") String> tags
 ) {
 }
