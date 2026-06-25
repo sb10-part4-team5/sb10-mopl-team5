@@ -60,9 +60,18 @@ public class ContentService {
             }
         }
 
-        List<String> tagNames = request.tags().stream()
+        attachTags(content, request.tags());
+
+        ContentStats stats = contentStatsRepository.save(ContentStats.create());
+        content.attachStats(stats);
+
+        return contentMapper.toDto(content, content.getContentTags(), stats);
+    }
+
+    private void attachTags(Content content, List<String> rawTagNames) {
+        List<String> tagNames = rawTagNames.stream()
                 .map(String::trim)
-                .filter(tag -> !tag.isEmpty())
+                .filter(name -> !name.isEmpty())
                 .map(String::toLowerCase)
                 .distinct()
                 .toList();
@@ -84,11 +93,5 @@ public class ContentService {
         }
 
         tagNames.forEach(name -> content.addTag(existingTags.get(name)));
-
-        ContentStats stats = contentStatsRepository.save(ContentStats.create());
-        content.attachStats(stats);
-
-        return contentMapper.toDto(content, content.getContentTags(), stats);
     }
-
 }

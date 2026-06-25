@@ -13,6 +13,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ContentMapper {
 
+    @Mapping(target = "id", source = "content.id")
     @Mapping(target = "tags", source = "contentTags")
     @Mapping(target = "averageRating", source = "stats")
     @Mapping(target = "reviewCount", source = "stats.reviewCount")
