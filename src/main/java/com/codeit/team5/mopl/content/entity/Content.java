@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.content.entity;
 
-import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.tag.entity.Tag;
@@ -10,6 +10,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -48,12 +49,9 @@ public class Content extends BaseUpdatableEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "thumbnail_url", length = 512)
-    private String thumbnailUrl;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "thumbnail_upload_status", length = 20)
-    private BinaryContentUploadStatus thumbnailUploadStatus;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "thumbnail_id")
+    private BinaryContent thumbnail;
 
     @Column(name = "released_at")
     private Instant releasedAt;
@@ -69,8 +67,8 @@ public class Content extends BaseUpdatableEntity {
     @Column(name = "external_id", nullable = false, length = 100)
     private String externalId;
 
-    //@OneToOne은 연관 관계의 주인이 아닌 쪽에서 FetchType.LAZY가 적용되지 않음
-    @OneToOne(mappedBy = "content", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval= true)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "stats_id")
     private ContentStats stats;
 
     @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
@@ -105,17 +103,12 @@ public class Content extends BaseUpdatableEntity {
         return content;
     }
 
-    public void initThumbnail(String thumbnailUrl) {
-        this.thumbnailUrl = thumbnailUrl;
-        this.thumbnailUploadStatus = BinaryContentUploadStatus.PENDING;
+    public void attachThumbnail(BinaryContent thumbnail) {
+        this.thumbnail = thumbnail;
     }
 
-    public void completeThumbnailUpload() {
-        this.thumbnailUploadStatus = BinaryContentUploadStatus.COMPLETED;
-    }
-
-    public void failThumbnailUpload() {
-        this.thumbnailUploadStatus = BinaryContentUploadStatus.FAILED;
+    public void attachStats(ContentStats stats) {
+        this.stats = stats;
     }
 
     public void addTag(Tag tag) {

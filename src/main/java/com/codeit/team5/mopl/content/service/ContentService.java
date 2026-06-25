@@ -1,7 +1,9 @@
 package com.codeit.team5.mopl.content.service;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
+import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
@@ -35,6 +37,7 @@ public class ContentService {
     private final TagRepository tagRepository;
     private final ContentMapper contentMapper;
     private final BinaryContentStorage binaryContentStorage;
+    private final BinaryContentRepository binaryContentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -48,11 +51,12 @@ public class ContentService {
         if (thumbnail != null && !thumbnail.isEmpty()) {
             try {
                 String key = binaryContentStorage.generateKey(content.getId(), thumbnail.getOriginalFilename());
-                content.initThumbnail(binaryContentStorage.toUrl(key));
-                eventPublisher.publishEvent(new BinaryContentUploadEvent(content.getId(), key, thumbnail.getBytes()));
+                BinaryContent binaryContent = binaryContentRepository.save(
+                        BinaryContent.pending(binaryContentStorage.toUrl(key)));
+                content.attachThumbnail(binaryContent);
+                eventPublisher.publishEvent(new BinaryContentUploadEvent(binaryContent.getId(), key, thumbnail.getBytes()));
             } catch (IOException e) {
                 log.warn("썸네일 바이트 읽기 실패 - contentId: {}", content.getId(), e);
-                content.failThumbnailUpload();
             }
         }
 
@@ -81,7 +85,8 @@ public class ContentService {
 
         tagNames.forEach(name -> content.addTag(existingTags.get(name)));
 
-        ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
+        ContentStats stats = contentStatsRepository.save(ContentStats.create());
+        content.attachStats(stats);
 
         return contentMapper.toDto(content, content.getContentTags(), stats);
     }
