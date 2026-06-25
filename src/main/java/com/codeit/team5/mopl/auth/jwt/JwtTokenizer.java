@@ -42,9 +42,16 @@ public class JwtTokenizer {
                 .compact();
     }
 
-    public Jws<Claims> getClaims(String jws) {
+    public Jws<Claims> getAccessClaims(String jws) {
         return Jwts.parserBuilder()
                 .setSigningKey(getAccessKey())
+                .build()
+                .parseClaimsJws(jws);
+    }
+
+    public Jws<Claims> getRefreshClaims(String jws) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getRefreshKey())
                 .build()
                 .parseClaimsJws(jws);
     }

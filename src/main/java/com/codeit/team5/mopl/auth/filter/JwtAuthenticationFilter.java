@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.auth.filter;
 
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import jakarta.servlet.FilterChain;
@@ -26,6 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenizer jwtTokenizer;
+    private final MoplUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(
@@ -44,18 +47,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String accessToken = authorizationHeader.substring(BEARER_PREFIX.length());
 
         try {
-            Jws<Claims> claimsJws = jwtTokenizer.getClaims(accessToken);
+            Jws<Claims> claimsJws = jwtTokenizer.getAccessClaims(accessToken);
             Claims claims = claimsJws.getBody();
 
-            String userId = claims.getSubject();
             String email = claims.get("email", String.class);
-            String role = claims.get("role", String.class);
+
+            MoplUserDetails userDetails = (MoplUserDetails) userDetailsService.loadUserByUsername(email);
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
-                            UUID.fromString(userId),
+                            userDetails,
                             null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                            userDetails.getAuthorities()
                     );
 
             authentication.setDetails(email);

@@ -34,6 +34,7 @@ mopl:
     type: ${MOPL_STORAGE_TYPE:memory}   # 기본값: 인메모리
 
 jwt:
-  secret-key: ${JWT_SECRET_KEY}
+  access-secret-key: ${JWT_ACCESS_SECRET_KEY:abcdefghijklmnopqrstuvwxyz123456}
+  refresh-secret-key: ${JWT_REFRESH_SECRET_KEY:123456abcdefghijklmnopqrstuvwxyz}
   access-token-expiration-minutes: 30
   refresh-token-expiration-minutes: 420
