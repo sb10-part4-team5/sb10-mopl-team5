@@ -37,7 +37,7 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
             Files.createDirectories(destination.getParent());
             Files.write(destination, bytes);
         } catch (IOException e) {
-            throw new FileStorageException(key);
+            throw new FileStorageException(key, e);
         }
         log.debug("파일 저장 완료: {}", destination);
     }
@@ -46,7 +46,7 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
-            throw new UploadDirectoryInitException(uploadDir);
+            throw new UploadDirectoryInitException(uploadDir, e);
         }
     }
 }

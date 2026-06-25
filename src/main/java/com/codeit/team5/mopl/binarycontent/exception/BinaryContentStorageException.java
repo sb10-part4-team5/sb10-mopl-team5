@@ -9,4 +9,8 @@ public class BinaryContentStorageException extends BusinessExceptionSuggestion {
         super(status, message);
     }
 
+    public BinaryContentStorageException(HttpStatus status, String message, Throwable cause) {
+        super(status, message);
+        initCause(cause);
+    }
 }
