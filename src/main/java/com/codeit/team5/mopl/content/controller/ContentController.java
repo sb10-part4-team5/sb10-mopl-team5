@@ -2,16 +2,21 @@ package com.codeit.team5.mopl.content.controller;
 
 import com.codeit.team5.mopl.content.controller.api.ContentApi;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.service.ContentService;
 import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,5 +39,16 @@ public class ContentController implements ContentApi {
         log.info("Content Create request: POST /api/contents");
         ContentResponse response = contentService.create(request, MultipartFiles.toImageResource(thumbnail));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Override
+    @PatchMapping(value = "/{contentId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ContentResponse> patchContent(
+            @PathVariable UUID contentId,
+            @Valid @RequestBody ContentUpdateRequest request
+    ) {
+        log.info("Content Update request: PATCH /api/contents/{}", contentId);
+        ContentResponse response = contentService.update(contentId, request);
+        return ResponseEntity.ok(response);
     }
 }
