@@ -34,6 +34,11 @@ public class MoplUserDetails implements UserDetails {
         return userDto.email();
     }
 
+    @Override
+    public boolean isAccountNonLocked() {
+        return !userDto.locked();
+    }
+
     public UUID getId() {
         return userDto.id();
     }

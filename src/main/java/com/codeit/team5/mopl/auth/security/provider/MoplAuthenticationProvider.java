@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.security.provider;
 
+import com.codeit.team5.mopl.auth.exception.AccountLockedException;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
@@ -32,6 +33,11 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
         if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
             log.warn("Login failed: id={}", userDetails.getId());
             throw new InvalidCredentialsException("비밀번호가 일치하지 않습니다.");
+        }
+
+        if (!userDetails.isAccountNonLocked()) {
+            log.warn("Login failed - Account is locked: id={}", userDetails.getId());
+            throw new AccountLockedException("잠긴 계정입니다");
         }
 
         return new UsernamePasswordAuthenticationToken(

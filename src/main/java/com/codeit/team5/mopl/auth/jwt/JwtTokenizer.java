@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.jwt;
 
+import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
@@ -50,10 +51,15 @@ public class JwtTokenizer {
     }
 
     public Jws<Claims> getRefreshClaims(String jws) {
-        return Jwts.parserBuilder()
+        Jws<Claims> claimsJws = Jwts.parserBuilder()
                 .setSigningKey(getRefreshKey())
                 .build()
                 .parseClaimsJws(jws);
+        if (!"REFRESH".equals(claimsJws.getBody().get("tokenType", String.class))) {
+            throw new JwtInvalidException("Invalid refresh token type");
+        }
+
+        return claimsJws;
     }
 
     private Key getAccessKey() {

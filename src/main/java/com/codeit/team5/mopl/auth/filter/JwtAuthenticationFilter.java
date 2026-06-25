@@ -1,10 +1,16 @@
 package com.codeit.team5.mopl.auth.filter;
 
+import com.codeit.team5.mopl.auth.exception.AuthException;
+import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenizer jwtTokenizer;
     private final MoplUserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -52,6 +59,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String email = claims.get("email", String.class);
 
+            if (email == null) {
+                throw new JwtInvalidException("Invalid token email");
+            }
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new UserNotFoundException(email));
+
+            validateSubject(claims, user);
+
             MoplUserDetails userDetails = (MoplUserDetails) userDetailsService.loadUserByUsername(email);
 
             UsernamePasswordAuthenticationToken authentication =
@@ -64,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authentication.setDetails(email);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException | AuthException e) {
             SecurityContextHolder.clearContext();
         }
 
@@ -74,5 +90,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean hasBearerToken(String authorizationHeader) {
         return Objects.nonNull(authorizationHeader)
                 && authorizationHeader.startsWith(BEARER_PREFIX);
+    }
+
+    private void validateSubject(Claims claims, User user) {
+        String subject = claims.getSubject();
+
+        if (subject == null) {
+            throw new JwtInvalidException("Invalid token subject");
+        }
+
+        try {
+            UUID subjectUserId = UUID.fromString(subject);
+
+            if (!subjectUserId.equals(user.getId())) {
+                throw new JwtInvalidException("Invalid token subject");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new JwtInvalidException("Invalid token subject");
+        }
     }
 }

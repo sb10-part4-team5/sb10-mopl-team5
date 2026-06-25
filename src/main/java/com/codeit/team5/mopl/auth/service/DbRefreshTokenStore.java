@@ -4,6 +4,8 @@ import com.codeit.team5.mopl.auth.entity.RefreshToken;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
 import com.codeit.team5.mopl.auth.token.RefreshTokenHasher;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.Objects;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DbRefreshTokenStore implements RefreshTokenStore {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRepository userRepository;
     private final RefreshTokenHasher refreshTokenHasher;
     private final EntityManager entityManager;
 
@@ -29,11 +32,14 @@ public class DbRefreshTokenStore implements RefreshTokenStore {
         Instant requiredExpiresAt =
                 Objects.requireNonNull(expiresAt, "expiresAt must not be null");
 
+        User user = userRepository.findByIdForUpdate(requiredUserId)
+                .orElseThrow(() -> new UserNotFoundException(requiredUserId));
+
         refreshTokenRepository.deleteByUser_Id(requiredUserId);
 
-        User userReference = entityManager.getReference(User.class, requiredUserId);
         RefreshToken refreshToken =
-                RefreshToken.create(userReference, tokenHash, requiredExpiresAt);
+                RefreshToken.create(user, tokenHash, requiredExpiresAt);
+
         refreshTokenRepository.save(refreshToken);
     }
 
