@@ -73,13 +73,25 @@ public class ContentService {
     }
 
     @Transactional
-    public ContentResponse update(UUID contentId, ContentUpdateRequest request) {
+    public ContentResponse update(UUID contentId, ContentUpdateRequest request, MultipartFile thumbnail) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(ContentNotFoundException::new);
 
         content.update(request.title(), request.description());
         content.clearTags();
         attachTags(content, request.tags());
+
+        if (thumbnail != null && !thumbnail.isEmpty()) {
+            try {
+                String key = binaryContentStorage.generateKey(contentId, thumbnail.getOriginalFilename());
+                BinaryContent binaryContent = binaryContentRepository.save(
+                        BinaryContent.pending(binaryContentStorage.toUrl(key)));
+                content.attachThumbnail(binaryContent);
+                eventPublisher.publishEvent(new BinaryContentUploadEvent(binaryContent.getId(), key, thumbnail.getBytes()));
+            } catch (IOException e) {
+                log.warn("썸네일 바이트 읽기 실패 - contentId: {}", contentId, e);
+            }
+        }
 
         return contentMapper.toDto(content);
     }

@@ -22,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 public interface ContentApi {
 
     @Schema(name = "ContentCreateMultipartRequest")
-    class MultipartRequest {
+    class ContentCreateMultipartRequest {
         @Schema(implementation = ContentCreateRequest.class)
         public ContentCreateRequest request;
 
@@ -45,13 +45,22 @@ public interface ContentApi {
     })
     @RequestBody(content = @Content(
             mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-            schema = @Schema(implementation = MultipartRequest.class),
+            schema = @Schema(implementation = ContentCreateMultipartRequest.class),
             encoding = @Encoding(name = "request", contentType = MediaType.APPLICATION_JSON_VALUE)
     ))
     ResponseEntity<ContentResponse> postContent(
             @Parameter(hidden = true) ContentCreateRequest request,
             @Parameter(hidden = true) MultipartFile thumbnail
     );
+
+    @Schema(name = "ContentUpdateMultipartRequest")
+    class ContentUpdateMultipartRequest {
+        @Schema(implementation = ContentUpdateRequest.class)
+        public ContentCreateRequest request;
+
+        @Schema(type = "string", format = "binary", description = "썸네일 이미지")
+        public MultipartFile thumbnail;
+    }
 
     @Operation(summary = "[어드민] 콘텐츠 수정", description = "콘텐츠의 제목, 설명, 태그를 수정합니다.")
     @ApiResponses({
@@ -68,8 +77,14 @@ public interface ContentApi {
             @ApiResponse(responseCode = "500", description = "서버 오류",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
+    @RequestBody(content = @Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+            schema = @Schema(implementation = ContentUpdateMultipartRequest.class),
+            encoding = @Encoding(name = "request", contentType = MediaType.APPLICATION_JSON_VALUE)
+    ))
     ResponseEntity<ContentResponse> patchContent(
             @Parameter(description = "콘텐츠 ID") UUID contentId,
-            @Parameter(hidden = true) ContentUpdateRequest request
+            @Parameter(hidden = true) ContentUpdateRequest request,
+            @Parameter(hidden = true) MultipartFile thumbnail
     );
 }
