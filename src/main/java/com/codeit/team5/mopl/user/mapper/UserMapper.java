@@ -13,5 +13,6 @@ import org.mapstruct.ReportingPolicy;
 )
 public interface UserMapper {
     @Mapping(target = "role", source = "user.role")
+    @Mapping(target = "profileImageUrl", source = "user.profileImage.url")
     UserResponse toDto(User user);
 }

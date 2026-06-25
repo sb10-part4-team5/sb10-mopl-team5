@@ -75,3 +75,7 @@ $RECYCLE.BIN/
 
 ### 로그 디렉토리 ###
 .logs/
+
+### 로컬 업로드 파일 디렉토리 ###
+uploads/
+uploads-test/

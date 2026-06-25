@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentTag;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -16,12 +17,15 @@ public interface ContentMapper {
     @Mapping(target = "averageRating", source = "stats")
     @Mapping(target = "reviewCount", source = "stats.reviewCount")
     @Mapping(target = "watcherCount", source = "stats.watcherCount")
-    ContentResponse toDto(Content content, List<ContentTag> contentTags, ContentStats stats);
+    @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
+    @Mapping(target = "thumbnailUploadStatus", source = "thumbnail.uploadStatus")
+    ContentResponse toDto(Content content);
 
-    default List<String> toTagNames(List<ContentTag> contentTags) {
+    default List<String> toTagNames(Set<ContentTag> contentTags) {
         if (contentTags == null) return Collections.emptyList();
         return contentTags.stream()
                 .map(ct -> ct.getTag().getName())
+                .sorted()
                 .toList();
     }
 

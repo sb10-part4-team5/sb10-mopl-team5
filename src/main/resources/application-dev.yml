@@ -40,6 +40,20 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+  web:
+    resources:
+      static-locations: classpath:/static/, file:./uploads/
+
+# 이미지 저장소 전략 (구현체는 mopl.storage.type 값으로 선택)
+#   - local: 로컬/테스트용 저장
+#   - s3    : 배포용 S3 저장
+mopl:
+  storage:
+    type: ${STORAGE_TYPE:local} # 기본값: 로컬
+    local:
+      base-url: http://localhost:8080
+      upload-dir: ./uploads
+
 logging:
   level:
     root: INFO

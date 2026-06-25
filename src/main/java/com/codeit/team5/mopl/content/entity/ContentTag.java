@@ -10,6 +10,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
@@ -37,10 +38,22 @@ public class ContentTag {
 
     public static ContentTag create(Content content, Tag tag) {
         ContentTag contentTag = new ContentTag();
-        contentTag.id = new ContentTagId();
+        contentTag.id = new ContentTagId(content.getId(), tag.getId());
         contentTag.content = content;
         contentTag.tag = tag;
         return contentTag;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ContentTag other)) return false;
+        return Objects.equals(id, other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 
     @Embeddable

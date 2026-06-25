@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.user.entity;
 
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.user.exception.InvalidPasswordException;
 import com.codeit.team5.mopl.user.exception.InvalidUsernameException;
@@ -34,8 +35,9 @@ public class User extends BaseUpdatableEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(name = "profile_image_url", length = 512)
-    private String profileImageUrl;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_image_id", unique = true)
+    private BinaryContent profileImage;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -55,20 +57,15 @@ public class User extends BaseUpdatableEntity {
         user.password = password;
         user.locked = false;
         user.role = UserRole.USER;
-        user.profileImageUrl = null;
-
         return user;
     }
 
-    public void updateProfile(
-            String newName,
-            String profileImageUrl
-    ) {
+    public void updateProfile(String newName, BinaryContent profileImage) {
         if (newName == null || newName.isBlank()) {
             throw new InvalidUsernameException();
         }
         this.name = newName;
-        this.profileImageUrl = profileImageUrl;
+        this.profileImage = profileImage;
     }
 
     public void updatePassword(String newPassword) {

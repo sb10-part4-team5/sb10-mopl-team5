@@ -1,20 +1,22 @@
 package com.codeit.team5.mopl.content.entity;
 
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
-import com.codeit.team5.mopl.tag.entity.Tag;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -46,8 +48,9 @@ public class Content extends BaseUpdatableEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "thumbnail_url", length = 512)
-    private String thumbnailUrl;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "thumbnail_id", unique = true)
+    private BinaryContent thumbnail;
 
     @Column(name = "released_at")
     private Instant releasedAt;
@@ -63,8 +66,12 @@ public class Content extends BaseUpdatableEntity {
     @Column(name = "external_id", nullable = false, length = 100)
     private String externalId;
 
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "stats_id", unique = true)
+    private ContentStats stats;
+
     @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ContentTag> contentTags = new ArrayList<>();
+    private Set<ContentTag> contentTags = new HashSet<>();
 
     public static Content createByAdmin(ContentType type, String title, String description) {
         Content content = new Content();
@@ -95,22 +102,18 @@ public class Content extends BaseUpdatableEntity {
         return content;
     }
 
-    public void addTag(Tag tag) {
-        if (tag == null) {
+    public void attachThumbnail(BinaryContent thumbnail) {
+        this.thumbnail = thumbnail;
+    }
+
+    public void attachStats(ContentStats stats) {
+        this.stats = stats;
+    }
+
+    public void addTag(ContentTag contentTag) {
+        if (contentTag == null) {
             return;
         }
-
-        boolean alreadyExists = this.contentTags.stream()
-                .anyMatch(ct -> {
-                    Tag existing = ct.getTag();
-                    if (existing.getId() != null && tag.getId() != null) {
-                        return existing.getId().equals(tag.getId());
-                    }
-                    return existing.getName().equals(tag.getName());
-                });
-
-        if (!alreadyExists) {
-            contentTags.add(ContentTag.create(this, tag));
-        }
+        contentTags.add(contentTag);
     }
 }
