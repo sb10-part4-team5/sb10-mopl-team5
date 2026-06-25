@@ -25,3 +25,10 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+# 이미지 저장소 전략 (구현체는 mopl.storage.type 값으로 선택)
+#   - memory: 로컬/테스트용 인메모리 저장
+#   - s3    : 배포용 S3 저장
+mopl:
+  storage:
+    type: ${MOPL_STORAGE_TYPE:memory}   # 기본값: 인메모리

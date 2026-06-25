@@ -1,0 +1,15 @@
+# 이 파일을 terraform.tfvars 로 복사한 뒤 실제 값으로 채운다.
+# terraform.tfvars 는 .gitignore 처리되어 커밋되지 않는다.
+
+account_id = "123456789012"        # AWS 계정 ID
+github_org = "sb10-part4-team5"     # GitHub 조직/사용자명
+
+db_password = "여기에-DB-비밀번호"  # 8자 이상, / @ " 공백 제외
+
+# 아래는 기본값이 있으므로 다를 때만 작성
+# aws_region     = "ap-northeast-2"
+# s3_bucket      = "mopl-bucket"
+# db_username    = "mopl"
+# ecr_repository = "mopl"
+# ecs_cluster    = "mopl-cluster"
+# ecs_service    = "mopl-service"
