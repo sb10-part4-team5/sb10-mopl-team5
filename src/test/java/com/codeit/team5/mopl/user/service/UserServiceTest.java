@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
@@ -27,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -99,8 +99,8 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.create(request))
                 .isInstanceOf(DuplicatedEmailException.class)
                 .satisfies(exception -> assertThat(
-                        ((DuplicatedEmailException) exception).getErrorCode()
-                ).isEqualTo(ErrorCode.EMAIL_ALREADY_EXISTS));
+                        ((DuplicatedEmailException) exception).getStatus()
+                ).isEqualTo(HttpStatus.CONFLICT));
 
         verify(userRepository).existsByEmail(request.email());
         verify(userRepository, never()).save(any(User.class));

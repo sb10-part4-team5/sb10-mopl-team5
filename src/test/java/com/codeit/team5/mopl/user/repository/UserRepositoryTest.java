@@ -8,6 +8,7 @@ import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -132,6 +133,36 @@ class UserRepositoryTest {
 
         // Then
         assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("식별자로 사용자를 비관적 쓰기 잠금으로 조회한다")
+    void findByIdForUpdate_success() {
+        // Given
+        User user = User.create("lock@example.com", "password", "잠금 사용자");
+        User savedUser = userRepository.saveAndFlush(user);
+        entityManager.clear();
+
+        // When
+        User foundUser = userRepository.findByIdForUpdate(savedUser.getId()).orElseThrow();
+
+        // Then
+        assertThat(foundUser.getId()).isEqualTo(savedUser.getId());
+        assertThat(foundUser.getEmail()).isEqualTo("lock@example.com");
+        assertThat(entityManager.getLockMode(foundUser)).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 식별자를 비관적 쓰기 잠금으로 조회하면 빈 결과를 반환한다")
+    void findByIdForUpdate_notFound() {
+        // Given
+        UUID nonexistentId = UUID.randomUUID();
+
+        // When
+        Optional<User> result = userRepository.findByIdForUpdate(nonexistentId);
+
+        // Then
+        assertThat(result).isEmpty();
     }
 
     @Test

@@ -1,0 +1,194 @@
+package com.codeit.team5.mopl.auth.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
+import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
+import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
+import com.codeit.team5.mopl.auth.jwt.JwtProperties;
+import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.mapper.AuthMapper;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.user.dto.response.UserResponse;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+@ExtendWith(MockitoExtension.class)
+class AuthServiceTest {
+
+    @Mock
+    private AuthenticationManager authenticationManager;
+
+    @Mock
+    private RefreshTokenStore refreshTokenStore;
+
+    @Mock
+    private AuthMapper authMapper;
+
+    @Mock
+    private JwtTokenizer jwtTokenizer;
+
+    @Mock
+    private JwtProperties jwtProperties;
+
+    @InjectMocks
+    private AuthService authService;
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("로그인에 성공하면 토큰을 발급하고 리프레시 토큰 저장을 요청한다")
+    void login_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserResponse userResponse = new UserResponse(
+                userId,
+                Instant.parse("2026-06-24T00:00:00Z"),
+                "user@example.com",
+                "사용자",
+                null,
+                "USER",
+                false
+        );
+        MoplUserDetails userDetails = new MoplUserDetails(userResponse, "encoded-password");
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+        );
+        SignInRequest request = new SignInRequest("User@Example.COM", "password1");
+        String accessToken = "access-token";
+        String refreshToken = "refresh-token";
+        JwtResponse expectedResponse = new JwtResponse(userResponse, accessToken);
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(jwtTokenizer.generateAccessToken(userId.toString(), userResponse.email(), userResponse.role()))
+                .thenReturn(accessToken);
+        when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(refreshToken);
+        when(jwtProperties.refreshTokenExpirationMinutes()).thenReturn(420L);
+        when(authMapper.toDto(userResponse, accessToken)).thenReturn(expectedResponse);
+
+        Instant before = Instant.now().plus(420, ChronoUnit.MINUTES).minusSeconds(1);
+
+        // When
+        JwtResponse result = authService.login(request);
+
+        // Then
+        Instant after = Instant.now().plus(420, ChronoUnit.MINUTES).plusSeconds(1);
+        assertThat(result).isSameAs(expectedResponse);
+
+        ArgumentCaptor<UsernamePasswordAuthenticationToken> authenticationCaptor =
+                ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
+        ArgumentCaptor<Instant> expiresAtCaptor = ArgumentCaptor.forClass(Instant.class);
+
+        verify(authenticationManager).authenticate(authenticationCaptor.capture());
+        verify(jwtTokenizer).generateAccessToken(userId.toString(), userResponse.email(), userResponse.role());
+        verify(jwtTokenizer).generateRefreshToken(userId.toString());
+        verify(refreshTokenStore).save(eq(userId), eq(refreshToken), expiresAtCaptor.capture());
+        verify(authMapper).toDto(userResponse, accessToken);
+
+        UsernamePasswordAuthenticationToken authenticationRequest = authenticationCaptor.getValue();
+        assertThat(authenticationRequest.getPrincipal()).isEqualTo("user@example.com");
+        assertThat(authenticationRequest.getCredentials()).isEqualTo(request.password());
+        assertThat(expiresAtCaptor.getValue()).isBetween(before, after);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 이메일이면 로그인에 실패하고 리프레시 토큰을 저장하지 않는다")
+    void login_unknownEmail_throwsException() {
+        // Given
+        SignInRequest request = new SignInRequest("Unknown@Example.COM", "password1");
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new UserNotFoundException("unknown@example.com"));
+
+        // When & Then
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verifyNoInteractions(jwtTokenizer, refreshTokenStore, authMapper);
+    }
+
+    @Test
+    @DisplayName("비밀번호가 일치하지 않으면 로그인에 실패하고 리프레시 토큰을 저장하지 않는다")
+    void login_invalidPassword_throwsException() {
+        // Given
+        SignInRequest request = new SignInRequest("user@example.com", "wrong-password");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new InvalidCredentialsException("비밀번호가 일치하지 않습니다."));
+
+        // When & Then
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(jwtTokenizer, never()).generateAccessToken(any(), any(), any());
+        verify(jwtTokenizer, never()).generateRefreshToken(any());
+        verifyNoInteractions(refreshTokenStore, authMapper);
+    }
+
+    @Test
+    @DisplayName("인증된 사용자가 로그아웃하면 사용자 식별자로 리프레시 토큰을 삭제한다")
+    void logout_authenticatedUser_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserResponse userResponse = new UserResponse(
+                userId,
+                Instant.parse("2026-06-24T00:00:00Z"),
+                "user@example.com",
+                "사용자",
+                null,
+                "USER",
+                false
+        );
+        MoplUserDetails userDetails = new MoplUserDetails(userResponse, "encoded-password");
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // When
+        authService.logout();
+
+        // Then
+        verify(refreshTokenStore).deleteByUserId(userId);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    @DisplayName("인증 정보가 없으면 로그아웃은 리프레시 토큰을 삭제하지 않고 종료한다")
+    void logout_unauthenticatedUser_doesNotDeleteRefreshToken() {
+        // Given: SecurityContext에 인증 정보가 없음
+
+        // When
+        authService.logout();
+
+        // Then
+        verify(refreshTokenStore, never()).deleteByUserId(any());
+    }
+}

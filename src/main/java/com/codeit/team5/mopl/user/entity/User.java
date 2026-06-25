@@ -78,15 +78,14 @@ public class User extends BaseUpdatableEntity {
     public void updateRole(UserRole role) {
         Objects.requireNonNull(role, "role must not be null");
         if (role == this.role) {
-            throw new SameRoleAssignmentException();
+            throw new SameRoleAssignmentException(this.role.toString());
         }
         this.role = role;
     }
 
     public void updateLocked(boolean locked) {
-        Objects.requireNonNull(role, "lock status must not be null");
         if (locked == this.locked) {
-            throw new SameLockStatusException();
+            throw new SameLockStatusException(this.locked);
         }
         this.locked = locked;
     }

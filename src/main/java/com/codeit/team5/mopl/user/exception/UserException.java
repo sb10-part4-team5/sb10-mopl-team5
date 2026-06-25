@@ -1,15 +1,16 @@
 package com.codeit.team5.mopl.user.exception;
 
 import com.codeit.team5.mopl.global.exception.BusinessException;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
 
-public class UserException extends BusinessException {
+public abstract class UserException extends BusinessException {
 
-    public UserException(ErrorCode errorCode) {
-        super(errorCode);
+    public UserException(HttpStatus status, String message) {
+        super(status, message);
     }
 
-    public UserException(ErrorCode errorCode, String detailMessage) {
-        super(errorCode, detailMessage);
+    public UserException(HttpStatus status, String message, Map<String, Object> details) {
+        super(status, message, details);
     }
 }

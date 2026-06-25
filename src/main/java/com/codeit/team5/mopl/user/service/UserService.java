@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.user.service;
 
-import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
@@ -68,7 +67,7 @@ public class UserService {
                     "Duplicated email: detail={}",
                     "이미 사용중인 이메일로 유저 생성 실패"
             );
-            throw new DuplicatedEmailException(ErrorCode.EMAIL_ALREADY_EXISTS, email);
+            throw new DuplicatedEmailException(email);
         }
     }
 

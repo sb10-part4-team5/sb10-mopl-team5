@@ -75,8 +75,8 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("중복 이메일로 회원가입하면 충돌 응답을 반환하고 사용자를 추가하지 않는다")
-    void createUser_duplicateEmail_throwsException() throws Exception {
+    @DisplayName("중복 이메일로 회원가입하면 409 충돌 응답을 반환하고 사용자를 추가하지 않는다")
+    void createUser_duplicateEmail_returnsConflict() throws Exception {
         // Given
         User existingUser = User.create("duplicate@example.com", "encoded-password", "기존 사용자");
         userRepository.saveAndFlush(existingUser);
@@ -86,12 +86,12 @@ class UserControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.exceptionName").value("EMAIL_ALREADY_EXISTS"))
-                .andExpect(jsonPath("$.message").value(request.email()))
-                .andExpect(jsonPath("$.details").isEmpty());
+                .andExpect(jsonPath("$.exceptionType").value("DuplicatedEmailException"))
+                .andExpect(jsonPath("$.message").value("이미 사용 중인 이메일입니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
         assertThat(userRepository.findAll())
                 .singleElement()
@@ -108,10 +108,10 @@ class UserControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.name[0]").value("사용자명은 필수입니다."));
 
@@ -127,10 +127,10 @@ class UserControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.email").isArray())
                 .andExpect(jsonPath("$.details.email").isNotEmpty());
@@ -147,10 +147,10 @@ class UserControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.password[0]")
                         .value("비밀번호는 영문자와 숫자를 포함하여 8자 이상이어야 합니다."));

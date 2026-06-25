@@ -1,20 +1,45 @@
 package com.codeit.team5.mopl.global.exception;
 
-import java.util.Objects;
+import java.util.Map;
+import java.util.StringJoiner;
+import java.util.stream.Collectors;
 import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
 @Getter
-public class BusinessException extends RuntimeException {
+public abstract class BusinessException extends RuntimeException {
 
-    private final ErrorCode errorCode;
+    private final HttpStatus status;
+    private final String exceptionType;
+    private final String message; // client 에게 보낼 message
+    private final String detailMessage; // logging 을 위한 message
 
-    public BusinessException(ErrorCode errorCode) {
-        super(Objects.requireNonNull(errorCode, "errorCode must not be null").getMessage());
-        this.errorCode = errorCode;
+    public BusinessException(HttpStatus status, String message) {
+        this(status, message, null);
     }
 
-    public BusinessException(ErrorCode errorCode, String detailMessage) {
-        super(detailMessage != null ? detailMessage : Objects.requireNonNull(errorCode, "errorCode must not be null").getMessage());
-        this.errorCode = Objects.requireNonNull(errorCode, "errorCode must not be null");
+    public BusinessException(HttpStatus status, String message, Map<String, Object> details) {
+        super(message);
+        this.status = status;
+        this.exceptionType = this.getClass().getSimpleName();
+        this.message = message;
+        this.detailMessage = formatDetailMessage(this.message, details);
+    }
+
+    private String formatDetailMessage(String defaultMessage, Map<String, Object> details) {
+        if (details == null || details.isEmpty()) {
+            return defaultMessage;
+        }
+        return details.entrySet().stream()
+                .map(entry -> entry.getKey() + ": " + entry.getValue().toString())
+                .collect(Collectors.joining(", ", "[", "]"));
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", this.exceptionType + "[", "]")
+                .add("HttpStatus=" + status)
+                .add("detailMessage='" + detailMessage + "'")
+                .toString();
     }
 }
