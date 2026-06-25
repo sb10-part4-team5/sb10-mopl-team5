@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.codeit.team5.mopl.config.SecurityConfig;
+import com.codeit.team5.mopl.global.config.SecurityConfig;
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
@@ -346,7 +346,7 @@ class UserControllerTest {
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"));
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 
         verify(userService, never()).update(any(), any(), any());
     }

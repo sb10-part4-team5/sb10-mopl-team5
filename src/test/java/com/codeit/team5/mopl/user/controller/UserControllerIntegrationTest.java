@@ -242,7 +242,7 @@ class UserControllerIntegrationTest {
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionName").value("INVALID_INPUT"));
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 
         User notUpdated = userRepository.findById(saved.getId()).orElseThrow();
         assertThat(notUpdated.getName()).isEqualTo("기존이름");
