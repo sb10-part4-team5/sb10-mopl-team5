@@ -72,7 +72,10 @@ public interface AuthApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))
             )
     })
-    ResponseEntity<Void> logout();
+    ResponseEntity<Void> logout(
+            @Parameter(description = "Refresh Token Cookie", required = false)
+            @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
+    );
 
     @Operation(
             summary = "Access Token 재발급",

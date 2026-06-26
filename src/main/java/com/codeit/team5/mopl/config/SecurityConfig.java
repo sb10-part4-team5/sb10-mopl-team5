@@ -56,7 +56,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(userAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/sign-out").authenticated()
+                        .requestMatchers("/api/auth/sign-out").permitAll()
                         .requestMatchers("/api/follows/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
                         .requestMatchers("/api/users").permitAll()

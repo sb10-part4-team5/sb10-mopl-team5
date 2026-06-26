@@ -10,17 +10,14 @@ import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -69,26 +66,22 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken
-                || !(authentication.getPrincipal() instanceof MoplUserDetails)) {
-            log.warn("Logout failed: unauthenticated request");
-
-            throw new JwtInvalidException("Authentication required");
-        }
-
-        MoplUserDetails principal = (MoplUserDetails) authentication.getPrincipal();
-        UUID userId = principal.getId();
-
-        refreshTokenStore.deleteByUserId(userId);
-
+    public void logout(String refreshToken) {
         SecurityContextHolder.clearContext();
 
-        log.info("Logout success: id={}", userId);
+        if (refreshToken == null || refreshToken.isBlank()) {
+            log.info("Logout requested without refresh token");
+            // 리프레시 토큰이 없을 시에도 쿠키 삭제 응답은 정상 반환
+            return;
+        }
+
+        try {
+            UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
+            refreshTokenStore.deleteByUserId(userId);
+            log.info("Logout success: id={}", userId);
+        } catch (JwtInvalidException e) {
+            log.info("Logout requested with invalid or expired refresh token");
+        }
     }
 
     @Transactional

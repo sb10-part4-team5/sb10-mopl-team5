@@ -50,10 +50,12 @@ public class AuthController implements AuthApi {
     }
 
     @PostMapping("/sign-out")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
+    ) {
         log.info("Logout request: POST /api/auth/sign-out");
 
-        authService.logout();
+        authService.logout(refreshToken);
         ResponseCookie deleteCookie = cookieManager.deleteCookie();
 
         return ResponseEntity.noContent()
