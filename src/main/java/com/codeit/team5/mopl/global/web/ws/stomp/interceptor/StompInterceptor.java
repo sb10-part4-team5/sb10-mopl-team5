@@ -24,7 +24,7 @@ public class StompInterceptor implements ChannelInterceptor {
             return message;
         }
         for (StompCommandHandler handler : handlers) {
-            if (handler.canHandle(command)) {
+            if (handler.canHandle(accessor)) {
                 handler.handle(accessor);
                 break;
             }
