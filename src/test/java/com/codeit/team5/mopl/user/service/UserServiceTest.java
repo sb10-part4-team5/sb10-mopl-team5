@@ -183,7 +183,7 @@ class UserServiceTest {
                 userId, Instant.parse("2026-06-25T00:00:00Z"),
                 "user@example.com", "새이름", null, "USER", false
         );
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(expected);
 
         // When
@@ -207,7 +207,7 @@ class UserServiceTest {
                 userId, Instant.parse("2026-06-25T00:00:00Z"),
                 "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
         );
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
         when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq(user.getId()), eq("profile.jpg")))
                 .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
         when(binaryContentStorage.toUrl("profiles/key.jpg"))
@@ -231,13 +231,13 @@ class UserServiceTest {
     void update_notFound_throwsException() {
         // Given
         UUID userId = UUID.randomUUID();
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> userService.update(userId, new UserUpdateRequest("새이름"), null))
                 .isInstanceOf(UserNotFoundException.class);
 
-        verify(userRepository).findById(userId);
+        verify(userRepository).findWithProfileImageById(userId);
         verifyNoInteractions(userMapper, binaryContentRepository, eventPublisher);
     }
 }
