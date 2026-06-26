@@ -30,6 +30,21 @@ public interface ContentApi {
         public MultipartFile thumbnail;
     }
 
+    @Operation(summary = "콘텐츠 단건 조회", description = "콘텐츠 ID로 단건 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "성공",
+                    content = @Content(schema = @Schema(implementation = ContentResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "콘텐츠 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<ContentResponse> getContent(@Parameter(description = "콘텐츠 ID") UUID contentId);
+
     @Operation(summary = "[어드민] 콘텐츠 생성", description = "새로운 콘텐츠를 등록합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "성공",

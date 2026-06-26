@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +52,13 @@ public class ContentController implements ContentApi {
         log.info("Content Update request: PATCH /api/contents/{}", contentId);
         ContentResponse response = contentService.update(contentId, request, MultipartFiles.toImageResource(thumbnail));
         return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @GetMapping("/{contentId}")
+    public ResponseEntity<ContentResponse> getContent(@PathVariable UUID contentId) {
+        log.info("Content Get request: GET /api/contents/{}", contentId);
+        return ResponseEntity.ok(contentService.getById(contentId));
     }
 
     @Override

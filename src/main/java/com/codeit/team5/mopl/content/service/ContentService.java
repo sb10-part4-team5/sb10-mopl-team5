@@ -93,6 +93,12 @@ public class ContentService {
         return contentMapper.toDto(content);
     }
 
+    public ContentResponse getById(UUID contentId) {
+        Content content = contentRepository.findWithStatsAndTagsById(contentId)
+                .orElseThrow(() -> new ContentNotFoundException(contentId));
+        return contentMapper.toDto(content);
+    }
+
     @Transactional
     public void delete(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
