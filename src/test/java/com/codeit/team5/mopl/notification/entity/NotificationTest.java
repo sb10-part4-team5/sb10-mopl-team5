@@ -3,6 +3,9 @@ package com.codeit.team5.mopl.notification.entity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeit.team5.mopl.notification.exception.InvalidNotificationTitleException;
+import com.codeit.team5.mopl.notification.exception.InvalidNotificationTypeException;
+import com.codeit.team5.mopl.notification.exception.ReceiverIdNullException;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -47,7 +50,7 @@ class NotificationTest {
         // when & then
         assertThatThrownBy(() -> Notification.create(
                 null, NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ReceiverIdNullException.class);
     }
 
     @Test
@@ -56,7 +59,7 @@ class NotificationTest {
         // when & then
         assertThatThrownBy(() -> Notification.create(
                 UUID.randomUUID(), null, "제목", "내용", NotificationLevel.INFO))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(InvalidNotificationTypeException.class);
     }
 
     @Test
@@ -65,16 +68,16 @@ class NotificationTest {
         // when & then
         assertThatThrownBy(() -> Notification.create(
                 UUID.randomUUID(), NotificationType.FOLLOWED, "  ", "내용", NotificationLevel.INFO))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(InvalidNotificationTitleException.class);
     }
+
     @Test
     @DisplayName("title이 null이면 예외가 발생한다")
-
     void create_titleNull_exception() {
         // when & then
         assertThatThrownBy(() -> Notification.create(
-            UUID.randomUUID(), NotificationType.FOLLOWED, null, "내용", NotificationLevel.INFO))
-            .isInstanceOf(IllegalArgumentException.class);
+                UUID.randomUUID(), NotificationType.FOLLOWED, null, "내용", NotificationLevel.INFO))
+                .isInstanceOf(InvalidNotificationTitleException.class);
     }
 
     @Test

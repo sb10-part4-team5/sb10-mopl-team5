@@ -1,6 +1,9 @@
 package com.codeit.team5.mopl.notification.entity;
 
 import com.codeit.team5.mopl.global.entity.BaseEntity;
+import com.codeit.team5.mopl.notification.exception.InvalidNotificationTitleException;
+import com.codeit.team5.mopl.notification.exception.InvalidNotificationTypeException;
+import com.codeit.team5.mopl.notification.exception.ReceiverIdNullException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -54,13 +57,13 @@ public class Notification extends BaseEntity {
         UUID receiverId, NotificationType type, String title, String content,
         NotificationLevel level) {
         if (receiverId == null) {
-            throw new IllegalArgumentException("receiverId는 필수입니다.");
+            throw new ReceiverIdNullException();
         }
         if (type == null) {
-            throw new IllegalArgumentException("type은 필수입니다.");
+            throw new InvalidNotificationTypeException();
         }
         if (title == null || title.isBlank()) {
-            throw new IllegalArgumentException("title은 비어 있을 수 없습니다.");
+            throw new InvalidNotificationTitleException();
         }
         return new Notification(receiverId, type, title, content, level);
     }
