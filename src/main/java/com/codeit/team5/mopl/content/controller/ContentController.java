@@ -1,11 +1,13 @@
 package com.codeit.team5.mopl.content.controller;
 
+import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import com.codeit.team5.mopl.content.controller.api.ContentApi;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.service.ContentService;
-import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +60,16 @@ public class ContentController implements ContentApi {
     @GetMapping("/{contentId}")
     public ResponseEntity<ContentResponse> getContent(@PathVariable UUID contentId) {
         log.info("Content Get request: GET /api/contents/{}", contentId);
-        return ResponseEntity.ok(contentService.getById(contentId));
+        ContentResponse response = contentService.findById(contentId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @GetMapping
+    public ResponseEntity<CursorResponse<ContentResponse>> getContents(ContentCursorRequest request) {
+        log.info("Content List request: GET /api/contents");
+        CursorResponse<ContentResponse> response = contentService.findContents(request);
+        return ResponseEntity.ok(response);
     }
 
     @Override
