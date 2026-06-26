@@ -34,7 +34,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.multipart.MultipartFile;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 
 @WebMvcTest(
         controllers = ContentController.class,
@@ -112,7 +112,10 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.reviewCount").value(0))
                 .andExpect(jsonPath("$.watcherCount").value(0));
 
-        verify(contentService).create(requestCaptor.capture(), any(MultipartFile.class));
+        ArgumentCaptor<FileRequest> thumbnailCaptor = ArgumentCaptor.forClass(FileRequest.class);
+        verify(contentService).create(requestCaptor.capture(), thumbnailCaptor.capture());
+        assertThat(thumbnailCaptor.getValue().filename()).isEqualTo("test.jpg");
+        assertThat(thumbnailCaptor.getValue().bytes()).containsExactly(1, 2, 3);
         ContentCreateRequest captured = requestCaptor.getValue();
         assertThat(captured.type()).isEqualTo(ContentType.MOVIE);
         assertThat(captured.title()).isEqualTo("테스트 영화");

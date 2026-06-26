@@ -5,6 +5,7 @@ import java.util.UUID;
 public record BinaryContentUploadEvent(
         UUID binaryContentId,
         String key,
-        byte[] bytes
+        byte[] bytes,
+        String contentType
 ) {
 }

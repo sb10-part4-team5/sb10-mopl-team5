@@ -1,6 +1,15 @@
 package com.codeit.team5.mopl.user.service;
 
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
+import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
+import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
@@ -11,6 +20,7 @@ import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +34,10 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final BinaryContentStorage binaryContentStorage;
+    private final StorageKeyFactory storageKeyFactory;
+    private final BinaryContentRepository binaryContentRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
@@ -51,6 +65,34 @@ public class UserService {
 
         log.debug("User retrieved: userId={}", userId);
         return userMapper.toDto(user);
+    }
+
+    @Transactional
+    public UserResponse update(UUID userId, UserUpdateRequest request, FileRequest image) {
+        User user = getUser(userId);
+
+        // TODO: 인증 구현 후 본인 확인(현재 로그인 사용자 == userId) 추가, 불일치 시 403
+
+        user.updateName(request.name());
+        if (image != null) {
+            user.updateProfileImage(storeProfileImage(user.getId(), image));
+        }
+
+        log.info("User updated: userId={}", userId);
+        return userMapper.toDto(user);
+    }
+
+    private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
+        // TODO(고아 정리): 기존 profileImage를 삭제 대상 상태로 표시 후 배치로 정리 (DB/S3 누적 방지)
+        GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.PROFILE, userId, image.filename());
+        BinaryContent profileImage = binaryContentRepository.save(
+                BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
+
+        eventPublisher.publishEvent(
+                new BinaryContentUploadEvent(profileImage.getId(), generated.key(), image.bytes(), generated.contentType()));
+        // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
+
+        return profileImage;
     }
 
     private User getUser(UUID userId) {

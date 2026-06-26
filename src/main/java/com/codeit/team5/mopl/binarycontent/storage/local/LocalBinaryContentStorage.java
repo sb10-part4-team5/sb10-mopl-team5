@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.binarycontent.storage.local;
 
-import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.exception.FileStorageException;
 import com.codeit.team5.mopl.binarycontent.exception.UploadDirectoryInitException;
 import java.io.IOException;
@@ -31,7 +31,7 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
     }
 
     @Override
-    public void store(String key, byte[] bytes) {
+    public void store(String key, byte[] bytes, String contentType) {
         Path destination = uploadDir.resolve(key);
         try {
             Files.createDirectories(destination.getParent());
