@@ -42,7 +42,8 @@ public class Follow extends BaseEntity {
     }
 
     public static Follow create(User follower, User followee) {
-        if (follower.getId() != null && follower.getId().equals(followee.getId())) {
+        if (follower == followee
+                || (follower.getId() != null && follower.getId().equals(followee.getId()))) {
             throw new SelfFollowException(follower.getId());
         }
         return new Follow(follower, followee);

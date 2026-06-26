@@ -30,12 +30,8 @@ public class FollowService {
 
     @Transactional
     public FollowResponse follow(UUID followerId, UUID followeeId) {
-        if (followerId.equals(followeeId)) {
-            throw new SelfFollowException(followerId);
-        }
-        if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
-            throw new DuplicateFollowException(followerId, followeeId);
-        }
+        validateNotSelf(followerId, followeeId);
+        validateNotDuplicate(followerId, followeeId);
 
         User follower = getUser(followerId);
         User followee = getUser(followeeId);
@@ -68,6 +64,18 @@ public class FollowService {
 
         followRepository.delete(follow);
         log.info("Follow deleted: followId={}, requester={}", followId, requesterId);
+    }
+
+    private void validateNotSelf(UUID followerId, UUID followeeId) {
+        if (followerId.equals(followeeId)) {
+            throw new SelfFollowException(followerId);
+        }
+    }
+
+    private void validateNotDuplicate(UUID followerId, UUID followeeId) {
+        if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
+            throw new DuplicateFollowException(followerId, followeeId);
+        }
     }
 
     private User getUser(UUID userId) {
