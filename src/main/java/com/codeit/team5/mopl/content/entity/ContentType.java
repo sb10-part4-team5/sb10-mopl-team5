@@ -9,21 +9,21 @@ public enum ContentType {
     TV_SERIES("tvSeries"),
     SPORT("sport");
 
-    private final String response;
+    private final String value;
 
-    ContentType(String response) {
-        this.response = response;
+    ContentType(String value) {
+        this.value = value;
     }
 
     @JsonValue
-    public String getResponse() {
-        return response;
+    public String getValue() {
+        return value;
     }
 
     @JsonCreator
     public static ContentType from(String value) {
         for (ContentType type : values()) {
-            if (type.response.equals(value)) {
+            if (type.value.equals(value)) {
                 return type;
             }
         }
