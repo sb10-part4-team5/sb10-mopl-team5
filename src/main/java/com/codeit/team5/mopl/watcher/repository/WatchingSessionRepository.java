@@ -18,14 +18,19 @@ public interface WatchingSessionRepository extends JpaRepository<WatchingSession
     Optional<WatchingSession> findByWatcherId(UUID userId);
 
     @Modifying
-    @Query("DELETE FROM WatchingSession w WHERE w.watcher.id = :watcherId")
-    void deleteByWatcherIdDirectly(UUID watcherId);
+    @Query("DELETE FROM WatchingSession w WHERE w.watcher.email = :email")
+    void deleteByWatcherEmailDirectly(String email);
 
     @EntityGraph(attributePaths = {"user", "content", "content.stats", "content.thumnail"})
     Window<WatchingSession> findByContentId(UUID contentId, ScrollPosition position, Limit limit,
             Sort sort);
 
-    boolean existsByWatcherId(UUID watcherId);
-
     Long countByContentId(UUID contentId);
+
+    boolean existsByWatcherEmailAndContentId(String email, UUID contentId);
+
+    @EntityGraph(attributePaths = {"user", "content", "content.stats", "content.thumnail", "content.contentTags"})
+    Optional<WatchingSession> findByWatcherEmail(String email);
+
+    boolean existsByWatcherEmail(String email);
 }

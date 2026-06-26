@@ -38,9 +38,9 @@ public class WatchingSessionService {
     private static final String SECONDARY_SORT_FIELD = "id";
 
     @Transactional
-    public WatchingSessionResponse create(UUID contentId, UUID watcherId) {
-        User user = userRepository.findById(watcherId)
-                .orElseThrow(() -> new UserNotFoundException(watcherId));
+    public WatchingSessionResponse create(UUID contentId, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(email));
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(ContentNotFoundException::new);
         WatchingSession session = WatchingSession.of(user, content);
@@ -67,16 +67,27 @@ public class WatchingSessionService {
     }
 
     @Transactional
-    public void delete(UUID userId) {
-        if (repository.existsByWatcherId(userId)) {
-            repository.deleteByWatcherIdDirectly(userId);
+    public void delete(String email) {
+        if (repository.existsByWatcherEmail(email)) {
+            repository.deleteByWatcherEmailDirectly(email);
             return;
         }
-        throw new WatchingSessionNotFoundException("userId", userId);
+        throw new WatchingSessionNotFoundException("userId", email);
     }
 
     public Long getCurrentWatchingContentView(UUID contentId) {
         return repository.countByContentId(contentId);
+    }
+
+    public void ensureWatchingContent(String email, UUID contentId) {
+        if (!repository.existsByWatcherEmailAndContentId(email, contentId)) {
+            throw new WatchingSessionNotFoundException(Map.of("email", email, "contentId", contentId));
+        }
+    }
+
+    public WatchingSessionResponse findSessionByWatcherEmail(String email) {
+        return mapper.toDto(repository.findByWatcherEmail(email)
+                .orElseThrow(() -> new WatchingSessionNotFoundException("email", email)));
     }
 
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {
