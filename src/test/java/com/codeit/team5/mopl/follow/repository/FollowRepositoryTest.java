@@ -156,4 +156,13 @@ class FollowRepositoryTest {
         assertThatThrownBy(() -> Follow.create(user, user))
                 .isInstanceOf(SelfFollowException.class);
     }
+
+    @Test
+    @DisplayName("같은 미저장 사용자 인스턴스로 팔로우를 생성하면 실패")
+    void create_sameTransientUser_throwsException() {
+        User user = User.create("self@mopl.com", "password", "본인");
+
+        assertThatThrownBy(() -> Follow.create(user, user))
+                .isInstanceOf(SelfFollowException.class);
+    }
 }

@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 public class SelfFollowException extends FollowException {
 
     public SelfFollowException(UUID userId) {
-        super(HttpStatus.BAD_REQUEST, "자기 자신을 팔로우할 수 없습니다.", Map.of("userId", userId));
+        super(HttpStatus.BAD_REQUEST, "자기 자신을 팔로우할 수 없습니다.",
+                userId == null ? null : Map.of("userId", userId));
     }
 }
