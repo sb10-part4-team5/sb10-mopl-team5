@@ -76,8 +76,10 @@ public class ContentService {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
 
+        List<String> tagNames = normalizeTagNames(request.tags());
+
         content.update(request.title(), request.description());
-        updateTags(content, request.tags());
+        updateTags(content, tagNames);
 
         if (image != null) {
             // TODO(고아 정리): 비정상적인 상태를 가진 BinaryContent를 배치로 정리 (DB/S3 누적 방지)
@@ -119,9 +121,7 @@ public class ContentService {
         insertTags(content, tagNames);
     }
 
-    private void updateTags(Content content, List<String> rawTagNames) {
-        List<String> requestedNames = normalizeTagNames(rawTagNames);
-
+    private void updateTags(Content content, List<String> requestedNames) {
         Set<String> currentNames = content.getContentTags().stream()
                 .map(ct -> ct.getTag().getName())
                 .collect(Collectors.toSet());

@@ -390,7 +390,7 @@ class ContentServiceTest {
     }
 
     @Test
-    @DisplayName("수정 시 정규화 후 유효한 태그가 없으면 예외를 던진다")
+    @DisplayName("수정 시 정규화 후 유효한 태그가 없으면 예외를 던지고 엔티티는 변경되지 않는다")
     void update_allBlankTags_throwsException() {
         // given
         UUID contentId = UUID.randomUUID();
@@ -402,6 +402,7 @@ class ContentServiceTest {
                 contentId, new ContentUpdateRequest("수정 제목", null, List.of("  ", " ")), null))
                 .isInstanceOf(EmptyTagException.class);
 
+        assertThat(content.getTitle()).isEqualTo("기존 제목");
         verify(tagRepository, never()).findByNameIn(anyList());
         verifyNoInteractions(binaryContentRepository, eventPublisher, contentMapper);
     }
