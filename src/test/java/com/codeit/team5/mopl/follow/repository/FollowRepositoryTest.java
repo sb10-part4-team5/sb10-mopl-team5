@@ -7,6 +7,7 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.follow.entity.Follow;
+import com.codeit.team5.mopl.follow.exception.SelfFollowException;
 import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.EntityManager;
 import java.util.Optional;
@@ -146,14 +147,13 @@ class FollowRepositoryTest {
     }
 
     @Test
-    @DisplayName("자기 자신을 follower-followee로 저장하면 실패")
-    void save_self_throwsException() {
+    @DisplayName("자기 자신으로 팔로우를 생성하면 실패")
+    void create_self_throwsException() {
         // given
         User user = saveUser("self@mopl.com", "본인");
 
         // when & then
-        Follow selfFollow = Follow.create(user, user);
-        assertThatThrownBy(() -> followRepository.saveAndFlush(selfFollow))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> Follow.create(user, user))
+                .isInstanceOf(SelfFollowException.class);
     }
 }

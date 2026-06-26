@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.follow.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -136,6 +137,22 @@ class FollowControllerTest {
     }
 
     @Test
+    @DisplayName("팔로우 여부 확인 성공")
+    void getFollowedByMe_following_success() throws Exception {
+        UUID followerId = UUID.randomUUID();
+        UUID followeeId = UUID.randomUUID();
+        FollowResponse response = new FollowResponse(UUID.randomUUID(), followeeId, followerId);
+        given(followService.getFollowedByMe(eq(followerId), eq(followeeId))).willReturn(response);
+
+        mockMvc.perform(get("/api/follows/followed-by-me")
+                        .with(authentication(authOf(followerId)))
+                        .param("followeeId", followeeId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.followeeId").value(followeeId.toString()))
+                .andExpect(jsonPath("$.followerId").value(followerId.toString()));
+    }
+
+    @Test
     @DisplayName("팔로우 여부 확인 - 팔로우하지 않으면 실패")
     void getFollowedByMe_notFollowing_throwsNotFound() throws Exception {
         UUID followerId = UUID.randomUUID();
@@ -171,6 +188,8 @@ class FollowControllerTest {
         mockMvc.perform(delete("/api/follows/{followId}", followId)
                         .with(authentication(authOf(requesterId))))
                 .andExpect(status().isNoContent());
+
+        then(followService).should().unfollow(eq(requesterId), eq(followId));
     }
 
     @Test

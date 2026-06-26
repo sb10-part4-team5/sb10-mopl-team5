@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -59,7 +60,7 @@ class FollowServiceTest {
         when(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)).thenReturn(false);
         when(userRepository.findById(followerId)).thenReturn(Optional.of(follower));
         when(userRepository.findById(followeeId)).thenReturn(Optional.of(followee));
-        when(followRepository.save(any(Follow.class))).then(returnsFirstArg());
+        when(followRepository.saveAndFlush(any(Follow.class))).then(returnsFirstArg());
         when(followMapper.toDto(any(Follow.class))).thenReturn(expected);
 
         // when
@@ -67,7 +68,10 @@ class FollowServiceTest {
 
         // then
         assertThat(result).isSameAs(expected);
-        verify(followRepository).save(any(Follow.class));
+        ArgumentCaptor<Follow> captor = ArgumentCaptor.forClass(Follow.class);
+        verify(followRepository).saveAndFlush(captor.capture());
+        assertThat(captor.getValue().getFollower()).isSameAs(follower);
+        assertThat(captor.getValue().getFollowee()).isSameAs(followee);
     }
 
     @Test
@@ -95,7 +99,7 @@ class FollowServiceTest {
         // when & then
         assertThatThrownBy(() -> followService.follow(followerId, followeeId))
                 .isInstanceOf(UserNotFoundException.class);
-        verify(followRepository, never()).save(any(Follow.class));
+        verify(followRepository, never()).saveAndFlush(any(Follow.class));
     }
 
     @Test
@@ -110,7 +114,7 @@ class FollowServiceTest {
         // when & then
         assertThatThrownBy(() -> followService.follow(followerId, followeeId))
                 .isInstanceOf(UserNotFoundException.class);
-        verify(followRepository, never()).save(any(Follow.class));
+        verify(followRepository, never()).saveAndFlush(any(Follow.class));
     }
 
     @Test
@@ -124,7 +128,8 @@ class FollowServiceTest {
         // when & then
         assertThatThrownBy(() -> followService.follow(followerId, followeeId))
                 .isInstanceOf(DuplicateFollowException.class);
-        verify(followRepository, never()).save(any(Follow.class));
+        verify(followRepository, never()).saveAndFlush(any(Follow.class));
+        verifyNoInteractions(userRepository, followMapper);
     }
 
     @Test

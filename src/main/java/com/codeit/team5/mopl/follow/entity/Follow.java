@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.follow.entity;
 
+import com.codeit.team5.mopl.follow.exception.SelfFollowException;
 import com.codeit.team5.mopl.global.entity.BaseEntity;
 import com.codeit.team5.mopl.user.entity.User;
 import java.util.UUID;
@@ -12,10 +13,12 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Check;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Check(name = "ck_follow_self", constraints = "follower_id <> followee_id")
 @Table(
     name = "follows",
     uniqueConstraints = @UniqueConstraint(
@@ -39,6 +42,9 @@ public class Follow extends BaseEntity {
     }
 
     public static Follow create(User follower, User followee) {
+        if (follower.getId() != null && follower.getId().equals(followee.getId())) {
+            throw new SelfFollowException(follower.getId());
+        }
         return new Follow(follower, followee);
     }
 
