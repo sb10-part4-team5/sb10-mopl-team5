@@ -23,8 +23,10 @@ import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -75,8 +77,7 @@ public class ContentService {
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
 
         content.update(request.title(), request.description());
-        content.clearTags();
-        attachTags(content, request.tags());
+        updateTags(content, request.tags());
 
         if (image != null) {
             // TODO(고아 정리): 비정상적인 상태를 가진 BinaryContent를 배치로 정리 (DB/S3 누적 방지)
@@ -103,31 +104,41 @@ public class ContentService {
 
     private BinaryContent storeThumbnailImage(UUID contentId, FileRequest image) {
         GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.THUMBNAIL, contentId, image.filename());
-        BinaryContent profileImage = binaryContentRepository.save(
+        BinaryContent thumbnailImage = binaryContentRepository.save(
                 BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
 
         eventPublisher.publishEvent(
-                new BinaryContentUploadEvent(profileImage.getId(), generated.key(), image.bytes(), generated.contentType()));
+                new BinaryContentUploadEvent(thumbnailImage.getId(), generated.key(), image.bytes(), generated.contentType()));
         // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 썸네일 이미지 롤백
 
-        return profileImage;
+        return thumbnailImage;
     }
 
     private void attachTags(Content content, List<String> rawTagNames) {
-        List<String> tagNames = rawTagNames.stream()
-                .map(String::trim)
-                .filter(name -> !name.isEmpty())
-                .map(String::toLowerCase)
-                .distinct()
+        List<String> tagNames = normalizeTagNames(rawTagNames);
+        insertTags(content, tagNames);
+    }
+
+    private void updateTags(Content content, List<String> rawTagNames) {
+        List<String> requestedNames = normalizeTagNames(rawTagNames);
+
+        Set<String> currentNames = content.getContentTags().stream()
+                .map(ct -> ct.getTag().getName())
+                .collect(Collectors.toSet());
+
+        Set<String> requestedSet = new HashSet<>(requestedNames);
+        content.getContentTags().removeIf(ct -> !requestedSet.contains(ct.getTag().getName()));
+
+        List<String> toAdd = requestedNames.stream()
+                .filter(name -> !currentNames.contains(name))
                 .toList();
 
-        if (tagNames.isEmpty()) {
-            throw new EmptyTagException();
+        if (!toAdd.isEmpty()) {
+            insertTags(content, toAdd);
         }
-        if (tagNames.size() > 10) {
-            throw new TooManyTagsException();
-        }
+    }
 
+    private void insertTags(Content content, List<String> tagNames) {
         Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
                 .collect(Collectors.toMap(Tag::getName, Function.identity()));
 
@@ -141,5 +152,18 @@ public class ContentService {
         }
 
         tagNames.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
+    }
+
+    private List<String> normalizeTagNames(List<String> rawTagNames) {
+        List<String> tagNames = rawTagNames.stream()
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .map(String::toLowerCase)
+                .distinct()
+                .toList();
+
+        if (tagNames.isEmpty()) throw new EmptyTagException();
+        if (tagNames.size() > 10) throw new TooManyTagsException();
+        return tagNames;
     }
 }

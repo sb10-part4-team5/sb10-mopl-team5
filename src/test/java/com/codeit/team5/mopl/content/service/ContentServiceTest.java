@@ -24,6 +24,7 @@ import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
+import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
@@ -34,7 +35,10 @@ import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -337,6 +341,40 @@ class ContentServiceTest {
     }
 
     @Test
+    @DisplayName("수정 시 유지되는 태그는 delete/insert 없이 그대로 유지된다")
+    void update_retainedTags_notReinserted() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
+        ReflectionTestUtils.setField(content, "id", contentId);
+
+        Tag actionTag = tagWithId("액션");
+        Tag sfTag = tagWithId("sf");
+        content.addTag(ContentTag.create(content, actionTag));  // 유지될 태그
+        content.addTag(ContentTag.create(content, sfTag));      // 제거될 태그
+
+        // 요청: 액션 유지 + 코미디 추가 (sf 제거)
+        ContentUpdateRequest request = new ContentUpdateRequest("기존 제목", null, List.of("액션", "코미디"));
+        Tag comedyTag = tagWithId("코미디");
+
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(tagRepository.findByNameIn(List.of("코미디"))).thenReturn(List.of(comedyTag));
+        when(contentMapper.toDto(content)).thenReturn(null);
+
+        // when
+        contentService.update(contentId, request, null);
+
+        // then: 추가할 태그만 조회
+        verify(tagRepository).findByNameIn(List.of("코미디"));
+        verify(tagRepository, never()).saveAll(anyList());
+
+        Set<String> finalTagNames = content.getContentTags().stream()
+                .map(ct -> ct.getTag().getName())
+                .collect(Collectors.toSet());
+        assertThat(finalTagNames).containsExactlyInAnyOrder("액션", "코미디");
+    }
+
+    @Test
     @DisplayName("존재하지 않는 콘텐츠 수정 시 예외를 던진다")
     void update_notFound_throwsException() {
         // given
@@ -415,5 +453,11 @@ class ContentServiceTest {
                 .isInstanceOf(ContentNotFoundException.class);
 
         verify(contentRepository, never()).delete(any());
+    }
+
+    private Tag tagWithId(String name) {
+        Tag tag = Tag.create(name);
+        ReflectionTestUtils.setField(tag, "id", UUID.randomUUID());
+        return tag;
     }
 }
