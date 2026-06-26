@@ -60,7 +60,7 @@ class FollowServiceTest {
         when(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)).thenReturn(false);
         when(userRepository.findById(followerId)).thenReturn(Optional.of(follower));
         when(userRepository.findById(followeeId)).thenReturn(Optional.of(followee));
-        when(followRepository.saveAndFlush(any(Follow.class))).then(returnsFirstArg());
+        when(followRepository.save(any(Follow.class))).then(returnsFirstArg());
         when(followMapper.toDto(any(Follow.class))).thenReturn(expected);
 
         // when
@@ -69,7 +69,7 @@ class FollowServiceTest {
         // then
         assertThat(result).isSameAs(expected);
         ArgumentCaptor<Follow> captor = ArgumentCaptor.forClass(Follow.class);
-        verify(followRepository).saveAndFlush(captor.capture());
+        verify(followRepository).save(captor.capture());
         assertThat(captor.getValue().getFollower()).isSameAs(follower);
         assertThat(captor.getValue().getFollowee()).isSameAs(followee);
     }
@@ -99,7 +99,7 @@ class FollowServiceTest {
         // when & then
         assertThatThrownBy(() -> followService.follow(followerId, followeeId))
                 .isInstanceOf(UserNotFoundException.class);
-        verify(followRepository, never()).saveAndFlush(any(Follow.class));
+        verify(followRepository, never()).save(any(Follow.class));
     }
 
     @Test
@@ -114,7 +114,7 @@ class FollowServiceTest {
         // when & then
         assertThatThrownBy(() -> followService.follow(followerId, followeeId))
                 .isInstanceOf(UserNotFoundException.class);
-        verify(followRepository, never()).saveAndFlush(any(Follow.class));
+        verify(followRepository, never()).save(any(Follow.class));
     }
 
     @Test
@@ -128,7 +128,7 @@ class FollowServiceTest {
         // when & then
         assertThatThrownBy(() -> followService.follow(followerId, followeeId))
                 .isInstanceOf(DuplicateFollowException.class);
-        verify(followRepository, never()).saveAndFlush(any(Follow.class));
+        verify(followRepository, never()).save(any(Follow.class));
         verifyNoInteractions(userRepository, followMapper);
     }
 

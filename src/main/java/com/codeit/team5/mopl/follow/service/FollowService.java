@@ -13,7 +13,6 @@ import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,12 +34,7 @@ public class FollowService {
         User follower = getUser(followerId);
         User followee = getUser(followeeId);
 
-        Follow saved;
-        try {
-            saved = followRepository.saveAndFlush(Follow.create(follower, followee));
-        } catch (DataIntegrityViolationException e) {
-            throw new DuplicateFollowException(followerId, followeeId);
-        }
+        Follow saved = followRepository.save(Follow.create(follower, followee));
 
         log.info("Follow created: follower={}, followee={}", followerId, followeeId);
         return followMapper.toDto(saved);
