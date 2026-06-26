@@ -9,10 +9,12 @@ import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
+import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.exception.TooManyTagsException;
@@ -20,9 +22,11 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.content.entity.ContentTag;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +37,9 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.ScrollPosition.Direction;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +57,8 @@ public class ContentService {
     private final StorageKeyFactory storageKeyFactory;
     private final BinaryContentRepository binaryContentRepository;
     private final ApplicationEventPublisher eventPublisher;
+
+    private static final String SECONDARY_SORT_FIELD = "id";
 
     @Transactional
     public ContentResponse create(ContentCreateRequest request, FileRequest image) {
@@ -93,10 +102,19 @@ public class ContentService {
         return contentMapper.toDto(content);
     }
 
-    public ContentResponse getById(UUID contentId) {
+    public ContentResponse findById(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
         return contentMapper.toDto(content);
+    }
+
+    public CursorResponse<ContentResponse> findContents(ContentCursorRequest request) {
+        int fetchLimit = request.limit() + 1;
+        List<Content> fetched = contentRepository.findContents(request, fetchLimit);
+        boolean hasNext = fetched.size() > request.limit();
+        List<Content> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
+        long totalCount = contentRepository.countContents(request);
+        return contentMapper.toCursor(page, hasNext, totalCount, request.sortBy(), request.sortDirection());
     }
 
     @Transactional
