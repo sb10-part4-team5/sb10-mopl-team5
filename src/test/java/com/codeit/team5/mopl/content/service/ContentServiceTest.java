@@ -18,11 +18,14 @@ import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
@@ -30,6 +33,7 @@ import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,6 +75,7 @@ class ContentServiceTest {
     @InjectMocks
     private ContentService contentService;
 
+    // --- CREATE ---
     @Test
     @DisplayName("콘텐츠 생성에 성공한다")
     void create_success() {
@@ -241,5 +246,174 @@ class ContentServiceTest {
 
         // then
         verify(tagRepository).findByNameIn(List.of("action", "drama"));
+    }
+
+    // --- UPDATE ---
+    @Test
+    @DisplayName("썸네일 없이 콘텐츠 수정에 성공한다")
+    void update_withoutThumbnail_success() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", "기존 설명");
+        ContentUpdateRequest request = new ContentUpdateRequest("수정 제목", "수정 설명", List.of("SF"));
+        ContentResponse expectedResponse = new ContentResponse(
+                contentId, ContentType.MOVIE, "수정 제목", "수정 설명",
+                null, null, List.of("sf"), 0.0, 0, 0
+        );
+
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(tagRepository.findByNameIn(List.of("sf"))).thenReturn(List.of(Tag.create("sf")));
+        when(contentMapper.toDto(content)).thenReturn(expectedResponse);
+
+        // when
+        ContentResponse result = contentService.update(contentId, request, null);
+
+        // then
+        assertThat(result).isSameAs(expectedResponse);
+        assertThat(content.getTitle()).isEqualTo("수정 제목");
+        assertThat(content.getDescription()).isEqualTo("수정 설명");
+        verifyNoInteractions(storageKeyFactory, binaryContentStorage, binaryContentRepository, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("기존 썸네일이 없을 때 새 썸네일로 수정에 성공한다")
+    void update_withNewThumbnail_noOldThumbnail_success() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "new.jpg");
+        ContentResponse expectedResponse = new ContentResponse(
+                contentId, ContentType.MOVIE, "수정 제목", null,
+                "http://localhost/thumbnails/new.jpg", BinaryContentUploadStatus.PENDING,
+                List.of("액션"), 0.0, 0, 0
+        );
+
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
+        when(storageKeyFactory.generate(eq(StorageDirectory.THUMBNAIL), any(), eq("new.jpg")))
+                .thenReturn(new GeneratedKey("thumbnails/new.jpg", "image/jpeg"));
+        when(binaryContentStorage.toUrl("thumbnails/new.jpg"))
+                .thenReturn("http://localhost/thumbnails/new.jpg");
+        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
+        when(contentMapper.toDto(content)).thenReturn(expectedResponse);
+
+        // when
+        ContentResponse result = contentService.update(contentId, new ContentUpdateRequest("수정 제목", null, List.of("액션")), image);
+
+        // then
+        assertThat(result).isSameAs(expectedResponse);
+        assertThat(content.getThumbnail()).isNotNull();
+        verify(binaryContentRepository).save(any(BinaryContent.class));
+        ArgumentCaptor<BinaryContentUploadEvent> eventCaptor = ArgumentCaptor.forClass(BinaryContentUploadEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().key()).isEqualTo("thumbnails/new.jpg");
+    }
+
+    @Test
+    @DisplayName("기존 썸네일이 있을 때 새 썸네일로 교체하면 기존 썸네일이 DELETED 상태가 된다")
+    void update_withNewThumbnail_oldThumbnailMarkedDeleted() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
+        BinaryContent oldThumbnail = BinaryContent.pending("http://localhost/thumbnails/old.jpg");
+        content.attachThumbnail(oldThumbnail);
+        FileRequest image = new FileRequest(new byte[]{4, 5, 6}, "new.jpg");
+
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
+        when(storageKeyFactory.generate(eq(StorageDirectory.THUMBNAIL), any(), eq("new.jpg")))
+                .thenReturn(new GeneratedKey("thumbnails/new.jpg", "image/jpeg"));
+        when(binaryContentStorage.toUrl("thumbnails/new.jpg"))
+                .thenReturn("http://localhost/thumbnails/new.jpg");
+        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
+        when(contentMapper.toDto(content)).thenReturn(null);
+
+        // when
+        contentService.update(contentId, new ContentUpdateRequest("수정 제목", null, List.of("액션")), image);
+
+        // then
+        assertThat(oldThumbnail.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.DELETED);
+        assertThat(content.getThumbnail()).isNotSameAs(oldThumbnail);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 콘텐츠 수정 시 예외를 던진다")
+    void update_notFound_throwsException() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> contentService.update(
+                contentId, new ContentUpdateRequest("제목", null, List.of("액션")), null))
+                .isInstanceOf(ContentNotFoundException.class);
+
+        verifyNoInteractions(tagRepository, binaryContentRepository, eventPublisher, contentMapper);
+    }
+
+    @Test
+    @DisplayName("수정 시 정규화 후 유효한 태그가 없으면 예외를 던진다")
+    void update_allBlankTags_throwsException() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+
+        // when & then
+        assertThatThrownBy(() -> contentService.update(
+                contentId, new ContentUpdateRequest("수정 제목", null, List.of("  ", " ")), null))
+                .isInstanceOf(EmptyTagException.class);
+
+        verify(tagRepository, never()).findByNameIn(anyList());
+        verifyNoInteractions(binaryContentRepository, eventPublisher, contentMapper);
+    }
+
+    // --- DELETE ---
+    @Test
+    @DisplayName("썸네일 없는 콘텐츠 삭제에 성공한다")
+    void delete_withoutThumbnail_success() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+
+        // when
+        contentService.delete(contentId);
+
+        // then
+        verify(contentRepository).delete(content);
+        verifyNoInteractions(binaryContentRepository, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("썸네일 있는 콘텐츠 삭제 시 썸네일이 DELETED 상태가 된다")
+    void delete_withThumbnail_marksDeletedAndDeletes() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
+        BinaryContent thumbnail = BinaryContent.pending("http://localhost/thumbnails/thumb.jpg");
+        content.attachThumbnail(thumbnail);
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+
+        // when
+        contentService.delete(contentId);
+
+        // then
+        assertThat(thumbnail.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.DELETED);
+        verify(contentRepository).delete(content);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 콘텐츠 삭제 시 예외를 던진다")
+    void delete_notFound_throwsException() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> contentService.delete(contentId))
+                .isInstanceOf(ContentNotFoundException.class);
+
+        verify(contentRepository, never()).delete(any());
     }
 }
