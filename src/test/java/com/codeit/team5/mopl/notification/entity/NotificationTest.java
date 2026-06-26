@@ -78,7 +78,7 @@ class NotificationTest {
         assertThatThrownBy(() -> Notification.create(
             UUID.randomUUID(), NotificationType.FOLLOWED, null, "내용", NotificationLevel.INFO))
             .isInstanceOf(InvalidNotificationTitleException.class);
-    }ggit
+
 
     @Test
     @DisplayName("읽음 처리하면 isRead가 true가 되고 readAt이 기록된다")
