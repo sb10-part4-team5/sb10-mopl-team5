@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.auth.handler;
 
 import com.codeit.team5.mopl.auth.utils.ErrorResponder;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,7 +17,7 @@ public class UserAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException, ServletException {
-        ErrorResponder.sendErrorResponse(response, ErrorCode.UNAUTHORIZED);
+        ErrorResponder.sendErrorResponse(response, authException);
 
         log.warn("Unauthorized access: {}", authException.getMessage());
     }

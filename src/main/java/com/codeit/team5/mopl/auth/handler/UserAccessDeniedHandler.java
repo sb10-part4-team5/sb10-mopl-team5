@@ -1,12 +1,10 @@
 package com.codeit.team5.mopl.auth.handler;
 
 import com.codeit.team5.mopl.auth.utils.ErrorResponder;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -26,6 +24,6 @@ public class UserAccessDeniedHandler implements AccessDeniedHandler {
                 request.getRequestURI(),
                 accessDeniedException.getMessage());
 
-        ErrorResponder.sendErrorResponse(response, ErrorCode.FORBIDDEN);
+        ErrorResponder.sendErrorResponse(response, accessDeniedException);
     }
 }
