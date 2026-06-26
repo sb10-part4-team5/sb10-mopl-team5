@@ -8,6 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ContentRepository extends JpaRepository<Content, UUID> {
 
-    @EntityGraph(attributePaths = {"thumbnail", "stats", "contentTags"})
+    @EntityGraph(attributePaths = {"thumbnail", "stats", "contentTags", "contentTags.tag"})
     Optional<Content> findWithStatsAndTagsById(UUID id);
 }

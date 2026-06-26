@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -18,4 +19,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") UUID id);
+
+    // N+1 문제 방지 update용 조회 메서드
+    @EntityGraph(attributePaths = {"profileImage"})
+    Optional<User> findWithProfileImageById(UUID id);
 }

@@ -2,20 +2,28 @@ package com.codeit.team5.mopl.content.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.hamcrest.Matchers.hasItem;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
-import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
-import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
+import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
+import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.service.ContentService;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -30,11 +38,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.codeit.team5.mopl.global.dto.FileRequest;
 
 @WebMvcTest(
         controllers = ContentController.class,
@@ -59,6 +67,8 @@ class ContentControllerTest {
     @Captor
     private ArgumentCaptor<ContentCreateRequest> requestCaptor;
 
+
+    // --- POST ---
     @Test
     @DisplayName("정상적인 콘텐츠 생성 요청이면 생성된 콘텐츠와 201 응답을 반환한다")
     void postContent_success() throws Exception {
@@ -269,6 +279,287 @@ class ContentControllerTest {
         // When & Then
         mockMvc.perform(multipart("/api/contents")
                         .file(requestPart))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."));
+    }
+
+    // --- PATCH ---
+    @Test
+    @DisplayName("정상적인 콘텐츠 수정 요청이면 수정된 콘텐츠와 200 응답을 반환한다")
+    void patchContent_success() throws Exception {
+        // Given
+        UUID contentId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        ContentUpdateRequest request = new ContentUpdateRequest(
+                "수정된 영화",
+                "수정된 설명",
+                List.of("액션", "SF")
+        );
+        ContentResponse response = new ContentResponse(
+                contentId,
+                ContentType.MOVIE,
+                "수정된 영화",
+                "수정된 설명",
+                "http://localhost:8080/thumbnails/11111111-1111-1111-1111-111111111111/new.jpg",
+                BinaryContentUploadStatus.PENDING,
+                List.of("SF", "액션"),
+                0.0, 0, 0
+        );
+
+        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
+                .willReturn(response);
+
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(request)
+        );
+        MockMultipartFile thumbnailPart = new MockMultipartFile(
+                "thumbnail", "new.jpg", MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{4, 5, 6}
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart)
+                        .file(thumbnailPart))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(contentId.toString()))
+                .andExpect(jsonPath("$.type").value("movie"))
+                .andExpect(jsonPath("$.title").value("수정된 영화"))
+                .andExpect(jsonPath("$.description").value("수정된 설명"))
+                .andExpect(jsonPath("$.thumbnailUrl").value(response.thumbnailUrl()))
+                .andExpect(jsonPath("$.thumbnailUploadStatus").value("PENDING"))
+                .andExpect(jsonPath("$.averageRating").value(0.0))
+                .andExpect(jsonPath("$.reviewCount").value(0))
+                .andExpect(jsonPath("$.watcherCount").value(0));
+
+        ArgumentCaptor<ContentUpdateRequest> requestCaptor = ArgumentCaptor.forClass(ContentUpdateRequest.class);
+        ArgumentCaptor<FileRequest> thumbnailCaptor = ArgumentCaptor.forClass(FileRequest.class);
+        verify(contentService).update(eq(contentId), requestCaptor.capture(), thumbnailCaptor.capture());
+        assertThat(requestCaptor.getValue().title()).isEqualTo("수정된 영화");
+        assertThat(requestCaptor.getValue().description()).isEqualTo("수정된 설명");
+        assertThat(requestCaptor.getValue().tags()).containsExactly("액션", "SF");
+        assertThat(thumbnailCaptor.getValue().filename()).isEqualTo("new.jpg");
+        assertThat(thumbnailCaptor.getValue().bytes()).containsExactly(4, 5, 6);
+    }
+
+    @Test
+    @DisplayName("thumbnail 없이 콘텐츠 수정 요청이면 200 응답을 반환한다")
+    void patchContent_withoutThumbnail_success() throws Exception {
+        // Given
+        UUID contentId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        ContentUpdateRequest request = new ContentUpdateRequest(
+                "수정된 드라마",
+                null,
+                List.of("로맨스")
+        );
+        ContentResponse response = new ContentResponse(
+                contentId,
+                ContentType.TV_SERIES,
+                "수정된 드라마",
+                null,
+                null,
+                null,
+                List.of("로맨스"),
+                0.0, 0, 0
+        );
+
+        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), isNull()))
+                .willReturn(response);
+
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(request)
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(contentId.toString()))
+                .andExpect(jsonPath("$.title").value("수정된 드라마"))
+                .andExpect(jsonPath("$.tags[0]").value("로맨스"));
+
+        verify(contentService).update(eq(contentId), any(ContentUpdateRequest.class), isNull());
+    }
+
+    @Test
+    @DisplayName("제목이 공백이면 400 검증 실패 응답을 반환한다")
+    void patchContent_blankTitle_returnsBadRequest() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        ContentUpdateRequest request = new ContentUpdateRequest("   ", null, List.of("액션"));
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(request)
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.title[0]").value("제목은 필수입니다."));
+
+        verify(contentService, never()).update(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("태그가 null이면 400 검증 실패 응답을 반환한다")
+    void patchContent_nullTags_returnsBadRequest() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        String requestJson = """
+                {
+                  "title": "수정된 영화"
+                }
+                """;
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE, requestJson.getBytes()
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.tags", hasItem("콘텐츠 태그는 필수입니다.")));
+
+        verify(contentService, never()).update(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("태그 목록이 비어있으면 400 검증 실패 응답을 반환한다")
+    void patchContent_emptyTags_returnsBadRequest() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of());
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(request)
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.tags[0]").value("콘텐츠 태그 목록은 비어있을 수 없습니다."));
+
+        verify(contentService, never()).update(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("태그 항목이 공백이면 400 검증 실패 응답을 반환한다")
+    void patchContent_blankTagItem_returnsBadRequest() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("  "));
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(request)
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details['tags[0]'][0]").value("태그는 공백일 수 없습니다."));
+
+        verify(contentService, never()).update(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 콘텐츠 수정 요청이면 404 응답을 반환한다")
+    void patchContent_notFound_returnsNotFound() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("액션"));
+        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
+                .willThrow(new ContentNotFoundException(contentId));
+
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(request)
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.exceptionType").value("ContentNotFoundException"))
+                .andExpect(jsonPath("$.message").value("콘텐츠를 찾을 수 없습니다."));
+
+        verify(contentService).update(eq(contentId), any(ContentUpdateRequest.class), any());
+    }
+
+    @Test
+    @DisplayName("예상하지 못한 서비스 예외가 발생하면 500 오류 응답을 반환한다")
+    void patchContent_unexpectedException_returnsInternalServerError() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("액션"));
+        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
+                .willThrow(new IllegalStateException("unexpected"));
+
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(request)
+        );
+
+        // When & Then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
+                        .file(requestPart))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."));
+    }
+
+    // --- DELETE ---
+    @Test
+    @DisplayName("정상적인 콘텐츠 삭제 요청이면 204 응답을 반환한다")
+    void deleteContent_success() throws Exception {
+        // Given
+        UUID contentId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        doNothing().when(contentService).delete(contentId);
+
+        // When & Then
+        mockMvc.perform(delete("/api/contents/{contentId}", contentId))
+                .andExpect(status().isNoContent());
+
+        verify(contentService).delete(contentId);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 콘텐츠 삭제 요청이면 404 응답을 반환한다")
+    void deleteContent_notFound_returnsNotFound() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        doThrow(new ContentNotFoundException(contentId)).when(contentService).delete(contentId);
+
+        // When & Then
+        mockMvc.perform(delete("/api/contents/{contentId}", contentId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.exceptionType").value("ContentNotFoundException"))
+                .andExpect(jsonPath("$.message").value("콘텐츠를 찾을 수 없습니다."));
+
+        verify(contentService).delete(contentId);
+    }
+
+    @Test
+    @DisplayName("삭제 중 예상하지 못한 예외가 발생하면 500 오류 응답을 반환한다")
+    void deleteContent_unexpectedException_returnsInternalServerError() throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+        doThrow(new IllegalStateException("unexpected")).when(contentService).delete(contentId);
+
+        // When & Then
+        mockMvc.perform(delete("/api/contents/{contentId}", contentId))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
                 .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."));

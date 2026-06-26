@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.content.entity;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
+import com.codeit.team5.mopl.content.exception.InvalidContentTitleException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -23,6 +24,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Entity
@@ -115,5 +117,13 @@ public class Content extends BaseUpdatableEntity {
             return;
         }
         contentTags.add(contentTag);
+    }
+
+    public void update(String title, String description) {
+        if (!StringUtils.hasText(title)) {
+            throw new InvalidContentTitleException();
+        }
+        this.title = title;
+        this.description = description;
     }
 }

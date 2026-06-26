@@ -14,14 +14,14 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface WatchingSessionRepository extends JpaRepository<WatchingSession, UUID> {
 
-    @EntityGraph(attributePaths = {"user", "content", "content.stats"})
+    @EntityGraph(attributePaths = {"user", "content", "content.thumbnail", "content.stats", "content.contentTags", "content.contentTags.tag"})
     Optional<WatchingSession> findByUserId(UUID userId);
 
     @Modifying
     @Query("DELETE FROM WatchingSession w WHERE w.user.id = :userId")
     void deleteByUserIdDirectly(UUID userId);
 
-    @EntityGraph(attributePaths = {"user", "content", "content.stats"})
+    @EntityGraph(attributePaths = {"user", "content", "content.thumbnail", "content.stats"})
     Window<WatchingSession> findByContentId(UUID contentId, ScrollPosition position, Limit limit,
             Sort sort);
 
