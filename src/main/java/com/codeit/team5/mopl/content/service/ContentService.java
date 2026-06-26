@@ -50,20 +50,15 @@ public class ContentService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public ContentResponse create(ContentCreateRequest request, FileRequest thumbnail) {
+    public ContentResponse create(ContentCreateRequest request, FileRequest image) {
         Content content = contentRepository.save(Content.createByAdmin(
                 request.type(),
                 request.title(),
                 request.description()
         ));
 
-        if (thumbnail != null) {
-            GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.THUMBNAIL, content.getId(), thumbnail.filename());
-            BinaryContent binaryContent = binaryContentRepository.save(
-                    BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
-            content.attachThumbnail(binaryContent);
-            eventPublisher.publishEvent(new BinaryContentUploadEvent(
-                    binaryContent.getId(), generated.key(), thumbnail.bytes(), generated.contentType()));
+        if (image != null) {
+            content.attachThumbnail(storeThumbnailImage(content.getId(), image));
         }
 
         attachTags(content, request.tags());
@@ -75,28 +70,21 @@ public class ContentService {
     }
 
     @Transactional
-    public ContentResponse update(UUID contentId, ContentUpdateRequest request, MultipartFile thumbnail) {
+    public ContentResponse update(UUID contentId, ContentUpdateRequest request, FileRequest image) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
-                .orElseThrow(ContentNotFoundException::new);
+                .orElseThrow(() -> new ContentNotFoundException(contentId));
 
         content.update(request.title(), request.description());
         content.clearTags();
         attachTags(content, request.tags());
 
-        if (thumbnail != null && !thumbnail.isEmpty()) {
-            try {
-                BinaryContent oldThumbnail = content.getThumbnail();
-                if (oldThumbnail != null) {
-                    oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
-                }
-                String key = binaryContentStorage.generateKey(contentId, thumbnail.getOriginalFilename());
-                BinaryContent binaryContent = binaryContentRepository.save(
-                        BinaryContent.pending(binaryContentStorage.toUrl(key)));
-                content.attachThumbnail(binaryContent);
-                eventPublisher.publishEvent(new BinaryContentUploadEvent(binaryContent.getId(), key, thumbnail.getBytes()));
-            } catch (IOException e) {
-                log.warn("썸네일 바이트 읽기 실패 - contentId: {}", contentId, e);
+        if (image != null) {
+            // TODO(고아 정리): 비정상적인 상태를 가진 BinaryContent를 배치로 정리 (DB/S3 누적 방지)
+            BinaryContent oldThumbnail = content.getThumbnail();
+            if (oldThumbnail != null) {
+                oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
             }
+            content.attachThumbnail(storeThumbnailImage(content.getId(), image));
         }
 
         return contentMapper.toDto(content);
@@ -105,12 +93,24 @@ public class ContentService {
     @Transactional
     public void delete(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
-                .orElseThrow(ContentNotFoundException::new);
+                .orElseThrow(() -> new ContentNotFoundException(contentId));
         BinaryContent oldThumbnail = content.getThumbnail();
         if (oldThumbnail != null) {
             oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
         }
         contentRepository.delete(content);
+    }
+
+    private BinaryContent storeThumbnailImage(UUID contentId, FileRequest image) {
+        GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.THUMBNAIL, contentId, image.filename());
+        BinaryContent profileImage = binaryContentRepository.save(
+                BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
+
+        eventPublisher.publishEvent(
+                new BinaryContentUploadEvent(profileImage.getId(), generated.key(), image.bytes(), generated.contentType()));
+        // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 썸네일 이미지 롤백
+
+        return profileImage;
     }
 
     private void attachTags(Content content, List<String> rawTagNames) {

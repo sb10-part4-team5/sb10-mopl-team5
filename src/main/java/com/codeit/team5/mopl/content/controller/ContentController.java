@@ -49,7 +49,7 @@ public class ContentController implements ContentApi {
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
         log.info("Content Update request: PATCH /api/contents/{}", contentId);
-        ContentResponse response = contentService.update(contentId, request, thumbnail);
+        ContentResponse response = contentService.update(contentId, request, MultipartFiles.toImageResource(thumbnail));
         return ResponseEntity.ok(response);
     }
 
