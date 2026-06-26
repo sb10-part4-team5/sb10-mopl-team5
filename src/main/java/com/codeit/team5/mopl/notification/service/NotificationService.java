@@ -6,12 +6,14 @@ import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.mapper.NotificationMapper;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -58,8 +60,12 @@ public class NotificationService {
         boolean ascending = resolveAscending(sortBy, sortDirection);
 
         // 주 커서는 createdAt 문자열로 들어오므로 Instant로 파싱. 없으면(null) 첫 페이지
-        Instant cursorInstant =
-                (cursor == null || cursor.isBlank()) ? null : Instant.parse(cursor);
+        Instant cursorInstant;
+        try{
+            cursorInstant = (cursor == null || cursor.isBlank()) ? null : Instant.parse(cursor);
+        } catch (DateTimeParseException e){
+            throw new InvalidCursorException(cursor);
+        }
 
         // 다음 페이지 존재 여부를 알기 위해 limit보다 1개 더 조회
         Limit fetchLimit = Limit.of(limit + 1);
