@@ -24,6 +24,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Entity
@@ -118,12 +119,8 @@ public class Content extends BaseUpdatableEntity {
         contentTags.add(contentTag);
     }
 
-    public void clearTags() {
-        contentTags.clear();
-    }
-
     public void update(String title, String description) {
-        if (title == null || title.isBlank()) {
+        if (!StringUtils.hasText(title)) {
             throw new InvalidContentTitleException();
         }
         this.title = title;
