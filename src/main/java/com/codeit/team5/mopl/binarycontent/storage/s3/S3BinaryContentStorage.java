@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.binarycontent.storage.s3;
 
-import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.exception.BinaryContentStorageException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

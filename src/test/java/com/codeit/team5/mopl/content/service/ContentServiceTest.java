@@ -11,10 +11,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.GeneratedKey;
-import com.codeit.team5.mopl.binarycontent.StorageDirectory;
-import com.codeit.team5.mopl.binarycontent.StorageKeyFactory;
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
+import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;

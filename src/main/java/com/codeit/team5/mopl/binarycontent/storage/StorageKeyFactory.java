@@ -1,5 +1,6 @@
-package com.codeit.team5.mopl.binarycontent;
+package com.codeit.team5.mopl.binarycontent.storage;
 
+import com.codeit.team5.mopl.binarycontent.ImageExtension;
 import com.codeit.team5.mopl.binarycontent.exception.InvalidImageExtensionException;
 import java.util.Locale;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.binarycontent;
+package com.codeit.team5.mopl.binarycontent.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

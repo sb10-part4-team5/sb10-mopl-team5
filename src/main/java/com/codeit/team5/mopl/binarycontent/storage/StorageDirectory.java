@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.binarycontent;
+package com.codeit.team5.mopl.binarycontent.storage;
 
 /**
  * 저장소 키의 최상위 폴더(prefix). 용도별로 추가하려면 상수만 추가하면 된다.

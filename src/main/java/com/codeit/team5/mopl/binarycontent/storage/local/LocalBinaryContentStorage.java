@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.binarycontent.storage.local;
 
-import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.exception.FileStorageException;
 import com.codeit.team5.mopl.binarycontent.exception.UploadDirectoryInitException;
 import java.io.IOException;
