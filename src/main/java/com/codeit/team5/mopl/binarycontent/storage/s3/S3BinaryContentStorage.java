@@ -30,8 +30,7 @@ public class S3BinaryContentStorage implements BinaryContentStorage {
     }
 
     @Override
-    public void store(String key, byte[] bytes) {
-        String contentType = validateImageKey(key).contentType();
+    public void store(String key, byte[] bytes, String contentType) {
         try {
             s3Client.putObject(
                     PutObjectRequest.builder()

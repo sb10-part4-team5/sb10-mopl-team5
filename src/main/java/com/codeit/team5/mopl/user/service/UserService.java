@@ -1,12 +1,13 @@
 package com.codeit.team5.mopl.user.service;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
@@ -34,6 +35,7 @@ public class UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final BinaryContentStorage binaryContentStorage;
+    private final StorageKeyFactory storageKeyFactory;
     private final BinaryContentRepository binaryContentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -82,12 +84,12 @@ public class UserService {
 
     private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
         // TODO(고아 정리): 기존 profileImage를 삭제 대상 상태로 표시 후 배치로 정리 (DB/S3 누적 방지)
-        String key = binaryContentStorage.generateKey(StorageDirectory.PROFILE, userId, image.filename());
+        GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.PROFILE, userId, image.filename());
         BinaryContent profileImage = binaryContentRepository.save(
-                BinaryContent.pending(binaryContentStorage.toUrl(key)));
+                BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
 
         eventPublisher.publishEvent(
-                new BinaryContentUploadEvent(profileImage.getId(), key, image.bytes()));
+                new BinaryContentUploadEvent(profileImage.getId(), generated.key(), image.bytes(), generated.contentType()));
         // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
 
         return profileImage;

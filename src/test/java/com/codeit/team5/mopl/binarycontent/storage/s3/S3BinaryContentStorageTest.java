@@ -3,10 +3,10 @@ package com.codeit.team5.mopl.binarycontent.storage.s3;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.codeit.team5.mopl.binarycontent.exception.InvalidImageExtensionException;
+import com.codeit.team5.mopl.binarycontent.exception.BinaryContentStorageException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -37,7 +38,7 @@ class S3BinaryContentStorageTest {
     @DisplayName("S3 객체 업로드 성공")
     void store_success() {
         // When
-        storage.store("profiles/abc.jpg", new byte[]{1, 2, 3});
+        storage.store("profiles/abc.jpg", new byte[]{1, 2, 3}, "image/jpeg");
 
         // Then
         ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
@@ -49,13 +50,15 @@ class S3BinaryContentStorageTest {
     }
 
     @Test
-    @DisplayName("허용되지 않은 확장자 업로드 실패")
-    void store_invalidExtension_throwsException() {
-        // When & Then
-        assertThatThrownBy(() -> storage.store("profiles/malware.exe", new byte[]{1, 2, 3}))
-                .isInstanceOf(InvalidImageExtensionException.class);
+    @DisplayName("SDK 예외가 발생하면 BinaryContentStorageException으로 변환하며 S3 업로드 실패")
+    void store_sdkException_throwsBinaryContentStorageException() {
+        // Given
+        given(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .willThrow(SdkClientException.create("S3 연결 실패"));
 
-        verifyNoInteractions(s3Client);
+        // When & Then
+        assertThatThrownBy(() -> storage.store("profiles/abc.jpg", new byte[]{1, 2, 3}, "image/jpeg"))
+                .isInstanceOf(BinaryContentStorageException.class);
     }
 
     @Test

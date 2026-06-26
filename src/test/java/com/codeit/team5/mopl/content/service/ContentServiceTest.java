@@ -12,7 +12,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
@@ -58,6 +60,9 @@ class ContentServiceTest {
     private BinaryContentStorage binaryContentStorage;
 
     @Mock
+    private StorageKeyFactory storageKeyFactory;
+
+    @Mock
     private BinaryContentRepository binaryContentRepository;
 
     @Mock
@@ -85,8 +90,8 @@ class ContentServiceTest {
         when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
         when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(binaryContentStorage.generateKey(eq(StorageDirectory.THUMBNAIL), any(), eq("test.jpg")))
-                .thenReturn("thumbnails/test.jpg");
+        when(storageKeyFactory.generate(eq(StorageDirectory.THUMBNAIL), any(), eq("test.jpg")))
+                .thenReturn(new GeneratedKey("thumbnails/test.jpg", "image/jpeg"));
         when(binaryContentStorage.toUrl("thumbnails/test.jpg")).thenReturn("http://localhost:8080/thumbnails/test.jpg");
         when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);
@@ -135,7 +140,7 @@ class ContentServiceTest {
 
         // then
         assertThat(result).isSameAs(expectedResponse);
-        verifyNoInteractions(binaryContentStorage, binaryContentRepository, eventPublisher);
+        verifyNoInteractions(storageKeyFactory, binaryContentStorage, binaryContentRepository, eventPublisher);
     }
 
     @Test

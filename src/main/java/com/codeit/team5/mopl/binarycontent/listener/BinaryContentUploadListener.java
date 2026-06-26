@@ -23,7 +23,7 @@ public class BinaryContentUploadListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(BinaryContentUploadEvent event) {
         try {
-            binaryContentStorage.store(event.key(), event.bytes());
+            binaryContentStorage.store(event.key(), event.bytes(), event.contentType());
             binaryContentService.updateUploadStatus(event.binaryContentId(), BinaryContentUploadStatus.COMPLETED);
             log.debug("파일 업로드 완료 - binaryContentId: {}", event.binaryContentId());
         } catch (Exception e) {

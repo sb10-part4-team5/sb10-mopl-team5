@@ -3,7 +3,6 @@ package com.codeit.team5.mopl.binarycontent.storage.local;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.codeit.team5.mopl.binarycontent.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.exception.FileStorageException;
 import com.codeit.team5.mopl.binarycontent.exception.UploadDirectoryInitException;
 import java.io.IOException;
@@ -32,61 +31,6 @@ class LocalBinaryContentStorageTest {
     }
 
     @Test
-    @DisplayName("generateKey는 thumbnails/{contentId}/{uuid}.{ext} 형식의 키를 반환한다")
-    void generateKey_returnsCorrectFormat() {
-        // given
-        UUID contentId = UUID.randomUUID();
-
-        // when
-        String key = storage.generateKey(StorageDirectory.THUMBNAIL, contentId,"test.jpg");
-
-        // then
-        assertThat(key).startsWith("thumbnails/" + contentId + "/");
-        assertThat(key).endsWith(".jpg");
-    }
-
-    @Test
-    @DisplayName("generateKey는 확장자가 없는 파일명도 처리한다")
-    void generateKey_noExtension_returnsKeyWithoutExtension() {
-        // given
-        UUID contentId = UUID.randomUUID();
-
-        // when
-        String key = storage.generateKey(StorageDirectory.THUMBNAIL, contentId, "testfile");
-
-        // then
-        assertThat(key).startsWith("thumbnails/" + contentId + "/");
-        assertThat(key).doesNotContain(".");
-    }
-
-    @Test
-    @DisplayName("generateKey는 허용되지 않는 확장자는 제거한다")
-    void generateKey_disallowedExtension_returnsKeyWithoutExtension() {
-        // given
-        UUID contentId = UUID.randomUUID();
-
-        // when
-        String key = storage.generateKey(StorageDirectory.THUMBNAIL, contentId, "malicious.exe");
-
-        // then
-        assertThat(key).startsWith("thumbnails/" + contentId + "/");
-        assertThat(key).doesNotContain(".exe");
-    }
-
-    @Test
-    @DisplayName("generateKey는 확장자를 소문자로 정규화한다")
-    void generateKey_uppercaseExtension_normalizesToLowercase() {
-        // given
-        UUID contentId = UUID.randomUUID();
-
-        // when
-        String key = storage.generateKey(StorageDirectory.THUMBNAIL, contentId,"photo.JPG");
-
-        // then
-        assertThat(key).endsWith(".jpg");
-    }
-
-    @Test
     @DisplayName("toUrl은 baseUrl과 key를 조합한 URL을 반환한다")
     void toUrl_returnsCombinedUrl() {
         // given
@@ -103,12 +47,11 @@ class LocalBinaryContentStorageTest {
     @DisplayName("store는 파일을 uploadDir 하위 경로에 저장한다")
     void store_savesFileToCorrectPath() throws IOException {
         // given
-        UUID contentId = UUID.randomUUID();
-        String key = storage.generateKey(StorageDirectory.THUMBNAIL, contentId,"test.jpg");
+        String key = "thumbnails/" + UUID.randomUUID() + "/test.jpg";
         byte[] bytes = new byte[]{1, 2, 3};
 
         // when
-        storage.store(key, bytes);
+        storage.store(key, bytes, "image/jpeg");
 
         // then
         Path saved = tempDir.resolve(key);
@@ -124,7 +67,7 @@ class LocalBinaryContentStorageTest {
         byte[] bytes = new byte[]{1, 2, 3};
 
         // when
-        storage.store(key, bytes);
+        storage.store(key, bytes, "image/jpeg");
 
         // then
         assertThat(Files.exists(tempDir.resolve(key))).isTrue();
@@ -159,7 +102,7 @@ class LocalBinaryContentStorageTest {
         byte[] bytes = new byte[]{1, 2, 3};
 
         // when & then
-        assertThatThrownBy(() -> storage.store(key, bytes))
+        assertThatThrownBy(() -> storage.store(key, bytes, "image/jpeg"))
                 .isInstanceOf(FileStorageException.class);
     }
 }

@@ -11,7 +11,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
@@ -53,6 +55,9 @@ class UserServiceTest {
 
     @Mock
     private BinaryContentStorage binaryContentStorage;
+
+    @Mock
+    private StorageKeyFactory storageKeyFactory;
 
     @Mock
     private BinaryContentRepository binaryContentRepository;
@@ -188,7 +193,7 @@ class UserServiceTest {
         assertThat(result).isSameAs(expected);
         assertThat(user.getName()).isEqualTo("새이름");
         assertThat(user.getProfileImage()).isNull();
-        verifyNoInteractions(binaryContentStorage, binaryContentRepository, eventPublisher);
+        verifyNoInteractions(storageKeyFactory, binaryContentStorage, binaryContentRepository, eventPublisher);
     }
 
     @Test
@@ -203,8 +208,8 @@ class UserServiceTest {
                 "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
         );
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(binaryContentStorage.generateKey(eq(StorageDirectory.PROFILE), eq(user.getId()), eq("profile.jpg")))
-                .thenReturn("profiles/key.jpg");
+        when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq(user.getId()), eq("profile.jpg")))
+                .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
         when(binaryContentStorage.toUrl("profiles/key.jpg"))
                 .thenReturn("http://localhost/profiles/key.jpg");
         when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());

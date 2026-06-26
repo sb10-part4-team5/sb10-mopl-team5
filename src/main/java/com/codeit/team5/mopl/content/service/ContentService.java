@@ -1,7 +1,9 @@
 package com.codeit.team5.mopl.content.service;
 
 import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
@@ -38,6 +40,7 @@ public class ContentService {
     private final TagRepository tagRepository;
     private final ContentMapper contentMapper;
     private final BinaryContentStorage binaryContentStorage;
+    private final StorageKeyFactory storageKeyFactory;
     private final BinaryContentRepository binaryContentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -50,11 +53,12 @@ public class ContentService {
         ));
 
         if (thumbnail != null) {
-            String key = binaryContentStorage.generateKey(StorageDirectory.THUMBNAIL, content.getId(), thumbnail.filename());
+            GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.THUMBNAIL, content.getId(), thumbnail.filename());
             BinaryContent binaryContent = binaryContentRepository.save(
-                    BinaryContent.pending(binaryContentStorage.toUrl(key)));
+                    BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
             content.attachThumbnail(binaryContent);
-            eventPublisher.publishEvent(new BinaryContentUploadEvent(binaryContent.getId(), key, thumbnail.bytes()));
+            eventPublisher.publishEvent(new BinaryContentUploadEvent(
+                    binaryContent.getId(), generated.key(), thumbnail.bytes(), generated.contentType()));
         }
 
         attachTags(content, request.tags());

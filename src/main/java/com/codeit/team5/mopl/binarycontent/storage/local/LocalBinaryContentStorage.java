@@ -31,8 +31,7 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
     }
 
     @Override
-    public void store(String key, byte[] bytes) {
-        validateImageKey(key);
+    public void store(String key, byte[] bytes, String contentType) {
         Path destination = uploadDir.resolve(key);
         try {
             Files.createDirectories(destination.getParent());

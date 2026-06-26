@@ -34,13 +34,13 @@ class BinaryContentUploadListenerTest {
     void handle_uploadSuccess_updatesCompleted() {
         // given
         UUID binaryContentId = UUID.randomUUID();
-        BinaryContentUploadEvent event = new BinaryContentUploadEvent(binaryContentId, "thumbnails/test.jpg", new byte[]{1, 2, 3});
+        BinaryContentUploadEvent event = new BinaryContentUploadEvent(binaryContentId, "thumbnails/test.jpg", new byte[]{1, 2, 3}, "image/jpeg");
 
         // when
         listener.handle(event);
 
         // then
-        verify(binaryContentStorage).store("thumbnails/test.jpg", event.bytes());
+        verify(binaryContentStorage).store("thumbnails/test.jpg", event.bytes(), "image/jpeg");
         verify(binaryContentService).updateUploadStatus(binaryContentId, BinaryContentUploadStatus.COMPLETED);
     }
 
@@ -49,8 +49,8 @@ class BinaryContentUploadListenerTest {
     void handle_uploadFails_updatesFailed() {
         // given
         UUID binaryContentId = UUID.randomUUID();
-        BinaryContentUploadEvent event = new BinaryContentUploadEvent(binaryContentId, "thumbnails/test.jpg", new byte[]{1, 2, 3});
-        doThrow(new RuntimeException("S3 연결 실패")).when(binaryContentStorage).store(any(), any());
+        BinaryContentUploadEvent event = new BinaryContentUploadEvent(binaryContentId, "thumbnails/test.jpg", new byte[]{1, 2, 3}, "image/jpeg");
+        doThrow(new RuntimeException("S3 연결 실패")).when(binaryContentStorage).store(any(), any(), any());
 
         // when
         listener.handle(event);
