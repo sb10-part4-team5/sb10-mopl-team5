@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
+import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
@@ -67,7 +68,8 @@ public class AuthService {
                 || authentication instanceof AnonymousAuthenticationToken
                 || !(authentication.getPrincipal() instanceof MoplUserDetails)) {
             log.warn("Logout failed: unauthenticated request");
-            return;
+
+            throw new JwtInvalidException("Authentication required");
         }
 
         MoplUserDetails principal = (MoplUserDetails) authentication.getPrincipal();
