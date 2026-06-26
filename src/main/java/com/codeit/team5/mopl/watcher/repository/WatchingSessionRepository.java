@@ -21,7 +21,7 @@ public interface WatchingSessionRepository extends JpaRepository<WatchingSession
     @Query("DELETE FROM WatchingSession w WHERE w.user.id = :userId")
     void deleteByUserIdDirectly(UUID userId);
 
-    @EntityGraph(attributePaths = {"user", "content", "content.thumbnail", "content.stats", "content.contentTags", "content.contentTags.tag"})
+    @EntityGraph(attributePaths = {"user", "content", "content.thumbnail", "content.stats"})
     Window<WatchingSession> findByContentId(UUID contentId, ScrollPosition position, Limit limit,
             Sort sort);
 
