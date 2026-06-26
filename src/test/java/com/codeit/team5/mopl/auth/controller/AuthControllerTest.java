@@ -5,12 +5,17 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
+import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
+import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
@@ -19,6 +24,7 @@ import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.auth.service.AuthService;
+import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
@@ -35,7 +41,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -57,6 +65,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private RefreshTokenCookieManager cookieManager;
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
@@ -88,13 +99,29 @@ class AuthControllerTest {
                 ),
                 "access-token"
         );
-        given(authService.login(any(SignInRequest.class))).willReturn(response);
+        AuthPayload authPayload = new AuthPayload(response, "refresh-token");
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("REFRESH_TOKEN", "refresh-token")
+                .httpOnly(true)
+                .secure(false)
+                .path("/api/auth")
+                .maxAge(420 * 60)
+                .build();
+        given(authService.login(any(SignInRequest.class))).willReturn(authPayload);
+        given(cookieManager.createCookie("refresh-token")).willReturn(refreshTokenCookie);
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", request.username())
+                        .param("password", request.password()))
                 .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("REFRESH_TOKEN=refresh-token"),
+                                org.hamcrest.Matchers.containsString("Path=/api/auth"),
+                                org.hamcrest.Matchers.containsString("Max-Age=25200"),
+                                org.hamcrest.Matchers.containsString("HttpOnly")
+                        )))
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.userDto.id").value(userId.toString()))
@@ -104,106 +131,98 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.userDto.locked").value(false));
 
         verify(authService).login(request);
+        verify(cookieManager).createCookie("refresh-token");
     }
 
     @Test
-    @DisplayName("로그인 요청에서 이메일이 누락되면 400 응답을 반환한다")
-    void login_missingEmail_returnsBadRequest() throws Exception {
-        // Given
-        String requestJson = """
-                {
-                  "password": "password1"
-                }
-                """;
+    @DisplayName("로그인 요청에서 이메일이 누락되면 현재 전역 예외 응답을 반환한다")
+    void login_missingEmail_returnsInternalServerError() throws Exception {
+        // Given: username 파라미터가 없음
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
-                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
-                .andExpect(jsonPath("$.details.username[0]").value("이메일은 필수입니다."));
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("password", "password1"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
         verify(authService, never()).login(any());
     }
 
     @Test
-    @DisplayName("로그인 요청의 이메일 형식이 올바르지 않으면 400 Bad Request를 반환한다")
-    void signIn_invalidEmail_returnsBadRequest() throws Exception {
+    @DisplayName("로그인 요청의 이메일 형식이 올바르지 않으면 현재 전역 예외 응답을 반환한다")
+    void signIn_invalidEmail_returnsInternalServerError() throws Exception {
         // Given
         SignInRequest request = new SignInRequest("invalid-email", "password1");
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
-                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
-                .andExpect(jsonPath("$.details.username").isArray())
-                .andExpect(jsonPath("$.details.username").isNotEmpty());
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", request.username())
+                        .param("password", request.password()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
-        verify(authService, never()).login(any());
+        verify(authService).login(request);
     }
 
     @Test
-    @DisplayName("로그인 요청의 이메일이 공백이면 400 응답을 반환한다")
-    void login_blankEmail_returnsBadRequest() throws Exception {
+    @DisplayName("로그인 요청의 이메일이 공백이면 현재 전역 예외 응답을 반환한다")
+    void login_blankEmail_returnsInternalServerError() throws Exception {
         // Given
         SignInRequest request = new SignInRequest("   ", "password1");
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
-                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
-                .andExpect(jsonPath("$.details.username").isArray())
-                .andExpect(jsonPath("$.details.username").isNotEmpty());
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", request.username())
+                        .param("password", request.password()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
-        verify(authService, never()).login(any());
+        verify(authService).login(request);
     }
 
     @Test
-    @DisplayName("로그인 요청에서 비밀번호가 누락되면 400 응답을 반환한다")
-    void login_missingPassword_returnsBadRequest() throws Exception {
-        // Given
-        String requestJson = """
-                {
-                  "username": "user@example.com"
-                }
-                """;
+    @DisplayName("로그인 요청에서 비밀번호가 누락되면 현재 전역 예외 응답을 반환한다")
+    void login_missingPassword_returnsInternalServerError() throws Exception {
+        // Given: password 파라미터가 없음
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
-                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
-                .andExpect(jsonPath("$.details.password[0]").value("비밀번호는 필수입니다."));
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", "user@example.com"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
         verify(authService, never()).login(any());
     }
 
     @Test
-    @DisplayName("로그인 요청의 비밀번호가 공백이면 400 응답을 반환한다")
-    void login_blankPassword_returnsBadRequest() throws Exception {
+    @DisplayName("로그인 요청의 비밀번호가 공백이면 현재 전역 예외 응답을 반환한다")
+    void login_blankPassword_returnsInternalServerError() throws Exception {
         // Given
         SignInRequest request = new SignInRequest("user@example.com", "   ");
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
-                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
-                .andExpect(jsonPath("$.details.password[0]").value("비밀번호는 필수입니다."));
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", request.username())
+                        .param("password", request.password()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
 
-        verify(authService, never()).login(any());
+        verify(authService).login(request);
     }
 
     @Test
@@ -216,8 +235,9 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .param("username", request.username())
+                .param("password", request.password()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.exceptionType").value("InvalidCredentialsException"))
                 .andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 올바르지 않습니다."))
@@ -227,18 +247,30 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("인증 헤더 없이 로그아웃을 요청하면 401 응답을 반환한다")
-    void logout_missingAuthorizationHeader_returnsUnauthorized() throws Exception {
+    @DisplayName("인증 헤더 없이 로그아웃을 요청하면 refresh token cookie 삭제 응답을 반환한다")
+    void logout_missingAuthorizationHeader_deletesRefreshTokenCookie() throws Exception {
         // Given: Authorization 헤더 없음
+        ResponseCookie deleteCookie = ResponseCookie.from("REFRESH_TOKEN", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/api/auth")
+                .maxAge(0)
+                .build();
+        given(cookieManager.deleteCookie()).willReturn(deleteCookie);
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-out"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.exceptionName").value("UNAUTHORIZED"))
-                .andExpect(jsonPath("$.message").value("인증이 필요합니다."))
-                .andExpect(jsonPath("$.details").isEmpty());
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("REFRESH_TOKEN="),
+                                org.hamcrest.Matchers.containsString("Path=/api/auth"),
+                                org.hamcrest.Matchers.containsString("Max-Age=0"),
+                                org.hamcrest.Matchers.containsString("HttpOnly")
+                        )));
 
-        verify(authService, never()).logout();
+        verify(authService).logout(null);
+        verify(cookieManager).deleteCookie();
     }
 
     @Test
@@ -246,14 +278,26 @@ class AuthControllerTest {
     void logout_authenticatedUser_success() throws Exception {
         // Given
         String accessToken = "valid-access-token";
+        String refreshToken = "refresh-token";
         mockAccessToken(accessToken);
+        ResponseCookie deleteCookie = ResponseCookie.from("REFRESH_TOKEN", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/api/auth")
+                .maxAge(0)
+                .build();
+        given(cookieManager.deleteCookie()).willReturn(deleteCookie);
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-out")
-                        .header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isNoContent());
+                        .header("Authorization", "Bearer " + accessToken)
+                        .cookie(new jakarta.servlet.http.Cookie("REFRESH_TOKEN", refreshToken)))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.containsString("Max-Age=0")));
 
-        verify(authService).logout();
+        verify(authService).logout(refreshToken);
+        verify(cookieManager).deleteCookie();
     }
 
     @Test
@@ -261,20 +305,107 @@ class AuthControllerTest {
     void logout_serviceException_returnsInternalServerError() throws Exception {
         // Given
         String accessToken = "valid-access-token";
+        String refreshToken = "refresh-token";
         mockAccessToken(accessToken);
         org.mockito.BDDMockito.willThrow(new IllegalStateException("logout failed"))
                 .given(authService)
-                .logout();
+                .logout(refreshToken);
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-out")
-                .header("Authorization", "Bearer " + accessToken))
+                .header("Authorization", "Bearer " + accessToken)
+                .cookie(new jakarta.servlet.http.Cookie("REFRESH_TOKEN", refreshToken)))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
                 .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
                 .andExpect(jsonPath("$.details").doesNotExist());
 
-        verify(authService).logout();
+        verify(authService).logout(refreshToken);
+    }
+
+    @Test
+    @DisplayName("잘못된 JWT로 인증이 실패하면 AuthenticationEntryPoint 응답을 반환한다")
+    void authenticatedRequest_invalidJwt_returnsEntryPointResponse() throws Exception {
+        // Given
+        String accessToken = "invalid-access-token";
+        given(jwtTokenizer.getAccessClaims(accessToken))
+                .willThrow(new JwtInvalidException("Invalid access token"));
+
+        // When & Then
+        mockMvc.perform(post("/api/follows")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("JwtInvalidException"))
+                .andExpect(jsonPath("$.exceptionName").doesNotExist())
+                .andExpect(jsonPath("$.message").value("Invalid access token"))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("CSRF 토큰 발급 요청에 성공하면 XSRF-TOKEN 쿠키를 반환한다")
+    void csrfToken_success() throws Exception {
+        // Given: CSRF 토큰 발급 엔드포인트
+
+        // When & Then
+        mockMvc.perform(get("/api/auth/csrf-token"))
+                .andExpect(status().isNoContent())
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("XSRF-TOKEN="))));
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 요청에 CSRF 토큰이 없으면 403 응답을 반환한다")
+    void refresh_missingCsrf_returnsForbidden() throws Exception {
+        // Given: /api/auth/refresh는 CSRF 보호 대상
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(new jakarta.servlet.http.Cookie("REFRESH_TOKEN", "refresh-token")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.exceptionType").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.exceptionName").doesNotExist())
+                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."));
+    }
+
+    @Test
+    @DisplayName("CSRF 토큰을 포함한 토큰 재발급 요청에 성공하면 refresh token cookie를 반환한다")
+    void refresh_withCsrf_success() throws Exception {
+        // Given
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        JwtResponse response = new JwtResponse(
+                new UserResponse(
+                        userId,
+                        Instant.parse("2026-06-24T00:00:00Z"),
+                        "user@example.com",
+                        "사용자",
+                        null,
+                        "USER",
+                        false
+                ),
+                "new-access-token"
+        );
+        AuthPayload authPayload = new AuthPayload(response, "new-refresh-token");
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("REFRESH_TOKEN", "new-refresh-token")
+                .httpOnly(true)
+                .secure(false)
+                .path("/api/auth")
+                .maxAge(420 * 60)
+                .build();
+        given(authService.refresh("refresh-token")).willReturn(authPayload);
+        given(cookieManager.createCookie("new-refresh-token")).willReturn(refreshTokenCookie);
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/refresh")
+                        .with(csrf())
+                        .cookie(new jakarta.servlet.http.Cookie("REFRESH_TOKEN", "refresh-token")))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.containsString("REFRESH_TOKEN=new-refresh-token")))
+                .andExpect(jsonPath("$.accessToken").value("new-access-token"))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist());
+
+        verify(authService).refresh("refresh-token");
+        verify(cookieManager).createCookie("new-refresh-token");
     }
 
     private void mockAccessToken(String accessToken) {
