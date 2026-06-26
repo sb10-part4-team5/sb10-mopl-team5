@@ -2,15 +2,16 @@ package com.codeit.team5.mopl.content.mapper;
 
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentTag;
-import com.codeit.team5.mopl.content.mapper.util.ContentUtilsMapper;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import org.springframework.data.domain.Sort.Direction;
 
 @Mapper(componentModel = "spring", uses = {ContentUtilsMapper.class})
 public interface ContentMapper {
@@ -22,4 +23,35 @@ public interface ContentMapper {
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
     @Mapping(target = "thumbnailUploadStatus", source = "thumbnail.uploadStatus")
     ContentResponse toDto(Content content);
+
+    default List<String> toTagNames(Set<ContentTag> contentTags) {
+        if (contentTags == null) return Collections.emptyList();
+        return contentTags.stream()
+                .map(ct -> ct.getTag().getName())
+                .sorted()
+                .toList();
+    }
+
+    default double toAverageRating(ContentStats stats) {
+        if (stats == null || stats.getReviewCount() == 0) return 0.0;
+        return stats.getRatingSum() / stats.getReviewCount();
+    }
+
+    default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,
+            long totalCount, ContentSortByType sortBy, Direction sortDirection) {
+        String nextCursor = null;
+        String nextIdAfter = null;
+        if (hasNext && !page.isEmpty()) {
+            Content last = page.get(page.size() - 1);
+            nextCursor = switch (sortBy) {
+                case CREATED_AT -> last.getCreatedAt().toString();
+                case WATCHER_COUNT -> String.valueOf(last.getStats().getWatcherCount());
+                case RATE -> String.valueOf(last.getStats().getRatingSum());
+            };
+            nextIdAfter = last.getId().toString();
+        }
+        List<ContentResponse> data = page.stream().map(this::toDto).toList();
+        return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, totalCount,
+                sortBy.getValue(), sortDirection.toString());
+    }
 }
