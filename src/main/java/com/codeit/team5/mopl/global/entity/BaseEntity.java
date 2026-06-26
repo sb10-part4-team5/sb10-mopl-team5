@@ -2,12 +2,14 @@ package com.codeit.team5.mopl.global.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-import lombok.EqualsAndHashCode;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.proxy.HibernateProxy;
@@ -37,11 +39,11 @@ public abstract class BaseEntity {
             return false;
         }
         Class<?> oEffectiveClass =
-                o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer()
-                        .getPersistentClass() : o.getClass();
+            o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer()
+                .getPersistentClass() : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy
-                ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
-                : this.getClass();
+            ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
         if (thisEffectiveClass != oEffectiveClass) {
             return false;
         }
