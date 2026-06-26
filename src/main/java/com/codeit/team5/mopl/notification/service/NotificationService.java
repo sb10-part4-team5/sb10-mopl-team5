@@ -6,6 +6,8 @@ import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
+import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.mapper.NotificationMapper;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
@@ -25,6 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class NotificationService {
 
+    private static final String SORT_BY_CREATED_AT = "createdAt";
+    private static final String SORT_ASCENDING = "ASCENDING";
+    private static final String SORT_DESCENDING = "DESCENDING";
+
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
     private final ApplicationEventPublisher publisher;
@@ -43,23 +49,31 @@ public class NotificationService {
         return response;
     }
 
-    // 수신자별 알림 목록 (커서 페이지네이션)
+    // 수신자별 알림 목록 조회 (커서 페이지네이션)
     public CursorResponseNotificationDto getNotifications(
             UUID receiverId, String cursor, UUID idAfter, int limit,
             String sortDirection, String sortBy) {
+
+        // 지원하는 정렬 값인지 검증하고 오름차순 여부를 결정 (응답 메타와 실제 정렬을 일치시킴)
+        boolean ascending = resolveAscending(sortBy, sortDirection);
+
+        // 주 커서는 createdAt 문자열로 들어오므로 Instant로 파싱. 없으면(null) 첫 페이지
         Instant cursorInstant =
                 (cursor == null || cursor.isBlank()) ? null : Instant.parse(cursor);
-        boolean ascending = isAscending(sortDirection);
 
-        // hasNext 판단을 위해 limit + 1 개를 조회
+        // 다음 페이지 존재 여부를 알기 위해 limit보다 1개 더 조회
         Limit fetchLimit = Limit.of(limit + 1);
+
+        // 정렬 방향에 맞는 커서 조회 메서드 선택
         List<Notification> rows = ascending
                 ? notificationRepository.findPageByReceiverAsc(receiverId, cursorInstant, idAfter, fetchLimit)
                 : notificationRepository.findPageByReceiverDesc(receiverId, cursorInstant, idAfter, fetchLimit);
 
+        // limit + 1개가 조회됐으면 다음 페이지가 있는 것. 초과분은 잘라내고 limit개만 노출
         boolean hasNext = rows.size() > limit;
         List<Notification> page = hasNext ? rows.subList(0, limit) : rows;
 
+        // 다음 페이지가 있을 때만 마지막 요소의 (createdAt, id)로 다음 커서를 구성
         String nextCursor = null;
         UUID nextIdAfter = null;
         if (hasNext && !page.isEmpty()) {
@@ -68,6 +82,7 @@ public class NotificationService {
             nextIdAfter = last.getId();
         }
 
+        // 응답의 totalCount (수신자의 전체 알림 개수)
         long totalCount = notificationRepository.countByReceiverId(receiverId);
 
         return new CursorResponseNotificationDto(
@@ -91,7 +106,17 @@ public class NotificationService {
         return notificationMapper.toResponse(notification);
     }
 
-    private boolean isAscending(String sortDirection) {
-        return sortDirection != null && sortDirection.toUpperCase().startsWith("ASC");
+    // 지원하는 정렬 값만 허용하고(아니면 400), 응답 메타데이터가 실제 정렬과 일치하도록 보장한다.
+    private boolean resolveAscending(String sortBy, String sortDirection) {
+        if (!SORT_BY_CREATED_AT.equals(sortBy)) {
+            throw new InvalidSortByException(sortBy);
+        }
+        if (SORT_ASCENDING.equalsIgnoreCase(sortDirection)) {
+            return true;
+        }
+        if (SORT_DESCENDING.equalsIgnoreCase(sortDirection)) {
+            return false;
+        }
+        throw new InvalidSortDirectionException(sortDirection);
     }
 }

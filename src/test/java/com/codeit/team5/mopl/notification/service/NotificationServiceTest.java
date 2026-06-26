@@ -7,12 +7,16 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
 import com.codeit.team5.mopl.notification.dto.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
+import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.mapper.NotificationMapper;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
@@ -60,6 +64,7 @@ class NotificationServiceTest {
 
         // then
         assertThat(result).isEqualTo(response);
+        verify(publisher).publishEvent(any(NotificationCreatedEvent.class));
     }
 
     @Test
@@ -132,6 +137,30 @@ class NotificationServiceTest {
 
         // then
         assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 sortBy면 예외가 발생한다")
+    void getNotifications_invalidSortBy_exception() {
+        // given
+        UUID receiverId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.getNotifications(
+                receiverId, null, null, 2, "DESCENDING", "title"))
+                .isInstanceOf(InvalidSortByException.class);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 sortDirection이면 예외가 발생한다")
+    void getNotifications_invalidSortDirection_exception() {
+        // given
+        UUID receiverId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.getNotifications(
+                receiverId, null, null, 2, "WHATEVER", "createdAt"))
+                .isInstanceOf(InvalidSortDirectionException.class);
     }
 
     @Test
