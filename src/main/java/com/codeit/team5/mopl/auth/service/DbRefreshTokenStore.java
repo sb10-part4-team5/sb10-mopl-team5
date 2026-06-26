@@ -6,7 +6,6 @@ import com.codeit.team5.mopl.auth.token.RefreshTokenHasher;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
-import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -22,7 +21,6 @@ public class DbRefreshTokenStore implements RefreshTokenStore {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final RefreshTokenHasher refreshTokenHasher;
-    private final EntityManager entityManager;
 
     @Override
     @Transactional
