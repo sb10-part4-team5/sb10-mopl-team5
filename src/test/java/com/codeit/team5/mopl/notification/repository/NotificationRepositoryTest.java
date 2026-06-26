@@ -175,6 +175,34 @@ class NotificationRepositoryTest {
     }
 
     @Test
+    @DisplayName("커서 페이지네이션으로 다음 페이지가 겹치지 않고 이어진다 (오래된순)")
+    void findPageByReceiverAsc_pagination() {
+        // Given
+        UUID receiverId = persistReceiver("page@example.com");
+        saveNotifications(receiverId, 5);
+        // 다른 수신자의 알림 (조회 대상에서 제외되어야 함)
+        UUID otherReceiverId = persistReceiver("page-other@example.com");
+        saveNotifications(otherReceiverId, 3);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When: 첫 페이지 (limit=2)
+        List<Notification> first = notificationRepository
+            .findPageByReceiverAsc(receiverId, null, null, Limit.of(2));
+        // 첫 페이지 마지막을 커서로 다음 페이지 조회
+        Notification cursor = first.get(first.size() - 1);
+        List<Notification> second = notificationRepository
+            .findPageByReceiverAsc(receiverId, cursor.getCreatedAt(), cursor.getId(), Limit.of(2));
+
+        // Then
+        assertThat(first).hasSize(2);
+        assertThat(second).hasSize(2);
+        assertThat(second).extracting(Notification::getId)
+            .doesNotContainAnyElementsOf(first.stream().map(Notification::getId).toList());
+        assertThat(notificationRepository.countByReceiverId(receiverId)).isEqualTo(5);
+    }
+
+    @Test
     @DisplayName("cursor와 idAfter 중 하나만 주어지면 예외가 발생한다")
     void findPageByReceiverDesc_cursorIdAfterNotTogether_exception() {
         // Given
