@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Tag(name = "인증 관리")
 public interface AuthApi {
@@ -45,7 +46,8 @@ public interface AuthApi {
     })
     ResponseEntity<JwtResponse> login(
             @Parameter(description = "로그인 요청 본문", required = true)
-            @Valid @RequestBody SignInRequest request
+            @Valid @RequestParam String username,
+            @Valid @RequestParam String password
     );
 
     @Operation(
