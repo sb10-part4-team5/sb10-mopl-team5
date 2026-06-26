@@ -8,6 +8,7 @@ import com.codeit.team5.mopl.follow.exception.FollowNotFoundException;
 import com.codeit.team5.mopl.follow.exception.SelfFollowException;
 import com.codeit.team5.mopl.follow.mapper.FollowMapper;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
+import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.UUID;
@@ -31,18 +32,14 @@ public class FollowService {
         if (followerId.equals(followeeId)) {
             throw new SelfFollowException(followerId);
         }
-        if (!userRepository.existsById(followeeId)) {
-            throw new UserNotFoundException(followeeId);
-        }
         if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
             throw new DuplicateFollowException(followerId, followeeId);
         }
 
-        Follow follow = Follow.create(
-                userRepository.getReferenceById(followerId),
-                userRepository.getReferenceById(followeeId)
-        );
-        Follow saved = followRepository.save(follow);
+        User follower = getUser(followerId);
+        User followee = getUser(followeeId);
+
+        Follow saved = followRepository.save(Follow.create(follower, followee));
 
         log.info("Follow created: follower={}, followee={}", followerId, followeeId);
         return followMapper.toDto(saved);
@@ -65,6 +62,11 @@ public class FollowService {
 
         followRepository.delete(follow);
         log.info("Follow deleted: followId={}, requester={}", followId, requesterId);
+    }
+
+    private User getUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
     }
 
     private Follow getFollow(UUID followId) {

@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Tag(name = "팔로우 관리", description = "팔로우 관련 API")
 public interface FollowApi {
 
-    @Operation(summary = "팔로우", description = "로그인한 사용자가 대상 사용자를 팔로우합니다.")
+    @Operation(operationId = "createFollow", summary = "팔로우")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "팔로우 성공",
                     content = @Content(schema = @Schema(implementation = FollowResponse.class))),
@@ -40,7 +40,8 @@ public interface FollowApi {
             @Parameter(description = "팔로우 요청 본문", required = true)
             @Valid @RequestBody FollowCreateRequest request);
 
-    @Operation(summary = "팔로우 여부 확인", description = "로그인한 사용자가 대상 사용자를 팔로우 중인지 확인합니다.")
+    @Operation(operationId = "isFollowedByMe", summary = "특정 유저를 내가 팔로우하는지 여부 조회",
+            description = "팔로우 중이면 FollowDto(id 포함)를 반환합니다. 팔로우하지 않은 경우 404를 반환합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "팔로우 중",
                     content = @Content(schema = @Schema(implementation = FollowResponse.class))),
@@ -56,7 +57,7 @@ public interface FollowApi {
             @Parameter(description = "대상 사용자 ID", required = true)
             @RequestParam UUID followeeId);
 
-    @Operation(summary = "팔로워 수 조회", description = "대상 사용자의 팔로워 수를 조회합니다.")
+    @Operation(operationId = "getFollowerCount", summary = "특정 유저의 팔로워 수 조회")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "성공"),
             @ApiResponse(responseCode = "401", description = "인증 오류",
@@ -68,7 +69,8 @@ public interface FollowApi {
             @Parameter(description = "대상 사용자 ID", required = true)
             @RequestParam UUID followeeId);
 
-    @Operation(summary = "팔로우 취소", description = "본인의 팔로우만 취소할 수 있습니다.")
+    @Operation(operationId = "cancelFollow", summary = "팔로우 취소",
+            description = "API 요청자 본인의 팔로우만 취소할 수 있습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "팔로우 취소 성공"),
             @ApiResponse(responseCode = "401", description = "인증 오류",

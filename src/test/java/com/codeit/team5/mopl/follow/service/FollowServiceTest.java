@@ -56,10 +56,9 @@ class FollowServiceTest {
         User followee = User.create("followee@mopl.com", "pw", "팔로위");
         FollowResponse expected = new FollowResponse(UUID.randomUUID(), followeeId, followerId);
 
-        when(userRepository.existsById(followeeId)).thenReturn(true);
         when(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)).thenReturn(false);
-        when(userRepository.getReferenceById(followerId)).thenReturn(follower);
-        when(userRepository.getReferenceById(followeeId)).thenReturn(followee);
+        when(userRepository.findById(followerId)).thenReturn(Optional.of(follower));
+        when(userRepository.findById(followeeId)).thenReturn(Optional.of(followee));
         when(followRepository.save(any(Follow.class))).then(returnsFirstArg());
         when(followMapper.toDto(any(Follow.class))).thenReturn(expected);
 
@@ -89,7 +88,24 @@ class FollowServiceTest {
         // given
         UUID followerId = UUID.randomUUID();
         UUID followeeId = UUID.randomUUID();
-        when(userRepository.existsById(followeeId)).thenReturn(false);
+        when(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)).thenReturn(false);
+        when(userRepository.findById(followerId)).thenReturn(Optional.of(User.create("f@mopl.com", "pw", "팔로워")));
+        when(userRepository.findById(followeeId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> followService.follow(followerId, followeeId))
+                .isInstanceOf(UserNotFoundException.class);
+        verify(followRepository, never()).save(any(Follow.class));
+    }
+
+    @Test
+    @DisplayName("팔로우 요청자(본인)가 없으면 실패")
+    void follow_followerNotFound_throwsException() {
+        // given
+        UUID followerId = UUID.randomUUID();
+        UUID followeeId = UUID.randomUUID();
+        when(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)).thenReturn(false);
+        when(userRepository.findById(followerId)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> followService.follow(followerId, followeeId))
@@ -103,7 +119,6 @@ class FollowServiceTest {
         // given
         UUID followerId = UUID.randomUUID();
         UUID followeeId = UUID.randomUUID();
-        when(userRepository.existsById(followeeId)).thenReturn(true);
         when(followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)).thenReturn(true);
 
         // when & then
