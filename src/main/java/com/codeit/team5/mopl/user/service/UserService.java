@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.user.service;
 
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
@@ -69,12 +70,21 @@ public class UserService {
 
     @Transactional
     public UserResponse update(UUID userId, UserUpdateRequest request, FileRequest image) {
-        User user = getUser(userId);
+        User user = userRepository.findWithProfileImageById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User not found: userId={}", userId);
+                    return new UserNotFoundException(userId);
+                });
 
         // TODO: 인증 구현 후 본인 확인(현재 로그인 사용자 == userId) 추가, 불일치 시 403
 
         user.updateName(request.name());
         if (image != null) {
+            // TODO(고아 정리): 비정상적인 상태를 가진 BinaryContent를 배치로 정리 (DB/S3 누적 방지)
+            BinaryContent oldProfile = user.getProfileImage();
+            if (oldProfile != null) {
+                oldProfile.updateUploadStatus(BinaryContentUploadStatus.DELETED);
+            }
             user.updateProfileImage(storeProfileImage(user.getId(), image));
         }
 
@@ -83,7 +93,6 @@ public class UserService {
     }
 
     private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
-        // TODO(고아 정리): 기존 profileImage를 삭제 대상 상태로 표시 후 배치로 정리 (DB/S3 누적 방지)
         GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.PROFILE, userId, image.filename());
         BinaryContent profileImage = binaryContentRepository.save(
                 BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
