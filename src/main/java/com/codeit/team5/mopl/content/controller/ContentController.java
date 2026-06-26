@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.content.controller.api.ContentApi;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.service.ContentService;
+import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,7 @@ public class ContentController implements ContentApi {
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
         log.info("Content Create request: POST /api/contents");
-        ContentResponse response = contentService.create(request, thumbnail);
+        ContentResponse response = contentService.create(request, MultipartFiles.toImageResource(thumbnail));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

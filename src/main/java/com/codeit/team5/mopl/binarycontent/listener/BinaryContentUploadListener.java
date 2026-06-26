@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.binarycontent.listener;
 
-import com.codeit.team5.mopl.binarycontent.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
@@ -23,7 +23,7 @@ public class BinaryContentUploadListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(BinaryContentUploadEvent event) {
         try {
-            binaryContentStorage.store(event.key(), event.bytes());
+            binaryContentStorage.store(event.key(), event.bytes(), event.contentType());
             binaryContentService.updateUploadStatus(event.binaryContentId(), BinaryContentUploadStatus.COMPLETED);
             log.debug("파일 업로드 완료 - binaryContentId: {}", event.binaryContentId());
         } catch (Exception e) {

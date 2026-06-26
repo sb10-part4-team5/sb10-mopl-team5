@@ -30,6 +30,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
     implementation 'org.mapstruct:mapstruct:1.6.3'
+    // AWS SDK (S3)
+    implementation platform('software.amazon.awssdk:bom:2.46.7')
+    implementation 'software.amazon.awssdk:s3'
     // Spring security
     implementation 'org.springframework.boot:spring-boot-starter-security'
     // JWT 기능을 위한 jjwt 라이브러리

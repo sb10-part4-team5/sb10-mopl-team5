@@ -2,14 +2,25 @@ package com.codeit.team5.mopl.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
+import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
+import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.global.exception.ErrorCode;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
@@ -26,6 +37,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -40,6 +52,18 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private BinaryContentStorage binaryContentStorage;
+
+    @Mock
+    private StorageKeyFactory storageKeyFactory;
+
+    @Mock
+    private BinaryContentRepository binaryContentRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private UserService userService;
@@ -147,5 +171,73 @@ class UserServiceTest {
 
         verify(userRepository).findById(userId);
         verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    @DisplayName("프로필 이름만 변경 성공")
+    void update_nameOnly_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "기존이름");
+        UserResponse expected = new UserResponse(
+                userId, Instant.parse("2026-06-25T00:00:00Z"),
+                "user@example.com", "새이름", null, "USER", false
+        );
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userMapper.toDto(user)).thenReturn(expected);
+
+        // When
+        UserResponse result = userService.update(userId, new UserUpdateRequest("새이름"), null);
+
+        // Then
+        assertThat(result).isSameAs(expected);
+        assertThat(user.getName()).isEqualTo("새이름");
+        assertThat(user.getProfileImage()).isNull();
+        verifyNoInteractions(storageKeyFactory, binaryContentStorage, binaryContentRepository, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 포함 변경 성공")
+    void update_withImage_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "기존이름");
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        UserResponse expected = new UserResponse(
+                userId, Instant.parse("2026-06-25T00:00:00Z"),
+                "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
+        );
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq(user.getId()), eq("profile.jpg")))
+                .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
+        when(binaryContentStorage.toUrl("profiles/key.jpg"))
+                .thenReturn("http://localhost/profiles/key.jpg");
+        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
+        when(userMapper.toDto(user)).thenReturn(expected);
+
+        // When
+        UserResponse result = userService.update(userId, new UserUpdateRequest("새이름"), image);
+
+        // Then
+        assertThat(result).isSameAs(expected);
+        assertThat(user.getName()).isEqualTo("새이름");
+        assertThat(user.getProfileImage()).isNotNull();
+        verify(binaryContentRepository).save(any(BinaryContent.class));
+        verify(eventPublisher).publishEvent(any(BinaryContentUploadEvent.class));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자 프로필 변경 실패")
+    void update_notFound_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.update(userId, new UserUpdateRequest("새이름"), null))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(userRepository).findById(userId);
+        verifyNoInteractions(userMapper, binaryContentRepository, eventPublisher);
     }
 }
