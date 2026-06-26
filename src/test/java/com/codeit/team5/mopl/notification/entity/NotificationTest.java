@@ -94,6 +94,7 @@ class NotificationTest {
         assertThat(notification.isRead()).isTrue();
         assertThat(notification.getReadAt()).isNotNull();
     }
+    }
 
     @Test
     @DisplayName("이미 읽은 알림을 다시 읽음 처리해도 readAt이 변경되지 않는다")
