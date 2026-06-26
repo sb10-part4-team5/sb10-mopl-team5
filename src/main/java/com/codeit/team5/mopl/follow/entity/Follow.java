@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.follow.entity;
 
+import com.codeit.team5.mopl.follow.exception.FollowForbiddenException;
 import com.codeit.team5.mopl.follow.exception.SelfFollowException;
 import com.codeit.team5.mopl.global.entity.BaseEntity;
 import com.codeit.team5.mopl.user.entity.User;
@@ -14,9 +15,11 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Check;
+import org.hibernate.annotations.Immutable;
 
 @Entity
 @Getter
+@Immutable
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Check(name = "ck_follow_self", constraints = "follower_id <> followee_id")
 @Table(
@@ -42,8 +45,7 @@ public class Follow extends BaseEntity {
     }
 
     public static Follow create(User follower, User followee) {
-        if (follower == followee
-                || (follower.getId() != null && follower.getId().equals(followee.getId()))) {
+        if (follower.equals(followee)) {
             throw new SelfFollowException(follower.getId());
         }
         return new Follow(follower, followee);
@@ -51,5 +53,11 @@ public class Follow extends BaseEntity {
 
     public boolean isOwnedBy(UUID userId) {
         return follower.getId().equals(userId);
+    }
+
+    public void validateOwnedBy(UUID userId) {
+        if (!isOwnedBy(userId)) {
+            throw new FollowForbiddenException(getId(), userId);
+        }
     }
 }

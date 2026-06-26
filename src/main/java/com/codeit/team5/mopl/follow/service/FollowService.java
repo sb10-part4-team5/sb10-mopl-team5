@@ -3,7 +3,6 @@ package com.codeit.team5.mopl.follow.service;
 import com.codeit.team5.mopl.follow.dto.response.FollowResponse;
 import com.codeit.team5.mopl.follow.entity.Follow;
 import com.codeit.team5.mopl.follow.exception.DuplicateFollowException;
-import com.codeit.team5.mopl.follow.exception.FollowForbiddenException;
 import com.codeit.team5.mopl.follow.exception.FollowNotFoundException;
 import com.codeit.team5.mopl.follow.exception.SelfFollowException;
 import com.codeit.team5.mopl.follow.mapper.FollowMapper;
@@ -60,7 +59,7 @@ public class FollowService {
     @Transactional
     public void unfollow(UUID requesterId, UUID followId) {
         Follow follow = getFollow(followId);
-        validateOwner(follow, requesterId);
+        follow.validateOwnedBy(requesterId);
 
         followRepository.delete(follow);
         log.info("Follow deleted: followId={}, requester={}", followId, requesterId);
@@ -86,11 +85,5 @@ public class FollowService {
     private Follow getFollow(UUID followId) {
         return followRepository.findById(followId)
                 .orElseThrow(() -> new FollowNotFoundException(followId));
-    }
-
-    private void validateOwner(Follow follow, UUID requesterId) {
-        if (!follow.isOwnedBy(requesterId)) {
-            throw new FollowForbiddenException(follow.getId(), requesterId);
-        }
     }
 }
