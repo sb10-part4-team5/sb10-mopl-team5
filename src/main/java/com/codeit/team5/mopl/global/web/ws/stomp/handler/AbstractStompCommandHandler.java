@@ -68,10 +68,6 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
         sessionStore.unsubscribe(email, subscriptionId);
     }
 
-    protected void disconnectSession(String email) {
-        sessionStore.disconnect(email);
-    }
-
     protected String getSessionDestination(String email, String subscriptionId) {
         return sessionStore.getDestination(email, subscriptionId);
     }

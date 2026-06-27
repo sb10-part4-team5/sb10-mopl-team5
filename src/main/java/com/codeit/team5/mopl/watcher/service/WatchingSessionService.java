@@ -41,8 +41,8 @@ public class WatchingSessionService {
     public WatchingSessionResponse create(UUID contentId, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException(email));
-        Content content = contentRepository.findById(contentId)
-                .orElseThrow(ContentNotFoundException::new);
+        Content content = contentRepository.findWithStatsAndTagsById(contentId)
+                .orElseThrow(() -> new ContentNotFoundException(contentId));
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
         return mapper.toDto(session);
@@ -81,7 +81,8 @@ public class WatchingSessionService {
 
     public void ensureWatchingContent(String email, UUID contentId) {
         if (!repository.existsByWatcherEmailAndContentId(email, contentId)) {
-            throw new WatchingSessionNotFoundException(Map.of("email", email, "contentId", contentId));
+            throw new WatchingSessionNotFoundException(
+                    Map.of("email", email, "contentId", contentId));
         }
     }
 

@@ -14,14 +14,14 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface WatchingSessionRepository extends JpaRepository<WatchingSession, UUID> {
 
-    @EntityGraph(attributePaths = {"user", "content", "content.stats", "content.thumnail", "content.contentTags"})
+    @EntityGraph(attributePaths = {"watcher", "content", "content.stats", "content.thumbnail", "content.contentTags"})
     Optional<WatchingSession> findByWatcherId(UUID userId);
 
     @Modifying
     @Query("DELETE FROM WatchingSession w WHERE w.watcher.email = :email")
     void deleteByWatcherEmailDirectly(String email);
 
-    @EntityGraph(attributePaths = {"user", "content", "content.stats", "content.thumnail"})
+    @EntityGraph(attributePaths = {"watcher", "content", "content.stats", "content.thumbnail"})
     Window<WatchingSession> findByContentId(UUID contentId, ScrollPosition position, Limit limit,
             Sort sort);
 
@@ -29,7 +29,7 @@ public interface WatchingSessionRepository extends JpaRepository<WatchingSession
 
     boolean existsByWatcherEmailAndContentId(String email, UUID contentId);
 
-    @EntityGraph(attributePaths = {"user", "content", "content.stats", "content.thumnail", "content.contentTags"})
+    @EntityGraph(attributePaths = {"watcher", "content", "content.stats", "content.thumbnail", "content.contentTags"})
     Optional<WatchingSession> findByWatcherEmail(String email);
 
     boolean existsByWatcherEmail(String email);
