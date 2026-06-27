@@ -32,7 +32,8 @@ public class NotificationController implements NotificationApi {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(defaultValue = "DESCENDING") String sortDirection,
             @RequestParam(defaultValue = "createdAt") String sortBy) {
-        log.info("알림 목록 요청 : GET /api/notifications, receiverId={}", receiverId);
+        log.info("알림 목록 요청 : GET /api/notifications");
+        log.debug("알림 목록 요청 : GET /api/notifications, receiverId={}", receiverId);
 
         CursorResponseNotificationDto response = notificationService.getNotifications(
                 receiverId, cursor, idAfter, limit, sortDirection, sortBy);
@@ -46,7 +47,8 @@ public class NotificationController implements NotificationApi {
             // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
             @RequestParam UUID receiverId,
             @PathVariable UUID notificationId) {
-        log.info("Notification read request: DELETE /api/notifications/{}, receiverId={}",
+        log.info("Notification read request: DELETE /api/notifications/{}", notificationId);
+        log.debug("Notification read request: DELETE /api/notifications/{}, receiverId={}",
                 notificationId, receiverId);
 
         notificationService.markAsRead(notificationId, receiverId);
