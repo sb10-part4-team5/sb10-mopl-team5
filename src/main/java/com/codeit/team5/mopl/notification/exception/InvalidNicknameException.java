@@ -5,8 +5,8 @@ import org.springframework.http.HttpStatus;
 
 public class InvalidNicknameException extends BusinessException {
 
-    public InvalidNicknameException(String nickname) {
+    public InvalidNicknameException() {
 
-        super(HttpStatus.BAD_REQUEST, "사용자 nickname이 유효하지 않음. nickname = {" + nickname + "}");
+        super(HttpStatus.BAD_REQUEST, "사용자 nickname이 유효하지 않음");
     }
 }

@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.notification.event;
 
 import com.codeit.team5.mopl.notification.exception.InvalidContentException;
 import com.codeit.team5.mopl.notification.exception.InvalidNicknameException;
+import com.codeit.team5.mopl.notification.exception.InvalidReceiverId;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -13,9 +14,11 @@ public record DirectMessageSentEvent (
     String content // 메시지 내용
 ){
     public DirectMessageSentEvent {
-        Objects.requireNonNull(receiverId, "receiverId가 유효하지 않음");
+        if (receiverId == null){
+            throw new InvalidReceiverId();
+        }
         if (senderNickname == null || senderNickname.isBlank()) {
-            throw new InvalidNicknameException(senderNickname);
+            throw new InvalidNicknameException();
         }
         if (content == null || content.isBlank()){
             throw new InvalidContentException();
