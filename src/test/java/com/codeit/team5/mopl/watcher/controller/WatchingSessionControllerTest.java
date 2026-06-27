@@ -81,16 +81,16 @@ class WatchingSessionControllerTest {
     }
 
     @Test
-    @DisplayName("유저의 시청 세션이 존재하지 않으면 예외가 발생한다_실패")
+    @DisplayName("유저의 시청 세션이 존재하지 않으면 빈 본문을 반환한다_성공")
     void findWatchingSessionsByWatcher_NotFound() throws Exception {
         // Given
         UUID watcherId = UUID.randomUUID();
-        given(service.findSessionByWatchId(watcherId))
-                .willThrow(new WatchingSessionNotFoundException("userId", watcherId));
+        given(service.findSessionByWatchId(watcherId)).willReturn(null);
 
         // When & Then
         mockMvc.perform(get("/api/users/{watcherId}/watching-sessions", watcherId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").doesNotExist());
     }
 
     @Test

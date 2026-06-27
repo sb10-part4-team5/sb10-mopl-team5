@@ -49,8 +49,9 @@ public class WatchingSessionService {
     }
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
-        return mapper.toDto(repository.findByWatcherId(watcherId)
-                .orElseThrow(() -> new WatchingSessionNotFoundException("userId", watcherId)));
+        return repository.findByWatcherId(watcherId)
+                .map(mapper::toDto)
+                .orElse(null);
     }
 
     public CursorResponse<WatchingSessionResponse> findSessionByContentId(UUID contentId,

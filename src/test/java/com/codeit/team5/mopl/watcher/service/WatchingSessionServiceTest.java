@@ -140,9 +140,11 @@ class WatchingSessionServiceTest {
         UUID watcherId = UUID.randomUUID();
         when(repository.findByWatcherId(watcherId)).thenReturn(Optional.empty());
 
-        // when & then
-        assertThatThrownBy(() -> service.findSessionByWatchId(watcherId))
-                .isInstanceOf(WatchingSessionNotFoundException.class);
+        // when
+        WatchingSessionResponse result = service.findSessionByWatchId(watcherId);
+
+        // then
+        assertThat(result).isNull();
     }
 
     // --- READ (findSessionByContentId) ---
