@@ -47,8 +47,7 @@ public class NotificationService {
         Notification saved = notificationRepository.save(notification);
         NotificationPayload payload = notificationMapper.toPayload(saved); // Notification을 내부에서 사용 될 Payload로 변환
         NotificationResponse response = notificationMapper.toResponse(saved); // Notification을 ResponseDto로 변환
-        log.info("알림 생성됨: id={}, receiverId={}, type={}",
-                saved.getId(), receiverId, type);
+        log.info("알림 생성됨: type={}", type);
         publisher.publishEvent(new NotificationCreatedEvent(payload));
         return response;
     }

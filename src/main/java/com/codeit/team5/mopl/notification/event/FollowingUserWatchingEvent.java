@@ -15,10 +15,10 @@ public record FollowingUserWatchingEvent(
         if (receiverId == null){
             throw new InvalidReceiverIdException();
         }
-        if (StringUtils.hasText(userNickname)) {
+        if (!StringUtils.hasText(userNickname)) {
             throw new InvalidNicknameException();
         }
-        if (StringUtils.hasText(contentName)){
+        if (!StringUtils.hasText(contentName)){
             throw new InvalidContentException();
         }
     }
