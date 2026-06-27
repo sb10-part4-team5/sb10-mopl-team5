@@ -9,11 +9,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
+import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.watcher.constant.SortByType;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 import java.util.List;
@@ -23,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -42,6 +45,18 @@ class WatchingSessionControllerTest {
 
     @MockitoBean
     private WatchingSessionService service;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private UserAuthenticationEntryPoint userAuthenticationEntryPoint;
+
+    @MockitoBean
+    private UserAccessDeniedHandler userAccessDeniedHandler;
+
+    @MockitoBean
+    private MoplAuthenticationProvider moplAuthenticationProvider;
 
     @Test
     @DisplayName("유저의 시청 세션 목록을 정상적으로 조회한다_성공")
@@ -75,7 +90,7 @@ class WatchingSessionControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/users/{watcherId}/watching-sessions", watcherId))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test

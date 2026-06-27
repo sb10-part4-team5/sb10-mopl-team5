@@ -29,10 +29,10 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         clear();
     }
 
-    // 1. findByUserId
+    // 1. findByWatcherEmail
     @Test
     @DisplayName("세션이 존재할 때 1번의 쿼리로 연관관계까지 조회_성공")
-    void findByUserId_성공() {
+    void findByWatcherEmail_성공() {
         // given
         User user = createUser();
         Content content = createContent();
@@ -41,25 +41,24 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         clear();
 
         // when
-        Optional<WatchingSession> result = repository.findByUserId(user.getId());
+        Optional<WatchingSession> result = repository.findByWatcherEmail(user.getEmail());
 
         // then
         assertThat(result).isPresent();
-        assertThat(result.get().getUser().getId()).isEqualTo(user.getId());
+        assertThat(result.get().getWatcher().getEmail()).isEqualTo(user.getEmail());
         assertThat(result.get().getContent().getId()).isEqualTo(content.getId());
-        ensureQueryCount(1);
+        ensureQueryCount(1); // EntityGraph를 통해 1번의 쿼리로 N+1 없이 가져와야 함
     }
 
     @Test
     @DisplayName("세션이 없을 때 빈 Optional 반환")
-    void findByUserId_NotFound() {
+    void findByWatcherEmail_NotFound() {
         // given
-        UUID randomUserId = UUID.randomUUID();
         flush();
         clear();
 
         // when
-        Optional<WatchingSession> result = repository.findByUserId(randomUserId);
+        Optional<WatchingSession> result = repository.findByWatcherEmail("notfound@test.com");
 
         // then
         assertThat(result).isEmpty();
@@ -91,7 +90,13 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         assertThat(result.isEmpty()).isFalse();
         assertThat(result.hasNext()).isTrue();
         assertThat(result.getContent()).hasSize(1);
-        ensureQueryCount(1);
+        
+        // 1-N 연관관계(tags 등)를 default_batch_fetch_size로 가져오는지 검증
+        // EntityGraph에는 tags가 없지만, 컬렉션을 터치하면 In 쿼리가 나감
+        result.getContent().get(0).getContent().getContentTags().size();
+        
+        // 메인 쿼리 1번 + Batch Fetch 쿼리 1번 = 총 2번의 쿼리 예상
+        ensureQueryCount(2);
     }
 
     @Test
@@ -117,6 +122,8 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         assertThat(result.hasNext()).isFalse();
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getContent().getId()).isEqualTo(content.getId());
+        
+        // 메인 쿼리 1번
         ensureQueryCount(1);
     }
 
@@ -139,10 +146,10 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         ensureQueryCount(1);
     }
 
-    // 3. deleteByUserIdDirectly
+    // 3. deleteByWatcherEmailDirectly
     @Test
-    @DisplayName("유저 ID로 세션을 직접 삭제_성공")
-    void deleteByUserIdDirectly_성공() {
+    @DisplayName("유저 Email로 세션을 직접 삭제_성공")
+    void deleteByWatcherEmailDirectly_성공() {
         // given
         User user = createUser();
         Content content = createContent();
@@ -151,30 +158,30 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         clear();
 
         // when
-        repository.deleteByUserIdDirectly(user.getId());
+        repository.deleteByWatcherEmailDirectly(user.getEmail());
 
         // then
-        assertThat(repository.existsByUserId(user.getId())).isFalse();
+        assertThat(repository.existsByWatcherEmail(user.getEmail())).isFalse();
         ensureQueryCount(2); // DELETE 1번 + exists 1번 = 2번
     }
 
     @Test
     @DisplayName("조건에 맞는 데이터가 없을 때 삭제되지 않음")
-    void deleteByUserIdDirectly_NotFound() {
+    void deleteByWatcherEmailDirectly_NotFound() {
         // given
-        UUID randomUserId = UUID.randomUUID();
+        String randomEmail = "random@test.com";
 
         // when
-        repository.deleteByUserIdDirectly(randomUserId);
+        repository.deleteByWatcherEmailDirectly(randomEmail);
 
         // then
         ensureQueryCount(1); // DELETE 1번
     }
 
-    // 4. existsByUserId
+    // 4. existsByWatcherEmail
     @Test
     @DisplayName("세션이 존재하면 true 반환_성공")
-    void existsByUserId_성공() {
+    void existsByWatcherEmail_성공() {
         // given
         User user = createUser();
         Content content = createContent();
@@ -183,7 +190,7 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         clear();
 
         // when
-        boolean exists = repository.existsByUserId(user.getId());
+        boolean exists = repository.existsByWatcherEmail(user.getEmail());
 
         // then
         assertThat(exists).isTrue();
@@ -192,12 +199,12 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
 
     @Test
     @DisplayName("세션이 존재하지 않으면 false 반환")
-    void existsByUserId_NotFound() {
+    void existsByWatcherEmail_NotFound() {
         // given
-        UUID randomUserId = UUID.randomUUID();
+        String randomEmail = "random@test.com";
 
         // when
-        boolean exists = repository.existsByUserId(randomUserId);
+        boolean exists = repository.existsByWatcherEmail(randomEmail);
 
         // then
         assertThat(exists).isFalse();
