@@ -3,6 +3,8 @@ package com.codeit.team5.mopl.notification.controller;
 import com.codeit.team5.mopl.notification.controller.api.NotificationApi;
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
 import com.codeit.team5.mopl.notification.service.NotificationService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,18 +27,18 @@ public class NotificationController implements NotificationApi {
     @Override
     @GetMapping
     public ResponseEntity<CursorResponseNotificationDto> getNotifications(
-            // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
-            @RequestParam UUID receiverId,
-            @RequestParam(required = false) String cursor,
-            @RequestParam(required = false) UUID idAfter,
-            @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(defaultValue = "DESCENDING") String sortDirection,
-            @RequestParam(defaultValue = "createdAt") String sortBy) {
+        // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
+        @RequestParam UUID receiverId,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(required = false) UUID idAfter,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
+        @RequestParam(defaultValue = "DESCENDING") String sortDirection,
+        @RequestParam(defaultValue = "createdAt") String sortBy) {
         log.info("알림 목록 요청 : GET /api/notifications");
         log.debug("알림 목록 요청 : GET /api/notifications, receiverId={}", receiverId);
 
         CursorResponseNotificationDto response = notificationService.getNotifications(
-                receiverId, cursor, idAfter, limit, sortDirection, sortBy);
+            receiverId, cursor, idAfter, limit, sortDirection, sortBy);
 
         return ResponseEntity.ok(response);
     }
@@ -44,12 +46,12 @@ public class NotificationController implements NotificationApi {
     @Override
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<Void> readNotification(
-            // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
-            @RequestParam UUID receiverId,
-            @PathVariable UUID notificationId) {
+        // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
+        @RequestParam UUID receiverId,
+        @PathVariable UUID notificationId) {
         log.info("Notification read request: DELETE /api/notifications/{}", notificationId);
         log.debug("Notification read request: DELETE /api/notifications/{}, receiverId={}",
-                notificationId, receiverId);
+            notificationId, receiverId);
 
         notificationService.markAsRead(notificationId, receiverId);
 
