@@ -19,7 +19,7 @@ public class WatchingContentUnsubscribeHandler extends AbstractStompUnsubscribeH
 
     public WatchingContentUnsubscribeHandler(WebSocketSessionStore sessionStore,
             WatchingSessionService service, WatchingSessionPayloadSender payloadSender) {
-        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT);
+        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT_PATTERN);
         this.service = service;
         this.payloadSender = payloadSender;
     }

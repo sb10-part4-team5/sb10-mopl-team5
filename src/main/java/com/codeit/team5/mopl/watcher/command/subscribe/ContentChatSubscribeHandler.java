@@ -15,7 +15,7 @@ public class ContentChatSubscribeHandler extends AbstractStompSubscribeHandler {
 
     public ContentChatSubscribeHandler(WebSocketSessionStore sessionStore,
             WatchingSessionService service) {
-        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT_CHAT);
+        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT_CHAT_PATTERN);
         this.service = service;
     }
 

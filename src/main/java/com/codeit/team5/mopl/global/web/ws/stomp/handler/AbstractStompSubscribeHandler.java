@@ -9,8 +9,8 @@ public abstract class AbstractStompSubscribeHandler extends AbstractStompCommand
 
     protected AbstractStompSubscribeHandler(
             WebSocketSessionStore sessionStore,
-            String destination) {
-        super(sessionStore, StompCommand.SUBSCRIBE, destination);
+            String destinationPattern) {
+        super(sessionStore, StompCommand.SUBSCRIBE, destinationPattern);
     }
 
     @Override

@@ -22,10 +22,10 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
     }
 
     protected AbstractStompCommandHandler(WebSocketSessionStore sessionStore, StompCommand command,
-            String destination) {
+            String destinationPattern) {
         this.sessionStore = sessionStore;
         this.command = command;
-        this.destinationPattern = destination.replace("{id}", "*");
+        this.destinationPattern = destinationPattern;
     }
 
     @Override
