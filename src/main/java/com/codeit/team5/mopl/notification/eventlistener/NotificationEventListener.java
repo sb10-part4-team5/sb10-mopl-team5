@@ -73,7 +73,7 @@ public class NotificationEventListener {
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
     public void onFollowingUserActivity(FollowingUserWatchingEvent event){
         String title = event.userNickname() + " 님이 컨텐츠 시청중입니다.";
-        String content = event.contentName() + "시청 중";
+        String content = event.contentName() + " 시청 중";
 
         notificationService.create(event.receiverId(), NotificationType.WATCHING_ACTIVITY,
             title, content, NotificationLevel.INFO);

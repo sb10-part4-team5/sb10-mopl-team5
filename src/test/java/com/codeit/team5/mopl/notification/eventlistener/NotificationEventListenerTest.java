@@ -149,6 +149,6 @@ class NotificationEventListenerTest {
         verify(notificationService).create(
                 eq(receiverId), eq(NotificationType.WATCHING_ACTIVITY),
                 eq("다린 님이 컨텐츠 시청중입니다."),
-                eq("콘텐츠A시청 중"), eq(NotificationLevel.INFO));
+                eq("콘텐츠A 시청 중"), eq(NotificationLevel.INFO));
     }
 }
