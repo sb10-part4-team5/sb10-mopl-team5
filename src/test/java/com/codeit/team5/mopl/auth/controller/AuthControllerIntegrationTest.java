@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.auth.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -14,6 +15,7 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
+import java.time.Instant;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -73,7 +75,8 @@ class AuthControllerIntegrationTest {
                                 Matchers.containsString("REFRESH_TOKEN="),
                                 Matchers.containsString("Path=/api/auth"),
                                 Matchers.containsString("Max-Age=25200"),
-                                Matchers.containsString("HttpOnly")
+                                Matchers.containsString("HttpOnly"),
+                                Matchers.containsString("SameSite=Lax")
                         )))
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
@@ -111,6 +114,7 @@ class AuthControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-out")
+                        .with(csrf())
                         .header("Authorization", "Bearer " + accessToken)
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isNoContent())
@@ -119,7 +123,8 @@ class AuthControllerIntegrationTest {
                                 Matchers.containsString("REFRESH_TOKEN="),
                                 Matchers.containsString("Path=/api/auth"),
                                 Matchers.containsString("Max-Age=0"),
-                                Matchers.containsString("HttpOnly")
+                                Matchers.containsString("HttpOnly"),
+                                Matchers.containsString("SameSite=Lax")
                         )));
 
         assertThat(refreshTokenRepository.count()).isZero();
@@ -131,14 +136,16 @@ class AuthControllerIntegrationTest {
         // Given: Authorization 헤더와 refresh token cookie가 없음
 
         // When & Then
-        mockMvc.perform(post("/api/auth/sign-out"))
+        mockMvc.perform(post("/api/auth/sign-out")
+                        .with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
                         Matchers.allOf(
                                 Matchers.containsString("REFRESH_TOKEN="),
                                 Matchers.containsString("Path=/api/auth"),
                                 Matchers.containsString("Max-Age=0"),
-                                Matchers.containsString("HttpOnly")
+                                Matchers.containsString("HttpOnly"),
+                                Matchers.containsString("SameSite=Lax")
                         )));
     }
 
@@ -155,18 +162,69 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("토큰 재발급 요청에 CSRF 토큰이 없으면 403 응답을 반환한다")
-    void refresh_missingCsrf_returnsForbidden() throws Exception {
+    @DisplayName("유효하지 않은 리프레시 토큰이면 인증 실패 응답을 반환한다")
+    void refresh_invalidRefreshToken_returnsUnauthorized() throws Exception {
         // Given
         Cookie refreshTokenCookie = new Cookie("REFRESH_TOKEN", "refresh-token");
 
         // When & Then
         mockMvc.perform(post("/api/auth/refresh")
-                        .cookie(refreshTokenCookie))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.exceptionType").value("FORBIDDEN"))
-                .andExpect(jsonPath("$.exceptionName").doesNotExist())
-                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."));
+                .cookie(refreshTokenCookie))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("JwtInvalidException"))
+                .andExpect(jsonPath("$.message").value("Invalid refresh token"))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("같은 계정으로 다시 로그인하면 이전 리프레시 토큰으로 재발급에 실패한다")
+    void refresh_afterReLoginWithOldRefreshToken_returnsUnauthorized() throws Exception {
+        // Given
+        SignInRequest request = saveLoginUser("old-refresh-flow@example.com", "password1");
+        Cookie oldRefreshTokenCookie = login(request).getResponse().getCookie("REFRESH_TOKEN");
+        waitUntilNextJwtSecond();
+        Cookie newRefreshTokenCookie = login(request).getResponse().getCookie("REFRESH_TOKEN");
+
+        assertThat(oldRefreshTokenCookie).isNotNull();
+        assertThat(newRefreshTokenCookie).isNotNull();
+        assertThat(newRefreshTokenCookie.getValue()).isNotEqualTo(oldRefreshTokenCookie.getValue());
+        assertThat(refreshTokenRepository.count()).isEqualTo(1);
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/refresh")
+                .cookie(oldRefreshTokenCookie))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("JwtInvalidException"))
+                .andExpect(jsonPath("$.message").value("Invalid refresh token"))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("같은 계정으로 다시 로그인해도 최신 리프레시 토큰으로 재발급에 성공한다")
+    void refresh_afterReLoginWithLatestRefreshToken_success() throws Exception {
+        // Given
+        SignInRequest request = saveLoginUser("latest-refresh-flow@example.com", "password1");
+        login(request);
+        waitUntilNextJwtSecond();
+        Cookie latestRefreshTokenCookie = login(request).getResponse().getCookie("REFRESH_TOKEN");
+
+        assertThat(latestRefreshTokenCookie).isNotNull();
+        assertThat(refreshTokenRepository.count()).isEqualTo(1);
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(latestRefreshTokenCookie))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        Matchers.allOf(
+                                Matchers.containsString("REFRESH_TOKEN="),
+                                Matchers.containsString("Path=/api/auth"),
+                                Matchers.containsString("HttpOnly"),
+                                Matchers.containsString("SameSite=Lax")
+                        )))
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(jsonPath("$.userDto.email").value(request.username()));
     }
 
     @Test
@@ -177,10 +235,25 @@ class AuthControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(post("/api/follows")
+                        .with(csrf())
                         .header("Authorization", "Bearer " + invalidAccessToken))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.exceptionType").exists())
-                .andExpect(jsonPath("$.exceptionName").doesNotExist())
+                .andExpect(jsonPath("$.exceptionType").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("인증 없이 보호 API를 요청하면 AuthenticationEntryPoint 응답을 반환한다")
+    void authenticatedRequest_missingAuthorization_returnsEntryPointResponse() throws Exception {
+        // Given: Authorization 헤더 없음
+
+        // When & Then
+        mockMvc.perform(post("/api/follows")
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."))
                 .andExpect(jsonPath("$.details").doesNotExist());
     }
 
@@ -188,5 +261,21 @@ class AuthControllerIntegrationTest {
         User user = User.create(email, passwordEncoder.encode(rawPassword), "사용자");
         userRepository.saveAndFlush(user);
         return new SignInRequest(email, rawPassword);
+    }
+
+    private MvcResult login(SignInRequest request) throws Exception {
+        return mockMvc.perform(post("/api/auth/sign-in")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", request.username())
+                        .param("password", request.password()))
+                .andExpect(status().isOk())
+                .andReturn();
+    }
+
+    private void waitUntilNextJwtSecond() {
+        long currentSecond = Instant.now().getEpochSecond();
+        while (Instant.now().getEpochSecond() == currentSecond) {
+            Thread.onSpinWait();
+        }
     }
 }
