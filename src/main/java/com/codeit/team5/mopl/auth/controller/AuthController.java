@@ -4,8 +4,10 @@ import com.codeit.team5.mopl.auth.controller.api.AuthApi;
 import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
+import com.codeit.team5.mopl.auth.exception.AuthException;
 import com.codeit.team5.mopl.auth.service.AuthService;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
+import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,19 +64,28 @@ public class AuthController implements AuthApi {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<JwtResponse> refresh(
+    public ResponseEntity refresh(
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
     ) {
         log.info("RefreshToken regenerate request: POST /api/auth/refresh");
 
-        AuthPayload authPayload = authService.refresh(refreshToken);
+        try {
+            AuthPayload authPayload = authService.refresh(refreshToken);
 
-        ResponseCookie refreshTokenCookie
-                = cookieManager.createCookie(authPayload.refreshToken());
+            ResponseCookie refreshTokenCookie =
+                    cookieManager.createCookie(authPayload.refreshToken());
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                .body(authPayload.jwtResponse());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                    .body(authPayload.jwtResponse());
+
+        } catch (AuthException e) {
+            ResponseCookie deleteCookie = cookieManager.deleteCookie();
+
+            return ResponseEntity.status(e.getStatus())
+                    .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                    .body(ErrorResponseSuggestion.from(e));
+        }
     }
 
     @GetMapping("/csrf-token")
