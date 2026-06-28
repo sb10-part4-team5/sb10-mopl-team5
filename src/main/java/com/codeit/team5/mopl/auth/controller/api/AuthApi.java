@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.controller.api;
 
+import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,10 +11,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ModelAttribute;
 
 @Tag(name = "인증 관리")
 public interface AuthApi {
@@ -22,7 +24,14 @@ public interface AuthApi {
             summary = "로그인",
             description = "이메일과 비밀번호로 로그인하고 JWT 토큰을 발급합니다. "
                     + "Refresh Token은 HttpOnly Cookie로 응답됩니다.",
-            security = {}
+            security = {},
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+                            schema = @Schema(implementation = SignInRequest.class)
+                    )
+            )
     )
     @ApiResponses({
             @ApiResponse(
@@ -47,11 +56,7 @@ public interface AuthApi {
             )
     })
     ResponseEntity<JwtResponse> login(
-            @Parameter(description = "이메일", required = true, example = "user@example.com")
-            @Valid @RequestParam String username,
-
-            @Parameter(description = "비밀번호", required = true, example = "password123")
-            @Valid @RequestParam String password
+            @Valid @ModelAttribute SignInRequest request
     );
 
     @Operation(

@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -34,12 +35,9 @@ public class AuthController implements AuthApi {
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
     public ResponseEntity<JwtResponse> login(
-            @Valid @RequestParam String username,
-            @Valid @RequestParam String password
+            @Valid @ModelAttribute SignInRequest request
     ) {
         log.info("Login request: POST /api/auth/sign-in");
-
-        SignInRequest request = new SignInRequest(username, password);
 
         AuthPayload authPayload = authService.login(request);
         ResponseCookie refreshTokenCookie = cookieManager.createCookie(authPayload.refreshToken());
