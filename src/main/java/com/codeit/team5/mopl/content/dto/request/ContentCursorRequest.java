@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.content.dto.request;
 
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
@@ -20,6 +21,7 @@ public record ContentCursorRequest(
 
         @NotNull
         @Positive
+        @Max(100)
         Integer limit,
 
         @NotNull

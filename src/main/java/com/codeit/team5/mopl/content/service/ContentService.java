@@ -215,7 +215,10 @@ public class ContentService {
             switch (request.sortBy()) {
                 case CREATED_AT -> Instant.parse(cursor);
                 case WATCHER_COUNT -> Long.parseLong(cursor);
-                case RATE -> Double.parseDouble(cursor);
+                case RATE -> {
+                    double val = Double.parseDouble(cursor);
+                    if (!Double.isFinite(val)) throw new InvalidCursorException(cursor);
+                }
             }
         } catch (Exception e) {
             throw new InvalidCursorException(cursor);
