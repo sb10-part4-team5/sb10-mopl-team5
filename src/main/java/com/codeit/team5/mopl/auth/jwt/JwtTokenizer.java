@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.auth.jwt;
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
@@ -56,15 +57,22 @@ public class JwtTokenizer {
     }
 
     public Jws<Claims> getRefreshClaims(String jws) {
-        Jws<Claims> claimsJws = Jwts.parserBuilder()
-                .setSigningKey(getRefreshKey())
-                .build()
-                .parseClaimsJws(jws);
-        if (!"REFRESH".equals(claimsJws.getBody().get("tokenType", String.class))) {
-            throw new JwtInvalidException("Invalid refresh token type");
-        }
+        try {
+            Jws<Claims> claimsJws = Jwts.parserBuilder()
+                    .setSigningKey(getRefreshKey())
+                    .build()
+                    .parseClaimsJws(jws);
 
-        return claimsJws;
+            if (!"REFRESH".equals(claimsJws.getBody().get("tokenType", String.class))) {
+                throw new JwtInvalidException("Invalid refresh token type");
+            }
+
+            return claimsJws;
+        } catch (JwtInvalidException e) {
+            throw e;
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new JwtInvalidException("Invalid refresh token");
+        }
     }
 
     public UUID getRefreshUserId(String refreshToken) {
