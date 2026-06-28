@@ -19,11 +19,13 @@ import com.codeit.team5.mopl.auth.mapper.AuthMapper;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
-import com.codeit.team5.mopl.user.mapper.UserMapper;
+import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +39,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -219,5 +222,120 @@ class AuthServiceTest {
         verify(jwtTokenizer).getRefreshUserId(refreshToken);
         verify(refreshTokenStore, never()).deleteByUserId(any());
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    @DisplayName("유효한 리프레시 토큰이면 새 토큰을 발급하고 리프레시 토큰을 회전한다")
+    void refresh_validRefreshToken_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        String refreshToken = "refresh-token";
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        ReflectionTestUtils.setField(user, "id", userId);
+        UserResponse userResponse = new UserResponse(
+                userId,
+                Instant.parse("2026-06-24T00:00:00Z"),
+                user.getEmail(),
+                user.getName(),
+                null,
+                "USER",
+                false
+        );
+        JwtResponse jwtResponse = new JwtResponse(userResponse, newAccessToken);
+        AuthPayload expectedPayload = new AuthPayload(jwtResponse, newRefreshToken);
+
+        when(jwtTokenizer.getRefreshUserId(refreshToken)).thenReturn(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userMapper.toDto(user)).thenReturn(userResponse);
+        when(jwtTokenizer.generateAccessToken(userId.toString(), user.getEmail(), user.getRole().name()))
+                .thenReturn(newAccessToken);
+        when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(newRefreshToken);
+        when(jwtProperties.refreshTokenExpirationMinutes()).thenReturn(420L);
+        when(refreshTokenStore.rotateIfValid(
+                eq(userId),
+                eq(refreshToken),
+                eq(newRefreshToken),
+                any(Instant.class)
+        )).thenReturn(true);
+        when(authMapper.toJwtResponse(userResponse, newAccessToken)).thenReturn(jwtResponse);
+        when(authMapper.toAuthPayload(jwtResponse, newRefreshToken)).thenReturn(expectedPayload);
+
+        Instant before = Instant.now().plus(420, ChronoUnit.MINUTES).minusSeconds(1);
+
+        // When
+        AuthPayload result = authService.refresh(refreshToken);
+
+        // Then
+        Instant after = Instant.now().plus(420, ChronoUnit.MINUTES).plusSeconds(1);
+        assertThat(result).isSameAs(expectedPayload);
+
+        ArgumentCaptor<Instant> expiresAtCaptor = ArgumentCaptor.forClass(Instant.class);
+        verify(jwtTokenizer).getRefreshUserId(refreshToken);
+        verify(userRepository).findById(userId);
+        verify(userMapper).toDto(user);
+        verify(jwtTokenizer).generateAccessToken(userId.toString(), user.getEmail(), user.getRole().name());
+        verify(jwtTokenizer).generateRefreshToken(userId.toString());
+        verify(refreshTokenStore).rotateIfValid(
+                eq(userId),
+                eq(refreshToken),
+                eq(newRefreshToken),
+                expiresAtCaptor.capture()
+        );
+        verify(refreshTokenStore, never()).existsValidToken(any(), any());
+        verify(refreshTokenStore, never()).save(any(), any(), any());
+        verify(authMapper).toJwtResponse(userResponse, newAccessToken);
+        verify(authMapper).toAuthPayload(jwtResponse, newRefreshToken);
+        assertThat(expiresAtCaptor.getValue()).isBetween(before, after);
+    }
+
+    @Test
+    @DisplayName("리프레시 토큰 회전에 실패하면 토큰 재발급에 실패한다")
+    void refresh_rotateIfValidFalse_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        String refreshToken = "refresh-token";
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        ReflectionTestUtils.setField(user, "id", userId);
+        UserResponse userResponse = new UserResponse(
+                userId,
+                Instant.parse("2026-06-24T00:00:00Z"),
+                user.getEmail(),
+                user.getName(),
+                null,
+                "USER",
+                false
+        );
+
+        when(jwtTokenizer.getRefreshUserId(refreshToken)).thenReturn(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userMapper.toDto(user)).thenReturn(userResponse);
+        when(jwtTokenizer.generateAccessToken(userId.toString(), user.getEmail(), user.getRole().name()))
+                .thenReturn(newAccessToken);
+        when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(newRefreshToken);
+        when(jwtProperties.refreshTokenExpirationMinutes()).thenReturn(420L);
+        when(refreshTokenStore.rotateIfValid(
+                eq(userId),
+                eq(refreshToken),
+                eq(newRefreshToken),
+                any(Instant.class)
+        )).thenReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> authService.refresh(refreshToken))
+                .isInstanceOf(JwtInvalidException.class);
+
+        verify(refreshTokenStore).rotateIfValid(
+                eq(userId),
+                eq(refreshToken),
+                eq(newRefreshToken),
+                any(Instant.class)
+        );
+        verify(refreshTokenStore, never()).existsValidToken(any(), any());
+        verify(refreshTokenStore, never()).save(any(), any(), any());
+        verifyNoInteractions(authMapper);
     }
 }
