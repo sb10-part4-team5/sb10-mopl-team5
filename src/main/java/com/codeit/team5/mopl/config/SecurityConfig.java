@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -40,10 +41,9 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        // Postman 및 프론트에서 XSRF-TOKEN 쿠키 값을
-                        // X-XSRF-TOKEN 헤더로 그대로 전달할 수 있도록 기본 RequestHandler를 사용한다.
                         .csrfTokenRequestHandler(csrfTokenRequestHandler)
-                        .requireCsrfProtectionMatcher(
+                        .ignoringRequestMatchers(
+                                paths.matcher(HttpMethod.POST, "/api/auth/sign-in"),
                                 paths.matcher(HttpMethod.POST, "/api/auth/refresh")
                         )
                 )
