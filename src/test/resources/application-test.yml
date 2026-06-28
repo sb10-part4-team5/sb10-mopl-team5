@@ -36,6 +36,10 @@ mopl:
     local:
       base-url: http://localhost:8080
       upload-dir: ./uploads-test
+  auth:
+    cookie:
+      secure: false
+      same-site: Lax
 
 logging:
   level:
