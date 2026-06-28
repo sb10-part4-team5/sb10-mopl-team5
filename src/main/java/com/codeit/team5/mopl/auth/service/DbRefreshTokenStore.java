@@ -66,7 +66,11 @@ public class DbRefreshTokenStore implements RefreshTokenStore {
                 Objects.requireNonNull(expiresAt, "expiresAt must not be null");
 
         User user = userRepository.findByIdForUpdate(requiredUserId)
-                .orElseThrow(() -> new UserNotFoundException(requiredUserId));
+                .orElse(null);
+
+        if (user == null) {
+            return false;
+        }
 
         if (!existsValidToken(requiredUserId, requiredOldToken)) {
             return false;
