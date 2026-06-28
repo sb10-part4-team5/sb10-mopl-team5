@@ -51,7 +51,8 @@ public interface ContentMapper {
             nextIdAfter = last.getId().toString();
         }
         List<ContentResponse> data = page.stream().map(this::toDto).toList();
+        String direction = sortDirection == Direction.ASC ? "ASCENDING" : "DESCENDING";
         return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, totalCount,
-                sortBy.getValue(), sortDirection.toString());
+                sortBy.getValue(), direction);
     }
 }
