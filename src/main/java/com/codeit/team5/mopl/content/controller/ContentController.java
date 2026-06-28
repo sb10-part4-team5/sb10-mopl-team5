@@ -66,7 +66,7 @@ public class ContentController implements ContentApi {
 
     @Override
     @GetMapping
-    public ResponseEntity<CursorResponse<ContentResponse>> getContents(ContentCursorRequest request) {
+    public ResponseEntity<CursorResponse<ContentResponse>> getContents(@Valid ContentCursorRequest request) {
         log.info("Content List request: GET /api/contents");
         CursorResponse<ContentResponse> response = contentService.findContents(request);
         return ResponseEntity.ok(response);

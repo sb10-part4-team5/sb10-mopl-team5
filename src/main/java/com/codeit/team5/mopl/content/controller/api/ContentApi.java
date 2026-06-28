@@ -64,7 +64,7 @@ public interface ContentApi {
     class ContentUpdateMultipartRequest {
 
         @Schema(implementation = ContentUpdateRequest.class)
-        public ContentCreateRequest request;
+        public ContentUpdateRequest request;
 
         @Schema(type = "string", format = "binary", description = "썸네일 이미지")
         public MultipartFile thumbnail;
