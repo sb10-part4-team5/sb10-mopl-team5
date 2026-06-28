@@ -3,10 +3,9 @@ package com.codeit.team5.mopl.notification.controller;
 import com.codeit.team5.mopl.notification.controller.api.NotificationApi;
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
 import com.codeit.team5.mopl.notification.service.NotificationService;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@Validated
 @Slf4j
 @RequestMapping("/api/notifications")
 public class NotificationController implements NotificationApi {
@@ -31,7 +31,7 @@ public class NotificationController implements NotificationApi {
         @RequestParam UUID receiverId,
         @RequestParam(required = false) String cursor,
         @RequestParam(required = false) UUID idAfter,
-        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
+        @RequestParam(defaultValue = "20") int limit,
         @RequestParam(defaultValue = "DESCENDING") String sortDirection,
         @RequestParam(defaultValue = "createdAt") String sortBy) {
         log.info("알림 목록 요청 : GET /api/notifications");

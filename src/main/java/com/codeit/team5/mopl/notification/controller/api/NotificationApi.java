@@ -4,6 +4,8 @@ import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,7 +39,7 @@ public interface NotificationApi {
             @Parameter(description = "보조 커서(직전 페이지 마지막 ID)")
             @RequestParam(required = false) UUID idAfter,
             @Parameter(description = "페이지 크기")
-            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
             @Parameter(description = "정렬 방향(ASCENDING/DESCENDING)")
             @RequestParam(defaultValue = "DESCENDING") String sortDirection,
             @Parameter(description = "정렬 기준(createdAt)")
