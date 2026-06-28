@@ -8,6 +8,7 @@ import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.follow.entity.Follow;
 import com.codeit.team5.mopl.follow.exception.SelfFollowException;
+import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
 import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.EntityManager;
 import java.util.Optional;
@@ -24,7 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 @DataJpaTest
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = NONE)
-@Import({JpaAuditingConfig.class, TestcontainersConfiguration.class})
+@Import({JpaAuditingConfig.class, TestcontainersConfiguration.class, QueryDslTestConfig.class})
 class FollowRepositoryTest {
 
     @Autowired
