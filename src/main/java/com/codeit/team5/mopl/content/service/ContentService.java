@@ -16,7 +16,9 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
+import com.codeit.team5.mopl.content.exception.CursorIdAfterNotTogetherException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
+import com.codeit.team5.mopl.content.exception.InvalidCursorException;
 import com.codeit.team5.mopl.content.exception.TooManyTagsException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
@@ -27,6 +29,7 @@ import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -109,6 +112,7 @@ public class ContentService {
     }
 
     public CursorResponse<ContentResponse> findContents(ContentCursorRequest request) {
+        validateCursor(request);
         int fetchLimit = request.limit() + 1;
         List<Content> fetched = contentRepository.findContents(request, fetchLimit);
         boolean hasNext = fetched.size() > request.limit();
@@ -189,5 +193,32 @@ public class ContentService {
         if (tagNames.isEmpty()) throw new EmptyTagException();
         if (tagNames.size() > 10) throw new TooManyTagsException();
         return tagNames;
+    }
+
+    private void validateCursor(ContentCursorRequest request) {
+        String cursor = request.cursor();
+        String idAfter = request.idAfter();
+
+        if ((cursor == null) != (idAfter == null)) {
+            throw new CursorIdAfterNotTogetherException();
+        }
+
+        if (cursor == null) return;
+
+        try {
+            UUID.fromString(idAfter);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidCursorException(idAfter);
+        }
+
+        try {
+            switch (request.sortBy()) {
+                case CREATED_AT -> Instant.parse(cursor);
+                case WATCHER_COUNT -> Long.parseLong(cursor);
+                case RATE -> Double.parseDouble(cursor);
+            }
+        } catch (Exception e) {
+            throw new InvalidCursorException(cursor);
+        }
     }
 }
