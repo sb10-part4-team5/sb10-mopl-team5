@@ -162,7 +162,6 @@ class DbRefreshTokenStoreTest {
     void save_nullExpiresAt_throwsException() {
         // Given
         UUID userId = UUID.randomUUID();
-        when(refreshTokenHasher.hash("raw-token")).thenReturn("hashed-token");
 
         // When & Then
         assertThatNullPointerException()

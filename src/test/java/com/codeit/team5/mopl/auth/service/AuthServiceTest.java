@@ -188,12 +188,18 @@ class AuthServiceTest {
     @Test
     @DisplayName("리프레시 토큰이 없으면 로그아웃은 리프레시 토큰을 삭제하지 않고 종료한다")
     void logout_missingRefreshToken_doesNotDeleteRefreshToken() {
-        // Given: refresh token cookie가 없음
+        // Given
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                "user@example.com",
+                null
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         // When
         authService.logout(null);
 
         // Then
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verifyNoInteractions(jwtTokenizer);
         verify(refreshTokenStore, never()).deleteByUserId(any());
     }

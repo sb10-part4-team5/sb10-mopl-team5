@@ -1,15 +1,15 @@
 package com.codeit.team5.mopl.auth.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
@@ -33,6 +33,7 @@ import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,6 +47,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @WebMvcTest(AuthController.class)
 @Import({
@@ -135,25 +137,26 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("로그인 요청에서 이메일이 누락되면 현재 전역 예외 응답을 반환한다")
-    void login_missingEmail_returnsInternalServerError() throws Exception {
+    @DisplayName("로그인 요청에서 이메일이 누락되면 400 검증 실패 응답을 반환한다")
+    void login_missingEmail_returnsBadRequest() throws Exception {
         // Given: username 파라미터가 없음
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("password", "password1"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
-                .andExpect(jsonPath("$.details").doesNotExist());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.username")
+                        .value(org.hamcrest.Matchers.hasItem("이메일은 필수입니다.")));
 
         verify(authService, never()).login(any());
     }
 
     @Test
-    @DisplayName("로그인 요청의 이메일 형식이 올바르지 않으면 현재 전역 예외 응답을 반환한다")
-    void signIn_invalidEmail_returnsInternalServerError() throws Exception {
+    @DisplayName("로그인 요청의 이메일 형식이 올바르지 않으면 400 검증 실패 응답을 반환한다")
+    void signIn_invalidEmail_returnsBadRequest() throws Exception {
         // Given
         SignInRequest request = new SignInRequest("invalid-email", "password1");
 
@@ -162,17 +165,18 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
-                .andExpect(jsonPath("$.details").doesNotExist());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.username").isArray())
+                .andExpect(jsonPath("$.details.username").isNotEmpty());
 
-        verify(authService).login(request);
+        verify(authService, never()).login(any());
     }
 
     @Test
-    @DisplayName("로그인 요청의 이메일이 공백이면 현재 전역 예외 응답을 반환한다")
-    void login_blankEmail_returnsInternalServerError() throws Exception {
+    @DisplayName("로그인 요청의 이메일이 공백이면 400 검증 실패 응답을 반환한다")
+    void login_blankEmail_returnsBadRequest() throws Exception {
         // Given
         SignInRequest request = new SignInRequest("   ", "password1");
 
@@ -181,34 +185,36 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
-                .andExpect(jsonPath("$.details").doesNotExist());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.username")
+                        .value(org.hamcrest.Matchers.hasItem("이메일은 필수입니다.")));
 
-        verify(authService).login(request);
+        verify(authService, never()).login(any());
     }
 
     @Test
-    @DisplayName("로그인 요청에서 비밀번호가 누락되면 현재 전역 예외 응답을 반환한다")
-    void login_missingPassword_returnsInternalServerError() throws Exception {
+    @DisplayName("로그인 요청에서 비밀번호가 누락되면 400 검증 실패 응답을 반환한다")
+    void login_missingPassword_returnsBadRequest() throws Exception {
         // Given: password 파라미터가 없음
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", "user@example.com"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
-                .andExpect(jsonPath("$.details").doesNotExist());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.password")
+                        .value(org.hamcrest.Matchers.hasItem("비밀번호는 필수입니다.")));
 
         verify(authService, never()).login(any());
     }
 
     @Test
-    @DisplayName("로그인 요청의 비밀번호가 공백이면 현재 전역 예외 응답을 반환한다")
-    void login_blankPassword_returnsInternalServerError() throws Exception {
+    @DisplayName("로그인 요청의 비밀번호가 공백이면 400 검증 실패 응답을 반환한다")
+    void login_blankPassword_returnsBadRequest() throws Exception {
         // Given
         SignInRequest request = new SignInRequest("user@example.com", "   ");
 
@@ -217,12 +223,13 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
-                .andExpect(jsonPath("$.details").doesNotExist());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.password")
+                        .value(org.hamcrest.Matchers.hasItem("비밀번호는 필수입니다.")));
 
-        verify(authService).login(request);
+        verify(authService, never()).login(any());
     }
 
     @Test
@@ -371,6 +378,12 @@ class AuthControllerTest {
     @DisplayName("CSRF 토큰을 포함한 토큰 재발급 요청에 성공하면 refresh token cookie를 반환한다")
     void refresh_withCsrf_success() throws Exception {
         // Given
+        MvcResult csrfResult = mockMvc.perform(get("/api/auth/csrf-token"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        Cookie xsrfTokenCookie = csrfResult.getResponse().getCookie("XSRF-TOKEN");
+        assertThat(xsrfTokenCookie).isNotNull();
+
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         JwtResponse response = new JwtResponse(
                 new UserResponse(
@@ -396,8 +409,9 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/refresh")
-                        .with(csrf())
-                        .cookie(new jakarta.servlet.http.Cookie("REFRESH_TOKEN", "refresh-token")))
+                        .cookie(xsrfTokenCookie)
+                        .cookie(new jakarta.servlet.http.Cookie("REFRESH_TOKEN", "refresh-token"))
+                        .header("X-XSRF-TOKEN", xsrfTokenCookie.getValue()))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
                         org.hamcrest.Matchers.containsString("REFRESH_TOKEN=new-refresh-token")))
