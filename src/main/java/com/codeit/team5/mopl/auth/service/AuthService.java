@@ -92,10 +92,6 @@ public class AuthService {
 
         UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
 
-        if (!refreshTokenStore.existsValidToken(userId, refreshToken)) {
-            throw new JwtInvalidException("Invalid refresh token");
-        }
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
                     log.warn("User not found: userId={}", userId);
@@ -111,8 +107,14 @@ public class AuthService {
                 user.getRole().name()
         );
         String newRefreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
-        // save 로직 내부가 userId로 기존 refreshToken 삭제 후 새로운 refreshToken을 저장하기 때문에 rotation으로 판단
-        refreshTokenStore.save(user.getId(), newRefreshToken, calculateExpiresAt());
+        if (!refreshTokenStore.rotateIfValid(
+                userId,
+                refreshToken,
+                newRefreshToken,
+                calculateExpiresAt()
+        )) {
+            throw new JwtInvalidException("Invalid refresh token");
+        }
 
         JwtResponse jwtResponse = authMapper.toJwtResponse(userDto, newAccessToken);
 

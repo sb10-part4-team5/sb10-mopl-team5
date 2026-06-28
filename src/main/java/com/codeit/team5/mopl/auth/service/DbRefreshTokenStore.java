@@ -26,26 +26,21 @@ public class DbRefreshTokenStore implements RefreshTokenStore {
     @Transactional
     public void save(UUID userId, String rawToken, Instant expiresAt) {
         UUID requiredUserId = Objects.requireNonNull(userId, "userId must not be null");
-        String tokenHash = refreshTokenHasher.hash(rawToken);
+        String requiredRawToken = Objects.requireNonNull(rawToken, "rawToken must not be null");
         Instant requiredExpiresAt =
                 Objects.requireNonNull(expiresAt, "expiresAt must not be null");
 
-        User user = userRepository.findByIdForUpdate(requiredUserId)
-                .orElseThrow(() -> new UserNotFoundException(requiredUserId));
+        User user = findUserForUpdate(requiredUserId);
 
-        refreshTokenRepository.deleteByUser_Id(requiredUserId);
-
-        RefreshToken refreshToken =
-                RefreshToken.create(user, tokenHash, requiredExpiresAt);
-
-        refreshTokenRepository.save(refreshToken);
+        replaceToken(user, requiredRawToken, requiredExpiresAt);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean existsValidToken(UUID userId, String rawToken) {
         UUID requiredUserId = Objects.requireNonNull(userId, "userId must not be null");
-        String tokenHash = refreshTokenHasher.hash(rawToken);
+        String requiredRawToken = Objects.requireNonNull(rawToken, "rawToken must not be null");
+        String tokenHash = refreshTokenHasher.hash(requiredRawToken);
 
         return refreshTokenRepository
                 .findByUser_IdAndTokenHashAndExpiresAtAfter(
@@ -54,6 +49,32 @@ public class DbRefreshTokenStore implements RefreshTokenStore {
                         Instant.now()
                 )
                 .isPresent();
+    }
+
+    @Override
+    @Transactional
+    public boolean rotateIfValid(
+            UUID userId,
+            String oldToken,
+            String newToken,
+            Instant expiresAt
+    ) {
+        UUID requiredUserId = Objects.requireNonNull(userId, "userId must not be null");
+        String requiredOldToken = Objects.requireNonNull(oldToken, "oldToken must not be null");
+        String requiredNewToken = Objects.requireNonNull(newToken, "newToken must not be null");
+        Instant requiredExpiresAt =
+                Objects.requireNonNull(expiresAt, "expiresAt must not be null");
+
+        User user = userRepository.findByIdForUpdate(requiredUserId)
+                .orElseThrow(() -> new UserNotFoundException(requiredUserId));
+
+        if (!existsValidToken(requiredUserId, requiredOldToken)) {
+            return false;
+        }
+
+        replaceToken(user, requiredNewToken, requiredExpiresAt);
+
+        return true;
     }
 
     @Override
@@ -68,5 +89,19 @@ public class DbRefreshTokenStore implements RefreshTokenStore {
     @Transactional
     public void deleteExpiredTokens() {
         refreshTokenRepository.deleteByExpiresAtBefore(Instant.now());
+    }
+
+    private User findUserForUpdate(UUID userId) {
+        return userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+    }
+
+    private void replaceToken(User user, String rawToken, Instant expiresAt) {
+        String tokenHash = refreshTokenHasher.hash(rawToken);
+
+        refreshTokenRepository.deleteByUser_Id(user.getId());
+
+        RefreshToken refreshToken = RefreshToken.create(user, tokenHash, expiresAt);
+        refreshTokenRepository.save(refreshToken);
     }
 }
