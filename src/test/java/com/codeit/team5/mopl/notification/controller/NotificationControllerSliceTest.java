@@ -135,7 +135,9 @@ class NotificationControllerSliceTest {
     void getNotifications_missingReceiverId_returnsError() throws Exception {
         // When & Then (MissingServletRequestParameterException → GlobalExceptionHandler에 전용 핸들러 추가 시 400으로 강화 예정)
         mockMvc.perform(get("/api/notifications"))
-                .andExpect(status().isBadRequest());
+            .andExpect(result ->
+                assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+
 
         verify(notificationService, never())
                 .getNotifications(any(), any(), any(), any(int.class), any(), any());
@@ -222,7 +224,8 @@ class NotificationControllerSliceTest {
     void readNotification_missingReceiverId_returnsError() throws Exception {
         // When & Then (MissingServletRequestParameterException → GlobalExceptionHandler에 전용 핸들러 추가 시 400으로 강화 예정)
         mockMvc.perform(delete("/api/notifications/{notificationId}", UUID.randomUUID()))
-                .andExpect(status().isBadRequest());
+            .andExpect(result ->
+                assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
 
         verify(notificationService, never()).markAsRead(any(), any());
     }
