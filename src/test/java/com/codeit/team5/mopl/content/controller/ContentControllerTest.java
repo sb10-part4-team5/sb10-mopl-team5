@@ -644,7 +644,7 @@ class ContentControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/contents")
-                        .param("typeEqual", "MOVIE")
+                        .param("typeEqual", "movie")
                         .param("keywordLike", "어벤져스")
                         .param("tagsIn", "액션", "SF")
                         .param("limit", "20")
