@@ -6,6 +6,6 @@ import org.springframework.http.HttpStatus;
 public class InvalidCursorException extends BusinessException {
 
     public InvalidCursorException(String cursor){
-        super(HttpStatus.BAD_REQUEST, "커서 값이 유효하지 않습니다. cursor={" + cursor + "}");
+        super(HttpStatus.BAD_REQUEST, "커서 값이 유효하지 않습니다.");
     }
 }
