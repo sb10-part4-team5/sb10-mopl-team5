@@ -133,10 +133,10 @@ public class ContentRepositoryImpl implements ContentRepositoryCustom {
             case RATE -> {
                 double cursorVal = Double.parseDouble(cursor);
                 yield isAsc
-                        ? stats.ratingSum.gt(cursorVal)
-                            .or(stats.ratingSum.eq(cursorVal).and(content.id.gt(id)))
-                        : stats.ratingSum.lt(cursorVal)
-                            .or(stats.ratingSum.eq(cursorVal).and(content.id.lt(id)));
+                        ? stats.averageRating.gt(cursorVal)
+                            .or(stats.averageRating.eq(cursorVal).and(content.id.gt(id)))
+                        : stats.averageRating.lt(cursorVal)
+                            .or(stats.averageRating.eq(cursorVal).and(content.id.lt(id)));
             }
         };
         where.and(cursorCondition);
@@ -151,7 +151,7 @@ public class ContentRepositoryImpl implements ContentRepositoryCustom {
         OrderSpecifier<?> primary = switch (request.sortBy()) {
             case CREATED_AT -> isAsc ? content.createdAt.asc() : content.createdAt.desc();
             case WATCHER_COUNT -> isAsc ? stats.watcherCount.asc() : stats.watcherCount.desc();
-            case RATE -> isAsc ? stats.ratingSum.asc() : stats.ratingSum.desc();
+            case RATE -> isAsc ? stats.averageRating.asc() : stats.averageRating.desc();
         };
         OrderSpecifier<?> secondary = isAsc ? content.id.asc() : content.id.desc();
         return new OrderSpecifier<?>[]{ primary, secondary };
