@@ -6,6 +6,7 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
+import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
 import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -23,7 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 @DataJpaTest
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = NONE)
-@Import({JpaAuditingConfig.class, TestcontainersConfiguration.class})
+@Import({JpaAuditingConfig.class, TestcontainersConfiguration.class, QueryDslTestConfig.class})
 class UserRepositoryTest {
 
     @Autowired
