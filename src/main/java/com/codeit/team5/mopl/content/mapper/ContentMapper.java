@@ -33,8 +33,8 @@ public interface ContentMapper {
     }
 
     default double toAverageRating(ContentStats stats) {
-        if (stats == null || stats.getReviewCount() == 0) return 0.0;
-        return stats.getRatingSum() / stats.getReviewCount();
+        if (stats == null) return 0.0;
+        return stats.getAverageRating();
     }
 
     default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,
@@ -46,7 +46,7 @@ public interface ContentMapper {
             nextCursor = switch (sortBy) {
                 case CREATED_AT -> last.getCreatedAt().toString();
                 case WATCHER_COUNT -> String.valueOf(last.getStats().getWatcherCount());
-                case RATE -> String.valueOf(last.getStats().getRatingSum());
+                case RATE -> String.valueOf(last.getStats().getAverageRating());
             };
             nextIdAfter = last.getId().toString();
         }
