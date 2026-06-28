@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Repository;
 
+// TODO(통합 테스트): typeEqual/keywordLike/tagsIn 필터, createdAt/watcherCount/rate 커서 페이지네이션,
+//  hasNext 판별을 Testcontainers(PostgreSQL) 기반 @DataJpaTest로 검증 필요
 @Repository
 @RequiredArgsConstructor
 public class ContentRepositoryImpl implements ContentRepositoryCustom {
