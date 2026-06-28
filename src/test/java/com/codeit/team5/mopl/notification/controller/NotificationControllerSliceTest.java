@@ -158,7 +158,7 @@ class NotificationControllerSliceTest {
                 .param("idAfter", idAfter.toString())
                 .param("limit", "0")
                 .param("sortDirection", "ASCENDING"))
-            .andExpect(status().is4xxClientError());
+            .andExpect(status().isBadRequest());
 
         verify(notificationService, never())
             .getNotifications(any(), any(), any(), any(int.class), any(), any());
@@ -179,7 +179,7 @@ class NotificationControllerSliceTest {
                 .param("idAfter", idAfter.toString())
                 .param("limit", "101")
                 .param("sortDirection", "ASCENDING"))
-            .andExpect(status().is4xxClientError());
+            .andExpect(status().isBadRequest());
 
         verify(notificationService, never())
             .getNotifications(any(), any(), any(), any(int.class), any(), any());
