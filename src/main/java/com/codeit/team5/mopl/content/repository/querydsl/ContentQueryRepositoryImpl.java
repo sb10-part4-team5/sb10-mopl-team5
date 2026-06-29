@@ -10,6 +10,7 @@ import com.codeit.team5.mopl.tag.entity.QTag;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
@@ -121,7 +122,7 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
             }
             case RATE -> {
                 double cursorVal = Double.parseDouble(cursor);
-                NumberExpression<Double> avgRating = stats.ratingSum.divide(stats.reviewCount.doubleValue());
+                NumberExpression<Double> avgRating = averageRating();
                 yield isAsc
                         ? avgRating.gt(cursorVal)
                             .or(avgRating.eq(cursorVal).and(content.id.gt(id)))
@@ -132,9 +133,16 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
         where.and(cursorCondition);
     }
 
+    private NumberExpression<Double> averageRating() {
+        return new CaseBuilder()
+                .when(stats.reviewCount.eq(0))
+                .then(0.0)
+                .otherwise(stats.ratingSum.divide(stats.reviewCount.doubleValue()));
+    }
+
     private OrderSpecifier<?>[] buildOrder(ContentCursorRequest request) {
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        NumberExpression<Double> avgRating = stats.ratingSum.divide(stats.reviewCount.doubleValue());
+        NumberExpression<Double> avgRating = averageRating();
         OrderSpecifier<?> primary = switch (request.sortBy()) {
             case CREATED_AT -> isAsc ? content.createdAt.asc() : content.createdAt.desc();
             case WATCHER_COUNT -> isAsc ? stats.watcherCount.asc() : stats.watcherCount.desc();
