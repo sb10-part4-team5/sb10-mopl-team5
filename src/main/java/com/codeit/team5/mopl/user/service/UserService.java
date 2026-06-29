@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.user.service;
 
+import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
@@ -10,6 +11,7 @@ import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
@@ -39,6 +41,7 @@ public class UserService {
     private final StorageKeyFactory storageKeyFactory;
     private final BinaryContentRepository binaryContentRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final RefreshTokenStore refreshTokenStore;
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
@@ -90,6 +93,16 @@ public class UserService {
 
         log.info("User updated: userId={}", userId);
         return userMapper.toDto(user);
+    }
+
+    @Transactional
+    public void updateRole(UUID userId, UserRoleUpdateRequest request) {
+        User requestedUser = getUser(userId);
+
+        requestedUser.updateRole(request.role());
+        refreshTokenStore.deleteByUserId(userId);
+
+        log.info("User role updated and refresh token invalidated: userId={}, updatedRole={}", userId, request.role());
     }
 
     private BinaryContent storeProfileImage(UUID userId, FileRequest image) {

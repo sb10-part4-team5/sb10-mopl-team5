@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.user.controller.api;
 
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -82,4 +83,30 @@ public interface UserApi {
             @Parameter(description = "사용자 ID", required = true) @PathVariable UUID userId,
             @Parameter(hidden = true) UserUpdateRequest request,
             @Parameter(hidden = true) MultipartFile image);
+
+    @Operation(
+            summary = "사용자 권한 변경",
+            description = "관리자가 사용자의 권한을 USER 또는 ADMIN으로 변경합니다. 권한이 변경된 사용자는 재인증이 필요합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "권한 변경 성공"),
+            @ApiResponse(responseCode = "204", description = "권한 변경 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 변경 가능)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<Void> updateRole(
+            @Parameter(description = "권한을 변경할 사용자 ID", required = true)
+            @PathVariable UUID userId,
+
+            @Parameter(description = "변경할 사용자 권한", required = true)
+            @Valid @RequestBody UserRoleUpdateRequest request
+    );
 }
