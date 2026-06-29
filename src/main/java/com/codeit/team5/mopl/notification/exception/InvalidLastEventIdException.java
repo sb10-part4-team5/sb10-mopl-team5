@@ -7,6 +7,6 @@ public class InvalidLastEventIdException extends BusinessException {
 
     public InvalidLastEventIdException() {
 
-        super(HttpStatus.BAD_REQUEST, "Last-Event-ID가 유효하지 ");
+        super(HttpStatus.BAD_REQUEST, "Last-Event-ID가 유효하지 않습니다");
     }
 }

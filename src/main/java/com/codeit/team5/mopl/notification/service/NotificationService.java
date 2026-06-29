@@ -9,6 +9,7 @@ import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
+import com.codeit.team5.mopl.notification.exception.InvalidLastEventIdException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
@@ -113,6 +114,9 @@ public class NotificationService {
 
     // SSE 재연결 시 미수신 알림 조회
     public List<NotificationPayload> findMissedNotifications(UUID receiverId, UUID lastEventId) {
+        notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
+                .orElseThrow(InvalidLastEventIdException::new);
+
         return notificationRepository.findMissedNotifications(receiverId, lastEventId).stream()
                 .map(notificationMapper::toPayload)
                 .toList();

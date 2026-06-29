@@ -44,13 +44,17 @@ public class SseController implements SseApi {
 
         // SseEmitter 객체 생성
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
-        // 로그인 한 유저의 id를 바탕으로 emitter 객체를 스토리지에 저장함.
-        emitterStore.save(userId, emitter);
+
+        // 이전 SseEmitter
+        SseEmitter previous = emitterStore.save(userId, emitter);
+        if(previous != null){
+            previous.complete();
+        }
 
         // Emitter 연결이 종료되면 객체 정리
         emitter.onCompletion(() -> {
             log.debug("SSE connection completed: userId={}", userId);
-            emitterStore.remove(userId);
+            emitterStore.remove(userId, emitter);
         });
         // 타임아웃이 지나면 객체 정리
         emitter.onTimeout(() -> {
@@ -60,7 +64,7 @@ public class SseController implements SseApi {
         // 에러 발생 시 객체 정리
         emitter.onError(e -> {
             log.debug("SSE connection error: userId={}", userId);
-            emitterStore.remove(userId);
+            emitterStore.remove(userId, emitter);
         });
 
         try {
@@ -73,7 +77,7 @@ public class SseController implements SseApi {
             }
         } catch (Exception e) {
             log.warn("SSE initial event send failed: userId={}", userId);
-            emitterStore.remove(userId);
+            emitterStore.remove(userId, emitter);
         }
 
         return emitter;
@@ -104,7 +108,7 @@ public class SseController implements SseApi {
                         .data(payload)); // payload
             } catch (Exception e) {
                 log.warn("SSE missed notification send failed: userId={}", userId);
-                emitterStore.remove(userId);
+                emitterStore.remove(userId, emitter);
                 throw new SseMissedEventSendFailException();
             }
         }

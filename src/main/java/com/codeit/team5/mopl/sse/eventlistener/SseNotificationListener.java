@@ -42,7 +42,7 @@ public class SseNotificationListener {
                     receiverId, payload.notificationId());
         } catch (Exception e) {
             log.warn("SSE send failed: receiverId={}", receiverId);
-            emitterStore.remove(receiverId);
+            emitterStore.remove(receiverId, emitter);
         }
     }
 
@@ -68,7 +68,7 @@ public class SseNotificationListener {
                     receiverId, payload.notificationId());
         } catch (Exception e) {
             log.warn("SSE DM send failed: receiverId={}", receiverId);
-            emitterStore.remove(receiverId);
+            emitterStore.remove(receiverId, emitter);
         }
     }
 }

@@ -13,8 +13,8 @@ public class SseEmitterStore {
     private final Map<UUID, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     // Emitter 객체를 emitters에 저장
-    public void save(UUID userId, SseEmitter emitter) {
-        emitters.put(userId, emitter);
+    public SseEmitter save(UUID userId, SseEmitter emitter) {
+        return emitters.put(userId, emitter);
     }
 
     // 수신자 ID에 해당하는 emitter 객체를 가져옴
@@ -23,7 +23,7 @@ public class SseEmitterStore {
     }
 
     // 수신자 ID에 해당하는 emitter 객체를 삭제함
-    public void remove(UUID userId) {
-        emitters.remove(userId);
+    public void remove(UUID userId, SseEmitter emitter) {
+        emitters.remove(userId, emitter);
     }
 }

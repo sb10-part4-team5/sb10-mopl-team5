@@ -75,9 +75,12 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     // 특정 알림 이후에 생성된 알림 목록 조회 (SSE 재연결 시 미수신 알림 전송용)
     @Query("""
-        select n from Notification n
-        where n.receiverId = :receiverId
-          and n.createdAt > (select ref.createdAt from Notification ref where ref.id = :lastEventId)
+        select n from Notification n, Notification ref
+        where ref.id = :lastEventId
+          and ref.receiverId = :receiverId
+          and n.receiverId = :receiverId
+          and (n.createdAt > ref.createdAt
+            or (n.createdAt = ref.createdAt and n.id > ref.id))
         order by n.createdAt asc, n.id asc
         """)
     List<Notification> findMissedNotifications(
