@@ -1,21 +1,8 @@
 package com.codeit.team5.mopl.watcher.service;
 
-import com.codeit.team5.mopl.content.entity.Content;
-import com.codeit.team5.mopl.content.repository.ContentRepository;
-import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.repository.UserRepository;
-import com.codeit.team5.mopl.watcher.constant.SortByType;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCreatedRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.entity.WatchingSession;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapper;
-import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.Map;
 import java.util.UUID;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.ScrollPosition;
 import org.springframework.data.domain.ScrollPosition.Direction;
@@ -23,6 +10,23 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Window;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.user.repository.UserRepository;
+import com.codeit.team5.mopl.watcher.constant.SortByType;
+import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
+import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
+import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,23 +41,20 @@ public class WatchingSessionService {
     private static final String SECONDARY_SORT_FIELD = "id";
 
     @Transactional
-    public WatchingSessionResponse create(WatchingSessionCreatedRequest request) {
-        if (!userRepository.existsById(request.watcherId())) {
-            throw new WatchingSessionNotFoundException("userId", request.watcherId());
-        }
-        if (!contentRepository.existsById(request.contentId())) {
-            throw new WatchingSessionNotFoundException("contentId", request.contentId());
-        }
-        User user = userRepository.getReferenceById(request.watcherId());
-        Content content = contentRepository.getReferenceById(request.contentId());
+    public WatchingSessionResponse create(UUID contentId, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(email));
+        Content content = contentRepository.findWithStatsAndTagsById(contentId)
+                .orElseThrow(() -> new ContentNotFoundException(contentId));
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
         return mapper.toDto(session);
     }
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
-        return mapper.toDto(repository.findByUserId(watcherId)
-                .orElseThrow(() -> new WatchingSessionNotFoundException("userId", watcherId)));
+        return repository.findByWatcherId(watcherId)
+                .map(mapper::toDto)
+                .orElse(null);
     }
 
     public CursorResponse<WatchingSessionResponse> findSessionByContentId(UUID contentId,
@@ -65,17 +66,33 @@ public class WatchingSessionService {
         ScrollPosition scrollPosition = createScrollPosition(request);
         Window<WatchingSession> result = repository.findByContentId(
                 contentId, scrollPosition, Limit.of(request.limit()), sort);
-        Long totalCount = repository.countByContentId(contentId);
+        Long totalCount = getCurrentWatchingContentView(contentId);
         return mapper.toCursor(result, totalCount, sortBy, direction);
     }
 
     @Transactional
-    public void delete(UUID userId) {
-        if (repository.existsByUserId(userId)) {
-            repository.deleteByUserIdDirectly(userId);
+    public void delete(String email) {
+        if (repository.existsByWatcherEmail(email)) {
+            repository.deleteByWatcherEmailDirectly(email);
             return;
         }
-        throw new WatchingSessionNotFoundException("userId", userId);
+        throw new WatchingSessionNotFoundException("email", email);
+    }
+
+    public Long getCurrentWatchingContentView(UUID contentId) {
+        return repository.countByContentId(contentId);
+    }
+
+    public void ensureWatchingContent(String email, UUID contentId) {
+        if (!repository.existsByWatcherEmailAndContentId(email, contentId)) {
+            throw new WatchingSessionNotFoundException(
+                    Map.of("email", email, "contentId", contentId));
+        }
+    }
+
+    public WatchingSessionResponse findSessionByWatcherEmail(String email) {
+        return mapper.toDto(repository.findByWatcherEmail(email)
+                .orElseThrow(() -> new WatchingSessionNotFoundException("email", email)));
     }
 
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {

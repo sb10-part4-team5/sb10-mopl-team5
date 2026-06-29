@@ -11,27 +11,27 @@ import static org.mockito.Mockito.when;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.constant.SortByType;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCreatedRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapper;
-import com.codeit.team5.mopl.watcher.mapper.WatchingSessionMapperImpl;
+import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.ScrollPosition;
@@ -45,8 +45,8 @@ class WatchingSessionServiceTest {
     @Mock
     private WatchingSessionRepository repository;
 
-    @Spy
-    private WatchingSessionMapper mapper = new WatchingSessionMapperImpl();
+    @Mock
+    private WatchingSessionMapper mapper;
 
     @Mock
     private UserRepository userRepository;
@@ -62,23 +62,22 @@ class WatchingSessionServiceTest {
     @DisplayName("세션 생성_성공")
     void create_성공() {
         // given
-        UUID watcherId = UUID.randomUUID();
+        String email = "test@test.com";
         UUID contentId = UUID.randomUUID();
-        WatchingSessionCreatedRequest request = new WatchingSessionCreatedRequest(watcherId,
-                contentId);
 
-        User user = createDummyUser(watcherId);
+        User user = createDummyUser(email);
         Content content = createDummyContent(contentId);
         WatchingSession session = createDummySession(user, content);
 
-        when(userRepository.existsById(watcherId)).thenReturn(true);
-        when(contentRepository.existsById(contentId)).thenReturn(true);
-        when(userRepository.getReferenceById(watcherId)).thenReturn(user);
-        when(contentRepository.getReferenceById(contentId)).thenReturn(content);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(
+                Optional.of(content));
         when(repository.save(any(WatchingSession.class))).thenReturn(session);
+        when(mapper.toDto(any(WatchingSession.class))).thenReturn(
+                WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
 
         // when
-        WatchingSessionResponse result = service.create(request);
+        WatchingSessionResponse result = service.create(contentId, email);
 
         // then
         assertThat(result).isNotNull();
@@ -89,33 +88,30 @@ class WatchingSessionServiceTest {
     @DisplayName("유저가 존재하지 않을 때 세션 생성")
     void create_UserNotFound() {
         // given
-        UUID watcherId = UUID.randomUUID();
+        String email = "test@test.com";
         UUID contentId = UUID.randomUUID();
-        WatchingSessionCreatedRequest request = new WatchingSessionCreatedRequest(watcherId,
-                contentId);
 
-        when(userRepository.existsById(watcherId)).thenReturn(false);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(WatchingSessionNotFoundException.class);
+        assertThatThrownBy(() -> service.create(contentId, email))
+                .isInstanceOf(UserNotFoundException.class);
     }
 
     @Test
     @DisplayName("컨텐츠가 존재하지 않을 때 세션 생성")
     void create_ContentNotFound() {
         // given
-        UUID watcherId = UUID.randomUUID();
+        String email = "test@test.com";
         UUID contentId = UUID.randomUUID();
-        WatchingSessionCreatedRequest request = new WatchingSessionCreatedRequest(watcherId,
-                contentId);
+        User user = createDummyUser(email);
 
-        when(userRepository.existsById(watcherId)).thenReturn(true);
-        when(contentRepository.existsById(contentId)).thenReturn(false);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(WatchingSessionNotFoundException.class);
+        assertThatThrownBy(() -> service.create(contentId, email))
+                .isInstanceOf(ContentNotFoundException.class);
     }
 
     // --- READ (findSessionByWatchId) ---
@@ -124,18 +120,20 @@ class WatchingSessionServiceTest {
     void findSessionByWatchId_성공() {
         // given
         UUID watcherId = UUID.randomUUID();
-        User user = createDummyUser(watcherId);
+        User user = createDummyUser("test@test.com");
         Content content = createDummyContent(UUID.randomUUID());
         WatchingSession session = createDummySession(user, content);
 
-        when(repository.findByUserId(watcherId)).thenReturn(Optional.of(session));
+        when(repository.findByWatcherId(watcherId)).thenReturn(Optional.of(session));
+        when(mapper.toDto(any(WatchingSession.class))).thenReturn(
+                WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
 
         // when
         WatchingSessionResponse result = service.findSessionByWatchId(watcherId);
 
         // then
         assertThat(result).isNotNull();
-        verify(repository).findByUserId(watcherId);
+        verify(repository).findByWatcherId(watcherId);
     }
 
     @Test
@@ -143,11 +141,13 @@ class WatchingSessionServiceTest {
     void findSessionByWatchId_NotFound() {
         // given
         UUID watcherId = UUID.randomUUID();
-        when(repository.findByUserId(watcherId)).thenReturn(Optional.empty());
+        when(repository.findByWatcherId(watcherId)).thenReturn(Optional.empty());
 
-        // when & then
-        assertThatThrownBy(() -> service.findSessionByWatchId(watcherId))
-                .isInstanceOf(WatchingSessionNotFoundException.class);
+        // when
+        WatchingSessionResponse result = service.findSessionByWatchId(watcherId);
+
+        // then
+        assertThat(result).isNull();
     }
 
     // --- READ (findSessionByContentId) ---
@@ -166,6 +166,8 @@ class WatchingSessionServiceTest {
                 any(Sort.class)))
                 .thenReturn(window);
         when(repository.countByContentId(contentId)).thenReturn(1L);
+        when(mapper.toCursor(any(), any(), any(), any())).thenReturn(
+                new CursorResponse<>(null, null, null, false, 1L, null, null));
 
         // when
         CursorResponse<WatchingSessionResponse> result = service.findSessionByContentId(contentId,
@@ -174,8 +176,7 @@ class WatchingSessionServiceTest {
         // then
         assertThat(result).isNotNull();
 
-        org.mockito.ArgumentCaptor<Sort> sortCaptor = org.mockito.ArgumentCaptor.forClass(
-                Sort.class);
+        ArgumentCaptor<Sort> sortCaptor = ArgumentCaptor.forClass(Sort.class);
         verify(repository).findByContentId(eq(contentId), any(ScrollPosition.class),
                 any(Limit.class), sortCaptor.capture());
 
@@ -206,6 +207,8 @@ class WatchingSessionServiceTest {
                 any(Sort.class)))
                 .thenReturn(window);
         when(repository.countByContentId(contentId)).thenReturn(11L);
+        when(mapper.toCursor(any(), any(), any(), any())).thenReturn(
+                new CursorResponse<>(null, null, null, false, 11L, null, null));
 
         // when
         CursorResponse<WatchingSessionResponse> result = service.findSessionByContentId(contentId,
@@ -214,8 +217,7 @@ class WatchingSessionServiceTest {
         // then
         assertThat(result).isNotNull();
 
-        org.mockito.ArgumentCaptor<Sort> sortCaptor = org.mockito.ArgumentCaptor.forClass(
-                Sort.class);
+        ArgumentCaptor<Sort> sortCaptor = ArgumentCaptor.forClass(Sort.class);
         verify(repository).findByContentId(eq(contentId), any(ScrollPosition.class),
                 any(Limit.class), sortCaptor.capture());
 
@@ -231,31 +233,31 @@ class WatchingSessionServiceTest {
     @DisplayName("세션 삭제_성공")
     void delete_성공() {
         // given
-        UUID watcherId = UUID.randomUUID();
-        when(repository.existsByUserId(watcherId)).thenReturn(true);
+        String email = "test@test.com";
+        when(repository.existsByWatcherEmail(email)).thenReturn(true);
 
         // when
-        service.delete(watcherId);
+        service.delete(email);
 
         // then
-        verify(repository).deleteByUserIdDirectly(watcherId);
+        verify(repository).deleteByWatcherEmailDirectly(email);
     }
 
     @Test
     @DisplayName("유저 ID에 해당하는 세션이 없을 때 세션 삭제")
     void delete_NotFound() {
         // given
-        UUID watcherId = UUID.randomUUID();
-        when(repository.existsByUserId(watcherId)).thenReturn(false);
+        String email = "notfound@test.com";
+        when(repository.existsByWatcherEmail(email)).thenReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> service.delete(watcherId))
+        assertThatThrownBy(() -> service.delete(email))
                 .isInstanceOf(WatchingSessionNotFoundException.class);
     }
 
-    private User createDummyUser(UUID id) {
-        User user = User.create("test@example.com", "password", "testName");
-        ReflectionTestUtils.setField(user, "id", id);
+    private User createDummyUser(String email) {
+        User user = User.create(email, "password", "testName");
+        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
         return user;
     }
 

@@ -14,18 +14,23 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface WatchingSessionRepository extends JpaRepository<WatchingSession, UUID> {
 
-    @EntityGraph(attributePaths = {"user", "content", "content.thumbnail", "content.stats", "content.contentTags", "content.contentTags.tag"})
-    Optional<WatchingSession> findByUserId(UUID userId);
+    @EntityGraph(attributePaths = {"watcher", "content", "content.stats", "content.thumbnail", "content.contentTags"})
+    Optional<WatchingSession> findByWatcherId(UUID watcherId);
 
     @Modifying
-    @Query("DELETE FROM WatchingSession w WHERE w.user.id = :userId")
-    void deleteByUserIdDirectly(UUID userId);
+    @Query("DELETE FROM WatchingSession w WHERE w.watcher.email = :email")
+    void deleteByWatcherEmailDirectly(String email);
 
-    @EntityGraph(attributePaths = {"user", "content", "content.thumbnail", "content.stats"})
+    @EntityGraph(attributePaths = {"watcher", "content", "content.stats", "content.thumbnail"})
     Window<WatchingSession> findByContentId(UUID contentId, ScrollPosition position, Limit limit,
             Sort sort);
 
-    boolean existsByUserId(UUID userId);
-
     Long countByContentId(UUID contentId);
+
+    boolean existsByWatcherEmailAndContentId(String email, UUID contentId);
+
+    @EntityGraph(attributePaths = {"watcher", "content", "content.stats", "content.thumbnail", "content.contentTags"})
+    Optional<WatchingSession> findByWatcherEmail(String email);
+
+    boolean existsByWatcherEmail(String email);
 }

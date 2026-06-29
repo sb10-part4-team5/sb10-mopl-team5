@@ -4,15 +4,19 @@ import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.io.Encoders;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
-import java.util.Map;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -60,6 +64,17 @@ public class JwtTokenizer {
         }
 
         return claimsJws;
+    }
+
+    public Authentication getAuthentication(String accessToken) {
+        Jws<Claims> claimsJws = getAccessClaims(accessToken);
+        Claims claims = claimsJws.getBody();
+        String email = claims.get("email", String.class);
+        String role = claims.get("role", String.class);
+        List<SimpleGrantedAuthority> authorities =
+                Collections.singletonList(new SimpleGrantedAuthority(role));
+        UserDetails principal = new User(email, "", authorities);
+        return new UsernamePasswordAuthenticationToken(principal, accessToken, authorities);
     }
 
     private Key getAccessKey() {
