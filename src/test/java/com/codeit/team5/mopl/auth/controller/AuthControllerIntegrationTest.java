@@ -182,7 +182,6 @@ class AuthControllerIntegrationTest {
         // Given
         SignInRequest request = saveLoginUser("old-refresh-flow@example.com", "password1");
         Cookie oldRefreshTokenCookie = login(request).getResponse().getCookie("REFRESH_TOKEN");
-        waitUntilNextJwtSecond();
         Cookie newRefreshTokenCookie = login(request).getResponse().getCookie("REFRESH_TOKEN");
 
         assertThat(oldRefreshTokenCookie).isNotNull();
@@ -205,7 +204,6 @@ class AuthControllerIntegrationTest {
         // Given
         SignInRequest request = saveLoginUser("latest-refresh-flow@example.com", "password1");
         login(request);
-        waitUntilNextJwtSecond();
         Cookie latestRefreshTokenCookie = login(request).getResponse().getCookie("REFRESH_TOKEN");
 
         assertThat(latestRefreshTokenCookie).isNotNull();
@@ -270,12 +268,5 @@ class AuthControllerIntegrationTest {
                         .param("password", request.password()))
                 .andExpect(status().isOk())
                 .andReturn();
-    }
-
-    private void waitUntilNextJwtSecond() {
-        long currentSecond = Instant.now().getEpochSecond();
-        while (Instant.now().getEpochSecond() == currentSecond) {
-            Thread.onSpinWait();
-        }
     }
 }

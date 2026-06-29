@@ -43,6 +43,7 @@ public class JwtTokenizer {
         return Jwts.builder()
                 .setSubject(subject)
                 .claim("tokenType", "REFRESH")
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(getTokenExpiration(jwtProperties.refreshTokenExpirationMinutes()))
                 .signWith(getRefreshKey())

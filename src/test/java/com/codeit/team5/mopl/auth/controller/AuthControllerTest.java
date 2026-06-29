@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -314,6 +315,14 @@ class AuthControllerTest {
 
         verify(authService).logout(refreshToken);
         verify(cookieManager).deleteCookie();
+    }
+
+    @Test
+    @DisplayName("인증된 사용자가 CSRF 토큰 없이 로그아웃 요청하면 403을 반환한다")
+    void signOut_authenticatedWithoutCsrf_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/auth/sign-out")
+                        .with(user("test@example.com")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
