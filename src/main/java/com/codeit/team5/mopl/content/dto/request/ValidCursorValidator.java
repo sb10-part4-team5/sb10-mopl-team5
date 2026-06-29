@@ -12,6 +12,8 @@ public class ValidCursorValidator implements ConstraintValidator<ValidCursor, Co
         String cursor = request.cursor();
         String idAfter = request.idAfter();
 
+        if ((cursor == null) ^ (idAfter == null)) return false;
+
         if (cursor == null) return true;
 
         try {

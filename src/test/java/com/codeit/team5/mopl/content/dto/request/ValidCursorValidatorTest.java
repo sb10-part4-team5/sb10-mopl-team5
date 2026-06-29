@@ -34,6 +34,19 @@ class ValidCursorValidatorTest {
         assertThat(validator.isValid(request(null, null, ContentSortByType.CREATED_AT), context)).isTrue();
     }
 
+    // --- pair 검증 ---
+    @Test
+    @DisplayName("cursor만 있고 idAfter가 null이면 유효하지 않다")
+    void invalid_onlyCursor() {
+        assertThat(validator.isValid(request(Instant.now().toString(), null, ContentSortByType.CREATED_AT), context)).isFalse();
+    }
+
+    @Test
+    @DisplayName("idAfter만 있고 cursor가 null이면 유효하지 않다")
+    void invalid_onlyIdAfter() {
+        assertThat(validator.isValid(request(null, UUID.randomUUID().toString(), ContentSortByType.CREATED_AT), context)).isFalse();
+    }
+
     // --- idAfter UUID 검증 ---
     @Test
     @DisplayName("idAfter가 UUID 형식이 아니면 유효하지 않다")

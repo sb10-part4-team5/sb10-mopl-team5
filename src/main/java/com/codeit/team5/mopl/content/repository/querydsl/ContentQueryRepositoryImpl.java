@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.entity.QContent;
 import com.codeit.team5.mopl.content.entity.QContentStats;
 import com.codeit.team5.mopl.content.entity.QContentTag;
+import com.codeit.team5.mopl.binarycontent.entity.QBinaryContent;
 import com.codeit.team5.mopl.tag.entity.QTag;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
@@ -32,12 +33,14 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
     private static final QContentStats stats = QContentStats.contentStats;
     private static final QContentTag contentTag = QContentTag.contentTag;
     private static final QTag tag = QTag.tag;
+    private static final QBinaryContent thumbnail = QBinaryContent.binaryContent;
 
     @Override
     public List<Content> findContents(ContentCursorRequest request, int fetchLimit) {
         return queryFactory
                 .selectFrom(content)
                 .leftJoin(content.stats, stats).fetchJoin()
+                .leftJoin(content.thumbnail, thumbnail).fetchJoin()
                 .where(buildWhere(request))
                 .orderBy(buildOrder(request))
                 .limit(fetchLimit)
