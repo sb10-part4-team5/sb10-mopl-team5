@@ -1,11 +1,11 @@
 package com.codeit.team5.mopl.notification.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,6 +15,7 @@ import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
@@ -24,6 +25,7 @@ import com.codeit.team5.mopl.notification.dto.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.service.NotificationService;
+import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.util.List;
@@ -33,6 +35,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -64,6 +68,13 @@ class NotificationControllerSliceTest {
     @MockitoBean
     private UserRepository userRepository;
 
+    private Authentication authOf(UUID userId) {
+        UserResponse dto = new UserResponse(
+                userId, Instant.now(), "user@mopl.com", "유저", null, "USER", false);
+        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+    }
+
     // ===== GET /api/notifications =====
 
     @Test
@@ -87,7 +98,7 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", receiverId.toString()))
+                        .with(authentication(authOf(receiverId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].id").value(notificationId.toString()))
@@ -120,7 +131,7 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", receiverId.toString())
+                        .with(authentication(authOf(receiverId)))
                         .param("cursor", cursor)
                         .param("idAfter", idAfter.toString())
                         .param("limit", "10")
@@ -131,13 +142,10 @@ class NotificationControllerSliceTest {
     }
 
     @Test
-    @DisplayName("receiverId 없이 알림 목록 조회하면 에러를 반환한다")
-    void getNotifications_missingReceiverId_returnsError() throws Exception {
-        // When & Then (MissingServletRequestParameterException → GlobalExceptionHandler에 전용 핸들러 추가 시 400으로 강화 예정)
+    @DisplayName("인증 없이 알림 목록 조회하면 401을 반환한다")
+    void getNotifications_unauthenticated_returnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/notifications"))
-            .andExpect(result ->
-                assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
-
+                .andExpect(status().isUnauthorized());
 
         verify(notificationService, never())
                 .getNotifications(any(), any(), any(), any(int.class), any(), any());
@@ -153,7 +161,7 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                .param("receiverId", receiverId.toString())
+                .with(authentication(authOf(receiverId)))
                 .param("cursor", cursor)
                 .param("idAfter", idAfter.toString())
                 .param("limit", "0")
@@ -174,7 +182,7 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                .param("receiverId", receiverId.toString())
+                .with(authentication(authOf(receiverId)))
                 .param("cursor", cursor)
                 .param("idAfter", idAfter.toString())
                 .param("limit", "101")
@@ -196,7 +204,7 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", notificationId)
-                        .param("receiverId", receiverId.toString()))
+                        .with(authentication(authOf(receiverId))))
                 .andExpect(status().isNoContent());
 
         verify(notificationService).markAsRead(eq(notificationId), eq(receiverId));
@@ -214,18 +222,16 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", notificationId)
-                        .param("receiverId", receiverId.toString()))
+                        .with(authentication(authOf(receiverId))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.exceptionType").value("NotificationNotFoundException"));
     }
 
     @Test
-    @DisplayName("읽음 처리 시 receiverId가 없으면 에러를 반환한다")
-    void readNotification_missingReceiverId_returnsError() throws Exception {
-        // When & Then (MissingServletRequestParameterException → GlobalExceptionHandler에 전용 핸들러 추가 시 400으로 강화 예정)
+    @DisplayName("인증 없이 읽음 처리하면 401을 반환한다")
+    void readNotification_unauthenticated_returnsUnauthorized() throws Exception {
         mockMvc.perform(delete("/api/notifications/{notificationId}", UUID.randomUUID()))
-            .andExpect(result ->
-                assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+                .andExpect(status().isUnauthorized());
 
         verify(notificationService, never()).markAsRead(any(), any());
     }

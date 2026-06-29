@@ -1,18 +1,22 @@
 package com.codeit.team5.mopl.notification.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
+import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +52,13 @@ class NotificationControllerIntegrationTest {
         return userRepository.saveAndFlush(user).getId();
     }
 
+    private Authentication authOf(UUID userId, String email) {
+        UserResponse dto = new UserResponse(
+                userId, Instant.now(), email, "수신자", null, "USER", false);
+        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+    }
+
     private Notification persistNotification(UUID receiverId, String title) {
         Notification notification = Notification.create(
                 receiverId, NotificationType.FOLLOWED, title, "내용", NotificationLevel.INFO);
@@ -63,7 +76,7 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", receiverId.toString())
+                        .with(authentication(authOf(receiverId, "list@example.com")))
                         .param("sortDirection", "DESCENDING")
                         .param("sortBy", "createdAt"))
                 .andExpect(status().isOk())
@@ -89,7 +102,7 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", myId.toString())
+                        .with(authentication(authOf(myId, "me@example.com")))
                         .param("sortDirection", "DESCENDING")
                         .param("sortBy", "createdAt"))
                 .andExpect(status().isOk())
@@ -108,7 +121,7 @@ class NotificationControllerIntegrationTest {
 
         // When: 첫 페이지 (limit=2)
         String firstPageResponse = mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", receiverId.toString())
+                        .with(authentication(authOf(receiverId, "page@example.com")))
                         .param("limit", "2")
                         .param("sortDirection", "DESCENDING")
                         .param("sortBy", "createdAt"))
@@ -127,7 +140,7 @@ class NotificationControllerIntegrationTest {
 
         // Then: 두 번째 페이지
         mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", receiverId.toString())
+                        .with(authentication(authOf(receiverId, "page@example.com")))
                         .param("cursor", nextCursor)
                         .param("idAfter", nextIdAfter)
                         .param("limit", "2")
@@ -139,9 +152,8 @@ class NotificationControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("receiverId 없이 조회하면 에러를 반환한다")
-    void getNotifications_missingReceiverId_returnsError() throws Exception {
-        // When & Then (MissingServletRequestParameterException → GlobalExceptionHandler에 전용 핸들러 추가 시 400으로 강화 예정)
+    @DisplayName("인증 없이 조회하면 에러를 반환한다")
+    void getNotifications_unauthenticated_returnsError() throws Exception {
         mockMvc.perform(get("/api/notifications")
                         .param("sortDirection", "DESCENDING")
                         .param("sortBy", "createdAt"))
@@ -154,7 +166,7 @@ class NotificationControllerIntegrationTest {
     void getNotifications_invalidSortBy_returnsBadRequest() throws Exception {
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", UUID.randomUUID().toString())
+                        .with(authentication(authOf(UUID.randomUUID(), "sort@example.com")))
                         .param("sortBy", "title")
                         .param("sortDirection", "DESCENDING"))
                 .andExpect(status().isBadRequest())
@@ -166,7 +178,7 @@ class NotificationControllerIntegrationTest {
     void getNotifications_invalidSortDirection_returnsBadRequest() throws Exception {
         // When & Then
         mockMvc.perform(get("/api/notifications")
-                        .param("receiverId", UUID.randomUUID().toString())
+                        .with(authentication(authOf(UUID.randomUUID(), "sort@example.com")))
                         .param("sortBy", "createdAt")
                         .param("sortDirection", "RANDOM"))
                 .andExpect(status().isBadRequest())
@@ -184,7 +196,7 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", saved.getId())
-                        .param("receiverId", receiverId.toString()))
+                        .with(authentication(authOf(receiverId, "read@example.com"))))
                 .andExpect(status().isNoContent());
 
         Notification found = notificationRepository.findById(saved.getId()).orElseThrow();
@@ -201,7 +213,7 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", fakeId)
-                        .param("receiverId", receiverId.toString()))
+                        .with(authentication(authOf(receiverId, "notfound@example.com"))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.exceptionType").value("NotificationNotFoundException"));
     }
@@ -216,7 +228,7 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", saved.getId())
-                        .param("receiverId", attackerId.toString()))
+                        .with(authentication(authOf(attackerId, "attacker@example.com"))))
                 .andExpect(status().isNotFound());
 
         Notification notRead = notificationRepository.findById(saved.getId()).orElseThrow();
