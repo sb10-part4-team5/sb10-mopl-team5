@@ -12,7 +12,7 @@ public class WebSocketSessionStore {
     private final Map<String, Map<String, String>> session = new ConcurrentHashMap<>();
 
     public void connect(String email) {
-        session.put(email, new ConcurrentHashMap<>());
+        session.putIfAbsent(email, new ConcurrentHashMap<>());
     }
 
     public void subscribe(String email, String subscriptionId, String destination) {
