@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -206,7 +207,8 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", notificationId)
-                        .with(authentication(authOf(receiverId))))
+                        .with(authentication(authOf(receiverId)))
+                        .with(csrf()))
                 .andExpect(status().isNoContent());
 
         verify(notificationService).markAsRead(eq(notificationId), eq(receiverId));
@@ -224,7 +226,8 @@ class NotificationControllerSliceTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", notificationId)
-                        .with(authentication(authOf(receiverId))))
+                        .with(authentication(authOf(receiverId)))
+                        .with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.exceptionType").value("NotificationNotFoundException"));
     }
@@ -232,7 +235,8 @@ class NotificationControllerSliceTest {
     @Test
     @DisplayName("인증 없이 읽음 처리하면 401을 반환한다")
     void readNotification_unauthenticated_returnsUnauthorized() throws Exception {
-        mockMvc.perform(delete("/api/notifications/{notificationId}", UUID.randomUUID()))
+        mockMvc.perform(delete("/api/notifications/{notificationId}", UUID.randomUUID())
+                        .with(csrf()))
                 .andExpect(status().isUnauthorized());
 
         verify(notificationService, never()).markAsRead(any(), any());

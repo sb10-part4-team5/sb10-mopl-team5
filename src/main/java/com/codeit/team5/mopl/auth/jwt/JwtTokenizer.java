@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.auth.jwt;
 
-import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -44,6 +43,7 @@ public class JwtTokenizer {
         return Jwts.builder()
                 .setSubject(subject)
                 .claim("tokenType", "REFRESH")
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(getTokenExpiration(jwtProperties.refreshTokenExpirationMinutes()))
                 .signWith(getRefreshKey())

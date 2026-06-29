@@ -40,10 +40,8 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        // Postman 및 프론트에서 XSRF-TOKEN 쿠키 값을
-                        // X-XSRF-TOKEN 헤더로 그대로 전달할 수 있도록 기본 RequestHandler를 사용한다.
                         .csrfTokenRequestHandler(csrfTokenRequestHandler)
-                        .requireCsrfProtectionMatcher(
+                        .ignoringRequestMatchers(
                                 paths.matcher(HttpMethod.POST, "/api/auth/refresh")
                         )
                 )

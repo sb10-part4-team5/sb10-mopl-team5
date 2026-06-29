@@ -12,7 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 @Getter
 @RequiredArgsConstructor
-public class MoplUserDetails implements UserDetails {
+public class MoplUserDetails implements UserDetails, MoplPrincipal {
 
     private final UserResponse userDto;
     private final String password;
@@ -43,7 +43,17 @@ public class MoplUserDetails implements UserDetails {
         return userDto.id();
     }
 
+    @Override
+    public String getEmail() {
+        return userDto.email();
+    }
+
     public String getRole() {
         return userDto.role();
+    }
+
+    @Override
+    public boolean isLocked() {
+        return userDto.locked();
     }
 }
