@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
@@ -43,6 +44,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(NotificationController.class)
 @Import({
         GlobalExceptionHandler.class,
+        TestGlobalExceptionHandlerConfig.class,
         SecurityConfig.class,
         JwtAuthenticationFilter.class,
         UserAuthenticationEntryPoint.class,
