@@ -3,12 +3,9 @@ package com.codeit.team5.mopl.content.mapper;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
-import com.codeit.team5.mopl.content.entity.ContentStats;
-import com.codeit.team5.mopl.content.entity.ContentTag;
+import com.codeit.team5.mopl.content.mapper.util.ContentUtilsMapper;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.springframework.data.domain.Sort.Direction;
@@ -23,19 +20,6 @@ public interface ContentMapper {
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
     @Mapping(target = "thumbnailUploadStatus", source = "thumbnail.uploadStatus")
     ContentResponse toDto(Content content);
-
-    default List<String> toTagNames(Set<ContentTag> contentTags) {
-        if (contentTags == null) return Collections.emptyList();
-        return contentTags.stream()
-                .map(ct -> ct.getTag().getName())
-                .sorted()
-                .toList();
-    }
-
-    default double toAverageRating(ContentStats stats) {
-        if (stats == null) return 0.0;
-        return stats.getAverageRating();
-    }
 
     default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,
             long totalCount, ContentSortByType sortBy, Direction sortDirection) {
