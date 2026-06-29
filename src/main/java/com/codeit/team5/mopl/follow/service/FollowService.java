@@ -7,12 +7,14 @@ import com.codeit.team5.mopl.follow.exception.FollowNotFoundException;
 import com.codeit.team5.mopl.follow.exception.SelfFollowException;
 import com.codeit.team5.mopl.follow.mapper.FollowMapper;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
+import com.codeit.team5.mopl.notification.event.UserFollowedEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class FollowService {
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
     private final FollowMapper followMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public FollowResponse follow(UUID followerId, UUID followeeId) {
@@ -35,6 +38,9 @@ public class FollowService {
         User followee = getUser(followeeId);
 
         Follow saved = followRepository.save(Follow.create(follower, followee));
+
+        // 팔로우 알림 이벤트 발행
+        eventPublisher.publishEvent(new UserFollowedEvent(followee.getId(), follower.getName()));
 
         log.info("Follow created: follower={}, followee={}", followerId, followeeId);
         return followMapper.toDto(saved);
