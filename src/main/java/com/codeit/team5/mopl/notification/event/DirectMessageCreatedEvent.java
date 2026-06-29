@@ -1,8 +1,8 @@
 package com.codeit.team5.mopl.notification.event;
 
-import com.codeit.team5.mopl.notification.dto.NotificationPayload;
+import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 
 public record DirectMessageCreatedEvent(
-    NotificationPayload notificationPayload
+    DirectMessagePayload directMessagePayload
 ) {
 }
