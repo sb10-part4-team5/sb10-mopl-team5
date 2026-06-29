@@ -4,10 +4,8 @@ import com.codeit.team5.mopl.auth.controller.api.AuthApi;
 import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
-import com.codeit.team5.mopl.auth.exception.AuthException;
 import com.codeit.team5.mopl.auth.service.AuthService;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +19,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -64,28 +61,19 @@ public class AuthController implements AuthApi {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity refresh(
+    public ResponseEntity<JwtResponse> refresh(
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
     ) {
         log.info("RefreshToken regenerate request: POST /api/auth/refresh");
 
-        try {
-            AuthPayload authPayload = authService.refresh(refreshToken);
+        AuthPayload authPayload = authService.refresh(refreshToken);
 
-            ResponseCookie refreshTokenCookie =
-                    cookieManager.createCookie(authPayload.refreshToken());
+        ResponseCookie refreshTokenCookie =
+                cookieManager.createCookie(authPayload.refreshToken());
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                    .body(authPayload.jwtResponse());
-
-        } catch (AuthException e) {
-            ResponseCookie deleteCookie = cookieManager.deleteCookie();
-
-            return ResponseEntity.status(e.getStatus())
-                    .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
-                    .body(ErrorResponseSuggestion.from(e));
-        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .body(authPayload.jwtResponse());
     }
 
     @GetMapping("/csrf-token")

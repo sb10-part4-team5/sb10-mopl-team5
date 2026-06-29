@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.auth.jwt;
 
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -64,14 +65,14 @@ public class JwtTokenizer {
                     .parseClaimsJws(jws);
 
             if (!"REFRESH".equals(claimsJws.getBody().get("tokenType", String.class))) {
-                throw new JwtInvalidException("Invalid refresh token type");
+                throw new RefreshTokenInvalidException("Invalid refresh token type");
             }
 
             return claimsJws;
-        } catch (JwtInvalidException e) {
+        } catch (RefreshTokenInvalidException e) {
             throw e;
         } catch (JwtException | IllegalArgumentException e) {
-            throw new JwtInvalidException("Invalid refresh token");
+            throw new RefreshTokenInvalidException("Invalid refresh token");
         }
     }
 
@@ -80,7 +81,7 @@ public class JwtTokenizer {
             Jws<Claims> claimsJws = getRefreshClaims(refreshToken);
             return UUID.fromString(claimsJws.getBody().getSubject());
         } catch (IllegalArgumentException e) {
-            throw new JwtInvalidException("Invalid refresh token subject");
+            throw new RefreshTokenInvalidException("Invalid refresh token subject");
         }
     }
 

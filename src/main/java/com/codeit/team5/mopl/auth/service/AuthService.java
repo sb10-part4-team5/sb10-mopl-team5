@@ -2,7 +2,7 @@ package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
-import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
@@ -79,7 +79,7 @@ public class AuthService {
             UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
             refreshTokenStore.deleteByUserId(userId);
             log.info("Logout success: id={}", userId);
-        } catch (JwtInvalidException e) {
+        } catch (RefreshTokenInvalidException e) {
             log.info("Logout requested with invalid or expired refresh token");
         }
     }
@@ -87,7 +87,7 @@ public class AuthService {
     @Transactional
     public AuthPayload refresh(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            throw new JwtInvalidException("Refresh token is required");
+            throw new RefreshTokenInvalidException("Refresh token is required");
         }
 
         UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
@@ -96,7 +96,7 @@ public class AuthService {
                 .orElseThrow(() -> {
                     log.warn("User not found: userId={}", userId);
                     // refreshToken 안의 userId가 DB에 없다는 뜻이라서 인증 실패로 처리
-                    return new JwtInvalidException("Invalid refresh token");
+                    return new RefreshTokenInvalidException("Invalid refresh token");
                 });
 
         UserResponse userDto = userMapper.toDto(user);
@@ -113,7 +113,7 @@ public class AuthService {
                 newRefreshToken,
                 calculateExpiresAt()
         )) {
-            throw new JwtInvalidException("Invalid refresh token");
+            throw new RefreshTokenInvalidException("Invalid refresh token");
         }
 
         JwtResponse jwtResponse = authMapper.toJwtResponse(userDto, newAccessToken);
