@@ -11,6 +11,7 @@ import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
+import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
@@ -119,6 +120,16 @@ public class UserService {
                 roleBefore,
                 request.role()
         );
+    }
+
+    @Transactional
+    public void updateLock(UUID userId, UserLockedUpdateRequest request) {
+        User requestUser = getUser(userId);
+
+        requestUser.updateLocked(request.locked());
+        refreshTokenStore.deleteByUserId(userId);
+
+        log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
     }
 
     private BinaryContent storeProfileImage(UUID userId, FileRequest image) {

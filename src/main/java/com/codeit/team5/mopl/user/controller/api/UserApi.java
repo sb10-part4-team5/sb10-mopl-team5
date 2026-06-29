@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.user.controller.api;
 
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
@@ -108,5 +109,10 @@ public interface UserApi {
 
             @Parameter(description = "변경할 사용자 권한", required = true)
             @Valid @RequestBody UserRoleUpdateRequest request
+    );
+
+    ResponseEntity<Void> updateLockStatus(
+            @PathVariable UUID userId,
+            @Valid @RequestBody UserLockedUpdateRequest request
     );
 }

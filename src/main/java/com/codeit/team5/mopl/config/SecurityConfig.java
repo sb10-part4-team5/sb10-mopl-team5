@@ -62,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/csrf-token").permitAll()
                         .requestMatchers("/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/*/role").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/locked").hasRole("ADMIN")
 
                         // Swagger, actuator 필요하면 추가
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

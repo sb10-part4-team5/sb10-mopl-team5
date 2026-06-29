@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.user.controller;
 
 import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import com.codeit.team5.mopl.user.controller.api.UserApi;
+import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
@@ -73,6 +74,18 @@ public class UserController implements UserApi {
         log.info("User role update request: PATCH /api/users/{}/role", userId);
 
         userService.updateRole(userId, request);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PatchMapping(value = "/{userId}/locked")
+    public ResponseEntity<Void> updateLockStatus(
+            @PathVariable UUID userId,
+            @Valid @RequestBody UserLockedUpdateRequest request) {
+        log.info("User lock status update request: PATCH /api/users/{}/lock", userId);
+
+        userService.updateLock(userId, request);
 
         return ResponseEntity.noContent().build();
     }
