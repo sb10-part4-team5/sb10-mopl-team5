@@ -111,6 +111,13 @@ public class NotificationService {
         return notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
     }
 
+    // SSE 재연결 시 미수신 알림 조회
+    public List<NotificationPayload> findMissedNotifications(UUID receiverId, UUID lastEventId) {
+        return notificationRepository.findMissedNotifications(receiverId, lastEventId).stream()
+                .map(notificationMapper::toPayload)
+                .toList();
+    }
+
     // 단건 읽음 처리
     @Transactional
     public NotificationResponse markAsRead(UUID notificationId, UUID receiverId) {

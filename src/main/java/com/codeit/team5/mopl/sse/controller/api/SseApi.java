@@ -9,8 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.UUID;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Tag(name = "SSE", description = "Server-Sent Events API")
@@ -27,5 +26,5 @@ public interface SseApi {
     SseEmitter subscribe(
             @Parameter(hidden = true) MoplUserDetails userDetails,
             @Parameter(description = "마지막으로 수신한 이벤트 ID (재연결 시 사용)")
-            @RequestParam(required = false) UUID lastEventId);
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId);
 }
