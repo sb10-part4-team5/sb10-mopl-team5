@@ -43,6 +43,8 @@ public class FollowService {
 ### 2단계: 이벤트 객체 생성
 
 아래 이벤트 레퍼런스 표에서 해당하는 이벤트 record를 `new`로 생성합니다.
+단, `DirectMessageSentEvent`와 `FollowingUserWatchingEvent` 처럼 생성자에서 검증하는 타입만 예외가 발생합니다.
+나머지 이벤트는 null/blank 허용 여부를 구현과 함께 확인해 주세요.
 필수 파라미터를 빠뜨리면 예외가 발생합니다.
 
 ```java
