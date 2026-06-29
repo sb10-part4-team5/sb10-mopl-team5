@@ -32,6 +32,10 @@ management:
 mopl:
   storage:
     type: ${MOPL_STORAGE_TYPE:local}   # 기본값: 로컬
+  admin:
+    email: ${ADMIN_EMAIL:exampleEmail@example.com}
+    password: ${ADMIN_PASSWORD:wrongPassword1234}
+    name: ${ADMIN_NAME:admin}
 
 jwt:
   access-secret-key: ${JWT_ACCESS_SECRET_KEY}
