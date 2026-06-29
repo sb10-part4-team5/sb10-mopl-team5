@@ -114,7 +114,8 @@ class WebSocketSessionStoreTest {
                     }
                 });
             }
-            latch.await(5, TimeUnit.SECONDS);
+            boolean completed = latch.await(5, TimeUnit.SECONDS);
+            assertThat(completed).as("스레드 작업이 5초 안에 완료되지 않음").isTrue();
         } finally {
             executorService.shutdown();
         }
