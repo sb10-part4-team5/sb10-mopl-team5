@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 
 @Tag(name = "시청 세션 관리")
@@ -35,6 +36,6 @@ public interface WatchingSessionRestApi {
     })
     ResponseEntity<CursorResponse<WatchingSessionResponse>> findWatchingSessionsByContent(
             @Parameter(name = "contentId", description = "콘텐츠 ID", required = true) UUID contentId,
-            WatchingSessionCursorRequest request
+            @ParameterObject WatchingSessionCursorRequest request
     );
 }
