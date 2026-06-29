@@ -1,10 +1,12 @@
 package com.codeit.team5.mopl.notification.controller;
 
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.notification.controller.api.NotificationApi;
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -27,13 +29,16 @@ public class NotificationController implements NotificationApi {
     @Override
     @GetMapping
     public ResponseEntity<CursorResponseNotificationDto> getNotifications(
-        // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
-        @RequestParam UUID receiverId,
+
+        @AuthenticationPrincipal MoplUserDetails userDetails,
         @RequestParam(required = false) String cursor,
         @RequestParam(required = false) UUID idAfter,
         @RequestParam(defaultValue = "20") int limit,
         @RequestParam(defaultValue = "DESCENDING") String sortDirection,
         @RequestParam(defaultValue = "createdAt") String sortBy) {
+
+        UUID receiverId = userDetails.getUserDto().id();
+
         log.info("알림 목록 요청 : GET /api/notifications");
         log.debug("알림 목록 요청 : GET /api/notifications, receiverId={}", receiverId);
 
@@ -46,12 +51,13 @@ public class NotificationController implements NotificationApi {
     @Override
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<Void> readNotification(
-        // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
-        @RequestParam UUID receiverId,
+        @AuthenticationPrincipal MoplUserDetails userDetails,
         @PathVariable UUID notificationId) {
+        UUID receiverId = userDetails.getUserDto().id();
         log.info("Notification read request: DELETE /api/notifications/{}", notificationId);
         log.debug("Notification read request: DELETE /api/notifications/{}, receiverId={}",
             notificationId, receiverId);
+
 
         notificationService.markAsRead(notificationId, receiverId);
 

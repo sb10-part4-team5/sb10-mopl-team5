@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.notification.controller.api;
 
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,9 +32,7 @@ public interface NotificationApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<CursorResponseNotificationDto> getNotifications(
-            // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
-            @Parameter(description = "수신자 ID (임시, 추후 인증 사용자에서 추출)", required = true)
-            @RequestParam UUID receiverId,
+            @Parameter(hidden = true) MoplUserDetails userDetails,
             @Parameter(description = "다음 페이지 커서(createdAt)")
             @RequestParam(required = false) String cursor,
             @Parameter(description = "보조 커서(직전 페이지 마지막 ID)")
@@ -57,9 +56,7 @@ public interface NotificationApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<Void> readNotification(
-            // TODO: 인증 적용 후 @AuthenticationPrincipal MoplUserDetails 에서 receiverId 추출로 교체
-            @Parameter(description = "수신자 ID (임시, 추후 인증 사용자에서 추출)", required = true)
-            @RequestParam UUID receiverId,
+            @Parameter(hidden = true) MoplUserDetails userDetails,
             @Parameter(description = "알림 ID", required = true)
             @PathVariable UUID notificationId);
 }
