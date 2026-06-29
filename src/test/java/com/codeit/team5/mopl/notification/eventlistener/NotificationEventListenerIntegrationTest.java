@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.UserFollowedEvent;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

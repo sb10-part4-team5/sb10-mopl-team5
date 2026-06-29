@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.notification.event;
+package com.codeit.team5.mopl.playlist.entity.event;
 
 import java.util.UUID;
 

@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.notification.event;
+package com.codeit.team5.mopl.follow.event;
 
 import java.util.UUID;
 

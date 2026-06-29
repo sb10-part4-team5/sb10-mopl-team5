@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.notification.event;
+package com.codeit.team5.mopl.watcher.event;
 
 import com.codeit.team5.mopl.notification.exception.InvalidContentException;
 import com.codeit.team5.mopl.notification.exception.InvalidNicknameException;
