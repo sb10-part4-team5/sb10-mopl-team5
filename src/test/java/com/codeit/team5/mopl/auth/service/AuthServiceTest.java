@@ -12,7 +12,7 @@ import static org.mockito.Mockito.when;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
-import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
@@ -213,7 +213,7 @@ class AuthServiceTest {
         // Given
         String refreshToken = "invalid-refresh-token";
         when(jwtTokenizer.getRefreshUserId(refreshToken))
-                .thenThrow(new JwtInvalidException("Invalid refresh token"));
+                .thenThrow(new RefreshTokenInvalidException("Invalid refresh token"));
 
         // When
         authService.logout(refreshToken);
@@ -326,7 +326,8 @@ class AuthServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> authService.refresh(refreshToken))
-                .isInstanceOf(JwtInvalidException.class);
+                .isInstanceOf(RefreshTokenInvalidException.class)
+                .hasMessage("Invalid refresh token");
 
         verify(refreshTokenStore).rotateIfValid(
                 eq(userId),
