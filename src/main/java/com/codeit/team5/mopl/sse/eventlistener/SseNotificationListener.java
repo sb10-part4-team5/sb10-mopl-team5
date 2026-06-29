@@ -1,6 +1,7 @@
-package com.codeit.team5.mopl.notification.eventlistener;
+package com.codeit.team5.mopl.sse.eventlistener;
 
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
+import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
 import java.util.UUID;
@@ -35,12 +36,38 @@ public class SseNotificationListener {
         try {
             emitter.send(SseEmitter.event()
                     .id(payload.notificationId().toString())
-                    .name("notification")
+                    .name("notifications")
                     .data(payload));
             log.debug("SSE notification sent: receiverId={}, notificationId={}",
                     receiverId, payload.notificationId());
         } catch (Exception e) {
             log.warn("SSE send failed: receiverId={}", receiverId);
+            emitterStore.remove(receiverId);
+        }
+    }
+
+    // DM 알림이 생성되면 SSE "direct-messages" 이벤트로 전송
+    @EventListener
+    public void onDirectMessageCreated(DirectMessageCreatedEvent event) {
+        NotificationPayload payload = event.notificationPayload();
+        UUID receiverId = payload.receiverId();
+
+        SseEmitter emitter = emitterStore.get(receiverId);
+        if (emitter == null) {
+            log.debug("SSE emitter not found for receiverId={}, skipping DM", receiverId);
+            return;
+        }
+
+        try {
+            // TODO: DM 도메인 구현 후 data를 DirectMessageDto로 교체 (현재는 NotificationPayload로 임시 전송)
+            emitter.send(SseEmitter.event()
+                    .id(payload.notificationId().toString())
+                    .name("direct-messages")
+                    .data(payload));
+            log.debug("SSE direct-message sent: receiverId={}, notificationId={}",
+                    receiverId, payload.notificationId());
+        } catch (Exception e) {
+            log.warn("SSE DM send failed: receiverId={}", receiverId);
             emitterStore.remove(receiverId);
         }
     }
