@@ -69,7 +69,7 @@ public class ContentService {
 
         attachTags(content, request.tags());
 
-        ContentStats stats = contentStatsRepository.save(ContentStats.create());
+        ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
         content.attachStats(stats);
 
         return contentMapper.toDto(content);
