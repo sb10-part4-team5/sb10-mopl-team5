@@ -12,13 +12,6 @@ public class ValidCursorValidator implements ConstraintValidator<ValidCursor, Co
         String cursor = request.cursor();
         String idAfter = request.idAfter();
 
-        if ((cursor == null) ^ (idAfter == null)) {
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("cursor와 idAfter가 같이 제공되지 않습니다.")
-                    .addConstraintViolation();
-            return false;
-        }
-
         if (cursor == null) return true;
 
         try {

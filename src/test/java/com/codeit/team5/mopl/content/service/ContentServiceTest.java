@@ -464,7 +464,7 @@ class ContentServiceTest {
                 Content.createByAdmin(ContentType.MOVIE, "영화2", null)
         );
         CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
-                List.of(), null, null, false, 2L, "createdAt", "DESC"
+                List.of(), null, null, false, 2L, "createdAt", "DESCENDING"
         );
 
         when(contentRepository.findContents(request, 21)).thenReturn(contents);
@@ -498,7 +498,7 @@ class ContentServiceTest {
         }
         List<Content> page = fetched.subList(0, limit);
         CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
-                List.of(), "cursor", "idAfter", true, 5L, "createdAt", "DESC"
+                List.of(), "cursor", "idAfter", true, 5L, "createdAt", "DESCENDING"
         );
 
         when(contentRepository.findContents(request, limit + 1)).thenReturn(fetched);
@@ -524,7 +524,7 @@ class ContentServiceTest {
                 20, Sort.Direction.DESC, ContentSortByType.CREATED_AT
         );
         CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
-                List.of(), null, null, false, 0L, "createdAt", "DESC"
+                List.of(), null, null, false, 0L, "createdAt", "DESCENDING"
         );
 
         when(contentRepository.findContents(request, 21)).thenReturn(List.of());
