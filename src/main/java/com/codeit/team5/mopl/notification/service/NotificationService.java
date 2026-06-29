@@ -10,7 +10,7 @@ import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
-import com.codeit.team5.mopl.notification.exception.InvalidLastEventIdException;
+import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;

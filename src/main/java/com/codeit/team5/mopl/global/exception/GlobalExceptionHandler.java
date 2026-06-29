@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -89,4 +90,15 @@ public class GlobalExceptionHandler {
                 .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
                 .body(ErrorResponseSuggestion.from(e));
     }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponseSuggestion> handleMissingServletRequestParameterException(
+        MissingServletRequestParameterException e
+    ){
+        log.warn(e.toString());
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponseSuggestion.from(e));
+    }
+
 }

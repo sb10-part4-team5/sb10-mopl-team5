@@ -2,12 +2,12 @@ package com.codeit.team5.mopl.follow.service;
 
 import com.codeit.team5.mopl.follow.dto.response.FollowResponse;
 import com.codeit.team5.mopl.follow.entity.Follow;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.follow.exception.DuplicateFollowException;
 import com.codeit.team5.mopl.follow.exception.FollowNotFoundException;
 import com.codeit.team5.mopl.follow.exception.SelfFollowException;
 import com.codeit.team5.mopl.follow.mapper.FollowMapper;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
-import com.codeit.team5.mopl.notification.event.UserFollowedEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -40,7 +40,7 @@ public class FollowService {
         Follow saved = followRepository.save(Follow.create(follower, followee));
 
         // 팔로우 알림 이벤트 발행
-        eventPublisher.publishEvent(new UserFollowedEvent(followee.getId(), follower.getName()));
+        eventPublisher.publishEvent(new UserFollowedEvent(followeeId, follower.getName()));
 
         log.info("Follow created: follower={}, followee={}", followerId, followeeId);
         return followMapper.toDto(saved);

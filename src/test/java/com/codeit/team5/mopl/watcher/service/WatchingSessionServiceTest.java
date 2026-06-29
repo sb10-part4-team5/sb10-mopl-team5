@@ -13,9 +13,7 @@ import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
-import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.notification.event.FollowingUserWatchingEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -23,10 +21,10 @@ import com.codeit.team5.mopl.watcher.constant.SortByType;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -59,9 +57,6 @@ class WatchingSessionServiceTest {
     private ContentRepository contentRepository;
 
     @Mock
-    private FollowRepository followRepository;
-
-    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
@@ -79,14 +74,10 @@ class WatchingSessionServiceTest {
         Content content = createDummyContent(contentId);
         WatchingSession session = createDummySession(user, content);
 
-        UUID followerId = UUID.randomUUID();
-
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(
                 Optional.of(content));
         when(repository.save(any(WatchingSession.class))).thenReturn(session);
-        when(followRepository.findFollowerIdsByFolloweeId(user.getId())).thenReturn(
-                List.of(followerId));
         when(mapper.toDto(any(WatchingSession.class))).thenReturn(
                 WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
 
@@ -96,7 +87,7 @@ class WatchingSessionServiceTest {
         // then
         assertThat(result).isNotNull();
         verify(repository).save(any(WatchingSession.class));
-        verify(eventPublisher).publishEvent(any(FollowingUserWatchingEvent.class));
+        verify(eventPublisher).publishEvent(any(WatchingSessionCreatedEvent.class));
     }
 
     @Test

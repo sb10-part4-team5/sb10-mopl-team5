@@ -223,7 +223,7 @@ public void doSomething() {
 
 ### 4. import 경로
 
-모든 이벤트는 `com.codeit.team5.mopl.notification.event` 패키지에 있습니다.
+이벤트마다 선언 위치가 다르므로 실제 패키지를 확인해 import하세요.
 
 ```java
 import com.codeit.team5.mopl.notification.event.UserFollowedEvent;

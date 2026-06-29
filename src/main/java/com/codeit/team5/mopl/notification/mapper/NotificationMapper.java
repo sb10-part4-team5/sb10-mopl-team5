@@ -15,6 +15,7 @@ public interface NotificationMapper {
 
     List<NotificationResponse> toResponseList(List<Notification> notifications);
 
+    @Mapping(source = "id", target = "notificationId")
     NotificationPayload toPayload(Notification notification);
 
     @Mapping(source = "id", target = "id")

@@ -1,8 +1,6 @@
 package com.codeit.team5.mopl.watcher.service;
 
-import com.codeit.team5.mopl.follow.repository.FollowRepository;
-import com.codeit.team5.mopl.notification.event.FollowingUserWatchingEvent;
-import java.util.List;
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,7 +39,6 @@ public class WatchingSessionService {
     private final WatchingSessionMapper mapper;
     private final UserRepository userRepository;
     private final ContentRepository contentRepository;
-    private final FollowRepository followRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     private static final String SECONDARY_SORT_FIELD = "id";
@@ -55,11 +52,8 @@ public class WatchingSessionService {
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
 
-        List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(user.getId());
-        for (UUID followerId : followerIds) {
-            eventPublisher.publishEvent(
-                    new FollowingUserWatchingEvent(followerId, user.getName(), content.getTitle()));
-        }
+        eventPublisher.publishEvent(
+                new WatchingSessionCreatedEvent(user.getId(), user.getName(), content.getTitle()));
 
         return mapper.toDto(session);
     }

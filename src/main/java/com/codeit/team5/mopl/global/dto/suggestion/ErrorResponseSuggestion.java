@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 public record ErrorResponseSuggestion(String exceptionType, String message, Object details) {
 
@@ -44,5 +45,13 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
         }
         return new ErrorResponseSuggestion("INTERNAL_SERVER_ERROR",
                 "서버 내부 데이터 처리 중 오류가 발생했습니다.", null);
+    }
+
+    public static ErrorResponseSuggestion from(MissingServletRequestParameterException ex) {
+        Map<String, List<String>> details = Map.of(
+                ex.getParameterName(),
+                List.of("필수 파라미터 '" + ex.getParameterName() + "'이(가) 누락되었습니다.")
+        );
+        return new ErrorResponseSuggestion("INVALID_INPUT", "잘못된 입력값입니다.", details);
     }
 }
