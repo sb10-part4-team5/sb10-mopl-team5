@@ -65,7 +65,7 @@ public class NotificationService {
         try{
             cursorInstant = (cursor == null || cursor.isBlank()) ? null : Instant.parse(cursor);
         } catch (DateTimeParseException e){
-            throw new InvalidCursorException(cursor);
+            throw new InvalidCursorException();
         }
 
         // 다음 페이지 존재 여부를 알기 위해 limit보다 1개 더 조회

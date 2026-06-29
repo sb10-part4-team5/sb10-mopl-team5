@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class InvalidCursorException extends ContentException {
 
-    public InvalidCursorException(String cursor) {
+    public InvalidCursorException() {
         super(HttpStatus.BAD_REQUEST, "커서 값이 유효하지 않습니다.");
     }
 }

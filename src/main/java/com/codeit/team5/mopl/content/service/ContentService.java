@@ -1,20 +1,20 @@
 package com.codeit.team5.mopl.content.service;
 
-import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
-import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
-import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
+import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
-import com.codeit.team5.mopl.content.entity.ContentSortByType;
+import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.CursorIdAfterNotTogetherException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
@@ -23,12 +23,10 @@ import com.codeit.team5.mopl.content.exception.TooManyTagsException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
-import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
-import com.codeit.team5.mopl.watcher.dto.WatchingSessionCursorRequest;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -40,9 +38,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.ScrollPosition;
-import org.springframework.data.domain.ScrollPosition.Direction;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -199,7 +194,7 @@ public class ContentService {
         String cursor = request.cursor();
         String idAfter = request.idAfter();
 
-        if ((cursor == null) != (idAfter == null)) {
+        if ((cursor == null) ^ (idAfter == null)) {
             throw new CursorIdAfterNotTogetherException();
         }
 
@@ -208,7 +203,7 @@ public class ContentService {
         try {
             UUID.fromString(idAfter);
         } catch (IllegalArgumentException e) {
-            throw new InvalidCursorException(idAfter);
+            throw new InvalidCursorException();
         }
 
         try {
@@ -217,11 +212,11 @@ public class ContentService {
                 case WATCHER_COUNT -> Long.parseLong(cursor);
                 case RATE -> {
                     double val = Double.parseDouble(cursor);
-                    if (!Double.isFinite(val)) throw new InvalidCursorException(cursor);
+                    if (!Double.isFinite(val)) throw new InvalidCursorException();
                 }
             }
         } catch (Exception e) {
-            throw new InvalidCursorException(cursor);
+            throw new InvalidCursorException();
         }
     }
 }
