@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.security.details;
 
+import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
@@ -18,9 +19,9 @@ public class MoplUserDetailsService implements UserDetailsService {
     private final UserMapper userMapper;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) throws InvalidCredentialsException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException(email));
+                .orElseThrow(() -> new InvalidCredentialsException(email));
 
         return new MoplUserDetails(userMapper.toDto(user), user.getPassword());
     }

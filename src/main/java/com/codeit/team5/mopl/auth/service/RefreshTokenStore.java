@@ -9,6 +9,8 @@ public interface RefreshTokenStore {
 
     boolean existsValidToken(UUID userId, String rawToken);
 
+    boolean rotateIfValid(UUID userId, String oldToken, String newToken, Instant expiresAt);
+
     void deleteByUserId(UUID userId);
 
     void deleteExpiredTokens();

@@ -1,8 +1,10 @@
 package com.codeit.team5.mopl.auth.jwt;
 
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
@@ -10,6 +12,7 @@ import java.security.Key;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.UUID;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -55,15 +58,31 @@ public class JwtTokenizer {
     }
 
     public Jws<Claims> getRefreshClaims(String jws) {
-        Jws<Claims> claimsJws = Jwts.parserBuilder()
-                .setSigningKey(getRefreshKey())
-                .build()
-                .parseClaimsJws(jws);
-        if (!"REFRESH".equals(claimsJws.getBody().get("tokenType", String.class))) {
-            throw new JwtInvalidException("Invalid refresh token type");
-        }
+        try {
+            Jws<Claims> claimsJws = Jwts.parserBuilder()
+                    .setSigningKey(getRefreshKey())
+                    .build()
+                    .parseClaimsJws(jws);
 
-        return claimsJws;
+            if (!"REFRESH".equals(claimsJws.getBody().get("tokenType", String.class))) {
+                throw new RefreshTokenInvalidException("Invalid refresh token type");
+            }
+
+            return claimsJws;
+        } catch (RefreshTokenInvalidException e) {
+            throw e;
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new RefreshTokenInvalidException("Invalid refresh token");
+        }
+    }
+
+    public UUID getRefreshUserId(String refreshToken) {
+        try {
+            Jws<Claims> claimsJws = getRefreshClaims(refreshToken);
+            return UUID.fromString(claimsJws.getBody().getSubject());
+        } catch (IllegalArgumentException e) {
+            throw new RefreshTokenInvalidException("Invalid refresh token subject");
+        }
     }
 
     public Authentication getAuthentication(String accessToken) {

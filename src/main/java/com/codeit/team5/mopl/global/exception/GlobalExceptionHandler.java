@@ -1,11 +1,19 @@
 package com.codeit.team5.mopl.global.exception;
 
+import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.exception.AuthException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenExpiredException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenNotFoundException;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.global.exception.util.ViolationExceptionUtils;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,7 +21,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final RefreshTokenCookieManager refreshTokenCookieManager;
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponseSuggestion> handleBusinessException(BusinessException e) {
@@ -64,5 +75,18 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponseSuggestion("INTERNAL_SERVER_ERROR",
                         "서버 내부 에러가 발생했습니다.", null));
+    }
+
+    @ExceptionHandler({
+            RefreshTokenInvalidException.class,
+            RefreshTokenNotFoundException.class,
+            RefreshTokenExpiredException.class
+    })
+    public ResponseEntity<ErrorResponseSuggestion> handleRefreshTokenException(AuthException e) {
+        ResponseCookie deleteCookie = refreshTokenCookieManager.deleteCookie();
+
+        return ResponseEntity.status(e.getStatus())
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(ErrorResponseSuggestion.from(e));
     }
 }

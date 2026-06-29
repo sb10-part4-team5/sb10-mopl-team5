@@ -2,6 +2,9 @@ package com.codeit.team5.mopl.auth.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -121,6 +124,115 @@ class DbRefreshTokenStoreTest {
     }
 
     @Test
+    @DisplayName("유효한 기존 리프레시 토큰이면 새 리프레시 토큰으로 교체하고 true를 반환한다")
+    void rotateIfValid_validToken_replacesTokenAndReturnsTrue() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = createUser(userId);
+        String oldToken = "old-refresh-token";
+        String newToken = "new-refresh-token";
+        String oldTokenHash = "old-hashed-refresh-token";
+        String newTokenHash = "new-hashed-refresh-token";
+        Instant expiresAt = Instant.parse("2026-06-24T12:00:00Z");
+        RefreshToken existingToken = RefreshToken.create(
+                user,
+                oldTokenHash,
+                Instant.parse("2026-06-24T11:00:00Z")
+        );
+
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(refreshTokenHasher.hash(oldToken)).thenReturn(oldTokenHash);
+        when(refreshTokenRepository.findByUser_IdAndTokenHashAndExpiresAtAfter(
+                eq(userId),
+                eq(oldTokenHash),
+                any(Instant.class)
+        )).thenReturn(Optional.of(existingToken));
+        when(refreshTokenHasher.hash(newToken)).thenReturn(newTokenHash);
+
+        // When
+        boolean result = refreshTokenStore.rotateIfValid(userId, oldToken, newToken, expiresAt);
+
+        // Then
+        assertThat(result).isTrue();
+
+        ArgumentCaptor<RefreshToken> refreshTokenCaptor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(userRepository).findByIdForUpdate(userId);
+        verify(refreshTokenHasher).hash(oldToken);
+        verify(refreshTokenRepository).findByUser_IdAndTokenHashAndExpiresAtAfter(
+                eq(userId),
+                eq(oldTokenHash),
+                any(Instant.class)
+        );
+        verify(refreshTokenHasher).hash(newToken);
+        verify(refreshTokenRepository).deleteByUser_Id(userId);
+        verify(refreshTokenRepository).save(refreshTokenCaptor.capture());
+
+        RefreshToken savedToken = refreshTokenCaptor.getValue();
+        assertThat(savedToken.getUser()).isSameAs(user);
+        assertThat(savedToken.getTokenHash()).isEqualTo(newTokenHash);
+        assertThat(savedToken.getExpiresAt()).isEqualTo(expiresAt);
+    }
+
+    @Test
+    @DisplayName("사용자가 없으면 리프레시 토큰 회전은 false를 반환한다")
+    void rotateIfValid_missingUser_returnsFalse() {
+        // Given
+        UUID userId = UUID.randomUUID();
+
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.empty());
+
+        // When
+        boolean result = refreshTokenStore.rotateIfValid(
+                userId,
+                "old-refresh-token",
+                "new-refresh-token",
+                Instant.parse("2026-06-24T12:00:00Z")
+        );
+
+        // Then
+        assertThat(result).isFalse();
+        verify(userRepository).findByIdForUpdate(userId);
+        verify(refreshTokenHasher, never()).hash(any());
+        verify(refreshTokenRepository, never()).deleteByUser_Id(any());
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("유효한 기존 리프레시 토큰이 없으면 새 토큰을 저장하지 않고 false를 반환한다")
+    void rotateIfValid_missingToken_returnsFalse() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = createUser(userId);
+        String oldToken = "old-refresh-token";
+        String newToken = "new-refresh-token";
+        String oldTokenHash = "old-hashed-refresh-token";
+
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(refreshTokenHasher.hash(oldToken)).thenReturn(oldTokenHash);
+        when(refreshTokenRepository.findByUser_IdAndTokenHashAndExpiresAtAfter(
+                eq(userId),
+                eq(oldTokenHash),
+                any(Instant.class)
+        )).thenReturn(Optional.empty());
+
+        // When
+        boolean result = refreshTokenStore.rotateIfValid(
+                userId,
+                oldToken,
+                newToken,
+                Instant.parse("2026-06-24T12:00:00Z")
+        );
+
+        // Then
+        assertThat(result).isFalse();
+        verify(userRepository).findByIdForUpdate(userId);
+        verify(refreshTokenHasher).hash(oldToken);
+        verify(refreshTokenHasher, never()).hash(newToken);
+        verify(refreshTokenRepository, never()).deleteByUser_Id(any());
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("사용자 식별자로 리프레시 토큰을 삭제한다")
     void deleteByUserId_success() {
         // Given
@@ -162,7 +274,6 @@ class DbRefreshTokenStoreTest {
     void save_nullExpiresAt_throwsException() {
         // Given
         UUID userId = UUID.randomUUID();
-        when(refreshTokenHasher.hash("raw-token")).thenReturn("hashed-token");
 
         // When & Then
         assertThatNullPointerException()

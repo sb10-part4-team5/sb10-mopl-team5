@@ -56,6 +56,10 @@ mopl:
     s3:
       bucket-name: ${S3_BUCKET:mopl-bucket-433041915727}
       region: ${AWS_REGION:ap-northeast-2}
+  auth:
+    cookie:
+      secure: true
+      same-site: None
 
 logging:
   level:
