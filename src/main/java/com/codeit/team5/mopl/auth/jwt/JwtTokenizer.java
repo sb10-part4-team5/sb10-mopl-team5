@@ -10,6 +10,7 @@ import java.security.Key;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.UUID;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -64,6 +65,15 @@ public class JwtTokenizer {
         }
 
         return claimsJws;
+    }
+
+    public UUID getRefreshUserId(String refreshToken) {
+        try {
+            Jws<Claims> claimsJws = getRefreshClaims(refreshToken);
+            return UUID.fromString(claimsJws.getBody().getSubject());
+        } catch (IllegalArgumentException e) {
+            throw new JwtInvalidException("Invalid refresh token subject");
+        }
     }
 
     public Authentication getAuthentication(String accessToken) {

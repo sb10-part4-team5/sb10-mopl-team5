@@ -7,9 +7,16 @@ import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.service.model.AuthPayload;
+import com.codeit.team5.mopl.user.dto.response.UserResponse;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.user.mapper.UserMapper;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,9 +39,11 @@ public class AuthService {
 
     private final JwtTokenizer jwtTokenizer;
     private final JwtProperties jwtProperties;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     @Transactional
-    public JwtResponse login(SignInRequest request) {
+    public AuthPayload login(SignInRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         normalizeEmail(request.username()),
@@ -50,13 +59,13 @@ public class AuthService {
                 principals.getUserDto().role()
         );
         String refreshToken = jwtTokenizer.generateRefreshToken(principals.getUserDto().id().toString());
-        Instant refreshExpiresAt = Instant.now()
-                .plus(jwtProperties.refreshTokenExpirationMinutes(), ChronoUnit.MINUTES);
-        refreshTokenStore.save(principals.getUserDto().id(), refreshToken, refreshExpiresAt);
+        refreshTokenStore.save(principals.getUserDto().id(), refreshToken, calculateExpiresAt());
 
         log.info("Login success: id={}", principals.getUserDto().id());
 
-        return authMapper.toDto(principals.getUserDto(), accessToken);
+        JwtResponse response = authMapper.toJwtResponse(principals.getUserDto(), accessToken);
+
+        return authMapper.toAuthPayload(response, refreshToken);
     }
 
     @Transactional
@@ -82,7 +91,47 @@ public class AuthService {
         log.info("Logout success: id={}", userId);
     }
 
+    @Transactional
+    public AuthPayload refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new JwtInvalidException("Refresh token is required");
+        }
+
+        UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
+
+        if (!refreshTokenStore.existsValidToken(userId, refreshToken)) {
+            throw new JwtInvalidException("Invalid refresh token");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User not found: userId={}", userId);
+                    // refreshToken 안의 userId가 DB에 없다는 뜻이라서 인증 실패로 처리
+                    return new JwtInvalidException("Invalid refresh token");
+                });
+
+        UserResponse userDto = userMapper.toDto(user);
+
+        String newAccessToken = jwtTokenizer.generateAccessToken(
+                user.getId().toString(),
+                user.getEmail(),
+                user.getRole().name()
+        );
+        String newRefreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
+        // save 로직 내부가 userId로 기존 refreshToken 삭제 후 새로운 refreshToken을 저장하기 때문에 rotation으로 판단
+        refreshTokenStore.save(user.getId(), newRefreshToken, calculateExpiresAt());
+
+        JwtResponse jwtResponse = authMapper.toJwtResponse(userDto, newAccessToken);
+
+        return authMapper.toAuthPayload(jwtResponse, newRefreshToken);
+    }
+
     private String normalizeEmail(String email) {
         return email.toLowerCase(Locale.ROOT);
+    }
+
+    private Instant calculateExpiresAt() {
+        return Instant.now()
+                .plus(jwtProperties.refreshTokenExpirationMinutes(), ChronoUnit.MINUTES);
     }
 }

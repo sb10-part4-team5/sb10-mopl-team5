@@ -41,4 +41,8 @@ public class RefreshToken extends BaseEntity {
         refreshToken.expiresAt = Objects.requireNonNull(expiresAt, "expiresAt must not be null");
         return refreshToken;
     }
+
+    public boolean isExpired() {
+        return expiresAt.isBefore(Instant.now());
+    }
 }
