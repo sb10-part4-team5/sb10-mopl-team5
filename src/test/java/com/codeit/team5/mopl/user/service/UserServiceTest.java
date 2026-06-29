@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
@@ -18,12 +19,17 @@ import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
-import com.codeit.team5.mopl.global.exception.ErrorCode;
+import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
+import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
+import com.codeit.team5.mopl.user.exception.SameLockStatusException;
+import com.codeit.team5.mopl.user.exception.SameRoleAssignmentException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -40,6 +46,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -64,6 +71,9 @@ class UserServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private RefreshTokenStore refreshTokenStore;
 
     @InjectMocks
     private UserService userService;
@@ -239,5 +249,129 @@ class UserServiceTest {
 
         verify(userRepository).findWithProfileImageById(userId);
         verifyNoInteractions(userMapper, binaryContentRepository, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("사용자 권한 변경 성공")
+    void updateRole_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        ReflectionTestUtils.setField(user, "id", userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        // When
+        userService.updateRole(userId, new UserRoleUpdateRequest(UserRole.ADMIN));
+
+        // Then
+        assertThat(user.getRole()).isEqualTo(UserRole.ADMIN);
+        verify(userRepository).findById(userId);
+        verify(refreshTokenStore).deleteByUserId(userId);
+
+        ArgumentCaptor<RoleChangedEvent> eventCaptor = ArgumentCaptor.forClass(RoleChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        RoleChangedEvent event = eventCaptor.getValue();
+        assertThat(event.receiverId()).isEqualTo(userId);
+        assertThat(event.roleBefore()).isEqualTo("USER");
+        assertThat(event.roleAfter()).isEqualTo("ADMIN");
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자 권한 변경 실패")
+    void updateRole_notFound_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateRole(userId, new UserRoleUpdateRequest(UserRole.ADMIN)))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(userRepository).findById(userId);
+        verifyNoInteractions(refreshTokenStore, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("동일한 권한으로 변경하면 실패하고 후속 처리를 하지 않는다")
+    void updateRole_sameRole_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateRole(userId, new UserRoleUpdateRequest(UserRole.USER)))
+                .isInstanceOf(SameRoleAssignmentException.class);
+
+        assertThat(user.getRole()).isEqualTo(UserRole.USER);
+        verify(userRepository).findById(userId);
+        verifyNoInteractions(refreshTokenStore, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("사용자 계정 잠금 성공")
+    void updateLock_lockedTrue_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        // When
+        userService.updateLock(userId, new UserLockedUpdateRequest(true));
+
+        // Then
+        assertThat(user.isLocked()).isTrue();
+        verify(userRepository).findById(userId);
+        verify(refreshTokenStore).deleteByUserId(userId);
+    }
+
+    @Test
+    @DisplayName("사용자 계정 잠금 해제 성공")
+    void updateLock_lockedFalse_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        user.updateLocked(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        // When
+        userService.updateLock(userId, new UserLockedUpdateRequest(false));
+
+        // Then
+        assertThat(user.isLocked()).isFalse();
+        verify(userRepository).findById(userId);
+        verify(refreshTokenStore).deleteByUserId(userId);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자 계정 잠금 상태 변경 실패")
+    void updateLock_notFound_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateLock(userId, new UserLockedUpdateRequest(true)))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(userRepository).findById(userId);
+        verifyNoInteractions(refreshTokenStore);
+    }
+
+    @Test
+    @DisplayName("동일한 잠금 상태로 변경하면 실패하고 후속 처리를 하지 않는다")
+    void updateLock_sameStatus_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateLock(userId, new UserLockedUpdateRequest(false)))
+                .isInstanceOf(SameLockStatusException.class);
+
+        assertThat(user.isLocked()).isFalse();
+        verify(userRepository).findById(userId);
+        verifyNoInteractions(refreshTokenStore);
     }
 }
