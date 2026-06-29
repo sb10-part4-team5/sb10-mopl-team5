@@ -73,17 +73,33 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     // 단건 읽음 처리 시 소유권 검증 조회
     Optional<Notification> findByIdAndReceiverId(UUID id, UUID receiverId);
 
-    // 특정 알림 이후에 생성된 알림 목록 조회 (SSE 재연결 시 미수신 알림 전송용)
+    // 특정 알림 이후에 생성된 일반 알림 조회 (DM 제외, SSE 재연결 시 미수신 알림 전송용)
     @Query("""
         select n from Notification n, Notification ref
         where ref.id = :lastEventId
           and ref.receiverId = :receiverId
           and n.receiverId = :receiverId
+          and n.type <> com.codeit.team5.mopl.notification.entity.NotificationType.DIRECT_MESSAGE
           and (n.createdAt > ref.createdAt
             or (n.createdAt = ref.createdAt and n.id > ref.id))
         order by n.createdAt asc, n.id asc
         """)
     List<Notification> findMissedNotifications(
+            @Param("receiverId") UUID receiverId,
+            @Param("lastEventId") UUID lastEventId);
+
+    // 특정 알림 이후에 생성된 DM 알림 조회 (SSE 재연결 시 미수신 DM 전송용)
+    @Query("""
+        select n from Notification n, Notification ref
+        where ref.id = :lastEventId
+          and ref.receiverId = :receiverId
+          and n.receiverId = :receiverId
+          and n.type = com.codeit.team5.mopl.notification.entity.NotificationType.DIRECT_MESSAGE
+          and (n.createdAt > ref.createdAt
+            or (n.createdAt = ref.createdAt and n.id > ref.id))
+        order by n.createdAt asc, n.id asc
+        """)
+    List<Notification> findMissedDirectMessages(
             @Param("receiverId") UUID receiverId,
             @Param("lastEventId") UUID lastEventId);
 }

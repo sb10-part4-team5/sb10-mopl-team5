@@ -1,8 +1,8 @@
 package com.codeit.team5.mopl.sse.controller;
 
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
-import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.exception.InvalidLastEventIdException;
 import com.codeit.team5.mopl.notification.exception.SseMissedEventSendFailException;
 import com.codeit.team5.mopl.notification.service.NotificationService;
@@ -83,10 +83,9 @@ public class SseController implements SseApi {
         return emitter;
     }
 
-    // 미수신된 알림을 다시 전송하는 private 메소드
+    // 미수신된 이벤트를 다시 전송하는 private 메소드
     private void sendMissedNotifications(SseEmitter emitter, UUID userId, String lastEventId) {
         UUID lastNotificationId;
-        // 받은 String 형식의 Last-Event-ID를 UUID로 파싱
         try {
             lastNotificationId = UUID.fromString(lastEventId);
         } catch (IllegalArgumentException e) {
@@ -94,24 +93,40 @@ public class SseController implements SseApi {
             throw new InvalidLastEventIdException();
         }
 
-        // 연결이 끊긴 동안 왔었던 알림들을 추출
-        List<NotificationPayload> missed = notificationService.findMissedNotifications(userId, lastNotificationId);
-        for (NotificationPayload payload : missed) {
+        // 미수신 일반 알림 전송
+        List<NotificationPayload> missedNotifications =
+                notificationService.findMissedNotifications(userId, lastNotificationId);
+        for (NotificationPayload payload : missedNotifications) {
             try {
-                // 이벤트가 DM이냐 아니냐에 따라 direct-messages / notifications 으로 이벤트 작명
-                String eventName = payload.type() == NotificationType.DIRECT_MESSAGE
-                        ? "direct-messages" : "notifications";
                 emitter.send(SseEmitter.event()
-                        .id(payload.notificationId().toString()) // payload의 이벤트 id
-                        .name(eventName) // event 이름
-                        // TODO : 추후 DM 도메인 작성되면 direct-messages 이벤트는 payload가 DirectMessageDto를 담아야 함.
-                        .data(payload)); // payload
+                        .id(payload.notificationId().toString())
+                        .name("notifications")
+                        .data(payload));
             } catch (Exception e) {
                 log.warn("SSE missed notification send failed: userId={}", userId);
                 emitterStore.remove(userId, emitter);
                 throw new SseMissedEventSendFailException();
             }
         }
-        log.debug("SSE missed notifications sent: userId={}, count={}", userId, missed.size());
+
+        // 미수신 DM 전송
+        // TODO: DM 도메인 구현 후 DirectMessageDto로 교체
+        List<DirectMessagePayload> missedDms =
+                notificationService.findMissedDirectMessages(userId, lastNotificationId);
+        for (DirectMessagePayload payload : missedDms) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .id(payload.id().toString())
+                        .name("direct-messages")
+                        .data(payload));
+            } catch (Exception e) {
+                log.warn("SSE missed DM send failed: userId={}", userId);
+                emitterStore.remove(userId, emitter);
+                throw new SseMissedEventSendFailException();
+            }
+        }
+
+        log.debug("SSE missed events sent: userId={}, notifications={}, dms={}",
+                userId, missedNotifications.size(), missedDms.size());
     }
 }

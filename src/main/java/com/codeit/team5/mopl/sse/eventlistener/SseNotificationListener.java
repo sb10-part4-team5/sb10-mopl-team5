@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.sse.eventlistener;
 
+import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
@@ -49,7 +50,7 @@ public class SseNotificationListener {
     // DM 알림이 생성되면 SSE "direct-messages" 이벤트로 전송
     @EventListener
     public void onDirectMessageCreated(DirectMessageCreatedEvent event) {
-        NotificationPayload payload = event.notificationPayload();
+        DirectMessagePayload payload = event.directMessagePayload();
         UUID receiverId = payload.receiverId();
 
         SseEmitter emitter = emitterStore.get(receiverId);
@@ -59,13 +60,12 @@ public class SseNotificationListener {
         }
 
         try {
-            // TODO: DM 도메인 구현 후 data를 DirectMessageDto로 교체 (현재는 NotificationPayload로 임시 전송)
             emitter.send(SseEmitter.event()
-                    .id(payload.notificationId().toString())
+                    .id(payload.id().toString())
                     .name("direct-messages")
                     .data(payload));
-            log.debug("SSE direct-message sent: receiverId={}, notificationId={}",
-                    receiverId, payload.notificationId());
+            log.debug("SSE direct-message sent: receiverId={}, id={}",
+                    receiverId, payload.id());
         } catch (Exception e) {
             log.warn("SSE DM send failed: receiverId={}", receiverId);
             emitterStore.remove(receiverId, emitter);

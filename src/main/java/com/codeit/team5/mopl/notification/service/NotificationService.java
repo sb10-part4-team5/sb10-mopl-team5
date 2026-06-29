@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.notification.service;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
+import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.dto.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
@@ -53,7 +54,8 @@ public class NotificationService {
 
         if (type == NotificationType.DIRECT_MESSAGE) {
             // sse 명세에 맞게 DM 전용 direct-message SSE 이벤트를 발행
-            publisher.publishEvent(new DirectMessageCreatedEvent(payload));
+            DirectMessagePayload dmPayload = notificationMapper.toDirectMessagePayload(saved);
+            publisher.publishEvent(new DirectMessageCreatedEvent(dmPayload));
         } else {
             // 그 이외의 알림 타입들은 notifications SSE 이벤트 발행
             publisher.publishEvent(new NotificationCreatedEvent(payload));
@@ -112,14 +114,28 @@ public class NotificationService {
         return notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
     }
 
-    // SSE 재연결 시 미수신 알림 조회
+    // SSE 재연결 시 미수신 일반 알림 조회 (DM 제외)
     public List<NotificationPayload> findMissedNotifications(UUID receiverId, UUID lastEventId) {
-        notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
-                .orElseThrow(InvalidLastEventIdException::new);
+        validateLastEventId(receiverId, lastEventId);
 
         return notificationRepository.findMissedNotifications(receiverId, lastEventId).stream()
                 .map(notificationMapper::toPayload)
                 .toList();
+    }
+
+    // SSE 재연결 시 미수신 DM 조회
+    // TODO: DM 도메인 구현 후 DirectMessageDto로 hydrate하도록 변경
+    public List<DirectMessagePayload> findMissedDirectMessages(UUID receiverId, UUID lastEventId) {
+        validateLastEventId(receiverId, lastEventId);
+
+        return notificationRepository.findMissedDirectMessages(receiverId, lastEventId).stream()
+                .map(notificationMapper::toDirectMessagePayload)
+                .toList();
+    }
+
+    private void validateLastEventId(UUID receiverId, UUID lastEventId) {
+        notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
+                .orElseThrow(InvalidLastEventIdException::new);
     }
 
     // 단건 읽음 처리
