@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.notification.service;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
+import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.dto.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
@@ -44,10 +45,10 @@ public class NotificationService {
             NotificationLevel level) {
         Notification notification = Notification.create(receiverId, type, title, content, level);
         Notification saved = notificationRepository.save(notification);
-        NotificationResponse response = notificationMapper.toResponse(saved);
-        log.info("알림 생성됨: id={}, receiverId={}, type={}",
-                saved.getId(), receiverId, type);
-        publisher.publishEvent(new NotificationCreatedEvent(response));
+        NotificationPayload payload = notificationMapper.toPayload(saved); // Notification을 내부에서 사용 될 Payload로 변환
+        NotificationResponse response = notificationMapper.toResponse(saved); // Notification을 ResponseDto로 변환
+        log.info("알림 생성됨: type={}", type);
+        publisher.publishEvent(new NotificationCreatedEvent(payload));
         return response;
     }
 

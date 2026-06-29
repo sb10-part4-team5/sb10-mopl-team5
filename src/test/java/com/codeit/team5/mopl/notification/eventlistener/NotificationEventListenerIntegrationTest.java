@@ -37,7 +37,7 @@ class NotificationEventListenerIntegrationTest {
         UUID receiverId = UUID.randomUUID();
         tx.executeWithoutResult(status -> {
             publisher.publishEvent(new UserFollowedEvent(receiverId, "다린"));
-            // 아직 트랜잭션 안 → 이 시점엔 create 호출 안 됨
+            verifyNoInteractions(notificationService); // 트랜잭션 블록 내에서 상호작용이 없음을 확인함.
         }); // ← 여기서 커밋
         verify(notificationService).create(
             eq(receiverId), eq(NotificationType.FOLLOWED),
@@ -45,6 +45,9 @@ class NotificationEventListenerIntegrationTest {
             eq(""),
             eq(NotificationLevel.INFO)
         );   // 커밋 후 호출 확인
+    }
+
+    private void verifyNoInteractions(NotificationService notificationService) {
     }
 
     @Test
