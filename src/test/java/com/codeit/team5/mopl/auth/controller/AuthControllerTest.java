@@ -16,7 +16,6 @@ import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
-import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
@@ -35,6 +34,7 @@ import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.MalformedJwtException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -114,6 +114,7 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
@@ -139,12 +140,32 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("CSRF 토큰 없이 로그인 요청하면 403 접근 거부 응답을 반환한다")
+    void login_missingCsrf_returnsForbidden() throws Exception {
+        // Given
+        SignInRequest request = new SignInRequest("user@example.com", "password1");
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", request.username())
+                        .param("password", request.password()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.exceptionType").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(authService, never()).login(any());
+    }
+
+    @Test
     @DisplayName("로그인 요청에서 이메일이 누락되면 400 검증 실패 응답을 반환한다")
     void login_missingEmail_returnsBadRequest() throws Exception {
         // Given: username 파라미터가 없음
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("password", "password1"))
                 .andExpect(status().isBadRequest())
@@ -164,6 +185,7 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
@@ -184,6 +206,7 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
@@ -203,6 +226,7 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", "user@example.com"))
                 .andExpect(status().isBadRequest())
@@ -222,6 +246,7 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
@@ -244,6 +269,7 @@ class AuthControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-in")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("username", request.username())
                 .param("password", request.password()))
@@ -355,15 +381,16 @@ class AuthControllerTest {
         // Given
         String accessToken = "invalid-access-token";
         given(jwtTokenizer.getAccessClaims(accessToken))
-                .willThrow(new JwtInvalidException("Invalid access token"));
+                .willThrow(new MalformedJwtException("Invalid access token"));
 
         // When & Then
         mockMvc.perform(post("/api/follows")
                         .with(csrf())
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.exceptionType").value("JwtInvalidException"))
-                .andExpect(jsonPath("$.message").value("Invalid access token"))
+                .andExpect(jsonPath("$.exceptionType").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.exceptionName").doesNotExist())
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."))
                 .andExpect(jsonPath("$.details").doesNotExist());
     }
 

@@ -66,6 +66,7 @@ class AuthControllerIntegrationTest {
 
         // When & Then
         MvcResult loginResult = mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
@@ -100,6 +101,7 @@ class AuthControllerIntegrationTest {
         // Given
         SignInRequest request = saveLoginUser("logout-flow@example.com", "password1");
         MvcResult loginResult = mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
@@ -263,6 +265,7 @@ class AuthControllerIntegrationTest {
 
     private MvcResult login(SignInRequest request) throws Exception {
         return mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))

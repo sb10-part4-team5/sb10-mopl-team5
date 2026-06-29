@@ -42,7 +42,6 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(csrfTokenRequestHandler)
                         .ignoringRequestMatchers(
-                                paths.matcher(HttpMethod.POST, "/api/auth/sign-in"),
                                 paths.matcher(HttpMethod.POST, "/api/auth/refresh")
                         )
                 )
