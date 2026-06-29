@@ -335,7 +335,8 @@ class UserControllerTest {
 
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
-                        .file(requestPart).file(imagePart))
+                        .file(requestPart).file(imagePart)
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
                 .andExpect(jsonPath("$.name").value("새이름"))
@@ -355,7 +356,8 @@ class UserControllerTest {
 
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
-                        .file(requestPart))
+                        .file(requestPart)
+                        .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 

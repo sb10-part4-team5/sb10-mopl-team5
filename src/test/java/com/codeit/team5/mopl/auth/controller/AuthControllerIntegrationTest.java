@@ -171,7 +171,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/api/auth/refresh")
                 .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.exceptionType").value("JwtInvalidException"))
+                .andExpect(jsonPath("$.exceptionType").value("RefreshTokenInvalidException"))
                 .andExpect(jsonPath("$.message").value("Invalid refresh token"))
                 .andExpect(jsonPath("$.details").doesNotExist());
     }
@@ -194,7 +194,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/api/auth/refresh")
                 .cookie(oldRefreshTokenCookie))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.exceptionType").value("JwtInvalidException"))
+                .andExpect(jsonPath("$.exceptionType").value("RefreshTokenInvalidException"))
                 .andExpect(jsonPath("$.message").value("Invalid refresh token"))
                 .andExpect(jsonPath("$.details").doesNotExist());
     }

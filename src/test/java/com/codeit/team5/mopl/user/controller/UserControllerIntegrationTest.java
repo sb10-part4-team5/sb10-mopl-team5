@@ -225,7 +225,8 @@ class UserControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
-                        .file(requestPart))
+                        .file(requestPart)
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(saved.getId().toString()))
                 .andExpect(jsonPath("$.name").value("변경된이름"));
@@ -246,7 +247,8 @@ class UserControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
-                        .file(requestPart))
+                        .file(requestPart)
+                        .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 

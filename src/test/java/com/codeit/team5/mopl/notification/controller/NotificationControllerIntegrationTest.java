@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.notification.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -196,7 +197,8 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", saved.getId())
-                        .with(authentication(authOf(receiverId, "read@example.com"))))
+                        .with(authentication(authOf(receiverId, "read@example.com")))
+                        .with(csrf()))
                 .andExpect(status().isNoContent());
 
         Notification found = notificationRepository.findById(saved.getId()).orElseThrow();
@@ -213,7 +215,8 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", fakeId)
-                        .with(authentication(authOf(receiverId, "notfound@example.com"))))
+                        .with(authentication(authOf(receiverId, "notfound@example.com")))
+                        .with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.exceptionType").value("NotificationNotFoundException"));
     }
@@ -228,7 +231,8 @@ class NotificationControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(delete("/api/notifications/{notificationId}", saved.getId())
-                        .with(authentication(authOf(attackerId, "attacker@example.com"))))
+                        .with(authentication(authOf(attackerId, "attacker@example.com")))
+                        .with(csrf()))
                 .andExpect(status().isNotFound());
 
         Notification notRead = notificationRepository.findById(saved.getId()).orElseThrow();

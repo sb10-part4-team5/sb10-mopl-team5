@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -95,6 +96,7 @@ class FollowControllerTest {
 
         mockMvc.perform(post("/api/follows")
                         .with(authentication(authOf(followerId)))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new FollowCreateRequest(followeeId))))
                 .andExpect(status().isCreated())
@@ -106,6 +108,7 @@ class FollowControllerTest {
     @DisplayName("인증 없이 팔로우 요청하면 실패")
     void follow_unauthenticated_throwsUnauthorized() throws Exception {
         mockMvc.perform(post("/api/follows")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new FollowCreateRequest(UUID.randomUUID()))))
                 .andExpect(status().isUnauthorized());
@@ -119,6 +122,7 @@ class FollowControllerTest {
 
         mockMvc.perform(post("/api/follows")
                         .with(authentication(authOf(userId)))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new FollowCreateRequest(userId))))
                 .andExpect(status().isBadRequest());
@@ -133,6 +137,7 @@ class FollowControllerTest {
 
         mockMvc.perform(post("/api/follows")
                         .with(authentication(authOf(followerId)))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new FollowCreateRequest(followeeId))))
                 .andExpect(status().isConflict());
@@ -188,7 +193,8 @@ class FollowControllerTest {
         UUID followId = UUID.randomUUID();
 
         mockMvc.perform(delete("/api/follows/{followId}", followId)
-                        .with(authentication(authOf(requesterId))))
+                        .with(authentication(authOf(requesterId)))
+                        .with(csrf()))
                 .andExpect(status().isNoContent());
 
         then(followService).should().unfollow(eq(requesterId), eq(followId));
@@ -203,7 +209,8 @@ class FollowControllerTest {
                 .given(followService).unfollow(eq(requesterId), eq(followId));
 
         mockMvc.perform(delete("/api/follows/{followId}", followId)
-                        .with(authentication(authOf(requesterId))))
+                        .with(authentication(authOf(requesterId)))
+                        .with(csrf()))
                 .andExpect(status().isForbidden());
     }
 }

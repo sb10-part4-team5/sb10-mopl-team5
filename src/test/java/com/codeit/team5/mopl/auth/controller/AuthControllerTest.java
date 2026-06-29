@@ -16,6 +16,7 @@ import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
@@ -395,7 +396,7 @@ class AuthControllerTest {
                 .maxAge(0)
                 .build();
         given(authService.refresh("refresh-token"))
-                .willThrow(new JwtInvalidException("Invalid refresh token"));
+                .willThrow(new RefreshTokenInvalidException("Invalid refresh token"));
         given(cookieManager.deleteCookie()).willReturn(deleteCookie);
 
         // When & Then
@@ -408,7 +409,7 @@ class AuthControllerTest {
                                 org.hamcrest.Matchers.containsString("Max-Age=0"),
                                 org.hamcrest.Matchers.containsString("SameSite=Lax")
                         )))
-                .andExpect(jsonPath("$.exceptionType").value("JwtInvalidException"))
+                .andExpect(jsonPath("$.exceptionType").value("RefreshTokenInvalidException"))
                 .andExpect(jsonPath("$.message").value("Invalid refresh token"))
                 .andExpect(jsonPath("$.details").doesNotExist());
 
