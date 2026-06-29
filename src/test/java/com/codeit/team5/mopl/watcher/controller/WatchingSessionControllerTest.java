@@ -18,7 +18,6 @@ import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.watcher.constant.SortByType;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 import java.util.List;
 import java.util.UUID;
@@ -140,7 +139,8 @@ class WatchingSessionControllerTest {
             "10, DESC, "
     })
     @DisplayName("필수 파라미터가 누락되면 400 에러를 반환한다_실패")
-    void findWatchingSessionsByContent_MissingParam(Integer limit, String sortDirection, String sortBy) throws Exception {
+    void findWatchingSessionsByContent_MissingParam(Integer limit, String sortDirection,
+            String sortBy) throws Exception {
         // Given
         UUID contentId = UUID.randomUUID();
 
@@ -155,6 +155,28 @@ class WatchingSessionControllerTest {
         if (sortBy != null) {
             requestBuilder.param("sortBy", sortBy);
         }
+
+        // Then
+        mockMvc.perform(requestBuilder)
+                .andExpect(status().isBadRequest());
+    }
+
+    @ParameterizedTest(name = "limit={0}, sortDirection={1}, sortBy={2}")
+    @CsvSource({
+            "0, DESC, CREATED_AT",
+            "-1, DESC, CREATED_AT"
+    })
+    @DisplayName("limit이 1 미만이면 400 에러를 반환한다_실패")
+    void findWatchingSessionsByContent_InvalidLimit(Integer limit, String sortDirection,
+            String sortBy) throws Exception {
+        // Given
+        UUID contentId = UUID.randomUUID();
+
+        // When
+        var requestBuilder = get("/api/contents/{contentId}/watching-sessions", contentId)
+                .param("limit", String.valueOf(limit))
+                .param("sortDirection", sortDirection)
+                .param("sortBy", sortBy);
 
         // Then
         mockMvc.perform(requestBuilder)

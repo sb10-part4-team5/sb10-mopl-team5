@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.global.web.ws.stomp.handler.StompCommandHandler;
@@ -46,14 +47,15 @@ class StompInterceptorTest {
         Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
         MessageChannel channel = mock(MessageChannel.class);
 
-        given(handler1.canHandle(any(StompHeaderAccessor.class))).willReturn(false);
-        given(handler2.canHandle(any(StompHeaderAccessor.class))).willReturn(true);
+        given(handler1.canHandle(any(StompHeaderAccessor.class))).willReturn(true);
 
         // When
         Message<?> result = interceptor.preSend(message, channel);
 
         // Then
         assertThat(result).isEqualTo(message);
-        verify(handler2).handle(any(StompHeaderAccessor.class));
+        verify(handler1).handle(any(StompHeaderAccessor.class));
+        verify(handler2, never()).canHandle(any(StompHeaderAccessor.class));
+        verify(handler2, never()).handle(any(StompHeaderAccessor.class));
     }
 }

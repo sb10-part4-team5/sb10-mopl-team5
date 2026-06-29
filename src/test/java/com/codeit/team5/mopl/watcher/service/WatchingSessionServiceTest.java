@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.entity.User;
@@ -31,7 +32,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.ScrollPosition;
@@ -70,9 +70,11 @@ class WatchingSessionServiceTest {
         WatchingSession session = createDummySession(user, content);
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(
+                Optional.of(content));
         when(repository.save(any(WatchingSession.class))).thenReturn(session);
-        when(mapper.toDto(any(WatchingSession.class))).thenReturn(WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
+        when(mapper.toDto(any(WatchingSession.class))).thenReturn(
+                WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
 
         // when
         WatchingSessionResponse result = service.create(contentId, email);
@@ -109,7 +111,7 @@ class WatchingSessionServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.create(contentId, email))
-                .isInstanceOf(RuntimeException.class); // ContentNotFoundException
+                .isInstanceOf(ContentNotFoundException.class);
     }
 
     // --- READ (findSessionByWatchId) ---
@@ -123,7 +125,8 @@ class WatchingSessionServiceTest {
         WatchingSession session = createDummySession(user, content);
 
         when(repository.findByWatcherId(watcherId)).thenReturn(Optional.of(session));
-        when(mapper.toDto(any(WatchingSession.class))).thenReturn(WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
+        when(mapper.toDto(any(WatchingSession.class))).thenReturn(
+                WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
 
         // when
         WatchingSessionResponse result = service.findSessionByWatchId(watcherId);
@@ -163,7 +166,8 @@ class WatchingSessionServiceTest {
                 any(Sort.class)))
                 .thenReturn(window);
         when(repository.countByContentId(contentId)).thenReturn(1L);
-        when(mapper.toCursor(any(), any(), any(), any())).thenReturn(new CursorResponse<>(null, null, null, false, 1L, null, null));
+        when(mapper.toCursor(any(), any(), any(), any())).thenReturn(
+                new CursorResponse<>(null, null, null, false, 1L, null, null));
 
         // when
         CursorResponse<WatchingSessionResponse> result = service.findSessionByContentId(contentId,
@@ -203,7 +207,8 @@ class WatchingSessionServiceTest {
                 any(Sort.class)))
                 .thenReturn(window);
         when(repository.countByContentId(contentId)).thenReturn(11L);
-        when(mapper.toCursor(any(), any(), any(), any())).thenReturn(new CursorResponse<>(null, null, null, false, 11L, null, null));
+        when(mapper.toCursor(any(), any(), any(), any())).thenReturn(
+                new CursorResponse<>(null, null, null, false, 11L, null, null));
 
         // when
         CursorResponse<WatchingSessionResponse> result = service.findSessionByContentId(contentId,

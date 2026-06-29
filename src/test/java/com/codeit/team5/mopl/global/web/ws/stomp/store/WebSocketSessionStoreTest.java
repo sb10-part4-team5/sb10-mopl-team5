@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,21 @@ class WebSocketSessionStoreTest {
     }
 
     @Test
+    @DisplayName("이미 존재하는 세션에 대해 다시 connect를 호출해도 기존 구독 정보가 유지된다_성공")
+    void connect_ExistingSession_성공() {
+        // given
+        String email = "test@test.com";
+        store.connect(email);
+        store.subscribe(email, "sub-1", "/topic/content/1");
+
+        // when
+        store.connect(email);
+
+        // then
+        assertThat(store.getDestination(email, "sub-1")).isEqualTo("/topic/content/1");
+    }
+
+    @Test
     @DisplayName("멀티스레드 환경에서 안전하게 동작한다_성공")
     void threadSafety_성공() throws InterruptedException {
         // given
@@ -87,17 +103,21 @@ class WebSocketSessionStoreTest {
         CountDownLatch latch = new CountDownLatch(threadCount);
 
         // when
-        for (int i = 0; i < threadCount; i++) {
-            final int index = i;
-            executorService.submit(() -> {
-                try {
-                    store.subscribe(email, "sub-" + index, "/topic/content/" + index);
-                } finally {
-                    latch.countDown();
-                }
-            });
+        try {
+            for (int i = 0; i < threadCount; i++) {
+                final int index = i;
+                executorService.submit(() -> {
+                    try {
+                        store.subscribe(email, "sub-" + index, "/topic/content/" + index);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+            latch.await(5, TimeUnit.SECONDS);
+        } finally {
+            executorService.shutdown();
         }
-        latch.await();
 
         // then
         for (int i = 0; i < threadCount; i++) {
