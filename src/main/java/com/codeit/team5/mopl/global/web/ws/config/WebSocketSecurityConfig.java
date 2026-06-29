@@ -16,8 +16,9 @@ public class WebSocketSecurityConfig {
     public AuthorizationManager<Message<?>> messageAuthorizationManager(
             MessageMatcherDelegatingAuthorizationManager.Builder messages) {
         return messages
-                .simpSubscribeDestMatchers(StompConstants.SUB_WATCHING_CONTENT_CHAT_PATTERN,
-                        StompConstants.SUB_WATCHING_CONTENT_PATTERN).authenticated()
+                .simpSubscribeDestMatchers(
+                        StompConstants.SUB_WATCHING_CONTENT_CHAT.replace("{id}", "*"),
+                        StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*")).authenticated()
                 .simpDestMatchers(StompConstants.PUB_WATCHING_CONTENT_CHAT).authenticated()
                 .anyMessage().permitAll()
                 .build();

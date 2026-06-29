@@ -1,5 +1,16 @@
 package com.codeit.team5.mopl.watcher.service;
 
+import java.util.Map;
+import java.util.UUID;
+
+import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.ScrollPosition.Direction;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Window;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
@@ -14,16 +25,8 @@ import com.codeit.team5.mopl.watcher.entity.WatchingSession;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
-import java.util.Map;
-import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Limit;
-import org.springframework.data.domain.ScrollPosition;
-import org.springframework.data.domain.ScrollPosition.Direction;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Window;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
@@ -73,7 +76,7 @@ public class WatchingSessionService {
             repository.deleteByWatcherEmailDirectly(email);
             return;
         }
-        throw new WatchingSessionNotFoundException("userId", email);
+        throw new WatchingSessionNotFoundException("email", email);
     }
 
     public Long getCurrentWatchingContentView(UUID contentId) {

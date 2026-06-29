@@ -15,7 +15,7 @@ import org.springframework.data.jpa.repository.Query;
 public interface WatchingSessionRepository extends JpaRepository<WatchingSession, UUID> {
 
     @EntityGraph(attributePaths = {"watcher", "content", "content.stats", "content.thumbnail", "content.contentTags"})
-    Optional<WatchingSession> findByWatcherId(UUID userId);
+    Optional<WatchingSession> findByWatcherId(UUID watcherId);
 
     @Modifying
     @Query("DELETE FROM WatchingSession w WHERE w.watcher.email = :email")

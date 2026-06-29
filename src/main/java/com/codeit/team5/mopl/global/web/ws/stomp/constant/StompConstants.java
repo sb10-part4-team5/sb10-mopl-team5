@@ -13,6 +13,4 @@ public final class StompConstants {
     public static final String SUB_WATCHING_CONTENT_CHAT = SUB_PREFIX + "/contents/{id}/chat";
     public static final String SUB_WATCHING_CONTENT = SUB_PREFIX + "/contents/{id}/watch";
 
-    public static final String SUB_WATCHING_CONTENT_CHAT_PATTERN = SUB_WATCHING_CONTENT_CHAT.replace("{id}", "*");
-    public static final String SUB_WATCHING_CONTENT_PATTERN = SUB_WATCHING_CONTENT.replace("{id}", "*");
 }

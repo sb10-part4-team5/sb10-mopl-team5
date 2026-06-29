@@ -10,6 +10,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
 
 @Controller
 @RequiredArgsConstructor
@@ -21,6 +22,9 @@ public class StompContentController {
     @MessageMapping(StompConstants.PUB_WATCHING_CONTENT_CHAT)
     public ContentChatPayload sendChat(Principal principal,
             @Payload ContentChatCreatedRequest request) {
+        if (!StringUtils.hasText(request.content().trim())) {
+            return null;
+        }
         String email = principal.getName();
         return chatService.createContentChatPayload(email, request);
     }

@@ -27,12 +27,13 @@ public class StompDisconnectEventHandler {
             return;
         }
         String email = user.getName();
-        sessionStore.disconnect(email);
         try {
             watchingSessionService.delete(email);
             log.info("WatchingSession cleaned up for disconnected user: {}", email);
         } catch (WatchingSessionNotFoundException e) {
             log.debug("No active WatchingSession to delete for user: {}", email);
+        } finally {
+            sessionStore.disconnect(email);
         }
     }
 }

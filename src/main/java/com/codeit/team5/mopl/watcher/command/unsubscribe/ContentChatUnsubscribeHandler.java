@@ -11,11 +11,11 @@ public class ContentChatUnsubscribeHandler extends AbstractStompUnsubscribeHandl
 
     public ContentChatUnsubscribeHandler(
             WebSocketSessionStore sessionStore) {
-        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT_CHAT_PATTERN);
+        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT_CHAT);
     }
 
     @Override
     protected void doHandle(UUID targetId, String email) {
-
+        // 추가 로직 필요 없음
     }
 }

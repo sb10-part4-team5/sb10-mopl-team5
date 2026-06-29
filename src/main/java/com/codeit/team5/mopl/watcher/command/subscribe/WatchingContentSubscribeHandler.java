@@ -19,7 +19,7 @@ public class WatchingContentSubscribeHandler extends AbstractStompSubscribeHandl
 
     public WatchingContentSubscribeHandler(WebSocketSessionStore sessionStore,
             WatchingSessionService service, WatchingSessionPayloadSender payloadSender) {
-        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT_PATTERN);
+        super(sessionStore, StompConstants.SUB_WATCHING_CONTENT);
         this.service = service;
         this.payloadSender = payloadSender;
     }

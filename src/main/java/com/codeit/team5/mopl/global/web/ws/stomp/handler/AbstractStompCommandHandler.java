@@ -73,14 +73,20 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
     }
 
     protected UUID getTargetId(String destination) {
-        String id = matcher.extractPathWithinPattern(destinationPattern, destination);
-        return UUID.fromString(id);
+        String id = matcher.extractUriTemplateVariables(destinationPattern, destination).get("id");
+        if (!StringUtils.hasText(id)) {
+            throw new IllegalArgumentException("Invalid destination: missing id");
+        }
+        try {
+            return UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid destination id format", e);
+        }
     }
 
-    protected String parseToken(
-            org.springframework.messaging.simp.stomp.StompHeaderAccessor accessor) {
+    protected String parseToken(StompHeaderAccessor accessor) {
         String header = accessor.getFirstNativeHeader("Authorization");
-        if (org.springframework.util.StringUtils.hasText(header) && header.startsWith("Bearer ")) {
+        if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
             return header.substring(7);
         }
         return "";
