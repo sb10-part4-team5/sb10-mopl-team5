@@ -29,12 +29,11 @@ public class UserAuthenticationEntryPoint implements AuthenticationEntryPoint {
             return;
         }
 
-        ErrorResponder.sendErrorResponse(response, authException);
-
         if (exception != null) {
             log.warn("Unauthorized access: {}", exception.getMessage(), exception);
         } else {
             log.warn("Unauthorized access", authException);
         }
+        ErrorResponder.sendErrorResponse(response, authException);
     }
 }
