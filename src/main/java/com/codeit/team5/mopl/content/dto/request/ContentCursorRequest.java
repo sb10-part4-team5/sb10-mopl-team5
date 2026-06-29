@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.data.domain.Sort;
 
+@ValidCursor
 public record ContentCursorRequest(
         ContentType typeEqual,
 
