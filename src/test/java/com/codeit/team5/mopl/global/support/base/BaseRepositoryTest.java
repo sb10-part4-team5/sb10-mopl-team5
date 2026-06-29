@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.global.support.base;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.global.support.config.HibernateConfig;
+import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
 import com.codeit.team5.mopl.global.support.inspector.QueryInspector;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -14,7 +15,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-@Import({HibernateConfig.class, QueryInspector.class, TestcontainersConfiguration.class})
+@Import({HibernateConfig.class, QueryInspector.class, TestcontainersConfiguration.class, QueryDslTestConfig.class})
 @DataJpaTest
 @EnableJpaAuditing
 @AutoConfigureTestDatabase(replace = Replace.NONE)

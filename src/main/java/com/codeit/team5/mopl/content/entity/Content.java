@@ -22,6 +22,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.util.StringUtils;
@@ -73,6 +74,7 @@ public class Content extends BaseUpdatableEntity {
     private ContentStats stats;
 
     @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 30)
     private Set<ContentTag> contentTags = new HashSet<>();
 
     public static Content createByAdmin(ContentType type, String title, String description) {
