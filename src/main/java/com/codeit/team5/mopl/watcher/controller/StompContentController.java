@@ -22,7 +22,7 @@ public class StompContentController {
     @MessageMapping(StompConstants.PUB_WATCHING_CONTENT_CHAT)
     public ContentChatPayload sendChat(Principal principal,
             @Payload ContentChatCreatedRequest request) {
-        if (!StringUtils.hasText(request.content().trim())) {
+        if (!StringUtils.hasText(request.content())) {
             return null;
         }
         String email = principal.getName();

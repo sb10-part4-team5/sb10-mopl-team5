@@ -16,8 +16,8 @@ public class WebSocketSessionStore {
     }
 
     public void subscribe(String email, String subscriptionId, String destination) {
-        session.computeIfAbsent(email, e -> new ConcurrentHashMap<>())
-                .put(subscriptionId, destination);
+        session.compute(email,
+                (k, innerMap) -> addSubscription(innerMap, subscriptionId, destination));
     }
 
     public void unsubscribe(String email, String subscriptionId) {
@@ -28,12 +28,20 @@ public class WebSocketSessionStore {
         session.remove(email);
     }
 
+    public String getDestination(String email, String subscriptionId) {
+        return session.getOrDefault(email, Collections.emptyMap()).get(subscriptionId);
+    }
+
+    private Map<String, String> addSubscription(Map<String, String> innerMap, String subscriptionId,
+            String destination) {
+        Map<String, String> map = (innerMap != null) ? innerMap : new ConcurrentHashMap<>();
+        map.put(subscriptionId, destination);
+        return map;
+    }
+
     private Map<String, String> removeIfEmpty(Map<String, String> innerMap, String subscriptionId) {
         innerMap.remove(subscriptionId);
         return innerMap.isEmpty() ? null : innerMap;
     }
 
-    public String getDestination(String email, String subscriptionId) {
-        return session.getOrDefault(email, Collections.emptyMap()).get(subscriptionId);
-    }
 }

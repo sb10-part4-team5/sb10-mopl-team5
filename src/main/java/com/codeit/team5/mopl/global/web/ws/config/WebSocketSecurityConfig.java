@@ -15,11 +15,16 @@ public class WebSocketSecurityConfig {
     @Bean
     public AuthorizationManager<Message<?>> messageAuthorizationManager(
             MessageMatcherDelegatingAuthorizationManager.Builder messages) {
+
+        String subWatchingContentChatPattern = StompConstants.SUB_WATCHING_CONTENT_CHAT.replace(
+                "{id}", "*");
+        String subWatchingContentPattern = StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*");
+        String pubWatchingContentChatPattern =
+                StompConstants.PUB_PREFIX + StompConstants.PUB_WATCHING_CONTENT_CHAT;
         return messages
-                .simpSubscribeDestMatchers(
-                        StompConstants.SUB_WATCHING_CONTENT_CHAT.replace("{id}", "*"),
-                        StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*")).authenticated()
-                .simpDestMatchers(StompConstants.PUB_WATCHING_CONTENT_CHAT).authenticated()
+                .simpSubscribeDestMatchers(subWatchingContentChatPattern, subWatchingContentPattern)
+                .authenticated()
+                .simpDestMatchers(pubWatchingContentChatPattern).authenticated()
                 .anyMessage().permitAll()
                 .build();
     }

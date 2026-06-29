@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.watcher.command.unsubscribe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
@@ -14,6 +15,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -51,11 +53,12 @@ class WatchingContentUnsubscribeHandlerTest {
         handler.doHandle(contentId, email);
 
         // Then
-        verify(service).ensureWatchingContent(email, contentId);
-        verify(service).findSessionByWatcherEmail(email);
-        verify(service).delete(email);
-        verify(service).getCurrentWatchingContentView(contentId);
-        verify(payloadSender).send(contentId, new WatchingSessionPayload(WatcherStatus.LEAVE, response, watchCount));
+        InOrder inOrder = inOrder(service, payloadSender);
+        inOrder.verify(service).ensureWatchingContent(email, contentId);
+        inOrder.verify(service).findSessionByWatcherEmail(email);
+        inOrder.verify(service).delete(email);
+        inOrder.verify(service).getCurrentWatchingContentView(contentId);
+        inOrder.verify(payloadSender).send(contentId, new WatchingSessionPayload(WatcherStatus.LEAVE, response, watchCount));
     }
 
     @Test
