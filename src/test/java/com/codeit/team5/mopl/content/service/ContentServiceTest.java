@@ -20,8 +20,11 @@ import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
+import com.codeit.team5.mopl.content.entity.ContentSortByType;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentTag;
@@ -33,11 +36,13 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -405,6 +410,135 @@ class ContentServiceTest {
         assertThat(content.getTitle()).isEqualTo("기존 제목");
         verify(tagRepository, never()).findByNameIn(anyList());
         verifyNoInteractions(binaryContentRepository, eventPublisher, contentMapper);
+    }
+
+    // --- FIND BY ID ---
+    @Test
+    @DisplayName("존재하는 콘텐츠 ID로 단건 조회에 성공한다")
+    void findById_success() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", "설명");
+        ContentResponse expectedResponse = new ContentResponse(
+                contentId, ContentType.MOVIE, "테스트 영화", "설명",
+                null, null, List.of("액션"), 4.5, 10, 100L
+        );
+
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(contentMapper.toDto(content)).thenReturn(expectedResponse);
+
+        // when
+        ContentResponse result = contentService.findById(contentId);
+
+        // then
+        assertThat(result).isSameAs(expectedResponse);
+        verify(contentRepository).findWithStatsAndTagsById(contentId);
+        verify(contentMapper).toDto(content);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 콘텐츠 ID로 단건 조회 시 예외를 던진다")
+    void findById_notFound_throwsException() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> contentService.findById(contentId))
+                .isInstanceOf(ContentNotFoundException.class);
+
+        verifyNoInteractions(contentMapper);
+    }
+
+    // --- FIND CONTENTS ---
+    @Test
+    @DisplayName("다음 페이지가 없는 경우 hasNext=false로 커서 응답을 반환한다")
+    void findContents_noNextPage_success() {
+        // given
+        ContentCursorRequest request = new ContentCursorRequest(
+                null, null, null, null, null,
+                20, Sort.Direction.DESC, ContentSortByType.CREATED_AT
+        );
+        List<Content> contents = List.of(
+                Content.createByAdmin(ContentType.MOVIE, "영화1", null),
+                Content.createByAdmin(ContentType.MOVIE, "영화2", null)
+        );
+        CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
+                List.of(), null, null, false, 2L, "createdAt", "DESCENDING"
+        );
+
+        when(contentRepository.findContents(request, 21)).thenReturn(contents);
+        when(contentRepository.countContents(request)).thenReturn(2L);
+        when(contentMapper.toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC))
+                .thenReturn(expectedResponse);
+
+        // when
+        CursorResponse<ContentResponse> result = contentService.findContents(request);
+
+        // then
+        assertThat(result).isSameAs(expectedResponse);
+        verify(contentRepository).findContents(request, 21);
+        verify(contentRepository).countContents(request);
+        verify(contentMapper).toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC);
+    }
+
+    @Test
+    @DisplayName("다음 페이지가 있는 경우 hasNext=true이고 limit개만 반환한다")
+    void findContents_hasNextPage_success() {
+        // given
+        int limit = 2;
+        ContentCursorRequest request = new ContentCursorRequest(
+                null, null, null, null, null,
+                limit, Sort.Direction.DESC, ContentSortByType.CREATED_AT
+        );
+        // limit+1 = 3개 반환 → hasNext=true
+        List<Content> fetched = new ArrayList<>();
+        for (int i = 0; i < limit + 1; i++) {
+            fetched.add(Content.createByAdmin(ContentType.MOVIE, "영화" + i, null));
+        }
+        List<Content> page = fetched.subList(0, limit);
+        CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
+                List.of(), "cursor", "idAfter", true, 5L, "createdAt", "DESCENDING"
+        );
+
+        when(contentRepository.findContents(request, limit + 1)).thenReturn(fetched);
+        when(contentRepository.countContents(request)).thenReturn(5L);
+        when(contentMapper.toCursor(page, true, 5L, ContentSortByType.CREATED_AT, Sort.Direction.DESC))
+                .thenReturn(expectedResponse);
+
+        // when
+        CursorResponse<ContentResponse> result = contentService.findContents(request);
+
+        // then
+        assertThat(result.hasNext()).isTrue();
+        assertThat(result.nextCursor()).isEqualTo("cursor");
+        verify(contentMapper).toCursor(page, true, 5L, ContentSortByType.CREATED_AT, Sort.Direction.DESC);
+    }
+
+    @Test
+    @DisplayName("조회 결과가 없으면 빈 목록과 totalCount=0을 반환한다")
+    void findContents_emptyResult() {
+        // given
+        ContentCursorRequest request = new ContentCursorRequest(
+                ContentType.MOVIE, "존재하지않는키워드", null, null, null,
+                20, Sort.Direction.DESC, ContentSortByType.CREATED_AT
+        );
+        CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
+                List.of(), null, null, false, 0L, "createdAt", "DESCENDING"
+        );
+
+        when(contentRepository.findContents(request, 21)).thenReturn(List.of());
+        when(contentRepository.countContents(request)).thenReturn(0L);
+        when(contentMapper.toCursor(List.of(), false, 0L, ContentSortByType.CREATED_AT, Sort.Direction.DESC))
+                .thenReturn(expectedResponse);
+
+        // when
+        CursorResponse<ContentResponse> result = contentService.findContents(request);
+
+        // then
+        assertThat(result.data()).isEmpty();
+        assertThat(result.totalCount()).isZero();
+        assertThat(result.hasNext()).isFalse();
     }
 
     // --- DELETE ---

@@ -1,19 +1,27 @@
 package com.codeit.team5.mopl.content.controller;
 
+import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import com.codeit.team5.mopl.content.controller.api.ContentApi;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
+import com.codeit.team5.mopl.content.entity.ContentSortByType;
+import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.service.ContentService;
-import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import jakarta.validation.Valid;
+import java.beans.PropertyEditorSupport;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +37,22 @@ import org.springframework.web.multipart.MultipartFile;
 public class ContentController implements ContentApi {
 
     private final ContentService contentService;
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(ContentType.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) {
+                setValue(ContentType.from(text));
+            }
+        });
+        binder.registerCustomEditor(ContentSortByType.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) {
+                setValue(ContentSortByType.from(text));
+            }
+        });
+    }
 
     @Override
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -50,6 +74,22 @@ public class ContentController implements ContentApi {
     ) {
         log.info("Content Update request: PATCH /api/contents/{}", contentId);
         ContentResponse response = contentService.update(contentId, request, MultipartFiles.toImageResource(thumbnail));
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @GetMapping("/{contentId}")
+    public ResponseEntity<ContentResponse> getContent(@PathVariable UUID contentId) {
+        log.info("Content Get request: GET /api/contents/{}", contentId);
+        ContentResponse response = contentService.findById(contentId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @GetMapping
+    public ResponseEntity<CursorResponse<ContentResponse>> getContents(@Valid ContentCursorRequest request) {
+        log.info("Content List request: GET /api/contents");
+        CursorResponse<ContentResponse> response = contentService.findContents(request);
         return ResponseEntity.ok(response);
     }
 
