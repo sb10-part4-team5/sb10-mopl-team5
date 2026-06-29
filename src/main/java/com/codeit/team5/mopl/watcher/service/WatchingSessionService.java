@@ -1,8 +1,12 @@
 package com.codeit.team5.mopl.watcher.service;
 
+import com.codeit.team5.mopl.follow.repository.FollowRepository;
+import com.codeit.team5.mopl.notification.event.FollowingUserWatchingEvent;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.ScrollPosition;
 import org.springframework.data.domain.ScrollPosition.Direction;
@@ -37,6 +41,8 @@ public class WatchingSessionService {
     private final WatchingSessionMapper mapper;
     private final UserRepository userRepository;
     private final ContentRepository contentRepository;
+    private final FollowRepository followRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final String SECONDARY_SORT_FIELD = "id";
 
@@ -48,6 +54,13 @@ public class WatchingSessionService {
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
+
+        List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(user.getId());
+        for (UUID followerId : followerIds) {
+            eventPublisher.publishEvent(
+                    new FollowingUserWatchingEvent(followerId, user.getName(), content.getTitle()));
+        }
+
         return mapper.toDto(session);
     }
 
