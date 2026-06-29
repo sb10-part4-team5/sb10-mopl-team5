@@ -7,6 +7,7 @@ import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
 import com.codeit.team5.mopl.auth.token.RefreshTokenHasher;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
+import com.codeit.team5.mopl.config.QueryDslConfig;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
@@ -24,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 @AutoConfigureTestDatabase(replace = NONE)
 @Import({
         JpaAuditingConfig.class,
+        QueryDslConfig.class,
         TestcontainersConfiguration.class,
         DbRefreshTokenStore.class,
         RefreshTokenHasher.class
