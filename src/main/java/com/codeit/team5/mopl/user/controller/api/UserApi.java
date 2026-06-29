@@ -86,8 +86,8 @@ public interface UserApi {
             @Parameter(hidden = true) MultipartFile image);
 
     @Operation(
-            summary = "사용자 권한 변경",
-            description = "관리자가 사용자의 권한을 USER 또는 ADMIN으로 변경합니다. 권한이 변경된 사용자는 재인증이 필요합니다."
+            summary = "[어드민] 사용자 권한 변경",
+            description = "[어드민 기능] 관리자가 사용자의 권한을 USER 또는 ADMIN으로 변경합니다. 권한이 변경된 사용자는 재인증이 필요합니다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "권한 변경 성공"),
@@ -111,8 +111,29 @@ public interface UserApi {
             @Valid @RequestBody UserRoleUpdateRequest request
     );
 
+    @Operation(
+            summary = "[어드민] 계정 잠금 상태 변경",
+            description = "[어드민 기능] 계정 잠금 상태를 변경합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "잠금 상태 변경 성공"),
+            @ApiResponse(responseCode = "204", description = "잠금 상태 변경 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 변경 가능)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
     ResponseEntity<Void> updateLockStatus(
+            @Parameter(description = "권한을 변경할 사용자 ID", required = true)
             @PathVariable UUID userId,
+
+            @Parameter(description = "변경할 사용자 잠금 상태", required = true)
             @Valid @RequestBody UserLockedUpdateRequest request
     );
 }
