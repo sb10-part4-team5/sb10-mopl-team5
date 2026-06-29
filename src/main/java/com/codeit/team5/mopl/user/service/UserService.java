@@ -10,11 +10,13 @@ import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
@@ -98,11 +100,25 @@ public class UserService {
     @Transactional
     public void updateRole(UUID userId, UserRoleUpdateRequest request) {
         User requestedUser = getUser(userId);
+        UserRole roleBefore = requestedUser.getRole();
 
         requestedUser.updateRole(request.role());
         refreshTokenStore.deleteByUserId(userId);
 
-        log.info("User role updated and refresh token invalidated: userId={}, updatedRole={}", userId, request.role());
+        eventPublisher.publishEvent(
+                new RoleChangedEvent(
+                        requestedUser.getId(),
+                        roleBefore.name(),
+                        request.role().name()
+                )
+        );
+
+        log.info(
+                "User role updated: userId={}, roleBefore={}, roleAfter={}",
+                userId,
+                roleBefore,
+                request.role()
+        );
     }
 
     private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
