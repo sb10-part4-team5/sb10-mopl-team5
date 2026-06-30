@@ -1,0 +1,65 @@
+package com.codeit.team5.mopl.playlist.service;
+
+import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
+import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
+import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
+import com.codeit.team5.mopl.playlist.entity.Playlist;
+import com.codeit.team5.mopl.playlist.exception.PlaylistAccessDeniedException;
+import com.codeit.team5.mopl.playlist.exception.PlaylistNotFoundException;
+import com.codeit.team5.mopl.playlist.exception.PlaylistUserNotFoundException;
+import com.codeit.team5.mopl.playlist.mapper.PlaylistMapper;
+import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.UserRepository;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
+public class PlaylistService {
+
+    private final PlaylistMapper mapper;
+    private final PlaylistRepository repository;
+    private final UserRepository userRepository;
+
+    @Transactional
+    public PlaylistResponse create(String email, PlaylistCreateRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new PlaylistUserNotFoundException(email));
+        Playlist playlist = Playlist.of(user, request.title(), request.description());
+        return mapper.toDto(playlist);
+    }
+
+    public PlaylistResponse find(UUID id) {
+        return mapper.toDto(findById(id));
+    }
+
+    @Transactional
+    public PlaylistResponse update(UUID id, String email, PlaylistUpdateRequest request) {
+        validateOwner(id, email);
+        Playlist playlist = findById(id);
+        playlist.updateTitle(request.title());
+        playlist.updateDescription(request.description());
+        return mapper.toDto(playlist);
+    }
+
+    @Transactional
+    public void delete(UUID id, String email) {
+        validateOwner(id, email);
+        repository.deleteByIdDirectly(id);
+    }
+
+    private Playlist findById(UUID id) {
+        return repository.findOwnerById(id).orElseThrow(() -> new PlaylistNotFoundException(id));
+    }
+
+    private void validateOwner(UUID id, String email) {
+        if (repository.existsByIdAndOwnerEmail(id, email)) {
+            return;
+        }
+        throw new PlaylistAccessDeniedException(id, email);
+    }
+}
