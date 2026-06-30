@@ -26,13 +26,13 @@ public class BinaryContent extends BaseUpdatableEntity {
     @Column(name = "upload_status", nullable = false, length = 20)
     private BinaryContentUploadStatus uploadStatus;
 
-    public static BinaryContent pending(String url) {
-        BinaryContent binaryContent = new BinaryContent();
+    public static BinaryContent completed(String url) {
         if (!StringUtils.hasText(url)) {
             throw new InvalidBinaryContentUrlException();
         }
+        BinaryContent binaryContent = new BinaryContent();
         binaryContent.url = url;
-        binaryContent.uploadStatus = BinaryContentUploadStatus.PENDING;
+        binaryContent.uploadStatus = BinaryContentUploadStatus.COMPLETED;
         return binaryContent;
     }
 

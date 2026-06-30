@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.user.entity;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.user.exception.InvalidPasswordException;
 import com.codeit.team5.mopl.user.exception.InvalidUsernameException;
@@ -68,6 +69,9 @@ public class User extends BaseUpdatableEntity {
     }
 
     public void updateProfileImage(BinaryContent profileImage) {
+        if (this.profileImage != null) {
+            this.profileImage.updateUploadStatus(BinaryContentUploadStatus.DELETED);
+        }
         this.profileImage = profileImage;
     }
 
