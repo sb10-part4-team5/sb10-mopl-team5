@@ -69,8 +69,7 @@ public class Content extends BaseUpdatableEntity {
     @Column(name = "external_id", nullable = false, length = 100)
     private String externalId;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "stats_id", unique = true)
+    @OneToOne(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
     private ContentStats stats;
 
     @OneToMany(mappedBy = "content", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)

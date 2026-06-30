@@ -32,7 +32,7 @@ class ContentRepositoryTest extends BaseRepositoryTest {
     void findWithStatsAndTagsById_성공() {
         // given
         Content content = createContent();
-        ContentStats stats = persistAndFlush(ContentStats.create());
+        ContentStats stats = persistAndFlush(ContentStats.create(content));
         content.attachStats(stats);
 
         Tag tag1 = persistAndFlush(Tag.create("액션"));
@@ -61,7 +61,7 @@ class ContentRepositoryTest extends BaseRepositoryTest {
     void findWithStatsAndTagsById_썸네일포함_성공() {
         // given
         Content content = createContent();
-        ContentStats stats = persistAndFlush(ContentStats.create());
+        ContentStats stats = persistAndFlush(ContentStats.create(content));
         content.attachStats(stats);
 
         BinaryContent thumbnail = persistAndFlush(BinaryContent.pending("https://example.com/thumb.jpg"));
@@ -84,7 +84,7 @@ class ContentRepositoryTest extends BaseRepositoryTest {
     void findWithStatsAndTagsById_태그없음_성공() {
         // given
         Content content = createContent();
-        ContentStats stats = persistAndFlush(ContentStats.create());
+        ContentStats stats = persistAndFlush(ContentStats.create(content));
         content.attachStats(stats);
         flush();
         clear();
