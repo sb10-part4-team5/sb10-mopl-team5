@@ -30,6 +30,7 @@ import com.codeit.team5.mopl.content.service.ContentService;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -196,7 +197,7 @@ class ContentControllerTest {
                 }
                 """;
         MockMultipartFile requestPart = new MockMultipartFile(
-                "request", "", MediaType.APPLICATION_JSON_VALUE, requestJson.getBytes()
+                "request", "", MediaType.APPLICATION_JSON_VALUE, requestJson.getBytes(StandardCharsets.UTF_8)
         );
 
         // When & Then
@@ -420,7 +421,7 @@ class ContentControllerTest {
                 }
                 """;
         MockMultipartFile requestPart = new MockMultipartFile(
-                "request", "", MediaType.APPLICATION_JSON_VALUE, requestJson.getBytes()
+                "request", "", MediaType.APPLICATION_JSON_VALUE, requestJson.getBytes(StandardCharsets.UTF_8)
         );
 
         // When & Then
