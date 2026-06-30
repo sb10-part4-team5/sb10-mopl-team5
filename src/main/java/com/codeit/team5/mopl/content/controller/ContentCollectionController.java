@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+// TODO 배포 시 제거 예정 - 초기 데이터 수집용 임시 엔드포인트
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/contents/collect")
