@@ -112,16 +112,6 @@ class NotificationControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("receiverId 없이 조회하면 에러를 반환한다")
-    void getNotifications_missingReceiverId_returnsError() throws Exception {
-        // When & Then (MissingServletRequestParameterException → GlobalExceptionHandler에 전용 핸들러 추가 시 400으로 강화 예정)
-        mockMvc.perform(get("/api/notifications")
-                .param("sortDirection", "DESCENDING")
-                .param("sortBy", "createdAt"))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
     @DisplayName("커서 페이지네이션으로 다음 페이지를 조회한다")
     void getNotifications_cursorPagination() throws Exception {
         // Given

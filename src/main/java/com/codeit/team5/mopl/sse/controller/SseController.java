@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.sse.controller;
 
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.global.exception.BusinessException;
 import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
@@ -71,13 +72,22 @@ public class SseController implements SseApi {
             emitter.send(SseEmitter.event()
                     .name("connect")
                     .data("connected"));
-
-            if (lastEventId != null) {
-                sendMissedNotifications(emitter, userId, lastEventId);
-            }
         } catch (Exception e) {
-            log.warn("SSE initial event send failed: userId={}", userId);
+            log.warn("SSE connect event send failed: userId={}", userId);
             emitterStore.remove(userId, emitter);
+            return emitter;
+        }
+
+        if (lastEventId != null) {
+            try {
+                sendMissedNotifications(emitter, userId, lastEventId);
+            } catch (BusinessException e) {
+                // 도메인 예외(잘못된 Last-Event-ID, 재전송 실패)는 클라이언트에 알리고 연결 종료
+                log.warn("SSE missed event recovery failed: userId={}, reason={}", userId, e.getMessage());
+                emitterStore.remove(userId, emitter);
+                emitter.completeWithError(e);
+                return emitter;
+            }
         }
 
         return emitter;
@@ -90,7 +100,7 @@ public class SseController implements SseApi {
             lastNotificationId = UUID.fromString(lastEventId);
         } catch (IllegalArgumentException e) {
             log.warn("Invalid Last-Event-ID format: {}", lastEventId);
-            throw new InvalidLastEventIdException();
+            throw new InvalidLastEventIdException(lastEventId);
         }
 
         // 미수신 일반 알림 전송

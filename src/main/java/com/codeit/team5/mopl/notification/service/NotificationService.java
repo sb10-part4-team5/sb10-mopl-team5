@@ -135,7 +135,7 @@ public class NotificationService {
 
     private void validateLastEventId(UUID receiverId, UUID lastEventId) {
         notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
-                .orElseThrow(InvalidLastEventIdException::new);
+                .orElseThrow(() -> new InvalidLastEventIdException(lastEventId.toString()));
     }
 
     // 단건 읽음 처리

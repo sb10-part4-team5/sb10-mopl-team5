@@ -73,6 +73,9 @@ public class NotificationEventListener {
     }
 
     // 시청 세션이 생성되면 해당 유저의 팔로워들에게 알림 생성 (fan-out)
+    // [계약] 팔로워 목록은 리스너 실행 시점(AFTER_COMMIT) 기준으로 조회합니다.
+    // 시청 시작과 리스너 실행 사이에 follow/unfollow가 발생하면 결과가 달라질 수 있으나,
+    // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
     public void onWatchingSessionCreated(WatchingSessionCreatedEvent event){
         String title = event.watcherNickname() + " 님이 컨텐츠 시청중입니다.";
