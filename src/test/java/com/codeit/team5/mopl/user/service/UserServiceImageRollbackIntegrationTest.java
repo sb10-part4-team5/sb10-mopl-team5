@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
@@ -32,12 +34,16 @@ class UserServiceImageRollbackIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private BinaryContentRepository binaryContentRepository;
+
     @MockitoBean
     private BinaryContentStorage binaryContentStorage;
 
     @AfterEach
     void cleanup() {
         userRepository.deleteAll();
+        binaryContentRepository.deleteAll();
     }
 
     @Test
@@ -59,5 +65,30 @@ class UserServiceImageRollbackIntegrationTest {
         User reloaded = userRepository.findWithProfileImageById(userId).orElseThrow();
         assertThat(reloaded.getName()).isEqualTo("기존이름");
         assertThat(reloaded.getProfileImage()).isNull();
+    }
+
+    @Test
+    @DisplayName("기존 프로필 이미지 교체 업로드 실패 시 기존 이미지 유지 성공")
+    void update_replaceImageFails_keepsOldImage() {
+        // given
+        BinaryContent oldImage = binaryContentRepository.save(
+                BinaryContent.completed("http://localhost/profiles/old.jpg"));
+        User user = User.create("replace-fail@example.com", "encoded-password", "기존이름");
+        user.updateProfileImage(oldImage);
+        UUID userId = userRepository.save(user).getId();
+        doThrow(new RuntimeException("S3 업로드 실패"))
+                .when(binaryContentStorage).store(any(), any(), any());
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+
+        // when & then
+        assertThatThrownBy(() ->
+                userService.update(userId, userId, new UserUpdateRequest("새이름"), image))
+                .isInstanceOf(RuntimeException.class);
+
+        // 롤백으로 기존 이미지가 그대로 유지되어야 한다
+        User reloaded = userRepository.findWithProfileImageById(userId).orElseThrow();
+        assertThat(reloaded.getName()).isEqualTo("기존이름");
+        assertThat(reloaded.getProfileImage()).isNotNull();
+        assertThat(reloaded.getProfileImage().getUrl()).isEqualTo("http://localhost/profiles/old.jpg");
     }
 }
