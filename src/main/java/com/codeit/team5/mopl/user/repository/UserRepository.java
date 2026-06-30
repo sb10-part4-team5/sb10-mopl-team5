@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 public interface UserRepository extends JpaRepository<User, UUID>, UserQueryRepository {
     boolean existsByEmail(String email);
 
+    @EntityGraph(attributePaths = {"profileImage"})
     Optional<User> findByEmail(String email);
 
     // refresh Token 재발급/저장을 직렬화하기 위함
