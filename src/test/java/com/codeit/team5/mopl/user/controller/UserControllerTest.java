@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.user.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
@@ -342,7 +343,7 @@ class UserControllerTest {
                 "user@example.com", "새이름",
                 "http://localhost/profiles/key.jpg", "USER", false
         );
-        given(userService.update(any(), any(), any(), any())).willReturn(response);
+        given(userService.update(eq(userId), eq(userId), any(), any())).willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
                 "request", "", MediaType.APPLICATION_JSON_VALUE,
@@ -360,7 +361,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.name").value("새이름"))
                 .andExpect(jsonPath("$.profileImageUrl").value("http://localhost/profiles/key.jpg"));
 
-        verify(userService).update(any(), any(), any(), any());
+        verify(userService).update(eq(userId), eq(userId), any(), any());
     }
 
     @Test

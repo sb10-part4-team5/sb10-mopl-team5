@@ -41,6 +41,12 @@ mopl:
       secure: false
       same-site: Lax
 
+jwt:
+  access-secret-key: abcdefghijklmnopqrstuvwxyz123456
+  refresh-secret-key: 123456abcdefghijklmnopqrstuvwxyz
+  access-token-expiration-minutes: 30
+  refresh-token-expiration-minutes: 420
+
 logging:
   level:
     root: WARN

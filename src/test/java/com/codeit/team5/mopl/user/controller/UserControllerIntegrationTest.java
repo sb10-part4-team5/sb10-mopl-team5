@@ -40,12 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest(properties = {
-        "jwt.access-secret-key=abcdefghijklmnopqrstuvwxyz123456",
-        "jwt.refresh-secret-key=123456abcdefghijklmnopqrstuvwxyz",
-        "jwt.access-token-expiration-minutes=30",
-        "jwt.refresh-token-expiration-minutes=420"
-})
+@SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
