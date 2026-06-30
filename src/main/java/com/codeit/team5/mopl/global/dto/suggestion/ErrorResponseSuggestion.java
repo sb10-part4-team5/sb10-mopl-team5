@@ -55,9 +55,13 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
 
             String fieldName = "request";
 
-            if (!path.isEmpty()) {
-                JsonMappingException.Reference lastReference = path.get(path.size() - 1);
-                fieldName = lastReference.getFieldName();
+            // 배열 인덱스 등 fieldName이 null인 경우를 고려해 뒤에서부터 실제 필드명을 찾는다.
+            for (int i = path.size() - 1; i >= 0; i--) {
+                String candidate = path.get(i).getFieldName();
+                if (candidate != null) {
+                    fieldName = candidate;
+                    break;
+                }
             }
 
             Object invalidValue = invalidFormatException.getValue();
