@@ -38,6 +38,12 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 관리자가 직접 등록하는 콘텐츠의 CRUD를 담당하는 서비스.
+ *
+ * <p>외부 API 수집 콘텐츠({@link TmdbContentService}, {@link SportsDbContentService})와 달리
+ * 썸네일 이미지는 S3에 비동기 업로드(이벤트 기반)되며, 태그는 최대 10개 제한이 적용된다.</p>
+ */
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -55,6 +61,13 @@ public class ContentService {
 
     private static final String SECONDARY_SORT_FIELD = "id";
 
+    /**
+     * 관리자가 콘텐츠를 직접 생성한다.
+     *
+     * @param request 제목·설명·타입·태그 정보
+     * @param image   썸네일 이미지 (null 허용)
+     * @return 생성된 콘텐츠 응답 DTO
+     */
     @Transactional
     public ContentResponse create(ContentCreateRequest request, FileRequest image) {
         Content content = contentRepository.save(Content.createByAdmin(
@@ -75,6 +88,15 @@ public class ContentService {
         return contentMapper.toDto(content);
     }
 
+    /**
+     * 콘텐츠 정보를 수정한다. 이미지가 제공되면 기존 썸네일을 DELETED 상태로 변경 후 교체한다.
+     *
+     * @param contentId 수정할 콘텐츠 UUID
+     * @param request   변경할 제목·설명·태그 정보
+     * @param image     새 썸네일 이미지 (null이면 기존 이미지 유지)
+     * @return 수정된 콘텐츠 응답 DTO
+     * @throws ContentNotFoundException 콘텐츠가 존재하지 않을 때
+     */
     @Transactional
     public ContentResponse update(UUID contentId, ContentUpdateRequest request, FileRequest image) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
@@ -97,12 +119,25 @@ public class ContentService {
         return contentMapper.toDto(content);
     }
 
+    /**
+     * 콘텐츠 단건을 조회한다.
+     *
+     * @param contentId 조회할 콘텐츠 UUID
+     * @return 콘텐츠 응답 DTO (stats, tags 포함)
+     * @throws ContentNotFoundException 콘텐츠가 존재하지 않을 때
+     */
     public ContentResponse findById(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
         return contentMapper.toDto(content);
     }
 
+    /**
+     * 커서 기반 페이지네이션으로 콘텐츠 목록을 조회한다.
+     *
+     * @param request 커서·정렬·필터·limit 조건
+     * @return 커서 응답 (콘텐츠 목록, hasNext, totalCount 포함)
+     */
     public CursorResponse<ContentResponse> findContents(ContentCursorRequest request) {
         int fetchLimit = request.limit() + 1;
         List<Content> fetched = contentRepository.findContents(request, fetchLimit);
@@ -112,6 +147,12 @@ public class ContentService {
         return contentMapper.toCursor(page, hasNext, totalCount, request.sortBy(), request.sortDirection());
     }
 
+    /**
+     * 콘텐츠를 삭제한다. 연결된 썸네일이 있으면 DELETED 상태로 마킹 후 삭제한다.
+     *
+     * @param contentId 삭제할 콘텐츠 UUID
+     * @throws ContentNotFoundException 콘텐츠가 존재하지 않을 때
+     */
     @Transactional
     public void delete(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)

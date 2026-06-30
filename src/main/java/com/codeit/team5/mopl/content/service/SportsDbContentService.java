@@ -27,6 +27,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
+/**
+ * TheSportsDB API에서 스포츠 경기 이벤트를 수집하여 DB에 저장하는 서비스.
+ *
+ * <p>수집 기준:
+ * <ul>
+ *   <li>리그 ID와 시즌을 조합하여 한 시즌의 전체 경기를 일괄 수집</li>
+ *   <li>중복 저장 방지: idEvent 기준 존재 여부 확인</li>
+ *   <li>리그명을 정규화(소문자 trim)하여 태그로 부착</li>
+ * </ul>
+ * </p>
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -40,6 +51,12 @@ public class SportsDbContentService {
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 특정 리그의 한 시즌 전체 경기를 수집한다.
+     *
+     * @param leagueId TheSportsDB 리그 ID (예: "4328" = EPL)
+     * @param season   시즌 문자열 (예: "2023-2024")
+     */
     @Async("contentCollectionExecutor")
     public void collectEvents(String leagueId, String season) {
         SportsDbEventListResponse response = sportsDbApiClient.fetchEventsBySeason(leagueId, season);

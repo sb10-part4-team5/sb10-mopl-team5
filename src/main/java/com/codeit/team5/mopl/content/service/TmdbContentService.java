@@ -34,6 +34,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
+/**
+ * TMDB API에서 영화·TV 시리즈 콘텐츠를 수집하여 DB에 저장하는 서비스.
+ *
+ * <p>수집 기준:
+ * <ul>
+ *   <li>한국어 번역 제목이 존재하는 콘텐츠만 저장 (title ≠ originalTitle 조건)</li>
+ *   <li>성인 콘텐츠 제외: include_adult=false, 영화 certification ≤ R, TV certification ≤ TV-14</li>
+ *   <li>중복 저장 방지: externalId 기준 존재 여부 확인</li>
+ *   <li>페이지 단위 트랜잭션 적용, 요청 사이 {@value #REQUEST_DELAY_MS}ms 대기</li>
+ * </ul>
+ * </p>
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -51,6 +63,12 @@ public class TmdbContentService {
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
 
+    /**
+     * TMDB 인기 영화를 페이지 범위 단위로 수집한다.
+     *
+     * @param startPage 수집 시작 페이지 (1-based)
+     * @param endPage   수집 종료 페이지 (최대 {@value #MAX_PAGE}로 자동 클램핑)
+     */
     @Async("contentCollectionExecutor")
     public void collectMovies(int startPage, int endPage) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
@@ -72,6 +90,12 @@ public class TmdbContentService {
         }
     }
 
+    /**
+     * TMDB 인기 TV 시리즈를 페이지 범위 단위로 수집한다.
+     *
+     * @param startPage 수집 시작 페이지 (1-based)
+     * @param endPage   수집 종료 페이지 (최대 {@value #MAX_PAGE}로 자동 클램핑)
+     */
     @Async("contentCollectionExecutor")
     public void collectTvSeries(int startPage, int endPage) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
