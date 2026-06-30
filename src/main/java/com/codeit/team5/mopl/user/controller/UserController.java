@@ -83,7 +83,7 @@ public class UserController implements UserApi {
     public ResponseEntity<Void> updateLockStatus(
             @PathVariable UUID userId,
             @Valid @RequestBody UserLockedUpdateRequest request) {
-        log.info("User lock status update request: PATCH /api/users/{}/lock", userId);
+        log.info("User lock status update request: PATCH /api/users/{}/locked", userId);
 
         userService.updateLock(userId, request);
 
