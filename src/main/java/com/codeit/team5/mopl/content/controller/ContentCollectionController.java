@@ -28,7 +28,7 @@ public class ContentCollectionController implements ContentCollectionApi {
     ) {
         log.info("TMDB 영화 수집 요청: {}~{}페이지", startPage, endPage);
         tmdbContentService.collectMovies(startPage, endPage);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/tmdb/tv")
@@ -38,7 +38,7 @@ public class ContentCollectionController implements ContentCollectionApi {
     ) {
         log.info("TMDB TV 시리즈 수집 요청: {}~{}페이지", startPage, endPage);
         tmdbContentService.collectTvSeries(startPage, endPage);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/sports")
@@ -48,6 +48,6 @@ public class ContentCollectionController implements ContentCollectionApi {
     ) {
         log.info("SportsDB 경기 수집 요청: league={}, season={}", league.getName(), season);
         sportsDbContentService.collectEvents(league.getLeagueId(), season);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 }

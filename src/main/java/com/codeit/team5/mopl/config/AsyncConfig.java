@@ -26,4 +26,17 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean(name = "contentCollectionExecutor")
+    public Executor contentCollectionExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(10);
+        executor.setThreadNamePrefix("content-collect-");
+        executor.setTaskDecorator(new CompositeTaskDecorator(
+                List.of(new MdcTaskDecorator(), new SecurityContextTaskDecorator())));
+        executor.initialize();
+        return executor;
+    }
 }

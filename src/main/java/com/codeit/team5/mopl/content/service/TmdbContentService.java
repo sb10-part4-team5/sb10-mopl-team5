@@ -27,6 +27,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -46,6 +47,7 @@ public class TmdbContentService {
     private final BinaryContentRepository binaryContentRepository;
     private final TagRepository tagRepository;
 
+    @Async("contentCollectionExecutor")
     @Transactional
     public void collectMovies(int startPage, int endPage) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
@@ -64,6 +66,7 @@ public class TmdbContentService {
         }
     }
 
+    @Async("contentCollectionExecutor")
     @Transactional
     public void collectTvSeries(int startPage, int endPage) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
