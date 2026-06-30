@@ -18,6 +18,8 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -29,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -46,40 +48,46 @@ public class TmdbContentService {
     private final ContentStatsRepository contentStatsRepository;
     private final BinaryContentRepository binaryContentRepository;
     private final TagRepository tagRepository;
+    private final TransactionTemplate transactionTemplate;
+    private final ObjectMapper objectMapper;
 
     @Async("contentCollectionExecutor")
-    @Transactional
     public void collectMovies(int startPage, int endPage) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
         if (clampedEnd < endPage) {
             log.warn("[TMDB] endPage {}가 최대 허용 페이지({})를 초과하여 {}로 조정됩니다.", endPage, MAX_PAGE, clampedEnd);
         }
-        endPage = clampedEnd;
-        for (int page = startPage; page <= endPage; page++) {
+        for (int page = startPage; page <= clampedEnd; page++) {
             TmdbMovieListResponse response = tmdbApiClient.fetchMovies(page);
-            response.results().forEach(this::saveMovieIfAbsent);
-            log.info("[TMDB] 영화 수집 완료 - {}/{}페이지 ({}건)", page, response.totalPages(), response.results().size());
+            final int currentPage = page;
+            transactionTemplate.execute(status -> {
+                response.results().forEach(this::saveMovieIfAbsent);
+                return null;
+            });
+            log.info("[TMDB] 영화 수집 완료 - {}/{}페이지 ({}건)", currentPage, response.totalPages(), response.results().size());
 
-            if (page < endPage) {
+            if (page < clampedEnd) {
                 sleep();
             }
         }
     }
 
     @Async("contentCollectionExecutor")
-    @Transactional
     public void collectTvSeries(int startPage, int endPage) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
         if (clampedEnd < endPage) {
             log.warn("[TMDB] endPage {}가 최대 허용 페이지({})를 초과하여 {}로 조정됩니다.", endPage, MAX_PAGE, clampedEnd);
         }
-        endPage = clampedEnd;
-        for (int page = startPage; page <= endPage; page++) {
+        for (int page = startPage; page <= clampedEnd; page++) {
             TmdbTvListResponse response = tmdbApiClient.fetchTvSeries(page);
-            response.results().forEach(this::saveTvSeriesIfAbsent);
-            log.info("[TMDB] TV 시리즈 수집 완료 - {}/{}페이지 ({}건)", page, response.totalPages(), response.results().size());
+            final int currentPage = page;
+            transactionTemplate.execute(status -> {
+                response.results().forEach(this::saveTvSeriesIfAbsent);
+                return null;
+            });
+            log.info("[TMDB] TV 시리즈 수집 완료 - {}/{}페이지 ({}건)", currentPage, response.totalPages(), response.results().size());
 
-            if (page < endPage) {
+            if (page < clampedEnd) {
                 sleep();
             }
         }
@@ -96,7 +104,6 @@ public class TmdbContentService {
             return;
         }
 
-        String metadata = buildMetadata(dto.voteAverage(), dto.originalLanguage());
         Content content = contentRepository.save(
                 Content.createByExternalSource(
                         ContentType.MOVIE,
@@ -105,7 +112,7 @@ public class TmdbContentService {
                         ContentSource.TMDB,
                         externalId,
                         parseDate(dto.releaseDate()),
-                        metadata
+                        buildMetadata(dto.voteAverage(), dto.originalLanguage())
                 )
         );
 
@@ -125,7 +132,6 @@ public class TmdbContentService {
             return;
         }
 
-        String metadata = buildMetadata(dto.voteAverage(), dto.originalLanguage());
         Content content = contentRepository.save(
                 Content.createByExternalSource(
                         ContentType.TV_SERIES,
@@ -134,7 +140,7 @@ public class TmdbContentService {
                         ContentSource.TMDB,
                         externalId,
                         parseDate(dto.firstAirDate()),
-                        metadata
+                        buildMetadata(dto.voteAverage(), dto.originalLanguage())
                 )
         );
 
@@ -159,7 +165,6 @@ public class TmdbContentService {
                 .filter(java.util.Optional::isPresent)
                 .map(java.util.Optional::get)
                 .toList();
-
         attachTags(content, genreNames);
     }
 
@@ -169,7 +174,6 @@ public class TmdbContentService {
                 .filter(java.util.Optional::isPresent)
                 .map(java.util.Optional::get)
                 .toList();
-
         attachTags(content, genreNames);
     }
 
@@ -177,16 +181,21 @@ public class TmdbContentService {
         if (tagNames.isEmpty()) {
             return;
         }
+        List<String> normalized = tagNames.stream()
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .distinct()
+                .toList();
 
-        Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
+        Map<String, Tag> existingTags = tagRepository.findByNameIn(normalized).stream()
                 .collect(Collectors.toMap(Tag::getName, Function.identity()));
 
-        tagNames.stream()
+        normalized.stream()
                 .filter(name -> !existingTags.containsKey(name))
                 .map(Tag::create)
                 .forEach(tag -> existingTags.put(tag.getName(), tagRepository.save(tag)));
 
-        tagNames.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
+        normalized.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
     }
 
     private Instant parseDate(String date) {
@@ -196,13 +205,20 @@ public class TmdbContentService {
         try {
             return LocalDate.parse(date).atStartOfDay(ZoneOffset.UTC).toInstant();
         } catch (Exception e) {
+            log.warn("[TMDB] 날짜 파싱 실패 - date={}", date);
             return null;
         }
     }
 
     private String buildMetadata(double voteAverage, String originalLanguage) {
-        return String.format("{\"voteAverage\": %.1f, \"originalLanguage\": \"%s\"}",
-                voteAverage, originalLanguage);
+        try {
+            return objectMapper.writeValueAsString(
+                    Map.of("voteAverage", voteAverage, "originalLanguage", originalLanguage)
+            );
+        } catch (JsonProcessingException e) {
+            log.warn("[TMDB] metadata 직렬화 실패 - voteAverage={}, originalLanguage={}", voteAverage, originalLanguage);
+            return "{}";
+        }
     }
 
     private void sleep() {
