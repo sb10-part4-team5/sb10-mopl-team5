@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
@@ -240,6 +241,32 @@ class UserServiceTest {
 
         assertThat(user.getProfileImage()).isNull();
         verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    @DisplayName("기존 프로필 이미지 교체 시 기존 이미지 DELETED 처리 성공")
+    void update_replaceImage_oldImageDeleted() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "기존이름");
+        BinaryContent oldImage = BinaryContent.completed("http://localhost/profiles/old.jpg");
+        user.updateProfileImage(oldImage);
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        UserResponse expected = new UserResponse(
+                userId, Instant.parse("2026-06-25T00:00:00Z"),
+                "user@example.com", "새이름", "http://localhost/profiles/new.jpg", "USER", false
+        );
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
+        when(binaryContentService.upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any()))
+                .thenReturn(BinaryContent.completed("http://localhost/profiles/new.jpg"));
+        when(userMapper.toDto(user)).thenReturn(expected);
+
+        // When
+        userService.update(userId, userId, new UserUpdateRequest("새이름"), image);
+
+        // Then
+        assertThat(oldImage.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.DELETED);
+        assertThat(user.getProfileImage().getUrl()).isEqualTo("http://localhost/profiles/new.jpg");
     }
 
     @Test

@@ -58,6 +58,7 @@ class BinaryContentServiceTest {
 
         // then
         verify(binaryContentStorage).store("profiles/key.jpg", image.bytes(), "image/jpeg");
+        verify(binaryContentRepository).save(any(BinaryContent.class));
         assertThat(result.getUrl()).isEqualTo("http://localhost/profiles/key.jpg");
         assertThat(result.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.COMPLETED);
     }

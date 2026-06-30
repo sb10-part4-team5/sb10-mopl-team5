@@ -68,13 +68,13 @@ public class ContentService {
                 request.description()
         ));
 
+        attachTags(content, request.tags());
+
         if (image != null) {
             content.attachThumbnail(binaryContentService.upload(StorageDirectory.THUMBNAIL, content.getId(), image));
         }
 
-        attachTags(content, request.tags());
-
-        ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
+        ContentStats stats = contentStatsRepository.save(ContentStats.create());
         content.attachStats(stats);
 
         return contentMapper.toDto(content);
