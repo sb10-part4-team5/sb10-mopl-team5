@@ -46,13 +46,13 @@ public class AdminInitializer implements ApplicationRunner {
 
                         log.info("Admin init success: ADMIN 계정이 초기화되었습니다.");
                     } catch (DataIntegrityViolationException e) {
-                        userRepository.findByEmail(adminProperties.email())
-                                .ifPresent(existingAdmin -> {
-                                    if (existingAdmin.getRole() != UserRole.ADMIN) {
-                                        existingAdmin.updateRole(UserRole.ADMIN);
-                                        userRepository.save(existingAdmin);
-                                    }
-                                });
+                        User existingAdmin = userRepository.findByEmail(adminProperties.email())
+                                .orElseThrow(() -> e);
+
+                        if (existingAdmin.getRole() != UserRole.ADMIN) {
+                            existingAdmin.updateRole(UserRole.ADMIN);
+                            userRepository.save(existingAdmin);
+                        }
 
                         log.info("Admin init recovered after duplicate insert race.");
                     }
