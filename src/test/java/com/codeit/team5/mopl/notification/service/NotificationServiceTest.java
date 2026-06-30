@@ -85,7 +85,7 @@ class NotificationServiceTest {
         // limit=2 → limit+1(=3)개 조회되어 hasNext=true
         given(notificationRepository.findPageByReceiverDesc(eq(receiverId), eq(null), eq(null), eq(Limit.of(3))))
                 .willReturn(List.of(n0, n1, n2));
-        given(notificationRepository.countByReceiverId(receiverId)).willReturn(10L);
+        given(notificationRepository.countByReceiverIdAndIsReadFalse(receiverId)).willReturn(10L);
         given(notificationMapper.toResponseList(anyList())).willReturn(List.of());
 
         // when
@@ -108,7 +108,7 @@ class NotificationServiceTest {
         // limit=2, 조회 결과 2개(<= limit) → hasNext=false
         given(notificationRepository.findPageByReceiverDesc(eq(receiverId), eq(null), eq(null), eq(Limit.of(3))))
                 .willReturn(List.of(n0));
-        given(notificationRepository.countByReceiverId(receiverId)).willReturn(1L);
+        given(notificationRepository.countByReceiverIdAndIsReadFalse(receiverId)).willReturn(1L);
         given(notificationMapper.toResponseList(anyList())).willReturn(List.of());
 
         // when
@@ -128,7 +128,7 @@ class NotificationServiceTest {
         UUID receiverId = UUID.randomUUID();
         given(notificationRepository.findPageByReceiverAsc(eq(receiverId), eq(null), eq(null), eq(Limit.of(3))))
                 .willReturn(List.of());
-        given(notificationRepository.countByReceiverId(receiverId)).willReturn(0L);
+        given(notificationRepository.countByReceiverIdAndIsReadFalse(receiverId)).willReturn(0L);
         given(notificationMapper.toResponseList(anyList())).willReturn(List.of());
 
         // when

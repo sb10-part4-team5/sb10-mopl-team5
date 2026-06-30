@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
     // 수신자별 알림 목록 (커서 페이지네이션, 최신순). cursor=null 이면 첫 페이지.
+    // 안 읽은 알림만 반환 (이미 읽음 처리한 알림이 목록에 계속 다시 뜨는 것을 방지)
     default List<Notification> findPageByReceiverDesc(
             UUID receiverId, Instant cursor, UUID idAfter, Limit limit) {
         if((cursor == null) != (idAfter == null)){
@@ -37,6 +38,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     @Query("""
         select n from Notification n
         where n.receiverId = :receiverId
+          and n.isRead = false
           and (:firstPage = true
                or n.createdAt < :cursor
                or (n.createdAt = :cursor and n.id < :idAfter))
@@ -52,6 +54,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     @Query("""
         select n from Notification n
         where n.receiverId = :receiverId
+          and  n.isRead = false
           and (:firstPage = true
                or n.createdAt > :cursor
                or (n.createdAt = :cursor and n.id > :idAfter))
@@ -80,6 +83,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
           and ref.receiverId = :receiverId
           and n.receiverId = :receiverId
           and n.type <> com.codeit.team5.mopl.notification.entity.NotificationType.DIRECT_MESSAGE
+          and n.isRead <> true
           and (n.createdAt > ref.createdAt
             or (n.createdAt = ref.createdAt and n.id > ref.id))
         order by n.createdAt asc, n.id asc
@@ -95,6 +99,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
           and ref.receiverId = :receiverId
           and n.receiverId = :receiverId
           and n.type = com.codeit.team5.mopl.notification.entity.NotificationType.DIRECT_MESSAGE
+          and n.isRead <> true
           and (n.createdAt > ref.createdAt
             or (n.createdAt = ref.createdAt and n.id > ref.id))
         order by n.createdAt asc, n.id asc

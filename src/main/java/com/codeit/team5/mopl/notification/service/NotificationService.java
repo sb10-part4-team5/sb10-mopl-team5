@@ -68,6 +68,7 @@ public class NotificationService {
     }
 
     // 수신자별 알림 목록 조회 (커서 페이지네이션)
+    // 안 읽은 알림만 조회하여, 이미 읽은 알림이 조회할 때마다 계속 다시 뜨는 것을 방지
     public CursorResponseNotificationDto getNotifications(
             UUID receiverId, String cursor, UUID idAfter, int limit,
             String sortDirection, String sortBy) {
@@ -104,8 +105,8 @@ public class NotificationService {
             nextIdAfter = last.getId();
         }
 
-        // 응답의 totalCount (수신자의 전체 알림 개수)
-        long totalCount = notificationRepository.countByReceiverId(receiverId);
+        // 응답의 totalCount (안 읽은 알림 수)
+        long totalCount = notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
 
         return new CursorResponseNotificationDto(
                 notificationMapper.toResponseList(page),

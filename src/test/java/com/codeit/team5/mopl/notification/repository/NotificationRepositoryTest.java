@@ -316,4 +316,54 @@ class NotificationRepositoryTest {
         // Then
         assertThat(result).isEmpty();
     }
+
+    @Test
+    @DisplayName("미수신 일반 알림 조회 시 읽음 처리된 알림은 제외된다")
+    void findMissedNotifications_excludesRead() {
+        // Given
+        UUID receiverId = persistReceiver("missed-noti@example.com");
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "기준", null, NotificationLevel.INFO));
+        Notification unread = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "안읽음", null, NotificationLevel.INFO));
+        Notification read = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "읽음", null, NotificationLevel.INFO));
+        read.markAsRead();
+        notificationRepository.save(read);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedNotifications(receiverId, ref.getId());
+
+        // Then
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(unread.getId());
+    }
+
+    @Test
+    @DisplayName("미수신 DM 조회 시 읽음 처리된 DM은 제외된다")
+    void findMissedDirectMessages_excludesRead() {
+        // Given
+        UUID receiverId = persistReceiver("missed-dm@example.com");
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "기준", null, NotificationLevel.INFO));
+        Notification unread = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "안읽음", null, NotificationLevel.INFO));
+        Notification read = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "읽음", null, NotificationLevel.INFO));
+        read.markAsRead();
+        notificationRepository.save(read);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedDirectMessages(receiverId, ref.getId());
+
+        // Then
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(unread.getId());
+    }
 }
