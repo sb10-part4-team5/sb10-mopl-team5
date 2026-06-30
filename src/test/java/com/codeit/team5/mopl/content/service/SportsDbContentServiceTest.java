@@ -96,10 +96,31 @@ class SportsDbContentServiceTest {
     }
 
     @Test
+    @DisplayName("API 응답 자체가 null이면 저장을 건너뛴다")
+    void collectEvents_nullResponse_skipsAll() {
+        given(sportsDbApiClient.fetchEventsBySeason("4328", "2023-2024")).willReturn(null);
+
+        sportsDbContentService.collectEvents("4328", "2023-2024");
+
+        verify(contentRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("API 응답의 events가 null이면 저장을 건너뛴다")
     void collectEvents_nullEvents_skipsAll() {
         given(sportsDbApiClient.fetchEventsBySeason("4328", "2023-2024"))
                 .willReturn(new SportsDbEventListResponse(null));
+
+        sportsDbContentService.collectEvents("4328", "2023-2024");
+
+        verify(contentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("API 응답의 events가 빈 배열이면 저장을 건너뛴다")
+    void collectEvents_emptyEvents_skipsAll() {
+        given(sportsDbApiClient.fetchEventsBySeason("4328", "2023-2024"))
+                .willReturn(new SportsDbEventListResponse(List.of()));
 
         sportsDbContentService.collectEvents("4328", "2023-2024");
 
@@ -229,14 +250,16 @@ class SportsDbContentServiceTest {
         given(sportsDbApiClient.fetchEventsBySeason("4328", "2023-2024"))
                 .willReturn(new SportsDbEventListResponse(List.of(dto)));
         given(contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, "8001")).willReturn(false);
-        given(contentRepository.save(any())).willReturn(mockContent());
+
+        ArgumentCaptor<Content> contentCaptor = ArgumentCaptor.forClass(Content.class);
+        given(contentRepository.save(contentCaptor.capture())).willReturn(mockContent());
         given(tagRepository.findByName(any())).willReturn(Optional.empty());
         given(tagRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
         given(contentStatsRepository.save(any())).willReturn(null);
 
         sportsDbContentService.collectEvents("4328", "2023-2024");
 
-        verify(contentRepository).save(any());
+        assertThat(contentCaptor.getValue().getReleasedAt()).isNull();
     }
 
     @Test

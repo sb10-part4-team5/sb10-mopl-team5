@@ -89,7 +89,7 @@ class TmdbContentServiceTest {
         Content saved = mockContent();
         given(contentRepository.save(any())).willReturn(saved);
         given(binaryContentRepository.save(any())).willReturn(mockBinaryContent());
-        given(tagRepository.findByNameIn(any())).willReturn(List.of());
+        given(tagRepository.findByNameIn(List.of("액션"))).willReturn(List.of());
         given(tagRepository.saveAll(any())).willAnswer(inv -> inv.getArgument(0));
         given(contentStatsRepository.save(any())).willReturn(null);
 
@@ -163,6 +163,23 @@ class TmdbContentServiceTest {
     }
 
     @Test
+    @DisplayName("totalPages가 endPage보다 작으면 totalPages에서 조기 종료한다")
+    void collectMovies_stopsAtTotalPages_whenLessThanEndPage() {
+        givenTransactionExecutesCallback();
+        TmdbMovieDto dto = movieDto(7L, "어벤져스", "Avengers", List.of());
+        TmdbMovieListResponse response = new TmdbMovieListResponse(1, List.of(dto), 2, 2);
+
+        given(tmdbApiClient.fetchMovies(any(Integer.class))).willReturn(response);
+        given(contentRepository.existsBySourceAndExternalId(any(), any())).willReturn(true);
+
+        tmdbContentService.collectMovies(1, 10);
+
+        verify(tmdbApiClient).fetchMovies(1);
+        verify(tmdbApiClient).fetchMovies(2);
+        verify(tmdbApiClient, never()).fetchMovies(3);
+    }
+
+    @Test
     @DisplayName("posterPath가 없으면 썸네일을 저장하지 않는다")
     void collectMovies_noPosterPath_doesNotSaveThumbnail() {
         givenTransactionExecutesCallback();
@@ -188,7 +205,7 @@ class TmdbContentServiceTest {
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "10")).willReturn(false);
         given(contentRepository.save(any())).willReturn(mockContent());
         given(binaryContentRepository.save(any())).willReturn(mockBinaryContent());
-        given(tagRepository.findByNameIn(any())).willReturn(List.of());
+        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of());
         given(tagRepository.saveAll(any())).willAnswer(inv -> inv.getArgument(0));
         given(contentStatsRepository.save(any())).willReturn(null);
 
@@ -234,7 +251,7 @@ class TmdbContentServiceTest {
         Content saved = mockContent();
         given(contentRepository.save(any())).willReturn(saved);
         given(binaryContentRepository.save(any())).willReturn(mockBinaryContent());
-        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of());
+        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of());  // 원본 라벨로 조회
         ArgumentCaptor<List> tagListCaptor = ArgumentCaptor.forClass(List.class);
         given(tagRepository.saveAll(tagListCaptor.capture())).willAnswer(inv -> inv.getArgument(0));
         given(contentStatsRepository.save(any())).willReturn(null);
@@ -274,12 +291,14 @@ class TmdbContentServiceTest {
         TmdbMovieDto dto = new TmdbMovieDto(20L, "어벤져스", "Avengers", "설명", null, List.of(), "invalid-date", 7.5, "en");
         given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(dto), 1, 1));
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "20")).willReturn(false);
-        given(contentRepository.save(any())).willReturn(mockContent());
+
+        ArgumentCaptor<Content> contentCaptor = ArgumentCaptor.forClass(Content.class);
+        given(contentRepository.save(contentCaptor.capture())).willReturn(mockContent());
         given(contentStatsRepository.save(any())).willReturn(null);
 
         tmdbContentService.collectMovies(1, 1);
 
-        verify(contentRepository).save(any());
+        assertThat(contentCaptor.getValue().getReleasedAt()).isNull();
     }
 
     private Content mockContent() {
