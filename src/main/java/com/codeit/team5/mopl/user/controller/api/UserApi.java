@@ -90,7 +90,6 @@ public interface UserApi {
             description = "[어드민 기능] 관리자가 사용자의 권한을 USER 또는 ADMIN으로 변경합니다. 권한이 변경된 사용자는 재인증이 필요합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "권한 변경 성공"),
             @ApiResponse(responseCode = "204", description = "권한 변경 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
@@ -99,6 +98,8 @@ public interface UserApi {
             @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 변경 가능)",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
             @ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "409", description = "이미 동일한 권한입니다.",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
@@ -116,7 +117,6 @@ public interface UserApi {
             description = "[어드민 기능] 계정 잠금 상태를 변경합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "잠금 상태 변경 성공"),
             @ApiResponse(responseCode = "204", description = "잠금 상태 변경 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
@@ -125,6 +125,8 @@ public interface UserApi {
             @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 변경 가능)",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
             @ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "409", description = "이미 동일한 잠금 상태입니다.",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))

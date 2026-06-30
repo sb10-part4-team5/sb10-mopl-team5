@@ -2,11 +2,14 @@ package com.codeit.team5.mopl.global.dto.suggestion;
 
 import com.codeit.team5.mopl.global.exception.BusinessException;
 import com.codeit.team5.mopl.global.exception.util.ViolationExceptionUtils;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
@@ -44,5 +47,35 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
         }
         return new ErrorResponseSuggestion("INTERNAL_SERVER_ERROR",
                 "서버 내부 데이터 처리 중 오류가 발생했습니다.", null);
+    }
+
+    public static ErrorResponseSuggestion from(HttpMessageNotReadableException ex) {
+        if (ex.getCause() instanceof InvalidFormatException invalidFormatException) {
+            List<JsonMappingException.Reference> path = invalidFormatException.getPath();
+
+            String fieldName = "request";
+
+            if (!path.isEmpty()) {
+                JsonMappingException.Reference lastReference = path.get(path.size() - 1);
+                fieldName = lastReference.getFieldName();
+            }
+
+            Object invalidValue = invalidFormatException.getValue();
+
+            return new ErrorResponseSuggestion(
+                    "INVALID_INPUT",
+                    "잘못된 입력값입니다.",
+                    Map.of(
+                            fieldName,
+                            List.of("허용되지 않는 값입니다: " + invalidValue)
+                    )
+            );
+        }
+
+        return new ErrorResponseSuggestion(
+                "INVALID_INPUT",
+                "요청 본문을 읽을 수 없습니다.",
+                null
+        );
     }
 }
