@@ -70,7 +70,7 @@ public class ContentService {
 
         attachTags(content, request.tags());
 
-        ContentStats stats = contentStatsRepository.save(ContentStats.create());
+        ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
         content.attachStats(stats);
 
         if (image != null) {
