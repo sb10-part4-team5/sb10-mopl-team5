@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
+import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
 import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
@@ -53,19 +54,27 @@ public class DmService {
     }
 
     @Transactional
-    public DirectMessageResponse sendMessage(UUID senderId, UUID conversationId, String content) {
-        User sender = getUser(senderId);
+    public DirectMessageResponse sendMessage(String senderEmail, UUID conversationId, String content) {
+        User sender = getUserByEmail(senderEmail);
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
         DirectMessage message = directMessageRepository.save(
                 DirectMessage.create(conversation, sender, content));
+        DirectMessageResponse response = dmMapper.toResponse(message);
 
+        eventPublisher.publishEvent(new DirectMessageBroadcastEvent(conversationId, response));
         eventPublisher.publishEvent(new DirectMessageSentEvent(
                 message.getReceiver().getId(), sender.getName(), content));
 
-        log.info("DM sent: conversationId={}, senderId={}", conversationId, senderId);
-        return dmMapper.toResponse(message);
+        log.info("DM sent: conversationId={}, senderId={}", conversationId, sender.getId());
+        return response;
+    }
+
+    public void validateParticipant(UUID conversationId, String email) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        conversation.validateParticipant(getUserByEmail(email).getId());
     }
 
     private ConversationResponse toConversationResponse(Conversation conversation, User currentUser) {
@@ -82,5 +91,10 @@ public class DmService {
     private User getUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
+    }
+
+    private User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(email));
     }
 }

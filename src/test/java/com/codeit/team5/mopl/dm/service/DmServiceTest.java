@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.dm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,8 +10,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.entity.Conversation;
+import com.codeit.team5.mopl.dm.entity.DirectMessage;
+import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
+import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.exception.SelfConversationException;
+import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
@@ -158,5 +164,112 @@ class DmServiceTest {
         assertThatThrownBy(() -> dmService.getOrCreateConversation(currentUserId, otherId))
                 .isInstanceOf(UserNotFoundException.class);
         verify(conversationRepository, never()).save(any(Conversation.class));
+    }
+
+    @Test
+    @DisplayName("DM 메시지 전송 성공")
+    void sendMessage_success() {
+        // given
+        UUID conversationId = UUID.randomUUID();
+        User sender = userWithId("a@mopl.com", "A", UUID.randomUUID());
+        User receiver = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        Conversation conversation = Conversation.create(sender, receiver);
+        DirectMessageResponse response = new DirectMessageResponse(
+                UUID.randomUUID(), conversationId, null, null, "hello", null);
+
+        when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(sender));
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(directMessageRepository.save(any(DirectMessage.class))).then(returnsFirstArg());
+        when(dmMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
+
+        // when
+        DirectMessageResponse result = dmService.sendMessage("a@mopl.com", conversationId, "hello");
+
+        // then
+        assertThat(result).isSameAs(response);
+        verify(directMessageRepository).save(any(DirectMessage.class));
+        verify(eventPublisher).publishEvent(any(DirectMessageSentEvent.class));
+    }
+
+    @Test
+    @DisplayName("대화가 없으면 DM 전송 실패")
+    void sendMessage_conversationNotFound_throwsException() {
+        // given
+        UUID conversationId = UUID.randomUUID();
+        User sender = userWithId("a@mopl.com", "A", UUID.randomUUID());
+
+        when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(sender));
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> dmService.sendMessage("a@mopl.com", conversationId, "hello"))
+                .isInstanceOf(ConversationNotFoundException.class);
+        verify(directMessageRepository, never()).save(any(DirectMessage.class));
+    }
+
+    @Test
+    @DisplayName("보낸 사람이 대화 참여자가 아니면 DM 전송 실패")
+    void sendMessage_senderNotParticipant_throwsException() {
+        // given
+        UUID conversationId = UUID.randomUUID();
+        User participant1 = userWithId("a@mopl.com", "A", UUID.randomUUID());
+        User participant2 = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        User outsider = userWithId("c@mopl.com", "C", UUID.randomUUID());
+        Conversation conversation = Conversation.create(participant1, participant2);
+
+        when(userRepository.findByEmail("c@mopl.com")).thenReturn(Optional.of(outsider));
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        // when & then
+        assertThatThrownBy(() -> dmService.sendMessage("c@mopl.com", conversationId, "hello"))
+                .isInstanceOf(NotConversationParticipantException.class);
+        verify(directMessageRepository, never()).save(any(DirectMessage.class));
+    }
+
+    @Test
+    @DisplayName("대화 참여자 검증 성공")
+    void validateParticipant_participant_success() {
+        // given
+        UUID conversationId = UUID.randomUUID();
+        User participant1 = userWithId("a@mopl.com", "A", UUID.randomUUID());
+        User participant2 = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        Conversation conversation = Conversation.create(participant1, participant2);
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(participant1));
+
+        // when & then
+        assertThatCode(() -> dmService.validateParticipant(conversationId, "a@mopl.com"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("대화 참여자가 아니면 검증 실패")
+    void validateParticipant_notParticipant_throwsException() {
+        // given
+        UUID conversationId = UUID.randomUUID();
+        User participant1 = userWithId("a@mopl.com", "A", UUID.randomUUID());
+        User participant2 = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        User outsider = userWithId("c@mopl.com", "C", UUID.randomUUID());
+        Conversation conversation = Conversation.create(participant1, participant2);
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(userRepository.findByEmail("c@mopl.com")).thenReturn(Optional.of(outsider));
+
+        // when & then
+        assertThatThrownBy(() -> dmService.validateParticipant(conversationId, "c@mopl.com"))
+                .isInstanceOf(NotConversationParticipantException.class);
+    }
+
+    @Test
+    @DisplayName("대화가 없으면 참여자 검증 실패")
+    void validateParticipant_conversationNotFound_throwsException() {
+        // given
+        UUID conversationId = UUID.randomUUID();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> dmService.validateParticipant(conversationId, "a@mopl.com"))
+                .isInstanceOf(ConversationNotFoundException.class);
     }
 }

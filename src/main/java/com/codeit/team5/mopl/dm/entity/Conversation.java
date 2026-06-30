@@ -5,6 +5,7 @@ import com.codeit.team5.mopl.dm.exception.SelfConversationException;
 import com.codeit.team5.mopl.global.entity.BaseEntity;
 import com.codeit.team5.mopl.global.util.UuidUtils;
 import com.codeit.team5.mopl.user.entity.User;
+import java.util.UUID;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -62,5 +63,11 @@ public class Conversation extends BaseEntity {
             return participant1;
         }
         throw new NotConversationParticipantException(user.getId());
+    }
+
+    public void validateParticipant(UUID userId) {
+        if (!participant1.getId().equals(userId) && !participant2.getId().equals(userId)) {
+            throw new NotConversationParticipantException(userId);
+        }
     }
 }
