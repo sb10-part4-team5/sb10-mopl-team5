@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -111,5 +113,58 @@ class ConversationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("단건 대화 조회 요청 성공")
+    void getConversation_success() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID withUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
+        ConversationResponse response = new ConversationResponse(conversationId, with, null, true);
+        given(dmService.getConversation(eq(currentUserId), eq(conversationId))).willReturn(response);
+
+        mockMvc.perform(get("/api/conversations/{conversationId}", conversationId)
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(conversationId.toString()))
+                .andExpect(jsonPath("$.with.userId").value(withUserId.toString()))
+                .andExpect(jsonPath("$.hasUnread").value(true));
+    }
+
+    @Test
+    @DisplayName("상대방과의 대화 조회 요청 성공")
+    void getConversationWith_success() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID withUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
+        ConversationResponse response = new ConversationResponse(conversationId, with, null, false);
+        given(dmService.getConversationWith(eq(currentUserId), eq(withUserId))).willReturn(response);
+
+        mockMvc.perform(get("/api/conversations/with")
+                        .param("userId", withUserId.toString())
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(conversationId.toString()))
+                .andExpect(jsonPath("$.with.userId").value(withUserId.toString()))
+                .andExpect(jsonPath("$.hasUnread").value(false));
+    }
+
+    @Test
+    @DisplayName("메시지 읽음 처리 요청 성공")
+    void markAsRead_success() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        UUID directMessageId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/conversations/{conversationId}/direct-messages/{directMessageId}/read",
+                        conversationId, directMessageId)
+                        .with(authentication(authOf(currentUserId)))
+                        .with(csrf()))
+                .andExpect(status().isOk());
+
+        verify(dmService).markMessagesAsRead(eq(currentUserId), eq(conversationId), eq(directMessageId));
     }
 }

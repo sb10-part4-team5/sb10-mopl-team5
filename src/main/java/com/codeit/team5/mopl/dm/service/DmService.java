@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
+import com.codeit.team5.mopl.dm.exception.DirectMessageNotFoundException;
 import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
@@ -16,6 +17,7 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -75,6 +77,37 @@ public class DmService {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
         conversation.validateParticipant(getUserByEmail(email).getId());
+    }
+
+    public ConversationResponse getConversation(UUID currentUserId, UUID conversationId) {
+        User currentUser = getUser(currentUserId);
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        conversation.validateParticipant(currentUserId);
+        return toConversationResponse(conversation, currentUser);
+    }
+
+    public ConversationResponse getConversationWith(UUID currentUserId, UUID withUserId) {
+        User currentUser = getUser(currentUserId);
+        UUID participant1Id = UuidUtils.compareUnsigned(currentUserId, withUserId) < 0
+                ? currentUserId : withUserId;
+        UUID participant2Id = UuidUtils.compareUnsigned(currentUserId, withUserId) < 0
+                ? withUserId : currentUserId;
+        Conversation conversation = conversationRepository
+                .findByParticipant1IdAndParticipant2Id(participant1Id, participant2Id)
+                .orElseThrow(() -> new ConversationNotFoundException(null));
+        return toConversationResponse(conversation, currentUser);
+    }
+
+    @Transactional
+    public void markMessagesAsRead(UUID currentUserId, UUID conversationId, UUID directMessageId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        conversation.validateParticipant(currentUserId);
+        DirectMessage message = directMessageRepository.findById(directMessageId)
+                .orElseThrow(() -> new DirectMessageNotFoundException(directMessageId));
+        directMessageRepository.markAsReadUntil(
+                conversationId, currentUserId, message.getCreatedAt(), Instant.now());
     }
 
     private ConversationResponse toConversationResponse(Conversation conversation, User currentUser) {

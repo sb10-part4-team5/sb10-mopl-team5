@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
 import com.codeit.team5.mopl.user.entity.User;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -90,6 +91,52 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
         // then
         assertThat(unreadForB).isEqualTo(2L);
         assertThat(unreadForA).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("기준 시점 이하의 안 읽은 메시지만 일괄 읽음 처리 성공")
+    void markAsReadUntil_success() {
+        // given - userA가 보낸 메시지는 receiver가 userB
+        DirectMessage alreadyRead = persistMessage(userA, "이미읽음");
+        alreadyRead.markAsRead();
+        persistAndFlush(alreadyRead);
+        Instant alreadyReadAt = alreadyRead.getReadAt();
+
+        DirectMessage before = persistMessage(userA, "기준이전");
+        DirectMessage atBoundary = persistMessage(userA, "기준시점");
+        DirectMessage after = persistMessage(userA, "기준이후");
+        DirectMessage otherReceiver = persistMessage(userB, "userA에게");
+        flush();
+        clear();
+
+        Instant readAt = Instant.parse("2030-01-01T00:00:00Z");
+
+        // when
+        int updated = directMessageRepository.markAsReadUntil(
+                conversation.getId(), userB.getId(), atBoundary.getCreatedAt(), readAt);
+
+        // then
+        assertThat(updated).isEqualTo(2);
+
+        DirectMessage reloadedBefore = directMessageRepository.findById(before.getId()).orElseThrow();
+        assertThat(reloadedBefore.isRead()).isTrue();
+        assertThat(compareInstant(reloadedBefore.getReadAt(), readAt)).isTrue();
+
+        DirectMessage reloadedBoundary = directMessageRepository.findById(atBoundary.getId()).orElseThrow();
+        assertThat(reloadedBoundary.isRead()).isTrue();
+        assertThat(compareInstant(reloadedBoundary.getReadAt(), readAt)).isTrue();
+
+        DirectMessage reloadedAfter = directMessageRepository.findById(after.getId()).orElseThrow();
+        assertThat(reloadedAfter.isRead()).isFalse();
+        assertThat(reloadedAfter.getReadAt()).isNull();
+
+        DirectMessage reloadedOther = directMessageRepository.findById(otherReceiver.getId()).orElseThrow();
+        assertThat(reloadedOther.isRead()).isFalse();
+        assertThat(reloadedOther.getReadAt()).isNull();
+
+        DirectMessage reloadedAlreadyRead = directMessageRepository.findById(alreadyRead.getId()).orElseThrow();
+        assertThat(reloadedAlreadyRead.isRead()).isTrue();
+        assertThat(compareInstant(reloadedAlreadyRead.getReadAt(), alreadyReadAt)).isTrue();
     }
 
     @Test

@@ -14,7 +14,6 @@ public final class StompConstants {
     public static final String SUB_WATCHING_CONTENT = SUB_PREFIX + "/contents/{id}/watch";
 
     public static final String PUB_CONVERSATION_DM = "/conversations/{id}/direct-messages";
-    public static final String SUB_CONVERSATION_DM =
-            SUB_PREFIX + "/conversations/{id}/direct-messages";
+    public static final String SUB_CONVERSATION_DM = SUB_PREFIX + "/conversations/{id}/direct-messages";
 
 }
