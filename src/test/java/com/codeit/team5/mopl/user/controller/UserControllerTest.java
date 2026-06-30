@@ -420,8 +420,8 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("권한 변경 요청의 role 값이 잘못된 enum이면 현재 예외 매핑 응답을 반환한다")
-    void updateRole_invalidRole_returnsInternalServerError() throws Exception {
+    @DisplayName("권한 변경 요청의 role 값이 잘못된 enum이면 400 검증 실패 응답을 반환한다")
+    void updateRole_invalidRole_returnsBadRequest() throws Exception {
         // Given
         UUID userId = UUID.randomUUID();
         String requestJson = """
@@ -436,10 +436,10 @@ class UserControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("서버 내부 에러가 발생했습니다."))
-                .andExpect(jsonPath("$.details").doesNotExist());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.role[0]").value("허용되지 않는 값입니다: MANAGER"));
 
         verify(userService, never()).updateRole(any(), any());
     }
