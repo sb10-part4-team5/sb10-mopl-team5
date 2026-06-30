@@ -17,6 +17,7 @@ import com.codeit.team5.mopl.tag.repository.TagRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +60,7 @@ public class SportsDbContentService {
     public void collectEvents(String leagueId, String season) {
         SportsDbEventListResponse response = sportsDbApiClient.fetchEventsBySeason(leagueId, season);
 
-        if (response.events() == null) {
+        if (response == null || response.events() == null || response.events().isEmpty()) {
             log.warn("[SportsDB] 수집된 경기 없음 - leagueId={}, season={}", leagueId, season);
             return;
         }
@@ -123,9 +124,10 @@ public class SportsDbContentService {
 
     private String buildMetadata(SportsDbEventDto dto) {
         try {
-            return objectMapper.writeValueAsString(
-                    Map.of("sport", dto.strSport(), "league", dto.strLeague())
-            );
+            Map<String, String> metadata = new HashMap<>();
+            metadata.put("sport", dto.strSport());
+            metadata.put("league", dto.strLeague());
+            return objectMapper.writeValueAsString(metadata);
         } catch (JsonProcessingException e) {
             log.warn("[SportsDB] metadata 직렬화 실패 - idEvent={}", dto.idEvent());
             return "{}";

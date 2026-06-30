@@ -21,6 +21,8 @@ import com.codeit.team5.mopl.tag.repository.TagRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -61,6 +63,8 @@ public class TmdbContentService {
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
 
+    private record TmdbPageResult(List<TmdbContentData> items, int totalPages) {}
+
     private record TmdbContentData(
             ContentType type,
             String title,
@@ -81,11 +85,14 @@ public class TmdbContentService {
      */
     @Async("contentCollectionExecutor")
     public void collectMovies(int startPage, int endPage) {
-        collectByPage("영화", startPage, endPage,
-                page -> tmdbApiClient.fetchMovies(page).results().stream()
-                        .filter(dto -> !dto.title().equals(dto.originalTitle()))
-                        .map(this::toContentData)
-                        .toList());
+        collectByPage("영화", startPage, endPage, page -> {
+            TmdbMovieListResponse response = tmdbApiClient.fetchMovies(page);
+            List<TmdbContentData> items = response.results().stream()
+                    .filter(dto -> !dto.title().equals(dto.originalTitle()))
+                    .map(this::toContentData)
+                    .toList();
+            return new TmdbPageResult(items, response.totalPages());
+        });
     }
 
     /**
@@ -96,29 +103,35 @@ public class TmdbContentService {
      */
     @Async("contentCollectionExecutor")
     public void collectTvSeries(int startPage, int endPage) {
-        collectByPage("TV 시리즈", startPage, endPage,
-                page -> tmdbApiClient.fetchTvSeries(page).results().stream()
-                        .filter(dto -> !dto.name().equals(dto.originalName()))
-                        .map(this::toContentData)
-                        .toList());
+        collectByPage("TV 시리즈", startPage, endPage, page -> {
+            TmdbTvListResponse response = tmdbApiClient.fetchTvSeries(page);
+            List<TmdbContentData> items = response.results().stream()
+                    .filter(dto -> !dto.name().equals(dto.originalName()))
+                    .map(this::toContentData)
+                    .toList();
+            return new TmdbPageResult(items, response.totalPages());
+        });
     }
 
     private void collectByPage(String label, int startPage, int endPage,
-                                Function<Integer, List<TmdbContentData>> fetcher) {
+                                Function<Integer, TmdbPageResult> fetcher) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
         if (clampedEnd < endPage) {
             log.warn("[TMDB] endPage {}가 최대 허용 페이지({})를 초과하여 {}로 조정됩니다.", endPage, MAX_PAGE, clampedEnd);
         }
         for (int page = startPage; page <= clampedEnd; page++) {
-            List<TmdbContentData> items = fetcher.apply(page);
+            TmdbPageResult result = fetcher.apply(page);
+            int actualLastPage = Math.min(result.totalPages(), clampedEnd);
             transactionTemplate.execute(status -> {
-                items.forEach(this::saveIfAbsent);
+                result.items().forEach(this::saveIfAbsent);
                 return null;
             });
-            log.info("[TMDB] {} 수집 완료 - {}페이지 ({}건)", label, page, items.size());
-            if (page < clampedEnd) {
-                sleep();
+            log.info("[TMDB] {} 수집 완료 - {}/{}페이지 ({}건)", label, page, result.totalPages(), result.items().size());
+            if (page >= actualLastPage) {
+                log.info("[TMDB] {} 수집 종료 - 실제 마지막 페이지({}) 도달", label, actualLastPage);
+                break;
             }
+            sleep();
         }
     }
 
@@ -175,24 +188,25 @@ public class TmdbContentService {
         if (tagNames.isEmpty()) {
             return;
         }
-        List<String> normalized = tagNames.stream()
+        // 소문자 키로 중복 제거하되, 저장 값은 원본 라벨 유지 (e.g. "SF" → key:"sf", label:"SF")
+        Map<String, String> keyToLabel = new LinkedHashMap<>();
+        tagNames.stream()
                 .map(String::trim)
-                .map(String::toLowerCase)
-                .distinct()
-                .toList();
+                .filter(s -> !s.isEmpty())
+                .forEach(label -> keyToLabel.putIfAbsent(label.toLowerCase(), label));
 
-        Map<String, Tag> existingTags = tagRepository.findByNameIn(normalized).stream()
-                .collect(Collectors.toMap(Tag::getName, Function.identity()));
+        Map<String, Tag> existingTags = tagRepository.findByNameIn(List.copyOf(keyToLabel.values())).stream()
+                .collect(Collectors.toMap(tag -> tag.getName().toLowerCase(), Function.identity()));
 
-        List<Tag> newTags = normalized.stream()
-                .filter(name -> !existingTags.containsKey(name))
-                .map(Tag::create)
+        List<Tag> newTags = keyToLabel.entrySet().stream()
+                .filter(e -> !existingTags.containsKey(e.getKey()))
+                .map(e -> Tag.create(e.getValue()))
                 .toList();
         if (!newTags.isEmpty()) {
-            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
+            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName().toLowerCase(), tag));
         }
 
-        normalized.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
+        keyToLabel.keySet().forEach(key -> content.addTag(ContentTag.create(content, existingTags.get(key))));
     }
 
     private Instant parseDate(String date) {
@@ -201,9 +215,10 @@ public class TmdbContentService {
 
     private String buildMetadata(double voteAverage, String originalLanguage) {
         try {
-            return objectMapper.writeValueAsString(
-                    Map.of("voteAverage", voteAverage, "originalLanguage", originalLanguage)
-            );
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("voteAverage", voteAverage);
+            metadata.put("originalLanguage", originalLanguage);
+            return objectMapper.writeValueAsString(metadata);
         } catch (JsonProcessingException e) {
             log.warn("[TMDB] metadata 직렬화 실패 - voteAverage={}, originalLanguage={}", voteAverage, originalLanguage);
             return "{}";
