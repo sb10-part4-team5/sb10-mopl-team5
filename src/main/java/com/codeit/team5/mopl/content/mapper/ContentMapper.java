@@ -18,7 +18,6 @@ public interface ContentMapper {
     @Mapping(target = "reviewCount", source = "stats.reviewCount")
     @Mapping(target = "watcherCount", source = "stats.watcherCount")
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
-    @Mapping(target = "thumbnailUploadStatus", source = "thumbnail.uploadStatus")
     ContentResponse toDto(Content content);
 
     default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,

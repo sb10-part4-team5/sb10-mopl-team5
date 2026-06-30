@@ -2,13 +2,22 @@ package com.codeit.team5.mopl.binarycontent.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
-import com.codeit.team5.mopl.binarycontent.exception.BinaryContentNotFoundException;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
-import java.util.Optional;
+import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
+import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
+import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,50 +30,52 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BinaryContentServiceTest {
 
     @Mock
+    private BinaryContentStorage binaryContentStorage;
+
+    @Mock
+    private StorageKeyFactory storageKeyFactory;
+
+    @Mock
     private BinaryContentRepository binaryContentRepository;
 
     @InjectMocks
     private BinaryContentService binaryContentService;
 
     @Test
-    @DisplayName("COMPLETED 상태로 업데이트한다")
-    void updateUploadStatus_completed() {
+    @DisplayName("이미지 업로드 후 COMPLETED 상태로 저장에 성공한다")
+    void upload_success() {
         // given
-        UUID id = UUID.randomUUID();
-        BinaryContent binaryContent = BinaryContent.pending("http://localhost/test.jpg");
-        when(binaryContentRepository.findById(id)).thenReturn(Optional.of(binaryContent));
+        UUID ownerId = UUID.randomUUID();
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq(ownerId), eq("profile.jpg")))
+                .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
+        when(binaryContentStorage.toUrl("profiles/key.jpg"))
+                .thenReturn("http://localhost/profiles/key.jpg");
+        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
 
         // when
-        binaryContentService.updateUploadStatus(id, BinaryContentUploadStatus.COMPLETED);
+        BinaryContent result = binaryContentService.upload(StorageDirectory.PROFILE, ownerId, image);
 
         // then
-        assertThat(binaryContent.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.COMPLETED);
+        verify(binaryContentStorage).store("profiles/key.jpg", image.bytes(), "image/jpeg");
+        assertThat(result.getUrl()).isEqualTo("http://localhost/profiles/key.jpg");
+        assertThat(result.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.COMPLETED);
     }
 
     @Test
-    @DisplayName("FAILED 상태로 업데이트한다")
-    void updateUploadStatus_failed() {
+    @DisplayName("스토리지 업로드 실패 시 예외를 전파하고 저장하지 않는다")
+    void upload_storeFails_throwsAndDoesNotSave() {
         // given
-        UUID id = UUID.randomUUID();
-        BinaryContent binaryContent = BinaryContent.pending("http://localhost/test.jpg");
-        when(binaryContentRepository.findById(id)).thenReturn(Optional.of(binaryContent));
-
-        // when
-        binaryContentService.updateUploadStatus(id, BinaryContentUploadStatus.FAILED);
-
-        // then
-        assertThat(binaryContent.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.FAILED);
-    }
-
-    @Test
-    @DisplayName("BinaryContent가 없으면 BinaryContentNotFoundException을 던진다")
-    void updateUploadStatus_notFound_throwsException() {
-        // given
-        UUID id = UUID.randomUUID();
-        when(binaryContentRepository.findById(id)).thenReturn(Optional.empty());
+        UUID ownerId = UUID.randomUUID();
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq(ownerId), eq("profile.jpg")))
+                .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
+        doThrow(new RuntimeException("S3 연결 실패"))
+                .when(binaryContentStorage).store(any(), any(), any());
 
         // when & then
-        assertThatThrownBy(() -> binaryContentService.updateUploadStatus(id, BinaryContentUploadStatus.COMPLETED))
-                .isInstanceOf(BinaryContentNotFoundException.class);
+        assertThatThrownBy(() -> binaryContentService.upload(StorageDirectory.PROFILE, ownerId, image))
+                .isInstanceOf(RuntimeException.class);
+        verify(binaryContentRepository, never()).save(any());
     }
 }
