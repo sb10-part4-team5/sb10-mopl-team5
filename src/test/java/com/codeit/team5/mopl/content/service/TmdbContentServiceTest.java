@@ -179,6 +179,18 @@ class TmdbContentServiceTest {
     }
 
     @Test
+    @DisplayName("title이 공백이면 저장을 건너뛴다 (DB NOT NULL 제약 보호)")
+    void collectMovies_blankTitle_skips() {
+        givenTransactionExecutesCallback();
+        TmdbMovieDto dto = new TmdbMovieDto(32L, "   ", "Avengers", "설명", null, List.of(), "2023-01-01", 7.5, "en");
+        given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(dto), 1, 1));
+
+        tmdbContentService.collectMovies(1, 1);
+
+        verify(contentRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("posterPath가 없으면 썸네일을 저장하지 않는다")
     void collectMovies_noPosterPath_doesNotSaveThumbnail() {
         givenTransactionExecutesCallback();
@@ -219,6 +231,18 @@ class TmdbContentServiceTest {
     void collectTvSeries_nullName_skips() {
         givenTransactionExecutesCallback();
         TmdbTvDto dto = new TmdbTvDto(31L, null, "The Glory", "설명", null, List.of(), "2023-01-01", 7.5, "en");
+        given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(dto), 1, 1));
+
+        tmdbContentService.collectTvSeries(1, 1);
+
+        verify(contentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("name이 공백이면 저장을 건너뛴다 (DB NOT NULL 제약 보호)")
+    void collectTvSeries_blankName_skips() {
+        givenTransactionExecutesCallback();
+        TmdbTvDto dto = new TmdbTvDto(33L, "   ", "The Glory", "설명", null, List.of(), "2023-01-01", 7.5, "en");
         given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(dto), 1, 1));
 
         tmdbContentService.collectTvSeries(1, 1);

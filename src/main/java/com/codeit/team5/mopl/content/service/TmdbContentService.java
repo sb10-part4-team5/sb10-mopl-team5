@@ -131,7 +131,10 @@ public class TmdbContentService {
                 log.info("[TMDB] {} 수집 종료 - 실제 마지막 페이지({}) 도달", label, actualLastPage);
                 break;
             }
-            sleep();
+            if (sleep()) {
+                log.info("[TMDB] {} 수집 중단 - 인터럽트 감지", label);
+                break;
+            }
         }
     }
 
@@ -225,11 +228,13 @@ public class TmdbContentService {
         }
     }
 
-    private void sleep() {
+    private boolean sleep() {
         try {
             Thread.sleep(REQUEST_DELAY_MS);
+            return false;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return true;
         }
     }
 }
