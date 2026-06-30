@@ -264,6 +264,9 @@ class UserServiceTest {
                 .isInstanceOf(UserForbiddenException.class);
 
         verifyNoInteractions(userRepository, userMapper, binaryContentRepository, eventPublisher);
+    }
+
+    @Test
     @DisplayName("사용자 권한 변경 성공")
     void updateRole_success() {
         // Given

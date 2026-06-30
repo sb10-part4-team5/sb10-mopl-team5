@@ -199,7 +199,8 @@ class UserControllerIntegrationTest {
                 User.create("user@example.com", "encoded-password", "사용자"));
 
         // When & Then
-        mockMvc.perform(get("/api/users/{userId}", savedUser.getId()))
+        mockMvc.perform(get("/api/users/{userId}", savedUser.getId())
+                        .with(authentication(authOf(UUID.randomUUID()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(savedUser.getId().toString()))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
@@ -216,7 +217,8 @@ class UserControllerIntegrationTest {
         UUID unknownId = UUID.randomUUID();
 
         // When & Then
-        mockMvc.perform(get("/api/users/{userId}", unknownId))
+        mockMvc.perform(get("/api/users/{userId}", unknownId)
+                        .with(authentication(authOf(UUID.randomUUID()))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.exceptionType").value("UserNotFoundException"))
                 .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."));
@@ -228,11 +230,16 @@ class UserControllerIntegrationTest {
         // Given: UUID로 변환 불가능한 경로 변수
 
         // When & Then
-        // 타입 변환 실패는 에러 응답(>=400)으로만 일반화 검증
-        // (핸들러에 MethodArgumentTypeMismatch -> 400 처리 추가 시 정확한 400으로 강화 예정)
-        mockMvc.perform(get("/api/users/{userId}", "invalid-uuid"))
-                .andExpect(result ->
-                        assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+        mockMvc.perform(get("/api/users/{userId}", "invalid-uuid")
+                        .with(authentication(authOf(UUID.randomUUID()))))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("인증 없이 사용자 조회 실패")
+    void getUser_unauthenticated_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/{userId}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -304,6 +311,9 @@ class UserControllerIntegrationTest {
                 userId, Instant.now(), "user@example.com", "유저", null, "USER", false);
         MoplUserDetails details = new MoplUserDetails(dto, "password");
         return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+    }
+
+    @Test
     @DisplayName("관리자가 사용자 권한을 변경하면 DB 권한이 변경되고 토큰이 무효화된다")
     void updateRole_byAdmin_success() throws Exception {
         // Given

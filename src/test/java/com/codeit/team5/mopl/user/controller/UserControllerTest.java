@@ -281,6 +281,13 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("인증 없이 사용자 조회 실패")
+    void getUser_unauthenticated_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/{userId}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("사용자 상세 조회 성공")
     void getUser_success() throws Exception {
         // Given
@@ -297,7 +304,8 @@ class UserControllerTest {
         given(userService.getById(userId)).willReturn(response);
 
         // When & Then
-        mockMvc.perform(get("/api/users/{userId}", userId))
+        mockMvc.perform(get("/api/users/{userId}", userId)
+                        .with(authentication(authOf(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
                 .andExpect(jsonPath("$.createdAt").value("2026-06-23T00:00:00Z"))
@@ -317,11 +325,9 @@ class UserControllerTest {
         given(userService.getById(userId)).willThrow(new UserNotFoundException(userId));
 
         // When & Then
-        // 예외 핸들러 마이그레이션 전이라 상태코드는 에러(>=400)로만 일반화 검증
-        // (핸들러 활성화 후 404 + ErrorResponseSuggestion 형식으로 강화 예정)
-        mockMvc.perform(get("/api/users/{userId}", userId))
-                .andExpect(result ->
-                        assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+        mockMvc.perform(get("/api/users/{userId}", userId)
+                        .with(authentication(authOf(userId))))
+                .andExpect(status().isNotFound());
 
         verify(userService).getById(userId);
     }
@@ -378,8 +384,9 @@ class UserControllerTest {
     }
 
     private Authentication authOf(UUID userId) {
-        UserResponse dto = new UserResponse(
-                userId, Instant.now(), "user@example.com", "유저", null, "USER", false);
+        return authOf(userId, "USER", false);
+    }
+
     @Test
     @DisplayName("관리자가 사용자 권한 변경 요청하면 204 응답을 반환한다")
     void updateRole_success() throws Exception {
