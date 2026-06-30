@@ -18,7 +18,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
-import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
@@ -90,7 +89,6 @@ class ContentControllerTest {
                 "테스트 영화",
                 "테스트 설명",
                 "http://localhost:8080/thumbnails/11111111-1111-1111-1111-111111111111/test.jpg",
-                BinaryContentUploadStatus.PENDING,
                 List.of("액션", "드라마"),
                 0.0, 0, 0
         );
@@ -120,7 +118,6 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.title").value("테스트 영화"))
                 .andExpect(jsonPath("$.description").value("테스트 설명"))
                 .andExpect(jsonPath("$.thumbnailUrl").value(response.thumbnailUrl()))
-                .andExpect(jsonPath("$.thumbnailUploadStatus").value("PENDING"))
                 .andExpect(jsonPath("$.tags[0]").value("액션"))
                 .andExpect(jsonPath("$.tags[1]").value("드라마"))
                 .andExpect(jsonPath("$.averageRating").value(0.0))
@@ -153,7 +150,6 @@ class ContentControllerTest {
                 ContentType.TV_SERIES,
                 "테스트 드라마",
                 "테스트 설명",
-                null,
                 null,
                 List.of("로맨스"),
                 0.0, 0, 0
@@ -306,7 +302,6 @@ class ContentControllerTest {
                 "수정된 영화",
                 "수정된 설명",
                 "http://localhost:8080/thumbnails/11111111-1111-1111-1111-111111111111/new.jpg",
-                BinaryContentUploadStatus.PENDING,
                 List.of("SF", "액션"),
                 0.0, 0, 0
         );
@@ -333,7 +328,6 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.title").value("수정된 영화"))
                 .andExpect(jsonPath("$.description").value("수정된 설명"))
                 .andExpect(jsonPath("$.thumbnailUrl").value(response.thumbnailUrl()))
-                .andExpect(jsonPath("$.thumbnailUploadStatus").value("PENDING"))
                 .andExpect(jsonPath("$.averageRating").value(0.0))
                 .andExpect(jsonPath("$.reviewCount").value(0))
                 .andExpect(jsonPath("$.watcherCount").value(0));
@@ -362,7 +356,6 @@ class ContentControllerTest {
                 contentId,
                 ContentType.TV_SERIES,
                 "수정된 드라마",
-                null,
                 null,
                 null,
                 List.of("로맨스"),
@@ -537,7 +530,6 @@ class ContentControllerTest {
                 "테스트 영화",
                 "테스트 설명",
                 "http://localhost:8080/thumbnails/test.jpg",
-                BinaryContentUploadStatus.PENDING,
                 List.of("액션", "SF"),
                 4.5, 10, 100L
         );
@@ -552,7 +544,6 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.title").value("테스트 영화"))
                 .andExpect(jsonPath("$.description").value("테스트 설명"))
                 .andExpect(jsonPath("$.thumbnailUrl").value(response.thumbnailUrl()))
-                .andExpect(jsonPath("$.thumbnailUploadStatus").value("PENDING"))
                 .andExpect(jsonPath("$.tags[0]").value("액션"))
                 .andExpect(jsonPath("$.tags[1]").value("SF"))
                 .andExpect(jsonPath("$.averageRating").value(4.5))
@@ -602,7 +593,7 @@ class ContentControllerTest {
                 ContentType.MOVIE,
                 "테스트 영화",
                 "테스트 설명",
-                null, null,
+                null,
                 List.of("액션"),
                 0.0, 0, 0L
         );

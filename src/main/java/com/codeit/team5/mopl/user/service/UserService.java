@@ -1,14 +1,8 @@
 package com.codeit.team5.mopl.user.service;
 
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
-import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
-import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
+import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
-import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
-import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
-import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
-import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
@@ -41,9 +35,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
-    private final BinaryContentStorage binaryContentStorage;
-    private final StorageKeyFactory storageKeyFactory;
-    private final BinaryContentRepository binaryContentRepository;
+    private final BinaryContentService binaryContentService;
     private final ApplicationEventPublisher eventPublisher;
     private final RefreshTokenStore refreshTokenStore;
 
@@ -79,20 +71,11 @@ public class UserService {
     public UserResponse update(UUID currentUserId, UUID userId, UserUpdateRequest request, FileRequest image) {
         validateOwner(currentUserId, userId);
 
-        User user = userRepository.findWithProfileImageById(userId)
-                .orElseThrow(() -> {
-                    log.warn("User not found: userId={}", userId);
-                    return new UserNotFoundException(userId);
-                });
+        User user = getUserWithProfileImage(userId);
 
         user.updateName(request.name());
         if (image != null) {
-            // TODO(고아 정리): 비정상적인 상태를 가진 BinaryContent를 배치로 정리 (DB/S3 누적 방지)
-            BinaryContent oldProfile = user.getProfileImage();
-            if (oldProfile != null) {
-                oldProfile.updateUploadStatus(BinaryContentUploadStatus.DELETED);
-            }
-            user.updateProfileImage(storeProfileImage(user.getId(), image));
+            user.updateProfileImage(binaryContentService.upload(StorageDirectory.PROFILE, user.getId(), image));
         }
 
         log.info("User updated: userId={}", userId);
@@ -133,22 +116,18 @@ public class UserService {
         log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
     }
 
-    private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
-        GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.PROFILE, userId, image.filename());
-        BinaryContent profileImage = binaryContentRepository.save(
-                BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
-
-        eventPublisher.publishEvent(
-                new BinaryContentUploadEvent(profileImage.getId(), generated.key(), image.bytes(), generated.contentType()));
-        // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
-
-        return profileImage;
-    }
-
     private void validateOwner(UUID currentUserId, UUID userId) {
         if (!currentUserId.equals(userId)) {
             throw new UserForbiddenException(currentUserId, userId);
         }
+    }
+
+    private User getUserWithProfileImage(UUID userId) {
+        return userRepository.findWithProfileImageById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User not found: userId={}", userId);
+                    return new UserNotFoundException(userId);
+                });
     }
 
     private User getUser(UUID userId) {

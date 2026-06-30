@@ -11,13 +11,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
-import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
-import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
-import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
-import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
+import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
@@ -62,13 +59,7 @@ class UserServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private BinaryContentStorage binaryContentStorage;
-
-    @Mock
-    private StorageKeyFactory storageKeyFactory;
-
-    @Mock
-    private BinaryContentRepository binaryContentRepository;
+    private BinaryContentService binaryContentService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -204,7 +195,7 @@ class UserServiceTest {
         assertThat(result).isSameAs(expected);
         assertThat(user.getName()).isEqualTo("새이름");
         assertThat(user.getProfileImage()).isNull();
-        verifyNoInteractions(storageKeyFactory, binaryContentStorage, binaryContentRepository, eventPublisher);
+        verifyNoInteractions(binaryContentService, eventPublisher);
     }
 
     @Test
@@ -219,11 +210,8 @@ class UserServiceTest {
                 "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
         );
         when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
-        when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq(user.getId()), eq("profile.jpg")))
-                .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
-        when(binaryContentStorage.toUrl("profiles/key.jpg"))
-                .thenReturn("http://localhost/profiles/key.jpg");
-        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
+        when(binaryContentService.upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any()))
+                .thenReturn(BinaryContent.completed("http://localhost/profiles/key.jpg"));
         when(userMapper.toDto(user)).thenReturn(expected);
 
         // When
@@ -233,8 +221,52 @@ class UserServiceTest {
         assertThat(result).isSameAs(expected);
         assertThat(user.getName()).isEqualTo("새이름");
         assertThat(user.getProfileImage()).isNotNull();
-        verify(binaryContentRepository).save(any(BinaryContent.class));
-        verify(eventPublisher).publishEvent(any(BinaryContentUploadEvent.class));
+        verify(binaryContentService).upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any());
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 업로드 실패 시 변경 실패")
+    void update_imageUploadFails_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "기존이름");
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
+        when(binaryContentService.upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any()))
+                .thenThrow(new RuntimeException("S3 연결 실패"));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.update(userId, userId, new UserUpdateRequest("새이름"), image))
+                .isInstanceOf(RuntimeException.class);
+
+        assertThat(user.getProfileImage()).isNull();
+        verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    @DisplayName("기존 프로필 이미지 교체 시 기존 이미지 DELETED 처리 성공")
+    void update_replaceImage_oldImageDeleted() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "기존이름");
+        BinaryContent oldImage = BinaryContent.completed("http://localhost/profiles/old.jpg");
+        user.updateProfileImage(oldImage);
+        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        UserResponse expected = new UserResponse(
+                userId, Instant.parse("2026-06-25T00:00:00Z"),
+                "user@example.com", "새이름", "http://localhost/profiles/new.jpg", "USER", false
+        );
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
+        when(binaryContentService.upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any()))
+                .thenReturn(BinaryContent.completed("http://localhost/profiles/new.jpg"));
+        when(userMapper.toDto(user)).thenReturn(expected);
+
+        // When
+        userService.update(userId, userId, new UserUpdateRequest("새이름"), image);
+
+        // Then
+        assertThat(oldImage.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.DELETED);
+        assertThat(user.getProfileImage().getUrl()).isEqualTo("http://localhost/profiles/new.jpg");
     }
 
     @Test
@@ -249,7 +281,7 @@ class UserServiceTest {
                 .isInstanceOf(UserNotFoundException.class);
 
         verify(userRepository).findWithProfileImageById(userId);
-        verifyNoInteractions(userMapper, binaryContentRepository, eventPublisher);
+        verifyNoInteractions(userMapper, binaryContentService, eventPublisher);
     }
 
     @Test
@@ -263,7 +295,7 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.update(currentUserId, userId, new UserUpdateRequest("새이름"), null))
                 .isInstanceOf(UserForbiddenException.class);
 
-        verifyNoInteractions(userRepository, userMapper, binaryContentRepository, eventPublisher);
+        verifyNoInteractions(userRepository, userMapper, binaryContentService, eventPublisher);
     }
 
     @Test

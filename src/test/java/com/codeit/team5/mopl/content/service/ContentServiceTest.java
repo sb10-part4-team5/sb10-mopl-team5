@@ -11,13 +11,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
-import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
-import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
-import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
@@ -70,13 +66,7 @@ class ContentServiceTest {
     private ContentMapper contentMapper;
 
     @Mock
-    private BinaryContentStorage binaryContentStorage;
-
-    @Mock
-    private StorageKeyFactory storageKeyFactory;
-
-    @Mock
-    private BinaryContentRepository binaryContentRepository;
+    private BinaryContentService binaryContentService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -97,17 +87,15 @@ class ContentServiceTest {
         Tag dramaTag = Tag.create("드라마");
         ContentResponse expectedResponse = new ContentResponse(
                 UUID.randomUUID(), ContentType.MOVIE, "테스트 영화", "테스트 설명",
-                null, null, List.of("액션", "드라마"), 0.0, 0, 0
+                null, List.of("액션", "드라마"), 0.0, 0, 0
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
         when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
         when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(storageKeyFactory.generate(eq(StorageDirectory.THUMBNAIL), any(), eq("test.jpg")))
-                .thenReturn(new GeneratedKey("thumbnails/test.jpg", "image/jpeg"));
-        when(binaryContentStorage.toUrl("thumbnails/test.jpg")).thenReturn("http://localhost:8080/thumbnails/test.jpg");
-        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
+        when(binaryContentService.upload(eq(StorageDirectory.THUMBNAIL), any(), any()))
+                .thenReturn(BinaryContent.completed("http://localhost:8080/thumbnails/test.jpg"));
         when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);
 
         // when
@@ -123,9 +111,7 @@ class ContentServiceTest {
         assertThat(savedContent.getTitle()).isEqualTo("테스트 영화");
         assertThat(savedContent.getThumbnail()).isNotNull();
 
-        ArgumentCaptor<BinaryContentUploadEvent> eventCaptor = ArgumentCaptor.forClass(BinaryContentUploadEvent.class);
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue().key()).isEqualTo("thumbnails/test.jpg");
+        verify(binaryContentService).upload(eq(StorageDirectory.THUMBNAIL), any(), any());
 
         verify(tagRepository).findByNameIn(List.of("액션", "드라마"));
         verify(contentStatsRepository).save(any(ContentStats.class));
@@ -141,7 +127,7 @@ class ContentServiceTest {
         Tag romanceTag = Tag.create("로맨스");
         ContentResponse expectedResponse = new ContentResponse(
                 UUID.randomUUID(), ContentType.TV_SERIES, "테스트 드라마",
-                null, null, null, List.of("로맨스"), 0.0, 0, 0
+                null, null, List.of("로맨스"), 0.0, 0, 0
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
@@ -154,7 +140,7 @@ class ContentServiceTest {
 
         // then
         assertThat(result).isSameAs(expectedResponse);
-        verifyNoInteractions(storageKeyFactory, binaryContentStorage, binaryContentRepository, eventPublisher);
+        verifyNoInteractions(binaryContentService, eventPublisher);
     }
 
     @Test
@@ -267,7 +253,7 @@ class ContentServiceTest {
         ContentUpdateRequest request = new ContentUpdateRequest("수정 제목", "수정 설명", List.of("SF"));
         ContentResponse expectedResponse = new ContentResponse(
                 contentId, ContentType.MOVIE, "수정 제목", "수정 설명",
-                null, null, List.of("sf"), 0.0, 0, 0
+                null, List.of("sf"), 0.0, 0, 0
         );
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
@@ -281,7 +267,7 @@ class ContentServiceTest {
         assertThat(result).isSameAs(expectedResponse);
         assertThat(content.getTitle()).isEqualTo("수정 제목");
         assertThat(content.getDescription()).isEqualTo("수정 설명");
-        verifyNoInteractions(storageKeyFactory, binaryContentStorage, binaryContentRepository, eventPublisher);
+        verifyNoInteractions(binaryContentService, eventPublisher);
     }
 
     @Test
@@ -293,17 +279,14 @@ class ContentServiceTest {
         FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "new.jpg");
         ContentResponse expectedResponse = new ContentResponse(
                 contentId, ContentType.MOVIE, "수정 제목", null,
-                "http://localhost/thumbnails/new.jpg", BinaryContentUploadStatus.PENDING,
+                "http://localhost/thumbnails/new.jpg",
                 List.of("액션"), 0.0, 0, 0
         );
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
-        when(storageKeyFactory.generate(eq(StorageDirectory.THUMBNAIL), any(), eq("new.jpg")))
-                .thenReturn(new GeneratedKey("thumbnails/new.jpg", "image/jpeg"));
-        when(binaryContentStorage.toUrl("thumbnails/new.jpg"))
-                .thenReturn("http://localhost/thumbnails/new.jpg");
-        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
+        when(binaryContentService.upload(eq(StorageDirectory.THUMBNAIL), any(), any()))
+                .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(expectedResponse);
 
         // when
@@ -312,10 +295,7 @@ class ContentServiceTest {
         // then
         assertThat(result).isSameAs(expectedResponse);
         assertThat(content.getThumbnail()).isNotNull();
-        verify(binaryContentRepository).save(any(BinaryContent.class));
-        ArgumentCaptor<BinaryContentUploadEvent> eventCaptor = ArgumentCaptor.forClass(BinaryContentUploadEvent.class);
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue().key()).isEqualTo("thumbnails/new.jpg");
+        verify(binaryContentService).upload(eq(StorageDirectory.THUMBNAIL), any(), any());
     }
 
     @Test
@@ -324,17 +304,14 @@ class ContentServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
-        BinaryContent oldThumbnail = BinaryContent.pending("http://localhost/thumbnails/old.jpg");
+        BinaryContent oldThumbnail = BinaryContent.completed("http://localhost/thumbnails/old.jpg");
         content.attachThumbnail(oldThumbnail);
         FileRequest image = new FileRequest(new byte[]{4, 5, 6}, "new.jpg");
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
-        when(storageKeyFactory.generate(eq(StorageDirectory.THUMBNAIL), any(), eq("new.jpg")))
-                .thenReturn(new GeneratedKey("thumbnails/new.jpg", "image/jpeg"));
-        when(binaryContentStorage.toUrl("thumbnails/new.jpg"))
-                .thenReturn("http://localhost/thumbnails/new.jpg");
-        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
+        when(binaryContentService.upload(eq(StorageDirectory.THUMBNAIL), any(), any()))
+                .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(null);
 
         // when
@@ -391,7 +368,7 @@ class ContentServiceTest {
                 contentId, new ContentUpdateRequest("제목", null, List.of("액션")), null))
                 .isInstanceOf(ContentNotFoundException.class);
 
-        verifyNoInteractions(tagRepository, binaryContentRepository, eventPublisher, contentMapper);
+        verifyNoInteractions(tagRepository, binaryContentService, eventPublisher, contentMapper);
     }
 
     @Test
@@ -409,7 +386,7 @@ class ContentServiceTest {
 
         assertThat(content.getTitle()).isEqualTo("기존 제목");
         verify(tagRepository, never()).findByNameIn(anyList());
-        verifyNoInteractions(binaryContentRepository, eventPublisher, contentMapper);
+        verifyNoInteractions(binaryContentService, eventPublisher, contentMapper);
     }
 
     // --- FIND BY ID ---
@@ -421,7 +398,7 @@ class ContentServiceTest {
         Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", "설명");
         ContentResponse expectedResponse = new ContentResponse(
                 contentId, ContentType.MOVIE, "테스트 영화", "설명",
-                null, null, List.of("액션"), 4.5, 10, 100L
+                null, List.of("액션"), 4.5, 10, 100L
         );
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
@@ -555,7 +532,7 @@ class ContentServiceTest {
 
         // then
         verify(contentRepository).delete(content);
-        verifyNoInteractions(binaryContentRepository, eventPublisher);
+        verifyNoInteractions(binaryContentService, eventPublisher);
     }
 
     @Test
@@ -564,7 +541,7 @@ class ContentServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
-        BinaryContent thumbnail = BinaryContent.pending("http://localhost/thumbnails/thumb.jpg");
+        BinaryContent thumbnail = BinaryContent.completed("http://localhost/thumbnails/thumb.jpg");
         content.attachThumbnail(thumbnail);
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
 

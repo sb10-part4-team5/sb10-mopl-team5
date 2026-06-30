@@ -2,12 +2,8 @@ package com.codeit.team5.mopl.content.service;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
-import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
-import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
-import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
-import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
+import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
-import com.codeit.team5.mopl.binarycontent.storage.StorageKeyFactory;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
@@ -34,7 +30,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,10 +49,7 @@ public class ContentService {
     private final ContentStatsRepository contentStatsRepository;
     private final TagRepository tagRepository;
     private final ContentMapper contentMapper;
-    private final BinaryContentStorage binaryContentStorage;
-    private final StorageKeyFactory storageKeyFactory;
-    private final BinaryContentRepository binaryContentRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final BinaryContentService binaryContentService;
 
     private static final String SECONDARY_SORT_FIELD = "id";
 
@@ -76,14 +68,14 @@ public class ContentService {
                 request.description()
         ));
 
-        if (image != null) {
-            content.attachThumbnail(storeThumbnailImage(content.getId(), image));
-        }
-
         attachTags(content, request.tags());
 
         ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
         content.attachStats(stats);
+
+        if (image != null) {
+            content.attachThumbnail(binaryContentService.upload(StorageDirectory.THUMBNAIL, content.getId(), image));
+        }
 
         return contentMapper.toDto(content);
     }
@@ -108,12 +100,7 @@ public class ContentService {
         updateTags(content, tagNames);
 
         if (image != null) {
-            // TODO(고아 정리): 비정상적인 상태를 가진 BinaryContent를 배치로 정리 (DB/S3 누적 방지)
-            BinaryContent oldThumbnail = content.getThumbnail();
-            if (oldThumbnail != null) {
-                oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
-            }
-            content.attachThumbnail(storeThumbnailImage(content.getId(), image));
+            content.attachThumbnail(binaryContentService.upload(StorageDirectory.THUMBNAIL, content.getId(), image));
         }
 
         return contentMapper.toDto(content);
@@ -162,18 +149,6 @@ public class ContentService {
             oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
         }
         contentRepository.delete(content);
-    }
-
-    private BinaryContent storeThumbnailImage(UUID contentId, FileRequest image) {
-        GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.THUMBNAIL, contentId, image.filename());
-        BinaryContent thumbnailImage = binaryContentRepository.save(
-                BinaryContent.pending(binaryContentStorage.toUrl(generated.key())));
-
-        eventPublisher.publishEvent(
-                new BinaryContentUploadEvent(thumbnailImage.getId(), generated.key(), image.bytes(), generated.contentType()));
-        // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 썸네일 이미지 롤백
-
-        return thumbnailImage;
     }
 
     private void attachTags(Content content, List<String> rawTagNames) {

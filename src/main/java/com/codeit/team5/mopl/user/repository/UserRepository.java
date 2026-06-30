@@ -4,7 +4,6 @@ import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -20,7 +19,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("select u from User u where u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") UUID id);
 
-    // N+1 문제 방지 update용 조회 메서드
-    @EntityGraph(attributePaths = {"profileImage"})
-    Optional<User> findWithProfileImageById(UUID id);
+    // 프로필 이미지를 fetch join으로 함께 조회 (update 시 N+1 방지)
+    @Query("select u from User u left join fetch u.profileImage where u.id = :id")
+    Optional<User> findWithProfileImageById(@Param("id") UUID id);
 }

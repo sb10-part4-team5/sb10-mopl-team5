@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.content.entity;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.content.exception.InvalidContentSourceException;
 import com.codeit.team5.mopl.content.exception.InvalidContentTitleException;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
@@ -106,6 +107,9 @@ public class Content extends BaseUpdatableEntity {
     }
 
     public void attachThumbnail(BinaryContent thumbnail) {
+        if (this.thumbnail != null) {
+            this.thumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
+        }
         this.thumbnail = thumbnail;
     }
 
