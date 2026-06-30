@@ -6,6 +6,7 @@ import java.util.List;
 public record TmdbTvDto(
         long id,
         String name,
+        @JsonProperty("original_name") String originalName,
         String overview,
         @JsonProperty("poster_path") String posterPath,
         @JsonProperty("genre_ids") List<Long> genreIds,

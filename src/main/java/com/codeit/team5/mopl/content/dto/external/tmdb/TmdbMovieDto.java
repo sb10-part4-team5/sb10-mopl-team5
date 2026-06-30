@@ -6,6 +6,7 @@ import java.util.List;
 public record TmdbMovieDto(
         long id,
         String title,
+        @JsonProperty("original_title") String originalTitle,
         String overview,
         @JsonProperty("poster_path") String posterPath,
         @JsonProperty("genre_ids") List<Long> genreIds,

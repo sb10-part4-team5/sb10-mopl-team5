@@ -86,6 +86,10 @@ public class TmdbContentService {
     }
 
     private void saveMovieIfAbsent(TmdbMovieDto dto) {
+        if (dto.title().equals(dto.originalTitle())) {
+            log.debug("[TMDB] 영화 스킵 (한국어 제목 없음) - externalId={}, title={}", dto.id(), dto.title());
+            return;
+        }
         String externalId = String.valueOf(dto.id());
         if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, externalId)) {
             log.debug("[TMDB] 영화 스킵 (이미 존재) - externalId={}, title={}", externalId, dto.title());
@@ -111,6 +115,10 @@ public class TmdbContentService {
     }
 
     private void saveTvSeriesIfAbsent(TmdbTvDto dto) {
+        if (dto.name().equals(dto.originalName())) {
+            log.debug("[TMDB] TV 시리즈 스킵 (한국어 제목 없음) - externalId={}, name={}", dto.id(), dto.name());
+            return;
+        }
         String externalId = String.valueOf(dto.id());
         if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, externalId)) {
             log.debug("[TMDB] TV 시리즈 스킵 (이미 존재) - externalId={}, name={}", externalId, dto.name());
