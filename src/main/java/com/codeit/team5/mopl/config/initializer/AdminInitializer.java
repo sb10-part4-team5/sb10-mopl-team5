@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -33,15 +34,28 @@ public class AdminInitializer implements ApplicationRunner {
                     userRepository.save(existingAdmin);
                     log.info("Admin init recover: 기존 admin 계정의 권한을 ADMIN으로 복구했습니다.");
                 }, () -> {
-                    User admin = User.create(
-                            adminProperties.email(),
-                            passwordEncoder.encode(adminProperties.password()),
-                            adminProperties.name()
-                    );
+                    try {
+                        User admin = User.create(
+                                adminProperties.email(),
+                                passwordEncoder.encode(adminProperties.password()),
+                                adminProperties.name()
+                        );
 
-                    admin.updateRole(UserRole.ADMIN);
-                    userRepository.save(admin);
-                    log.info("Admin init success: ADMIN 계정이 초기화되었습니다.");
+                        admin.updateRole(UserRole.ADMIN);
+                        userRepository.save(admin);
+
+                        log.info("Admin init success: ADMIN 계정이 초기화되었습니다.");
+                    } catch (DataIntegrityViolationException e) {
+                        userRepository.findByEmail(adminProperties.email())
+                                .ifPresent(existingAdmin -> {
+                                    if (existingAdmin.getRole() != UserRole.ADMIN) {
+                                        existingAdmin.updateRole(UserRole.ADMIN);
+                                        userRepository.save(existingAdmin);
+                                    }
+                                });
+
+                        log.info("Admin init recovered after duplicate insert race.");
+                    }
                 });
     }
 }
