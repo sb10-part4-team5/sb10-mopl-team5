@@ -36,6 +36,16 @@ public class BinaryContent extends BaseUpdatableEntity {
         return binaryContent;
     }
 
+    public static BinaryContent externalUrl(String url) {
+        BinaryContent binaryContent = new BinaryContent();
+        if (!StringUtils.hasText(url)) {
+            throw new InvalidBinaryContentUrlException();
+        }
+        binaryContent.url = url;
+        binaryContent.uploadStatus = BinaryContentUploadStatus.COMPLETED;
+        return binaryContent;
+    }
+
     public void updateUploadStatus(BinaryContentUploadStatus status) {
         this.uploadStatus = Objects.requireNonNull(status, "status must not be null");
     }

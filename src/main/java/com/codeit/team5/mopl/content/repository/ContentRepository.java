@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.content.repository;
 
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.repository.querydsl.ContentQueryRepository;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,4 +12,6 @@ public interface ContentRepository extends JpaRepository<Content, UUID>, Content
 
     @EntityGraph(attributePaths = {"thumbnail", "stats", "contentTags", "contentTags.tag"})
     Optional<Content> findWithStatsAndTagsById(UUID id);
+
+    boolean existsBySourceAndExternalId(ContentSource source, String externalId);
 }
