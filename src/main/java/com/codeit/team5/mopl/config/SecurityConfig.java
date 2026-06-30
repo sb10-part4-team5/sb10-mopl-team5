@@ -62,6 +62,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/follows/**").authenticated()
+                        .requestMatchers("/api/conversations/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
 
                         .requestMatchers("/api/auth/sign-in").permitAll()

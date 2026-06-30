@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.constant.UserSortBy;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import java.util.List;
 import org.mapstruct.Mapper;
@@ -20,6 +21,9 @@ public interface UserMapper {
     @Mapping(target = "profileImageUrl", source = "user.profileImage.url")
     UserResponse toDto(User user);
 
+    @Mapping(target = "userId", source = "id")
+    @Mapping(target = "profileImageUrl", source = "profileImage.url")
+    UserSummaryResponse toSummaryResponse(User user);
     default CursorResponse<UserResponse> toCursor(
             List<User> page, boolean hasNext, long totalCount, UserSortBy sortBy, Direction sortDirection
     ) {
