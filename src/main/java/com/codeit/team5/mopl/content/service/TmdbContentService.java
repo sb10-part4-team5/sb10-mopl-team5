@@ -88,7 +88,6 @@ public class TmdbContentService {
         collectByPage("영화", startPage, endPage, page -> {
             TmdbMovieListResponse response = tmdbApiClient.fetchMovies(page);
             List<TmdbContentData> items = response.results().stream()
-                    .filter(dto -> !dto.title().equals(dto.originalTitle()))
                     .map(this::toContentData)
                     .toList();
             return new TmdbPageResult(items, response.totalPages());
@@ -106,7 +105,6 @@ public class TmdbContentService {
         collectByPage("TV 시리즈", startPage, endPage, page -> {
             TmdbTvListResponse response = tmdbApiClient.fetchTvSeries(page);
             List<TmdbContentData> items = response.results().stream()
-                    .filter(dto -> !dto.name().equals(dto.originalName()))
                     .map(this::toContentData)
                     .toList();
             return new TmdbPageResult(items, response.totalPages());

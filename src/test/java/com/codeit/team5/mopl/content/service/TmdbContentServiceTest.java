@@ -79,7 +79,7 @@ class TmdbContentServiceTest {
     // --- collectMovies ---
 
     @Test
-    @DisplayName("한국어 제목이 있는 영화는 저장된다")
+    @DisplayName("정상적인 영화는 저장된다")
     void collectMovies_savesMovieWithKoreanTitle() {
         givenTransactionExecutesCallback();
         TmdbMovieDto dto = movieDto(1L, "어벤져스", "Avengers", List.of(28L));
@@ -97,19 +97,6 @@ class TmdbContentServiceTest {
 
         verify(contentRepository).save(any());
         verify(contentStatsRepository).save(any());
-    }
-
-    @Test
-    @DisplayName("한국어 제목이 없는 영화(title == originalTitle)는 저장을 건너뛴다")
-    void collectMovies_skipsMovieWithoutKoreanTitle() {
-        givenTransactionExecutesCallback();
-        TmdbMovieDto dto = movieDto(2L, "Avengers", "Avengers", List.of(28L));
-        given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(dto), 1, 1));
-
-        tmdbContentService.collectMovies(1, 1);
-
-        verify(contentRepository, never()).existsBySourceAndExternalId(any(), any());
-        verify(contentRepository, never()).save(any());
     }
 
     @Test
@@ -197,7 +184,7 @@ class TmdbContentServiceTest {
     // --- collectTvSeries ---
 
     @Test
-    @DisplayName("한국어 이름이 있는 TV 시리즈는 저장된다")
+    @DisplayName("정상적인 TV 시리즈는 저장된다")
     void collectTvSeries_savesTvWithKoreanName() {
         givenTransactionExecutesCallback();
         TmdbTvDto dto = tvDto(10L, "더 글로리", "The Glory", List.of(18L));
@@ -213,18 +200,6 @@ class TmdbContentServiceTest {
 
         verify(contentRepository).save(any());
         verify(contentStatsRepository).save(any());
-    }
-
-    @Test
-    @DisplayName("한국어 이름이 없는 TV 시리즈(name == originalName)는 저장을 건너뛴다")
-    void collectTvSeries_skipsWithoutKoreanName() {
-        givenTransactionExecutesCallback();
-        TmdbTvDto dto = tvDto(11L, "The Glory", "The Glory", List.of());
-        given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(dto), 1, 1));
-
-        tmdbContentService.collectTvSeries(1, 1);
-
-        verify(contentRepository, never()).save(any());
     }
 
     @Test
