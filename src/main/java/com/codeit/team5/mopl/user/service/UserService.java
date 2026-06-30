@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.user.service;
 
+import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
@@ -9,11 +10,16 @@ import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
+import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
+import com.codeit.team5.mopl.user.exception.UserForbiddenException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -39,6 +45,7 @@ public class UserService {
     private final StorageKeyFactory storageKeyFactory;
     private final BinaryContentRepository binaryContentRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final RefreshTokenStore refreshTokenStore;
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
@@ -69,14 +76,14 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse update(UUID userId, UserUpdateRequest request, FileRequest image) {
+    public UserResponse update(UUID currentUserId, UUID userId, UserUpdateRequest request, FileRequest image) {
+        validateOwner(currentUserId, userId);
+
         User user = userRepository.findWithProfileImageById(userId)
                 .orElseThrow(() -> {
                     log.warn("User not found: userId={}", userId);
                     return new UserNotFoundException(userId);
                 });
-
-        // TODO: 인증 구현 후 본인 확인(현재 로그인 사용자 == userId) 추가, 불일치 시 403
 
         user.updateName(request.name());
         if (image != null) {
@@ -92,6 +99,40 @@ public class UserService {
         return userMapper.toDto(user);
     }
 
+    @Transactional
+    public void updateRole(UUID userId, UserRoleUpdateRequest request) {
+        User requestedUser = getUser(userId);
+        UserRole roleBefore = requestedUser.getRole();
+
+        requestedUser.updateRole(request.role());
+        refreshTokenStore.deleteByUserId(userId);
+
+        eventPublisher.publishEvent(
+                new RoleChangedEvent(
+                        requestedUser.getId(),
+                        roleBefore.name(),
+                        request.role().name()
+                )
+        );
+
+        log.info(
+                "User role updated: userId={}, roleBefore={}, roleAfter={}",
+                userId,
+                roleBefore,
+                request.role()
+        );
+    }
+
+    @Transactional
+    public void updateLock(UUID userId, UserLockedUpdateRequest request) {
+        User requestUser = getUser(userId);
+
+        requestUser.updateLocked(request.locked());
+        refreshTokenStore.deleteByUserId(userId);
+
+        log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
+    }
+
     private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
         GeneratedKey generated = storageKeyFactory.generate(StorageDirectory.PROFILE, userId, image.filename());
         BinaryContent profileImage = binaryContentRepository.save(
@@ -102,6 +143,12 @@ public class UserService {
         // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
 
         return profileImage;
+    }
+
+    private void validateOwner(UUID currentUserId, UUID userId) {
+        if (!currentUserId.equals(userId)) {
+            throw new UserForbiddenException(currentUserId, userId);
+        }
     }
 
     private User getUser(UUID userId) {

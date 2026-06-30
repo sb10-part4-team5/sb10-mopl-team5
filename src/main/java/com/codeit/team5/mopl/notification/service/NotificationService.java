@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -42,7 +43,9 @@ public class NotificationService {
     private final ApplicationEventPublisher publisher;
 
     // 알림 생성 및 저장
-    @Transactional
+    // AFTER_COMMIT 이벤트 리스너(트랜잭션 동기화 콜백)에서 호출되므로,
+    // 활성 트랜잭션 유무와 무관하게 항상 새 물리 트랜잭션을 보장하기 위해 REQUIRES_NEW 사용
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationResponse create(
             UUID receiverId, NotificationType type, String title, String content,
             NotificationLevel level) {
