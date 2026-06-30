@@ -6,6 +6,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import org.mockito.ArgumentCaptor;
+
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.entity.Content;
@@ -62,11 +64,12 @@ class ContentCollectionUtilsTest {
     void attachThumbnail_validUrl_savesAndAttaches() {
         Content content = mockContent();
         BinaryContent thumbnail = BinaryContent.externalUrl("https://base.url/poster.jpg");
-        given(binaryContentRepository.save(any())).willReturn(thumbnail);
+        ArgumentCaptor<BinaryContent> captor = ArgumentCaptor.forClass(BinaryContent.class);
+        given(binaryContentRepository.save(captor.capture())).willReturn(thumbnail);
 
         ContentCollectionUtils.attachThumbnail(content, "/poster.jpg", binaryContentRepository, "https://base.url");
 
-        verify(binaryContentRepository).save(any());
+        assertThat(captor.getValue().getUrl()).isEqualTo("https://base.url/poster.jpg");
         assertThat(content.getThumbnail()).isEqualTo(thumbnail);
     }
 
@@ -75,11 +78,12 @@ class ContentCollectionUtilsTest {
     void attachThumbnail_emptyBaseUrl_usesUrlAsIs() {
         Content content = mockContent();
         BinaryContent thumbnail = BinaryContent.externalUrl("https://thumb.url/img.jpg");
-        given(binaryContentRepository.save(any())).willReturn(thumbnail);
+        ArgumentCaptor<BinaryContent> captor = ArgumentCaptor.forClass(BinaryContent.class);
+        given(binaryContentRepository.save(captor.capture())).willReturn(thumbnail);
 
         ContentCollectionUtils.attachThumbnail(content, "https://thumb.url/img.jpg", binaryContentRepository, "");
 
-        verify(binaryContentRepository).save(any());
+        assertThat(captor.getValue().getUrl()).isEqualTo("https://thumb.url/img.jpg");
     }
 
     @Test
