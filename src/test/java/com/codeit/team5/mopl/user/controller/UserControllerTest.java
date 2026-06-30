@@ -336,7 +336,7 @@ class UserControllerTest {
                 "user@example.com", "새이름",
                 "http://localhost/profiles/key.jpg", "USER", false
         );
-        given(userService.update(any(), any(), any())).willReturn(response);
+        given(userService.update(any(), any(), any(), any())).willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
                 "request", "", MediaType.APPLICATION_JSON_VALUE,
@@ -347,13 +347,14 @@ class UserControllerTest {
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
                         .file(requestPart).file(imagePart)
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(authentication(authOf(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
                 .andExpect(jsonPath("$.name").value("새이름"))
                 .andExpect(jsonPath("$.profileImageUrl").value("http://localhost/profiles/key.jpg"));
 
-        verify(userService).update(any(), any(), any());
+        verify(userService).update(any(), any(), any(), any());
     }
 
     @Test
@@ -368,13 +369,17 @@ class UserControllerTest {
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
                         .file(requestPart)
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(authentication(authOf(userId))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 
-        verify(userService, never()).update(any(), any(), any());
+        verify(userService, never()).update(any(), any(), any(), any());
     }
 
+    private Authentication authOf(UUID userId) {
+        UserResponse dto = new UserResponse(
+                userId, Instant.now(), "user@example.com", "유저", null, "USER", false);
     @Test
     @DisplayName("관리자가 사용자 권한 변경 요청하면 204 응답을 반환한다")
     void updateRole_success() throws Exception {

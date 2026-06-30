@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.user.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -12,7 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.entity.UserRole;
@@ -27,7 +30,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import java.time.Instant;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -210,11 +216,10 @@ class UserControllerIntegrationTest {
         UUID unknownId = UUID.randomUUID();
 
         // When & Then
-        // 예외 핸들러 마이그레이션 전이라 상태코드는 에러(>=400)로만 일반화 검증
-        // (핸들러 활성화 후 404 + ErrorResponseSuggestion 형식으로 강화 예정)
         mockMvc.perform(get("/api/users/{userId}", unknownId))
-                .andExpect(result ->
-                        assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.exceptionType").value("UserNotFoundException"))
+                .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."));
     }
 
     @Test
@@ -243,7 +248,8 @@ class UserControllerIntegrationTest {
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
                         .file(requestPart)
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(authentication(authOf(saved.getId()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(saved.getId().toString()))
                 .andExpect(jsonPath("$.name").value("변경된이름"));
@@ -265,7 +271,8 @@ class UserControllerIntegrationTest {
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
                         .file(requestPart)
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(authentication(authOf(saved.getId()))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 
@@ -274,6 +281,29 @@ class UserControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("본인이 아닌 사용자의 프로필 변경 실패")
+    void updateUser_notOwner_returnsForbidden() throws Exception {
+        User saved = userRepository.saveAndFlush(
+                User.create("user@example.com", "encoded-password", "기존이름"));
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(new UserUpdateRequest("변경된이름")));
+
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", saved.getId())
+                        .file(requestPart)
+                        .with(csrf())
+                        .with(authentication(authOf(UUID.randomUUID()))))
+                .andExpect(status().isForbidden());
+
+        User notUpdated = userRepository.findById(saved.getId()).orElseThrow();
+        assertThat(notUpdated.getName()).isEqualTo("기존이름");
+    }
+
+    private Authentication authOf(UUID userId) {
+        UserResponse dto = new UserResponse(
+                userId, Instant.now(), "user@example.com", "유저", null, "USER", false);
+        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
     @DisplayName("관리자가 사용자 권한을 변경하면 DB 권한이 변경되고 토큰이 무효화된다")
     void updateRole_byAdmin_success() throws Exception {
         // Given

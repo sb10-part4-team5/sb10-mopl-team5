@@ -19,6 +19,7 @@ import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
+import com.codeit.team5.mopl.user.exception.UserForbiddenException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -75,14 +76,14 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse update(UUID userId, UserUpdateRequest request, FileRequest image) {
+    public UserResponse update(UUID currentUserId, UUID userId, UserUpdateRequest request, FileRequest image) {
+        validateOwner(currentUserId, userId);
+
         User user = userRepository.findWithProfileImageById(userId)
                 .orElseThrow(() -> {
                     log.warn("User not found: userId={}", userId);
                     return new UserNotFoundException(userId);
                 });
-
-        // TODO: 인증 구현 후 본인 확인(현재 로그인 사용자 == userId) 추가, 불일치 시 403
 
         user.updateName(request.name());
         if (image != null) {
@@ -142,6 +143,12 @@ public class UserService {
         // TODO(업로드 실패 대응): 비동기 업로드 실패 시 보상 트랜잭션으로 프로필 이미지 롤백
 
         return profileImage;
+    }
+
+    private void validateOwner(UUID currentUserId, UUID userId) {
+        if (!currentUserId.equals(userId)) {
+            throw new UserForbiddenException(currentUserId, userId);
+        }
     }
 
     private User getUser(UUID userId) {
