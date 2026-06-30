@@ -3,24 +3,18 @@ package com.codeit.team5.mopl.playlist.entity;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.user.entity.User;
 import io.jsonwebtoken.lang.Assert;
-import jakarta.persistence.AttributeOverride;
-import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import java.util.function.Consumer;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import org.springframework.util.StringUtils;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -58,5 +52,20 @@ public class Playlist extends BaseUpdatableEntity {
                 .description(description)
                 .subscriberCount(0)
                 .build();
+    }
+
+    public void updateTitle(String title) {
+        updateIfChanged(this.title, title, value -> this.title = value);
+    }
+
+    public void updateDescription(String description) {
+        updateIfChanged(this.description, description, value -> this.description = value);
+    }
+
+    private void updateIfChanged(String oldValue, String newValue, Consumer<String> update) {
+        if (!StringUtils.hasText(newValue) || oldValue.equals(newValue)) {
+            return;
+        }
+        update.accept(newValue);
     }
 }
