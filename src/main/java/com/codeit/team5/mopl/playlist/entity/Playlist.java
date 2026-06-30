@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.playlist.entity;
 
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.user.entity.User;
+import io.jsonwebtoken.lang.Assert;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
@@ -12,42 +13,50 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 @Getter
-@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "playlists", schema = "public")
-@AttributeOverrides({
-        @AttributeOverride(name = "createdAt",
-                column = @Column(nullable = false)),
-        @AttributeOverride(name = "updatedAt",
-                column = @Column(nullable = false))})
+@Table(name = "playlists")
 public class Playlist extends BaseUpdatableEntity {
 
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @Size(max = 255)
-    @NotNull
-    @Column(name = "title", nullable = false)
+    @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @NotNull
     @Column(name = "description", nullable = false, length = Integer.MAX_VALUE)
     private String description;
 
-    @NotNull
-    @ColumnDefault("0")
     @Column(name = "subscriber_count", nullable = false)
     private Integer subscriberCount;
 
+    @Builder(access = AccessLevel.PRIVATE)
+    private Playlist(User owner, String title, String description, Integer subscriberCount) {
+        Assert.hasText(title, "제목을 입력해주세요.");
+        Assert.hasText(description, "상세 설명을 입력해주세요.");
+        this.owner = owner;
+        this.title = title;
+        this.description = description;
+        this.subscriberCount = subscriberCount;
+    }
 
+    public static Playlist of(User owner, String title, String description) {
+        return Playlist.builder()
+                .owner(owner)
+                .title(title)
+                .description(description)
+                .subscriberCount(0)
+                .build();
+    }
 }
