@@ -38,6 +38,7 @@ public class TmdbContentService {
 
     private static final String TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
     private static final long REQUEST_DELAY_MS = 300;
+    private static final int MAX_PAGE = 500;
 
     private final TmdbApiClient tmdbApiClient;
     private final ContentRepository contentRepository;
@@ -47,6 +48,11 @@ public class TmdbContentService {
 
     @Transactional
     public void collectMovies(int startPage, int endPage) {
+        int clampedEnd = Math.min(endPage, MAX_PAGE);
+        if (clampedEnd < endPage) {
+            log.warn("[TMDB] endPage {}가 최대 허용 페이지({})를 초과하여 {}로 조정됩니다.", endPage, MAX_PAGE, clampedEnd);
+        }
+        endPage = clampedEnd;
         for (int page = startPage; page <= endPage; page++) {
             TmdbMovieListResponse response = tmdbApiClient.fetchMovies(page);
             response.results().forEach(this::saveMovieIfAbsent);
@@ -60,6 +66,11 @@ public class TmdbContentService {
 
     @Transactional
     public void collectTvSeries(int startPage, int endPage) {
+        int clampedEnd = Math.min(endPage, MAX_PAGE);
+        if (clampedEnd < endPage) {
+            log.warn("[TMDB] endPage {}가 최대 허용 페이지({})를 초과하여 {}로 조정됩니다.", endPage, MAX_PAGE, clampedEnd);
+        }
+        endPage = clampedEnd;
         for (int page = startPage; page <= endPage; page++) {
             TmdbTvListResponse response = tmdbApiClient.fetchTvSeries(page);
             response.results().forEach(this::saveTvSeriesIfAbsent);
@@ -74,6 +85,7 @@ public class TmdbContentService {
     private void saveMovieIfAbsent(TmdbMovieDto dto) {
         String externalId = String.valueOf(dto.id());
         if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, externalId)) {
+            log.debug("[TMDB] 영화 스킵 (이미 존재) - externalId={}, title={}", externalId, dto.title());
             return;
         }
 
@@ -98,6 +110,7 @@ public class TmdbContentService {
     private void saveTvSeriesIfAbsent(TmdbTvDto dto) {
         String externalId = String.valueOf(dto.id());
         if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, externalId)) {
+            log.debug("[TMDB] TV 시리즈 스킵 (이미 존재) - externalId={}, name={}", externalId, dto.name());
             return;
         }
 

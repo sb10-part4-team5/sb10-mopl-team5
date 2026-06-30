@@ -51,6 +51,7 @@ public class SportsDbContentService {
 
     private void saveEventIfAbsent(SportsDbEventDto dto) {
         if (contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, dto.idEvent())) {
+            log.debug("[SportsDB] 경기 스킵 (이미 존재) - idEvent={}, event={}", dto.idEvent(), dto.strEvent());
             return;
         }
 
