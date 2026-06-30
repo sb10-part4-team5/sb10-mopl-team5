@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.content.service;
 
-import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.content.service.util.ContentCollectionUtils;
 import com.codeit.team5.mopl.content.client.sportsdb.SportsDbApiClient;
 import com.codeit.team5.mopl.content.dto.external.sportsdb.SportsDbEventDto;
 import com.codeit.team5.mopl.content.dto.external.sportsdb.SportsDbEventListResponse;
@@ -17,8 +17,6 @@ import com.codeit.team5.mopl.tag.repository.TagRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,13 +65,14 @@ public class SportsDbContentService {
         }
 
         transactionTemplate.execute(status -> {
-            response.events().forEach(this::saveEventIfAbsent);
+            Tag leagueTag = resolveLeagueTag(response.events().get(0).strLeague());
+            response.events().forEach(dto -> saveEventIfAbsent(dto, leagueTag));
             return null;
         });
         log.info("[SportsDB] 경기 수집 완료 - leagueId={}, season={}, {}건", leagueId, season, response.events().size());
     }
 
-    private void saveEventIfAbsent(SportsDbEventDto dto) {
+    private void saveEventIfAbsent(SportsDbEventDto dto, Tag leagueTag) {
         if (contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, dto.idEvent())) {
             log.debug("[SportsDB] 경기 스킵 (이미 존재) - idEvent={}, event={}", dto.idEvent(), dto.strEvent());
             return;
@@ -92,28 +91,23 @@ public class SportsDbContentService {
         );
 
         attachThumbnail(content, dto.strThumb());
-        attachLeagueTag(content, dto.strLeague());
+        if (leagueTag != null) {
+            content.addTag(ContentTag.create(content, leagueTag));
+        }
         contentStatsRepository.save(ContentStats.create(content));
     }
 
-    private void attachThumbnail(Content content, String thumbUrl) {
-        if (!StringUtils.hasText(thumbUrl)) {
-            return;
-        }
-        BinaryContent thumbnail = binaryContentRepository.save(
-                BinaryContent.externalUrl(thumbUrl)
-        );
-        content.attachThumbnail(thumbnail);
-    }
-
-    private void attachLeagueTag(Content content, String leagueName) {
+    private Tag resolveLeagueTag(String leagueName) {
         if (!StringUtils.hasText(leagueName)) {
-            return;
+            return null;
         }
         String normalized = leagueName.trim().toLowerCase();
-        Tag tag = tagRepository.findByName(normalized)
+        return tagRepository.findByName(normalized)
                 .orElseGet(() -> tagRepository.save(Tag.create(normalized)));
-        content.addTag(ContentTag.create(content, tag));
+    }
+
+    private void attachThumbnail(Content content, String thumbUrl) {
+        ContentCollectionUtils.attachThumbnail(content, thumbUrl, binaryContentRepository, "");
     }
 
     private String buildDescription(SportsDbEventDto dto) {
@@ -139,14 +133,6 @@ public class SportsDbContentService {
     }
 
     private Instant parseDate(String date) {
-        if (!StringUtils.hasText(date)) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(date).atStartOfDay(ZoneOffset.UTC).toInstant();
-        } catch (Exception e) {
-            log.warn("[SportsDB] 날짜 파싱 실패 - date={}", date);
-            return null;
-        }
+        return ContentCollectionUtils.parseDate(date, "SportsDB");
     }
 }

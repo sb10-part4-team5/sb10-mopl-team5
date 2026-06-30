@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.content.service;
 
-import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.content.service.util.ContentCollectionUtils;
 import com.codeit.team5.mopl.content.client.tmdb.TmdbApiClient;
 import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbMovieDto;
 import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbMovieGenre;
@@ -21,8 +21,6 @@ import com.codeit.team5.mopl.tag.repository.TagRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -63,6 +61,18 @@ public class TmdbContentService {
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
 
+    private record TmdbContentData(
+            ContentType type,
+            String title,
+            String externalId,
+            String overview,
+            String posterPath,
+            List<String> tagNames,
+            String releaseDate,
+            double voteAverage,
+            String originalLanguage
+    ) {}
+
     /**
      * TMDB 인기 영화를 페이지 범위 단위로 수집한다.
      *
@@ -71,23 +81,11 @@ public class TmdbContentService {
      */
     @Async("contentCollectionExecutor")
     public void collectMovies(int startPage, int endPage) {
-        int clampedEnd = Math.min(endPage, MAX_PAGE);
-        if (clampedEnd < endPage) {
-            log.warn("[TMDB] endPage {}가 최대 허용 페이지({})를 초과하여 {}로 조정됩니다.", endPage, MAX_PAGE, clampedEnd);
-        }
-        for (int page = startPage; page <= clampedEnd; page++) {
-            TmdbMovieListResponse response = tmdbApiClient.fetchMovies(page);
-            final int currentPage = page;
-            transactionTemplate.execute(status -> {
-                response.results().forEach(this::saveMovieIfAbsent);
-                return null;
-            });
-            log.info("[TMDB] 영화 수집 완료 - {}/{}페이지 ({}건)", currentPage, response.totalPages(), response.results().size());
-
-            if (page < clampedEnd) {
-                sleep();
-            }
-        }
+        collectByPage("영화", startPage, endPage,
+                page -> tmdbApiClient.fetchMovies(page).results().stream()
+                        .filter(dto -> !dto.title().equals(dto.originalTitle()))
+                        .map(this::toContentData)
+                        .toList());
     }
 
     /**
@@ -98,107 +96,79 @@ public class TmdbContentService {
      */
     @Async("contentCollectionExecutor")
     public void collectTvSeries(int startPage, int endPage) {
+        collectByPage("TV 시리즈", startPage, endPage,
+                page -> tmdbApiClient.fetchTvSeries(page).results().stream()
+                        .filter(dto -> !dto.name().equals(dto.originalName()))
+                        .map(this::toContentData)
+                        .toList());
+    }
+
+    private void collectByPage(String label, int startPage, int endPage,
+                                Function<Integer, List<TmdbContentData>> fetcher) {
         int clampedEnd = Math.min(endPage, MAX_PAGE);
         if (clampedEnd < endPage) {
             log.warn("[TMDB] endPage {}가 최대 허용 페이지({})를 초과하여 {}로 조정됩니다.", endPage, MAX_PAGE, clampedEnd);
         }
         for (int page = startPage; page <= clampedEnd; page++) {
-            TmdbTvListResponse response = tmdbApiClient.fetchTvSeries(page);
-            final int currentPage = page;
+            List<TmdbContentData> items = fetcher.apply(page);
             transactionTemplate.execute(status -> {
-                response.results().forEach(this::saveTvSeriesIfAbsent);
+                items.forEach(this::saveIfAbsent);
                 return null;
             });
-            log.info("[TMDB] TV 시리즈 수집 완료 - {}/{}페이지 ({}건)", currentPage, response.totalPages(), response.results().size());
-
+            log.info("[TMDB] {} 수집 완료 - {}페이지 ({}건)", label, page, items.size());
             if (page < clampedEnd) {
                 sleep();
             }
         }
     }
 
-    private void saveMovieIfAbsent(TmdbMovieDto dto) {
-        if (dto.title().equals(dto.originalTitle())) {
-            log.debug("[TMDB] 영화 스킵 (한국어 제목 없음) - externalId={}, title={}", dto.id(), dto.title());
-            return;
-        }
-        String externalId = String.valueOf(dto.id());
-        if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, externalId)) {
-            log.debug("[TMDB] 영화 스킵 (이미 존재) - externalId={}, title={}", externalId, dto.title());
+    private void saveIfAbsent(TmdbContentData data) {
+        if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, data.externalId())) {
+            log.debug("[TMDB] 스킵 (이미 존재) - externalId={}, title={}", data.externalId(), data.title());
             return;
         }
 
         Content content = contentRepository.save(
                 Content.createByExternalSource(
-                        ContentType.MOVIE,
-                        dto.title(),
-                        dto.overview(),
+                        data.type(),
+                        data.title(),
+                        data.overview(),
                         ContentSource.TMDB,
-                        externalId,
-                        parseDate(dto.releaseDate()),
-                        buildMetadata(dto.voteAverage(), dto.originalLanguage())
+                        data.externalId(),
+                        parseDate(data.releaseDate()),
+                        buildMetadata(data.voteAverage(), data.originalLanguage())
                 )
         );
 
-        attachThumbnail(content, dto.posterPath());
-        attachMovieTags(content, dto.genreIds());
+        attachThumbnail(content, data.posterPath());
+        attachTags(content, data.tagNames());
         contentStatsRepository.save(ContentStats.create(content));
     }
 
-    private void saveTvSeriesIfAbsent(TmdbTvDto dto) {
-        if (dto.name().equals(dto.originalName())) {
-            log.debug("[TMDB] TV 시리즈 스킵 (한국어 제목 없음) - externalId={}, name={}", dto.id(), dto.name());
-            return;
-        }
-        String externalId = String.valueOf(dto.id());
-        if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, externalId)) {
-            log.debug("[TMDB] TV 시리즈 스킵 (이미 존재) - externalId={}, name={}", externalId, dto.name());
-            return;
-        }
-
-        Content content = contentRepository.save(
-                Content.createByExternalSource(
-                        ContentType.TV_SERIES,
-                        dto.name(),
-                        dto.overview(),
-                        ContentSource.TMDB,
-                        externalId,
-                        parseDate(dto.firstAirDate()),
-                        buildMetadata(dto.voteAverage(), dto.originalLanguage())
-                )
-        );
-
-        attachThumbnail(content, dto.posterPath());
-        attachTvTags(content, dto.genreIds());
-        contentStatsRepository.save(ContentStats.create(content));
-    }
-
-    private void attachThumbnail(Content content, String posterPath) {
-        if (!StringUtils.hasText(posterPath)) {
-            return;
-        }
-        BinaryContent thumbnail = binaryContentRepository.save(
-                BinaryContent.externalUrl(TMDB_IMAGE_BASE_URL + posterPath)
-        );
-        content.attachThumbnail(thumbnail);
-    }
-
-    private void attachMovieTags(Content content, List<Long> genreIds) {
-        List<String> genreNames = genreIds.stream()
+    private TmdbContentData toContentData(TmdbMovieDto dto) {
+        List<String> tagNames = dto.genreIds().stream()
                 .map(id -> TmdbMovieGenre.fromId(id).map(TmdbMovieGenre::getLabel))
                 .filter(java.util.Optional::isPresent)
                 .map(java.util.Optional::get)
                 .toList();
-        attachTags(content, genreNames);
+        return new TmdbContentData(ContentType.MOVIE, dto.title(), String.valueOf(dto.id()),
+                dto.overview(), dto.posterPath(), tagNames, dto.releaseDate(),
+                dto.voteAverage(), dto.originalLanguage());
     }
 
-    private void attachTvTags(Content content, List<Long> genreIds) {
-        List<String> genreNames = genreIds.stream()
+    private TmdbContentData toContentData(TmdbTvDto dto) {
+        List<String> tagNames = dto.genreIds().stream()
                 .map(id -> TmdbTvGenre.fromId(id).map(TmdbTvGenre::getLabel))
                 .filter(java.util.Optional::isPresent)
                 .map(java.util.Optional::get)
                 .toList();
-        attachTags(content, genreNames);
+        return new TmdbContentData(ContentType.TV_SERIES, dto.name(), String.valueOf(dto.id()),
+                dto.overview(), dto.posterPath(), tagNames, dto.firstAirDate(),
+                dto.voteAverage(), dto.originalLanguage());
+    }
+
+    private void attachThumbnail(Content content, String posterPath) {
+        ContentCollectionUtils.attachThumbnail(content, posterPath, binaryContentRepository, TMDB_IMAGE_BASE_URL);
     }
 
     private void attachTags(Content content, List<String> tagNames) {
@@ -214,24 +184,19 @@ public class TmdbContentService {
         Map<String, Tag> existingTags = tagRepository.findByNameIn(normalized).stream()
                 .collect(Collectors.toMap(Tag::getName, Function.identity()));
 
-        normalized.stream()
+        List<Tag> newTags = normalized.stream()
                 .filter(name -> !existingTags.containsKey(name))
                 .map(Tag::create)
-                .forEach(tag -> existingTags.put(tag.getName(), tagRepository.save(tag)));
+                .toList();
+        if (!newTags.isEmpty()) {
+            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
+        }
 
         normalized.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
     }
 
     private Instant parseDate(String date) {
-        if (!StringUtils.hasText(date)) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(date).atStartOfDay(ZoneOffset.UTC).toInstant();
-        } catch (Exception e) {
-            log.warn("[TMDB] 날짜 파싱 실패 - date={}", date);
-            return null;
-        }
+        return ContentCollectionUtils.parseDate(date, "TMDB");
     }
 
     private String buildMetadata(double voteAverage, String originalLanguage) {

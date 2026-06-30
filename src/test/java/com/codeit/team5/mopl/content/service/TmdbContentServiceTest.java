@@ -90,7 +90,7 @@ class TmdbContentServiceTest {
         given(contentRepository.save(any())).willReturn(saved);
         given(binaryContentRepository.save(any())).willReturn(mockBinaryContent());
         given(tagRepository.findByNameIn(any())).willReturn(List.of());
-        given(tagRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        given(tagRepository.saveAll(any())).willAnswer(inv -> inv.getArgument(0));
         given(contentStatsRepository.save(any())).willReturn(null);
 
         tmdbContentService.collectMovies(1, 1);
@@ -189,7 +189,7 @@ class TmdbContentServiceTest {
         given(contentRepository.save(any())).willReturn(mockContent());
         given(binaryContentRepository.save(any())).willReturn(mockBinaryContent());
         given(tagRepository.findByNameIn(any())).willReturn(List.of());
-        given(tagRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        given(tagRepository.saveAll(any())).willAnswer(inv -> inv.getArgument(0));
         given(contentStatsRepository.save(any())).willReturn(null);
 
         tmdbContentService.collectTvSeries(1, 1);
@@ -235,13 +235,15 @@ class TmdbContentServiceTest {
         given(contentRepository.save(any())).willReturn(saved);
         given(binaryContentRepository.save(any())).willReturn(mockBinaryContent());
         given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of());
-        ArgumentCaptor<Tag> tagCaptor = ArgumentCaptor.forClass(Tag.class);
-        given(tagRepository.save(tagCaptor.capture())).willAnswer(inv -> inv.getArgument(0));
+        ArgumentCaptor<List> tagListCaptor = ArgumentCaptor.forClass(List.class);
+        given(tagRepository.saveAll(tagListCaptor.capture())).willAnswer(inv -> inv.getArgument(0));
         given(contentStatsRepository.save(any())).willReturn(null);
 
         tmdbContentService.collectTvSeries(1, 1);
 
-        assertThat(tagCaptor.getValue().getName()).isEqualTo("드라마");
+        List<Tag> savedTags = tagListCaptor.getValue();
+        assertThat(savedTags).hasSize(1);
+        assertThat(((Tag) savedTags.get(0)).getName()).isEqualTo("드라마");
     }
 
     @Test
