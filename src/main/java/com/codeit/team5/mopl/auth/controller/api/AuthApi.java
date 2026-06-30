@@ -56,7 +56,8 @@ public interface AuthApi {
             )
     })
     ResponseEntity<JwtResponse> login(
-            @Valid @ModelAttribute SignInRequest request
+            @Valid @ModelAttribute SignInRequest request,
+            CsrfToken csrfToken
     );
 
     @Operation(
@@ -106,7 +107,8 @@ public interface AuthApi {
     })
     ResponseEntity<JwtResponse> refresh(
             @Parameter(description = "Refresh Token Cookie", required = false)
-            @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
+            @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken,
+            CsrfToken csrfToken
     );
 
     @Operation(
