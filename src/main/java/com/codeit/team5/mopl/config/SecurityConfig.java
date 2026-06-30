@@ -57,6 +57,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/sign-out").permitAll()
                         .requestMatchers("/api/follows/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated()
                         .requestMatchers("/api/users").permitAll()
                         .requestMatchers("/api/auth/sign-in").permitAll()
                         .requestMatchers("/api/auth/csrf-token").permitAll()

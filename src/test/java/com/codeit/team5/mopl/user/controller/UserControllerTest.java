@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.user.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
@@ -281,6 +282,13 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("인증 없이 사용자 조회 실패")
+    void getUser_unauthenticated_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/{userId}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("사용자 상세 조회 성공")
     void getUser_success() throws Exception {
         // Given
@@ -297,7 +305,8 @@ class UserControllerTest {
         given(userService.getById(userId)).willReturn(response);
 
         // When & Then
-        mockMvc.perform(get("/api/users/{userId}", userId))
+        mockMvc.perform(get("/api/users/{userId}", userId)
+                        .with(authentication(authOf(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
                 .andExpect(jsonPath("$.createdAt").value("2026-06-23T00:00:00Z"))
@@ -317,11 +326,9 @@ class UserControllerTest {
         given(userService.getById(userId)).willThrow(new UserNotFoundException(userId));
 
         // When & Then
-        // 예외 핸들러 마이그레이션 전이라 상태코드는 에러(>=400)로만 일반화 검증
-        // (핸들러 활성화 후 404 + ErrorResponseSuggestion 형식으로 강화 예정)
-        mockMvc.perform(get("/api/users/{userId}", userId))
-                .andExpect(result ->
-                        assertThat(result.getResponse().getStatus()).isGreaterThanOrEqualTo(400));
+        mockMvc.perform(get("/api/users/{userId}", userId)
+                        .with(authentication(authOf(userId))))
+                .andExpect(status().isNotFound());
 
         verify(userService).getById(userId);
     }
@@ -336,7 +343,7 @@ class UserControllerTest {
                 "user@example.com", "새이름",
                 "http://localhost/profiles/key.jpg", "USER", false
         );
-        given(userService.update(any(), any(), any())).willReturn(response);
+        given(userService.update(eq(userId), eq(userId), any(), any())).willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
                 "request", "", MediaType.APPLICATION_JSON_VALUE,
@@ -347,13 +354,14 @@ class UserControllerTest {
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
                         .file(requestPart).file(imagePart)
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(authentication(authOf(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
                 .andExpect(jsonPath("$.name").value("새이름"))
                 .andExpect(jsonPath("$.profileImageUrl").value("http://localhost/profiles/key.jpg"));
 
-        verify(userService).update(any(), any(), any());
+        verify(userService).update(eq(userId), eq(userId), any(), any());
     }
 
     @Test
@@ -368,11 +376,16 @@ class UserControllerTest {
         // When & Then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/users/{userId}", userId)
                         .file(requestPart)
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(authentication(authOf(userId))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 
-        verify(userService, never()).update(any(), any(), any());
+        verify(userService, never()).update(any(), any(), any(), any());
+    }
+
+    private Authentication authOf(UUID userId) {
+        return authOf(userId, "USER", false);
     }
 
     @Test

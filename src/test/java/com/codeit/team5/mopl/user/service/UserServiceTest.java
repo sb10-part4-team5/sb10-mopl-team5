@@ -28,6 +28,7 @@ import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
+import com.codeit.team5.mopl.user.exception.UserForbiddenException;
 import com.codeit.team5.mopl.user.exception.SameLockStatusException;
 import com.codeit.team5.mopl.user.exception.SameRoleAssignmentException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
@@ -197,7 +198,7 @@ class UserServiceTest {
         when(userMapper.toDto(user)).thenReturn(expected);
 
         // When
-        UserResponse result = userService.update(userId, new UserUpdateRequest("새이름"), null);
+        UserResponse result = userService.update(userId, userId, new UserUpdateRequest("새이름"), null);
 
         // Then
         assertThat(result).isSameAs(expected);
@@ -226,7 +227,7 @@ class UserServiceTest {
         when(userMapper.toDto(user)).thenReturn(expected);
 
         // When
-        UserResponse result = userService.update(userId, new UserUpdateRequest("새이름"), image);
+        UserResponse result = userService.update(userId, userId, new UserUpdateRequest("새이름"), image);
 
         // Then
         assertThat(result).isSameAs(expected);
@@ -244,11 +245,25 @@ class UserServiceTest {
         when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.update(userId, new UserUpdateRequest("새이름"), null))
+        assertThatThrownBy(() -> userService.update(userId, userId, new UserUpdateRequest("새이름"), null))
                 .isInstanceOf(UserNotFoundException.class);
 
         verify(userRepository).findWithProfileImageById(userId);
         verifyNoInteractions(userMapper, binaryContentRepository, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("본인이 아닌 사용자의 프로필 변경 실패")
+    void update_notOwner_throwsException() {
+        // Given
+        UUID currentUserId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        // When & Then
+        assertThatThrownBy(() -> userService.update(currentUserId, userId, new UserUpdateRequest("새이름"), null))
+                .isInstanceOf(UserForbiddenException.class);
+
+        verifyNoInteractions(userRepository, userMapper, binaryContentRepository, eventPublisher);
     }
 
     @Test

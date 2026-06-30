@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.user.controller;
 
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import com.codeit.team5.mopl.user.controller.api.UserApi;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -56,12 +58,14 @@ public class UserController implements UserApi {
     @Override
     @PatchMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UserResponse> updateUser(
+            @AuthenticationPrincipal MoplUserDetails userDetails,
             @PathVariable UUID userId,
             @Valid @RequestPart("request") UserUpdateRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
         log.info("User update request: PATCH /api/users/{}", userId);
 
-        UserResponse response = userService.update(userId, request, MultipartFiles.toImageResource(image));
+        UserResponse response = userService.update(
+                userDetails.getId(), userId, request, MultipartFiles.toImageResource(image));
 
         return ResponseEntity.ok(response);
     }

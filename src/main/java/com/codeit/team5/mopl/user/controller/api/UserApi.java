@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.user.controller.api;
 
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
@@ -81,6 +82,7 @@ public interface UserApi {
             encoding = @Encoding(name = "request", contentType = MediaType.APPLICATION_JSON_VALUE)
     ))
     ResponseEntity<UserResponse> updateUser(
+            @Parameter(hidden = true) MoplUserDetails userDetails,
             @Parameter(description = "사용자 ID", required = true) @PathVariable UUID userId,
             @Parameter(hidden = true) UserUpdateRequest request,
             @Parameter(hidden = true) MultipartFile image);

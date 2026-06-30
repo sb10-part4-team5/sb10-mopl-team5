@@ -51,7 +51,7 @@ public class Follow extends BaseEntity {
         return new Follow(follower, followee);
     }
 
-    public boolean isOwnedBy(UUID userId) {
+    private boolean isOwnedBy(UUID userId) {
         return follower.getId().equals(userId);
     }
 
