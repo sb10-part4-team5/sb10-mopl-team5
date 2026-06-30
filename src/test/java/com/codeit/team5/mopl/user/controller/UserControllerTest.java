@@ -3,11 +3,14 @@ package com.codeit.team5.mopl.user.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,13 +21,19 @@ import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
+import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
+import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
+import com.codeit.team5.mopl.user.exception.SameLockStatusException;
+import com.codeit.team5.mopl.user.exception.SameRoleAssignmentException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.user.service.UserService;
@@ -40,6 +49,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -364,4 +375,221 @@ class UserControllerTest {
         verify(userService, never()).update(any(), any(), any());
     }
 
+    @Test
+    @DisplayName("관리자가 사용자 권한 변경 요청하면 204 응답을 반환한다")
+    void updateRole_success() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/role", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(userService).updateRole(userId, request);
+    }
+
+    @Test
+    @DisplayName("권한 변경 요청의 role이 null이면 400 검증 실패 응답을 반환한다")
+    void updateRole_nullRole_returnsBadRequest() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        String requestJson = """
+                {
+                  "role": null
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/role", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.role").isArray())
+                .andExpect(jsonPath("$.details.role").isNotEmpty());
+
+        verify(userService, never()).updateRole(any(), any());
+    }
+
+    @Test
+    @DisplayName("권한 변경 요청의 role 값이 잘못된 enum이면 400 검증 실패 응답을 반환한다")
+    void updateRole_invalidRole_returnsBadRequest() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        String requestJson = """
+                {
+                  "role": "MANAGER"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/role", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.role[0]").value("허용되지 않는 값입니다: MANAGER"));
+
+        verify(userService, never()).updateRole(any(), any());
+    }
+
+    @Test
+    @DisplayName("권한 변경 대상 사용자가 없으면 404 응답을 반환한다")
+    void updateRole_userNotFound_returnsNotFound() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.ADMIN);
+        willThrow(new UserNotFoundException(userId))
+                .given(userService)
+                .updateRole(userId, request);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/role", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.exceptionType").value("UserNotFoundException"))
+                .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(userService).updateRole(userId, request);
+    }
+
+    @Test
+    @DisplayName("동일한 권한으로 변경하면 409 충돌 응답을 반환한다")
+    void updateRole_sameRole_returnsConflict() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserRoleUpdateRequest request = new UserRoleUpdateRequest(UserRole.USER);
+        willThrow(new SameRoleAssignmentException("USER"))
+                .given(userService)
+                .updateRole(userId, request);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/role", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.exceptionType").value("SameRoleAssignmentException"))
+                .andExpect(jsonPath("$.message")
+                        .value("현재 사용자의 역할과 변경할 역할이 동일합니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(userService).updateRole(userId, request);
+    }
+
+    @Test
+    @DisplayName("관리자가 사용자 잠금 상태 변경 요청하면 204 응답을 반환한다")
+    void updateLock_success() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserLockedUpdateRequest request = new UserLockedUpdateRequest(true);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/locked", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(userService).updateLock(userId, request);
+    }
+
+    @Test
+    @DisplayName("잠금 상태 변경 요청의 locked가 null이면 400 검증 실패 응답을 반환한다")
+    void updateLock_nullLocked_returnsBadRequest() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        String requestJson = """
+                {
+                  "locked": null
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/locked", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.locked").isArray())
+                .andExpect(jsonPath("$.details.locked").isNotEmpty());
+
+        verify(userService, never()).updateLock(any(), any());
+    }
+
+    @Test
+    @DisplayName("잠금 상태 변경 대상 사용자가 없으면 404 응답을 반환한다")
+    void updateLock_userNotFound_returnsNotFound() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserLockedUpdateRequest request = new UserLockedUpdateRequest(true);
+        willThrow(new UserNotFoundException(userId))
+                .given(userService)
+                .updateLock(userId, request);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/locked", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.exceptionType").value("UserNotFoundException"))
+                .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(userService).updateLock(userId, request);
+    }
+
+    @Test
+    @DisplayName("동일한 잠금 상태로 변경하면 409 충돌 응답을 반환한다")
+    void updateLock_sameStatus_returnsConflict() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UserLockedUpdateRequest request = new UserLockedUpdateRequest(false);
+        willThrow(new SameLockStatusException(false))
+                .given(userService)
+                .updateLock(userId, request);
+
+        // When & Then
+        mockMvc.perform(patch("/api/users/{userId}/locked", userId)
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.exceptionType").value("SameLockStatusException"))
+                .andExpect(jsonPath("$.message")
+                        .value("현재 사용자의 잠금 상태와 변경할 잠금 상태가 동일합니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(userService).updateLock(userId, request);
+    }
+
+    private Authentication authOf(UUID userId, String role, boolean locked) {
+        UserResponse dto = new UserResponse(
+                userId, Instant.now(), role.toLowerCase() + "@mopl.com", "사용자", null, role, locked);
+        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+    }
 }

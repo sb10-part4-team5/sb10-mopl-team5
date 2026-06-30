@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.user.service;
 
+import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import com.codeit.team5.mopl.binarycontent.storage.GeneratedKey;
@@ -9,10 +10,14 @@ import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.event.BinaryContentUploadEvent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
+import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
+import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
@@ -39,6 +44,7 @@ public class UserService {
     private final StorageKeyFactory storageKeyFactory;
     private final BinaryContentRepository binaryContentRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final RefreshTokenStore refreshTokenStore;
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
@@ -90,6 +96,40 @@ public class UserService {
 
         log.info("User updated: userId={}", userId);
         return userMapper.toDto(user);
+    }
+
+    @Transactional
+    public void updateRole(UUID userId, UserRoleUpdateRequest request) {
+        User requestedUser = getUser(userId);
+        UserRole roleBefore = requestedUser.getRole();
+
+        requestedUser.updateRole(request.role());
+        refreshTokenStore.deleteByUserId(userId);
+
+        eventPublisher.publishEvent(
+                new RoleChangedEvent(
+                        requestedUser.getId(),
+                        roleBefore.name(),
+                        request.role().name()
+                )
+        );
+
+        log.info(
+                "User role updated: userId={}, roleBefore={}, roleAfter={}",
+                userId,
+                roleBefore,
+                request.role()
+        );
+    }
+
+    @Transactional
+    public void updateLock(UUID userId, UserLockedUpdateRequest request) {
+        User requestUser = getUser(userId);
+
+        requestUser.updateLocked(request.locked());
+        refreshTokenStore.deleteByUserId(userId);
+
+        log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
     }
 
     private BinaryContent storeProfileImage(UUID userId, FileRequest image) {
