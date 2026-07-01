@@ -35,12 +35,14 @@ public class TmdbMovieItemReader implements ItemReader<TmdbMovieDto> {
         }
         currentPage = Integer.parseInt(startPageParam);
         endPage = Math.min(Integer.parseInt(endPageParam), MAX_PAGE);
+        buffer.clear();
+        totalPages = Integer.MAX_VALUE;
         log.info("[TMDB] 영화 수집 범위 설정 - {}~{}페이지", currentPage, endPage);
     }
 
     @Override
     public TmdbMovieDto read() throws InterruptedException {
-        if (buffer.isEmpty()) {
+        while (buffer.isEmpty()) {
             if (currentPage > Math.min(totalPages, endPage)) {
                 return null;
             }
