@@ -3,6 +3,9 @@ spring:
     name: mopl
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  batch:
+    job:
+      enabled: false
   jpa:
     open-in-view: false
     hibernate:
