@@ -10,6 +10,8 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -31,10 +33,21 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
 
     @Override
     public void write(Chunk<? extends ContentWithMetaData> chunk) {
-        List<? extends ContentWithMetaData> items = chunk.getItems();
+        List<ContentWithMetaData> items = new java.util.ArrayList<>(chunk.getItems());
 
-        // 1. Content 일괄 저장
-        List<Content> contents = items.stream()
+        // 1. Content 일괄 저장 (청크 내 externalId 중복 제거 — TMDB가 페이지 간 동일 영화를 중복 반환하는 경우 대비)
+        List<ContentWithMetaData> deduplicatedItems = items.stream()
+                .collect(Collectors.toMap(
+                        item -> item.content().getExternalId(),
+                        Function.identity(),
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .toList();
+
+        List<Content> contents = deduplicatedItems.stream()
                 .map(ContentWithMetaData::content)
                 .toList();
         contentRepository.saveAll(contents);
@@ -46,7 +59,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         contentStatsRepository.saveAll(stats);
 
         // 3. 썸네일 저장
-        items.forEach(item -> {
+        deduplicatedItems.forEach(item -> {
             if (StringUtils.hasText(item.thumbnailUrl())) {
                 BinaryContent thumbnail = binaryContentRepository.save(
                         BinaryContent.externalUrl(item.thumbnailUrl()));
@@ -55,7 +68,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         });
 
         // 4. 태그 저장
-        List<String> allTagNames = items.stream()
+        List<String> allTagNames = deduplicatedItems.stream()
                 .flatMap(item -> item.tagNames().stream())
                 .distinct()
                 .toList();
@@ -73,11 +86,11 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
             }
 
-            items.forEach(item -> item.tagNames().forEach(tagName ->
+            deduplicatedItems.forEach(item -> item.tagNames().forEach(tagName ->
                     item.content().addTag(ContentTag.create(item.content(), existingTags.get(tagName)))
             ));
         }
 
-        log.info("[Batch] {}건 저장 완료", items.size());
+        log.info("[Batch] {}건 저장 완료 (청크 원본: {}건)", deduplicatedItems.size(), items.size());
     }
 }
