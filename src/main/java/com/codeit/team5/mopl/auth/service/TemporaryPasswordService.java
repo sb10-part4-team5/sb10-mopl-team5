@@ -40,7 +40,7 @@ public class TemporaryPasswordService {
 
         temporaryPasswordRepository.save(temporaryPassword);
 
-        temporaryPasswordRepository.save(temporaryPassword);
+        log.info("TemporaryPassword saved: userId={}", user.getId());
 
         return rawPassword;
     }
@@ -56,5 +56,11 @@ public class TemporaryPasswordService {
                         passwordEncoder.matches(rawPassword, temporaryPassword.getPasswordHash())
                 )
                 .orElse(false);
+    }
+
+    @Transactional
+    public void deleteByUserId(UUID userId) {
+        temporaryPasswordRepository.deleteByUserId(userId);
+        log.info("TemporaryPassword deleted: userId={}", userId);
     }
 }

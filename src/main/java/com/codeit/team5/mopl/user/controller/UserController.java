@@ -1,9 +1,11 @@
 package com.codeit.team5.mopl.user.controller;
 
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.controller.api.UserApi;
+import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
@@ -92,6 +94,19 @@ public class UserController implements UserApi {
         log.info("User lock status update request: PATCH /api/users/{}/locked", userId);
 
         userService.updateLock(userId, request);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PatchMapping("/{userId}/password")
+    public ResponseEntity<Void> updatePassword(
+            @AuthenticationPrincipal MoplPrincipal userDetails,
+            @PathVariable UUID userId,
+            @RequestBody ChangePasswordRequest request) {
+        log.info("User password update request: PATCH /api/users/{}/password", userId);
+
+        userService.updatePassword(userDetails.getId(), userId, request);
 
         return ResponseEntity.noContent().build();
     }
