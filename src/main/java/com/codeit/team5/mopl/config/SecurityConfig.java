@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/follows/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
 
+                        .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/auth/sign-in").permitAll()
                         .requestMatchers("/api/auth/csrf-token").permitAll()
                         .requestMatchers("/api/auth/refresh").permitAll()
