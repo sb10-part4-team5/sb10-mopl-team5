@@ -55,18 +55,20 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/sign-out").permitAll()
+
+                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/role").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/locked").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*").authenticated()
+
                         .requestMatchers("/api/follows/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/users/*").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated()
-                        .requestMatchers("/api/users").permitAll()
+
                         .requestMatchers("/api/auth/sign-in").permitAll()
                         .requestMatchers("/api/auth/csrf-token").permitAll()
                         .requestMatchers("/api/auth/refresh").permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/role").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/locked").hasRole("ADMIN")
-
-                        // Swagger, actuator 필요하면 추가
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
                         .anyRequest().permitAll()

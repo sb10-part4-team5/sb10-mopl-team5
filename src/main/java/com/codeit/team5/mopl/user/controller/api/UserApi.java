@@ -1,7 +1,9 @@
 package com.codeit.team5.mopl.user.controller.api;
 
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
@@ -139,5 +141,9 @@ public interface UserApi {
 
             @Parameter(description = "변경할 사용자 잠금 상태", required = true)
             @Valid @RequestBody UserLockedUpdateRequest request
+    );
+
+    ResponseEntity<CursorResponse<UserResponse>> getUsers(
+            @Parameter(hidden = true)UserCursorRequest request
     );
 }

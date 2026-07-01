@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.global.exception.InvalidSortDirectionException;
-import com.codeit.team5.mopl.watcher.constant.SortByType;
+import com.codeit.team5.mopl.user.constant.UserSortBy;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.FormatterRegistry;
@@ -21,5 +21,7 @@ public class WebConfig implements WebMvcConfigurer {
             }
             throw new InvalidSortDirectionException(value);
         });
+
+        registry.addConverter(String.class, UserSortBy.class, UserSortBy::from);
     }
 }
