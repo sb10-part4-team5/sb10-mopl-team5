@@ -47,6 +47,7 @@ public class ConversationService {
                 .findByParticipant1IdAndParticipant2Id(participant1Id, participant2Id)
                 .orElseGet(() -> conversationRepository.save(Conversation.create(currentUser, otherParticipant)));
 
+        log.info("Conversation ready: id={}, currentUserId={}", conversation.getId(), currentUserId);
         return toConversationResponse(conversation, currentUser);
     }
 

@@ -54,6 +54,7 @@ public class ConversationController implements ConversationApi {
     public ResponseEntity<ConversationResponse> getConversationWith(
             @AuthenticationPrincipal MoplUserDetails userDetails,
             @RequestParam UUID userId) {
+        log.info("Request API: GET /api/conversations/with, userId={}, withUserId={}", userDetails.getId(), userId);
         return ResponseEntity.ok(conversationService.getConversationWith(userDetails.getId(), userId));
     }
 
@@ -62,6 +63,7 @@ public class ConversationController implements ConversationApi {
     public ResponseEntity<ConversationResponse> getConversation(
             @AuthenticationPrincipal MoplUserDetails userDetails,
             @PathVariable UUID conversationId) {
+        log.info("Request API: GET /api/conversations/{}, userId={}", conversationId, userDetails.getId());
         return ResponseEntity.ok(conversationService.getConversation(userDetails.getId(), conversationId));
     }
 }

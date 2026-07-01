@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
 import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Controller;
 
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class DmStompController {
 
     private final DirectMessageService directMessageService;
@@ -22,6 +24,7 @@ public class DmStompController {
             Principal principal,
             @DestinationVariable("id") UUID conversationId,
             @Payload DirectMessageSendRequest request) {
+        log.info("DM STOMP send: conversationId={}, sender={}", conversationId, principal.getName());
         directMessageService.sendMessage(principal.getName(), conversationId, request.content());
     }
 }

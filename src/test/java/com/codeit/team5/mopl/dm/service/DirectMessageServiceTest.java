@@ -22,6 +22,7 @@ import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -55,6 +56,9 @@ class DirectMessageServiceTest {
     private DmMapper dmMapper;
 
     @Mock
+    private WebSocketSessionStore webSocketSessionStore;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
@@ -81,6 +85,7 @@ class DirectMessageServiceTest {
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.save(any(DirectMessage.class))).then(returnsFirstArg());
         when(dmMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
+        when(webSocketSessionStore.isSubscribed(any(), any())).thenReturn(false);
 
         // when
         DirectMessageResponse result = directMessageService.sendMessage("a@mopl.com", conversationId, "hello");
@@ -89,6 +94,30 @@ class DirectMessageServiceTest {
         assertThat(result).isSameAs(response);
         verify(directMessageRepository).save(any(DirectMessage.class));
         verify(eventPublisher).publishEvent(any(DirectMessageSentEvent.class));
+    }
+
+    @Test
+    @DisplayName("수신자가 대화방 활성 상태면 알림 미발행 성공")
+    void sendMessage_receiverActive_noNotificationSuccess() {
+        // given
+        UUID conversationId = UUID.randomUUID();
+        User sender = userWithId("a@mopl.com", "A", UUID.randomUUID());
+        User receiver = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        Conversation conversation = Conversation.create(sender, receiver);
+        DirectMessageResponse response = new DirectMessageResponse(
+                UUID.randomUUID(), conversationId, null, null, "hello", null);
+
+        when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(sender));
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(directMessageRepository.save(any(DirectMessage.class))).then(returnsFirstArg());
+        when(dmMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
+        when(webSocketSessionStore.isSubscribed(any(), any())).thenReturn(true);
+
+        // when
+        directMessageService.sendMessage("a@mopl.com", conversationId, "hello");
+
+        // then
+        verify(eventPublisher, never()).publishEvent(any(DirectMessageSentEvent.class));
     }
 
     @Test
