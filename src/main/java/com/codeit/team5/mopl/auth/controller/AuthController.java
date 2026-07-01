@@ -49,12 +49,7 @@ public class AuthController implements AuthApi {
     ) {
         log.info("Logout request: POST /api/auth/sign-out");
 
-        authService.logout(refreshToken);
-        ResponseCookie deleteCookie = cookieManager.deleteCookie();
-
-        return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
-                .build();
+        throw new UnsupportedOperationException("Handled by Spring Security filter");
     }
 
     @Override

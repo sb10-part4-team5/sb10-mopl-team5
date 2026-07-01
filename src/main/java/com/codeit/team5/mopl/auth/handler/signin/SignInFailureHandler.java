@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.handler;
+package com.codeit.team5.mopl.auth.handler.signin;
 
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class LoginFailureHandler implements AuthenticationFailureHandler {
+public class SignInFailureHandler implements AuthenticationFailureHandler {
 
     private final ObjectMapper objectMapper;
 
