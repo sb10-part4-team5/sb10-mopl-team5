@@ -31,3 +31,10 @@ jobs:
 
       - name: 테스트 및 커버리지 검증
         run: ./gradlew clean test jacocoTestReport jacocoTestCoverageVerification
+
+      - name: 커버리지 리포트를 CodeCov에 업로드
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/reports/jacoco/test/jacocoTestReport.xml  # 테스트 리포트 경로를 명시하여 추후 오류 예방
+          fail_ci_if_error: true                                  # 업로드 실패 시 CI 실패 처리
