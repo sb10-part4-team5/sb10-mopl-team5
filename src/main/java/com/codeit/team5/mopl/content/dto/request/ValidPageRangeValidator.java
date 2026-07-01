@@ -8,6 +8,7 @@ public class ValidPageRangeValidator implements ConstraintValidator<ValidPageRan
     @Override
     public boolean isValid(PageRangeRequest request, ConstraintValidatorContext context) {
         if (request == null) return true;
+        if (request.startPage() == null || request.endPage() == null) return true;
         return request.startPage() >= 1 && request.endPage() >= request.startPage();
     }
 }
