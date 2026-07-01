@@ -21,10 +21,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: prometheus, health, info
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 springdoc:
   swagger-ui:
