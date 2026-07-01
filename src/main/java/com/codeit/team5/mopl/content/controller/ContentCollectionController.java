@@ -33,17 +33,20 @@ public class ContentCollectionController implements ContentCollectionApi {
     private final Job tmdbMovieJob;
     private final Job tmdbTvSeriesJob;
     private final Job sportsDbEventJob;
+    private final Job sportsDbDayJob;
 
     public ContentCollectionController(
             @Qualifier("asyncJobLauncher") JobLauncher asyncJobLauncher,
             @Qualifier("tmdbMovieJob") Job tmdbMovieJob,
             @Qualifier("tmdbTvSeriesJob") Job tmdbTvSeriesJob,
-            @Qualifier("sportsDbEventJob") Job sportsDbEventJob
+            @Qualifier("sportsDbEventJob") Job sportsDbEventJob,
+            @Qualifier("sportsDbDayJob") Job sportsDbDayJob
     ) {
         this.asyncJobLauncher = asyncJobLauncher;
         this.tmdbMovieJob = tmdbMovieJob;
         this.tmdbTvSeriesJob = tmdbTvSeriesJob;
         this.sportsDbEventJob = sportsDbEventJob;
+        this.sportsDbDayJob = sportsDbDayJob;
     }
 
     @PostMapping("/tmdb/movies")
@@ -78,6 +81,19 @@ public class ContentCollectionController implements ContentCollectionApi {
         run(sportsDbEventJob, new JobParametersBuilder()
                 .addString("leagueId", league.getLeagueId())
                 .addString("season", season)
+                .addString("run.id", String.valueOf(System.currentTimeMillis()))
+                .toJobParameters());
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/sports/day")
+    public ResponseEntity<Void> collectSportsEventsByDay(
+            @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "날짜 형식은 YYYY-MM-DD이어야 합니다. (예: 2024-12-26)")
+            @RequestParam String date
+    ) {
+        log.info("SportsDB 일별 경기 수집 요청: date={}", date);
+        run(sportsDbDayJob, new JobParametersBuilder()
+                .addString("date", date)
                 .addString("run.id", String.valueOf(System.currentTimeMillis()))
                 .toJobParameters());
         return ResponseEntity.accepted().build();
