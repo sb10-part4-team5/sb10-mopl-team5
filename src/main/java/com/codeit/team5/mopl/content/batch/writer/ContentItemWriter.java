@@ -1,0 +1,83 @@
+package com.codeit.team5.mopl.content.batch.writer;
+
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
+import com.codeit.team5.mopl.content.batch.dto.ContentWithMetaData;
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentStats;
+import com.codeit.team5.mopl.content.entity.ContentTag;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.tag.entity.Tag;
+import com.codeit.team5.mopl.tag.repository.TagRepository;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.util.StringUtils;
+
+@Slf4j
+@RequiredArgsConstructor
+public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
+
+    private final ContentRepository contentRepository;
+    private final ContentStatsRepository contentStatsRepository;
+    private final BinaryContentRepository binaryContentRepository;
+    private final TagRepository tagRepository;
+
+    @Override
+    public void write(Chunk<? extends ContentWithMetaData> chunk) {
+        List<? extends ContentWithMetaData> items = chunk.getItems();
+
+        // 1. Content 일괄 저장
+        List<Content> contents = items.stream()
+                .map(ContentWithMetaData::content)
+                .toList();
+        contentRepository.saveAll(contents);
+
+        // 2. ContentStats 일괄 저장
+        List<ContentStats> stats = contents.stream()
+                .map(ContentStats::create)
+                .toList();
+        contentStatsRepository.saveAll(stats);
+
+        // 3. 썸네일 저장
+        items.forEach(item -> {
+            if (StringUtils.hasText(item.thumbnailUrl())) {
+                BinaryContent thumbnail = binaryContentRepository.save(
+                        BinaryContent.externalUrl(item.thumbnailUrl()));
+                item.content().attachThumbnail(thumbnail);
+            }
+        });
+
+        // 4. 태그 저장
+        List<String> allTagNames = items.stream()
+                .flatMap(item -> item.tagNames().stream())
+                .distinct()
+                .toList();
+
+        if (!allTagNames.isEmpty()) {
+            Map<String, Tag> existingTags = tagRepository.findByNameIn(allTagNames).stream()
+                    .collect(Collectors.toMap(Tag::getName, Function.identity()));
+
+            List<Tag> newTags = allTagNames.stream()
+                    .filter(name -> !existingTags.containsKey(name))
+                    .map(Tag::create)
+                    .toList();
+
+            if (!newTags.isEmpty()) {
+                tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
+            }
+
+            items.forEach(item -> item.tagNames().forEach(tagName ->
+                    item.content().addTag(ContentTag.create(item.content(), existingTags.get(tagName)))
+            ));
+        }
+
+        log.info("[Batch] {}건 저장 완료", items.size());
+    }
+}
