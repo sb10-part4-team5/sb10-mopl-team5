@@ -5,7 +5,7 @@ import com.codeit.team5.mopl.global.exception.BusinessException;
 import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
-import com.codeit.team5.mopl.notification.exception.SseMissedEventSendFailException;
+import com.codeit.team5.mopl.sse.exception.SseMissedEventSendFailException;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.sse.controller.api.SseApi;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
