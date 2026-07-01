@@ -70,4 +70,22 @@ public interface ContentCollectionApi {
             @Pattern(regexp = "^\\d{4}-\\d{4}$", message = "시즌 형식은 YYYY-YYYY이어야 합니다. (예: 2023-2024)")
             @RequestParam String season
     );
+
+    @Operation(summary = "SportsDB 일별 경기 수집", description = "SportsDB API에서 특정 날짜의 전체 리그 경기 데이터를 수집합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "수집 요청 수락 (백그라운드 처리)"),
+            @ApiResponse(responseCode = "400", description = "잘못된 날짜 형식",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<Void> collectSportsEventsByDay(
+            @Parameter(description = "날짜 (예: 2024-12-26)", example = "2024-12-26")
+            @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "날짜 형식은 YYYY-MM-DD이어야 합니다. (예: 2024-12-26)")
+            @RequestParam String date
+    );
 }
