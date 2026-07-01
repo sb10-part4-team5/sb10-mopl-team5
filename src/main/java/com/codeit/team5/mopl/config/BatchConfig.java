@@ -53,7 +53,7 @@ public class BatchConfig {
     private final TagRepository tagRepository;
     private final ObjectMapper objectMapper;
 
-    // ── 비동기 JobLauncher (컨트롤러용) ───────────────────────────────
+    // ── 비동기 JobLauncher ───────────────────────────────
 
     @Bean
     public JobLauncher asyncJobLauncher(JobRepository jobRepository) throws Exception {
