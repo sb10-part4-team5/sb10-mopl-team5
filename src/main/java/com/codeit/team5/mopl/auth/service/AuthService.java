@@ -63,7 +63,7 @@ public class AuthService {
         String refreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
         refreshTokenStore.save(user.getId(), refreshToken, calculateExpiresAt());
 
-        log.info("Login success: id={}", user.getId());
+        log.info("Login success");
 
         JwtResponse response = authMapper.toJwtResponse(userDto, accessToken);
 
@@ -83,7 +83,7 @@ public class AuthService {
         try {
             UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
             refreshTokenStore.deleteByUserId(userId);
-            log.info("Logout success: id={}", userId);
+            log.info("Logout success");
         } catch (RefreshTokenInvalidException e) {
             log.info("Logout requested with invalid or expired refresh token");
         }
