@@ -35,12 +35,14 @@ public class TmdbTvSeriesItemReader implements ItemReader<TmdbTvDto> {
         }
         currentPage = Integer.parseInt(startPageParam);
         endPage = Math.min(Integer.parseInt(endPageParam), MAX_PAGE);
+        buffer.clear();
+        totalPages = Integer.MAX_VALUE;
         log.info("[TMDB] TV 시리즈 수집 범위 설정 - {}~{}페이지", currentPage, endPage);
     }
 
     @Override
     public TmdbTvDto read() throws InterruptedException {
-        if (buffer.isEmpty()) {
+        while (buffer.isEmpty()) {
             if (currentPage > Math.min(totalPages, endPage)) {
                 return null;
             }
