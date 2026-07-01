@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.follow.dto.request.FollowCreateRequest;
 import com.codeit.team5.mopl.follow.entity.Follow;
@@ -60,7 +61,7 @@ class FollowControllerIntegrationTest {
     private Authentication authOf(UUID userId, String email) {
         UserResponse dto = new UserResponse(
                 userId, Instant.now(), email, "유저", null, "USER", false);
-        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        MoplUserDetails details = new MoplUserDetails(new AuthUser(dto.id(), dto.email(), dto.role(), dto.locked()), "password");
         return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
     }
 

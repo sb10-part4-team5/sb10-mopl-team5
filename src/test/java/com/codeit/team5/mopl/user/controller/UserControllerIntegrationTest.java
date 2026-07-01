@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
@@ -304,7 +305,7 @@ class UserControllerIntegrationTest {
     private Authentication authOf(UUID userId) {
         UserResponse dto = new UserResponse(
                 userId, Instant.now(), "user@example.com", "유저", null, "USER", false);
-        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        MoplUserDetails details = new MoplUserDetails(new AuthUser(dto.id(), dto.email(), dto.role(), dto.locked()), "password");
         return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
     }
 

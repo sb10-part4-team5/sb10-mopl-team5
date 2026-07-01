@@ -10,6 +10,7 @@ import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
@@ -50,17 +51,21 @@ public class AuthService {
 
         MoplUserDetails principals = (MoplUserDetails) authentication.getPrincipal();
 
+        User user = userRepository.findById(principals.getId())
+                .orElseThrow(() -> new UserNotFoundException(principals.getId()));
+        UserResponse userDto = userMapper.toDto(user);
+
         String accessToken = jwtTokenizer.generateAccessToken(
-                principals.getUserDto().id().toString(),
-                principals.getUserDto().email(),
-                principals.getUserDto().role()
+                userDto.id().toString(),
+                userDto.email(),
+                userDto.role()
         );
-        String refreshToken = jwtTokenizer.generateRefreshToken(principals.getUserDto().id().toString());
-        refreshTokenStore.save(principals.getUserDto().id(), refreshToken, calculateExpiresAt());
+        String refreshToken = jwtTokenizer.generateRefreshToken(userDto.id().toString());
+        refreshTokenStore.save(userDto.id(), refreshToken, calculateExpiresAt());
 
-        log.info("Login success: id={}", principals.getUserDto().id());
+        log.info("Login success: id={}", userDto.id());
 
-        JwtResponse response = authMapper.toJwtResponse(principals.getUserDto(), accessToken);
+        JwtResponse response = authMapper.toJwtResponse(userDto, accessToken);
 
         return authMapper.toAuthPayload(response, refreshToken);
     }

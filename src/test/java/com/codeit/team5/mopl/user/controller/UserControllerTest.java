@@ -22,6 +22,7 @@ import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
@@ -697,7 +698,7 @@ class UserControllerTest {
     private Authentication authOf(UUID userId, String role, boolean locked) {
         UserResponse dto = new UserResponse(
                 userId, Instant.now(), role.toLowerCase() + "@mopl.com", "사용자", null, role, locked);
-        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        MoplUserDetails details = new MoplUserDetails(new AuthUser(dto.id(), dto.email(), dto.role(), dto.locked()), "password");
         return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
     }
 }

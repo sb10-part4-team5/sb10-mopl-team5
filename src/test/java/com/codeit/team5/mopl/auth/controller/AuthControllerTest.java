@@ -21,6 +21,7 @@ import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
@@ -519,7 +520,7 @@ class AuthControllerTest {
                 "USER",
                 false
         );
-        MoplUserDetails userDetails = new MoplUserDetails(userResponse, "encoded-password");
+        MoplUserDetails userDetails = new MoplUserDetails(new AuthUser(userResponse.id(), userResponse.email(), userResponse.role(), userResponse.locked()), "encoded-password");
         User user = User.create(userResponse.email(), "encoded-password", userResponse.name());
         org.springframework.test.util.ReflectionTestUtils.setField(user, "id", userResponse.id());
 
