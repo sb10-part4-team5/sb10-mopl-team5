@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.auth.controller;
 
 import com.codeit.team5.mopl.auth.controller.api.AuthApi;
-import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.service.AuthService;

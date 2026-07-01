@@ -1,8 +1,7 @@
 package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.entity.TemporaryPassword;
-import com.codeit.team5.mopl.auth.exception.TemporaryPasswordNotFoundException;
-import com.codeit.team5.mopl.auth.generator.TemporaryPasswordGenerator;
+import com.codeit.team5.mopl.auth.support.TemporaryPasswordGenerator;
 import com.codeit.team5.mopl.auth.repository.TemporaryPasswordRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import java.time.Instant;

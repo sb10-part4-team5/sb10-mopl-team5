@@ -1,7 +1,7 @@
-package com.codeit.team5.mopl.auth.handler;
+package com.codeit.team5.mopl.auth.security.handler;
 
-import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
-import com.codeit.team5.mopl.auth.utils.ErrorResponder;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.support.ErrorResponder;
 import com.codeit.team5.mopl.global.exception.BusinessException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

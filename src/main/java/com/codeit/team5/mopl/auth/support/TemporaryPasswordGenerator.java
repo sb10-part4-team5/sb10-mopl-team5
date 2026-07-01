@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.generator;
+package com.codeit.team5.mopl.auth.support;
 
 import java.security.SecureRandom;
 import org.springframework.stereotype.Component;

@@ -1,12 +1,12 @@
 package com.codeit.team5.mopl.config;
 
-import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
-import com.codeit.team5.mopl.auth.handler.signin.SignInFailureHandler;
-import com.codeit.team5.mopl.auth.handler.signin.SignInSuccessHandler;
-import com.codeit.team5.mopl.auth.handler.SpaCsrfTokenRequestHandler;
-import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
-import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
-import com.codeit.team5.mopl.auth.handler.signout.SignOutHandler;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
+import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
+import com.codeit.team5.mopl.auth.security.handler.SpaCsrfTokenRequestHandler;
+import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
+import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

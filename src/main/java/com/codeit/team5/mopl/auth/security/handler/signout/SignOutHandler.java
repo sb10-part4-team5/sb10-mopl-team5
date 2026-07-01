@@ -1,6 +1,6 @@
-package com.codeit.team5.mopl.auth.handler.signout;
+package com.codeit.team5.mopl.auth.security.handler.signout;
 
-import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
