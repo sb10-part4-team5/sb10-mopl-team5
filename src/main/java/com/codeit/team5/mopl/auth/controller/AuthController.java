@@ -29,6 +29,8 @@ public class AuthController implements AuthApi {
     private final AuthService authService;
     private final RefreshTokenCookieManager cookieManager;
 
+    // 실제 로그인 처리는 Spring Security UsernamePasswordAuthenticationFilter가 담당
+    // 이 메서드는 Swagger 문서 노출을 위한 선언
     @PostMapping(
             value = "/sign-in",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
