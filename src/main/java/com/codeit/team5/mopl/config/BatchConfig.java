@@ -23,10 +23,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.reactive.function.client.WebClientException;
@@ -49,6 +52,17 @@ public class BatchConfig {
     private final BinaryContentRepository binaryContentRepository;
     private final TagRepository tagRepository;
     private final ObjectMapper objectMapper;
+
+    // ── 비동기 JobLauncher (컨트롤러용) ───────────────────────────────
+
+    @Bean
+    public JobLauncher asyncJobLauncher(JobRepository jobRepository) throws Exception {
+        TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
+        launcher.setJobRepository(jobRepository);
+        launcher.setTaskExecutor(new SimpleAsyncTaskExecutor("batch-controller-"));
+        launcher.afterPropertiesSet();
+        return launcher;
+    }
 
     // ── TMDB 영화 Job ──────────────────────────────────────────────
 
