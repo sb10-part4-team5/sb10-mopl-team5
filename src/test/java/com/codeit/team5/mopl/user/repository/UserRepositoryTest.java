@@ -338,6 +338,71 @@ class UserRepositoryTest {
     }
 
     @Test
+    @DisplayName("권한 커서로 사용자 목록을 이어서 조회한다")
+    void findUsers_roleCursor_success() {
+        // Given
+        User firstUser = User.create("role-cursor-a@example.com", "password", "권한 A");
+        User secondUser = User.create("role-cursor-b@example.com", "password", "권한 B");
+        User firstAdmin = User.create("role-cursor-c@example.com", "password", "권한 C");
+        firstAdmin.updateRole(UserRole.ADMIN);
+        User secondAdmin = User.create("role-cursor-d@example.com", "password", "권한 D");
+        secondAdmin.updateRole(UserRole.ADMIN);
+
+        userRepository.saveAll(List.of(secondUser, firstAdmin, firstUser, secondAdmin));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "role-cursor",
+                null,
+                false,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.ROLE
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "role-cursor",
+                null,
+                false,
+                lastUserOfFirstPage.getRole().name(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.ROLE
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::getRole)
+                .containsExactly(UserRole.ADMIN, UserRole.ADMIN, UserRole.USER, UserRole.USER);
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).getRole()).isEqualTo(lastUserOfFirstPage.getRole());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+    }
+
+    @Test
     @DisplayName("잘못된 커서 값이면 예외가 발생한다")
     void findUsers_malformedCursor_throwsException() {
         // Given
