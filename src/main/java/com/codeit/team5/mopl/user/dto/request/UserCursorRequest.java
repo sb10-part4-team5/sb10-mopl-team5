@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.user.dto.request;
 
 import com.codeit.team5.mopl.user.constant.UserSortBy;
 import com.codeit.team5.mopl.user.entity.UserRole;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.util.UUID;
@@ -16,6 +17,7 @@ public record UserCursorRequest(
 
         @NotNull
         @Positive
+        @Max(100)
         Integer limit,
 
         @NotNull
