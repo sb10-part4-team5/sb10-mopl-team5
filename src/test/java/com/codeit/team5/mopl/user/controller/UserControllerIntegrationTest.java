@@ -309,6 +309,70 @@ class UserControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("관리자가 사용자 목록을 조회하면 커서 응답을 반환한다")
+    void getUsers_byAdmin_success() throws Exception {
+        // Given
+        SignInRequest adminRequest = saveLoginUser("list-admin@example.com", "password1", UserRole.ADMIN, false);
+        User first = saveUser("list-target-a@example.com", "password1", UserRole.USER, false);
+        saveUser("list-target-b@example.com", "password1", UserRole.USER, true);
+        String adminAccessToken = login(adminRequest);
+
+        // When & Then
+        mockMvc.perform(get("/api/users")
+                        .header("Authorization", "Bearer " + adminAccessToken)
+                        .param("emailLike", "list-target")
+                        .param("roleEqual", "USER")
+                        .param("limit", "1")
+                        .param("sortDirection", "ASCENDING")
+                        .param("sortBy", "email"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(first.getId().toString()))
+                .andExpect(jsonPath("$.data[0].email").value("list-target-a@example.com"))
+                .andExpect(jsonPath("$.data[0].name").value("사용자"))
+                .andExpect(jsonPath("$.data[0].role").value("USER"))
+                .andExpect(jsonPath("$.data[0].locked").value(false))
+                .andExpect(jsonPath("$.nextCursor").value("list-target-a@example.com"))
+                .andExpect(jsonPath("$.nextIdAfter").value(first.getId().toString()))
+                .andExpect(jsonPath("$.hasNext").value(true))
+                .andExpect(jsonPath("$.totalCount").value(2))
+                .andExpect(jsonPath("$.sortBy").value("email"))
+                .andExpect(jsonPath("$.sortDirection").value("ASCENDING"));
+    }
+
+    @Test
+    @DisplayName("일반 사용자가 사용자 목록을 조회하면 403 접근 거부 응답을 반환한다")
+    void getUsers_byUser_returnsForbidden() throws Exception {
+        // Given
+        SignInRequest userRequest = saveLoginUser("list-user@example.com", "password1", UserRole.USER, false);
+        String accessToken = login(userRequest);
+
+        // When & Then
+        mockMvc.perform(get("/api/users")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .param("limit", "10")
+                        .param("sortDirection", "ASCENDING")
+                        .param("sortBy", "name"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.exceptionType").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("인증 없이 사용자 목록을 조회하면 401 인증 실패 응답을 반환한다")
+    void getUsers_unauthenticated_returnsUnauthorized() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/api/users")
+                        .param("limit", "10")
+                        .param("sortDirection", "ASCENDING")
+                        .param("sortBy", "name"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
     @DisplayName("관리자가 사용자 권한을 변경하면 DB 권한이 변경되고 토큰이 무효화된다")
     void updateRole_byAdmin_success() throws Exception {
         // Given

@@ -60,6 +60,7 @@ public class AuthController implements AuthApi {
                 .build();
     }
 
+    @Override
     @PostMapping("/refresh")
     public ResponseEntity<JwtResponse> refresh(
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken

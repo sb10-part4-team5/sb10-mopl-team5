@@ -2,7 +2,9 @@ package com.codeit.team5.mopl.user.controller;
 
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.controller.api.UserApi;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
@@ -92,5 +94,16 @@ public class UserController implements UserApi {
         userService.updateLock(userId, request);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @GetMapping
+    public ResponseEntity<CursorResponse<UserResponse>> getUsers(
+            @Valid UserCursorRequest request) {
+        log.info("User list request: GET /api/users");
+
+        CursorResponse<UserResponse> response = userService.findUsers(request);
+
+        return ResponseEntity.ok(response);
     }
 }

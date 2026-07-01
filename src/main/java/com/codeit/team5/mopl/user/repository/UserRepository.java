@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.user.repository;
 
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.querydsl.UserQueryRepository;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
@@ -9,7 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, UserQueryRepository {
     boolean existsByEmail(String email);
 
     Optional<User> findByEmail(String email);
