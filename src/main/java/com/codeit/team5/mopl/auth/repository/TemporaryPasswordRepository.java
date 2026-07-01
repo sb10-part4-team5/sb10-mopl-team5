@@ -9,5 +9,7 @@ public interface TemporaryPasswordRepository extends JpaRepository<TemporaryPass
 
     Optional<TemporaryPassword> findTopByUserIdOrderByCreatedAtDesc(UUID userId);
 
+    Optional<TemporaryPassword> findByUserId(UUID userId);
+
     void deleteByUserId(UUID userId);
 }

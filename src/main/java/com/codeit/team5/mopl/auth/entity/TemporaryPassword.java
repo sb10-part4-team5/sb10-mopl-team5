@@ -50,4 +50,9 @@ public class TemporaryPassword extends BaseEntity {
     public boolean isValidAt(Instant now) {
         return !isExpired(now);
     }
+
+    public void reissue(String passwordHash, Instant issuedAt) {
+        this.passwordHash = passwordHash;
+        this.expiresAt = issuedAt.plus(EXPIRATION_DURATION);
+    }
 }

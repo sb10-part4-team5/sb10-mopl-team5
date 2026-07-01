@@ -12,7 +12,6 @@ import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,10 +66,6 @@ public class AuthService {
         JwtResponse jwtResponse = authMapper.toJwtResponse(userDto, newAccessToken);
 
         return authMapper.toAuthPayload(jwtResponse, newRefreshToken);
-    }
-
-    private String normalizeEmail(String email) {
-        return email.toLowerCase(Locale.ROOT);
     }
 
     private Instant calculateExpiresAt() {

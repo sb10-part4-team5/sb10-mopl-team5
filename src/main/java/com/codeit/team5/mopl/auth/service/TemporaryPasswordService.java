@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// “임시 비밀번호 credential” 발급/검증/폐기 정책 담당
 @Slf4j
 @Service
 @Transactional(readOnly = true)
@@ -30,7 +31,14 @@ public class TemporaryPasswordService {
         String passwordHash = passwordEncoder.encode(rawPassword);
 
         TemporaryPassword temporaryPassword =
-                TemporaryPassword.create(user, passwordHash, Instant.now());
+                temporaryPasswordRepository.findByUserId(user.getId())
+                        .map(existing -> {
+                            existing.reissue(passwordHash, Instant.now());
+                            return existing;
+                        })
+                        .orElseGet(() -> TemporaryPassword.create(user, passwordHash, Instant.now()));
+
+        temporaryPasswordRepository.save(temporaryPassword);
 
         temporaryPasswordRepository.save(temporaryPassword);
 
@@ -38,6 +46,10 @@ public class TemporaryPasswordService {
     }
 
     public boolean matches(UUID userId, String rawPassword) {
+        if (rawPassword == null || rawPassword.isBlank()) {
+            return false;
+        }
+
         return temporaryPasswordRepository.findTopByUserIdOrderByCreatedAtDesc(userId)
                 .filter(temporaryPassword -> temporaryPassword.isValidAt(Instant.now()))
                 .map(temporaryPassword ->

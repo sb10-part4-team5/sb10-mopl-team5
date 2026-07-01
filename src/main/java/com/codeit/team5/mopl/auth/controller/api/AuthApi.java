@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.controller.api;
 
+import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "인증 관리")
 public interface AuthApi {
@@ -125,5 +127,22 @@ public interface AuthApi {
     })
     ResponseEntity<Void> csrfToken(
             @Parameter(hidden = true) CsrfToken csrfToken
+    );
+
+    @Operation(
+            summary = "비밀번호 초기화",
+            description = "임시 비밀번호로 초기화 후 이메일로 전송합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "비밀번호 초기화 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<Void> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request
     );
 }
