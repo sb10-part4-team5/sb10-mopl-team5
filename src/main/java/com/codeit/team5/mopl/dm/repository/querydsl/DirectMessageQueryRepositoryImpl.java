@@ -26,6 +26,8 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
     public List<DirectMessage> findMessages(UUID conversationId, DirectMessageCursorRequest request, int fetchLimit) {
         return queryFactory
                 .selectFrom(directMessage)
+                .join(directMessage.sender).fetchJoin()
+                .join(directMessage.receiver).fetchJoin()
                 .where(buildWhere(conversationId, request))
                 .orderBy(buildOrder(request))
                 .limit(fetchLimit)

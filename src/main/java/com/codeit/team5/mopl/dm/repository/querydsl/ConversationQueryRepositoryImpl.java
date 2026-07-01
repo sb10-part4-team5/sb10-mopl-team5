@@ -27,6 +27,8 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
             int fetchLimit) {
         return queryFactory
                 .selectFrom(conversation)
+                .join(conversation.participant1).fetchJoin()
+                .join(conversation.participant2).fetchJoin()
                 .where(buildWhere(currentUserId, request))
                 .orderBy(buildOrder(request))
                 .limit(fetchLimit)

@@ -59,8 +59,7 @@ public class ConversationService {
         return toConversationResponse(conversation, currentUser);
     }
 
-    public CursorResponse<ConversationResponse> findMyConversations(UUID currentUserId,
-            ConversationCursorRequest request) {
+    public CursorResponse<ConversationResponse> findMyConversations(UUID currentUserId, ConversationCursorRequest request) {
         User currentUser = getUser(currentUserId);
         int fetchLimit = request.limit() + 1;
         List<Conversation> fetched = conversationRepository.findMyConversations(currentUserId, request, fetchLimit);
