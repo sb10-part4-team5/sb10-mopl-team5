@@ -92,7 +92,7 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
                 where.and(predicate);
             }
         } catch (DateTimeParseException | IllegalArgumentException e) {
-            throw new InvalidCursorException(request.cursor(), request.idAfter());
+            throw new InvalidCursorException(request.cursor(), request.idAfter(), e);
         }
     }
 
