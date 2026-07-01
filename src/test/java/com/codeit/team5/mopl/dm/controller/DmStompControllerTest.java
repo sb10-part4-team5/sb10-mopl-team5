@@ -4,7 +4,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.dm.dto.request.DirectMessageSendRequest;
-import com.codeit.team5.mopl.dm.service.DmService;
+import com.codeit.team5.mopl.dm.service.DirectMessageService;
 import java.security.Principal;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class DmStompControllerTest {
 
     @Mock
-    private DmService dmService;
+    private DirectMessageService directMessageService;
 
     @Mock
     private Principal principal;
@@ -38,6 +38,6 @@ class DmStompControllerTest {
         dmStompController.sendDirectMessage(principal, conversationId, request);
 
         // then
-        verify(dmService).sendMessage("a@mopl.com", conversationId, "hello");
+        verify(directMessageService).sendMessage("a@mopl.com", conversationId, "hello");
     }
 }

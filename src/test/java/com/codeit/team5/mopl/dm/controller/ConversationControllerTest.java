@@ -22,7 +22,8 @@ import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
-import com.codeit.team5.mopl.dm.service.DmService;
+import com.codeit.team5.mopl.dm.service.ConversationService;
+import com.codeit.team5.mopl.dm.service.DirectMessageService;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
@@ -59,7 +60,10 @@ class ConversationControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private DmService dmService;
+    private ConversationService conversationService;
+
+    @MockitoBean
+    private DirectMessageService directMessageService;
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
@@ -88,14 +92,14 @@ class ConversationControllerTest {
         UUID conversationId = UUID.randomUUID();
         UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
         ConversationResponse response = new ConversationResponse(conversationId, with, null, false);
-        given(dmService.getOrCreateConversation(eq(currentUserId), eq(withUserId))).willReturn(response);
+        given(conversationService.getOrCreateConversation(eq(currentUserId), eq(withUserId))).willReturn(response);
 
         mockMvc.perform(post("/api/conversations")
                         .with(authentication(authOf(currentUserId)))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ConversationCreateRequest(withUserId))))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(conversationId.toString()))
                 .andExpect(jsonPath("$.with.userId").value(withUserId.toString()))
                 .andExpect(jsonPath("$.with.name").value("상대방"))
@@ -123,7 +127,7 @@ class ConversationControllerTest {
         UUID conversationId = UUID.randomUUID();
         UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
         ConversationResponse response = new ConversationResponse(conversationId, with, null, true);
-        given(dmService.getConversation(eq(currentUserId), eq(conversationId))).willReturn(response);
+        given(conversationService.getConversation(eq(currentUserId), eq(conversationId))).willReturn(response);
 
         mockMvc.perform(get("/api/conversations/{conversationId}", conversationId)
                         .with(authentication(authOf(currentUserId))))
@@ -141,7 +145,7 @@ class ConversationControllerTest {
         UUID conversationId = UUID.randomUUID();
         UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
         ConversationResponse response = new ConversationResponse(conversationId, with, null, false);
-        given(dmService.getConversationWith(eq(currentUserId), eq(withUserId))).willReturn(response);
+        given(conversationService.getConversationWith(eq(currentUserId), eq(withUserId))).willReturn(response);
 
         mockMvc.perform(get("/api/conversations/with")
                         .param("userId", withUserId.toString())
@@ -165,6 +169,6 @@ class ConversationControllerTest {
                         .with(csrf()))
                 .andExpect(status().isOk());
 
-        verify(dmService).markMessagesAsRead(eq(currentUserId), eq(conversationId), eq(directMessageId));
+        verify(directMessageService).markMessagesAsRead(eq(currentUserId), eq(conversationId), eq(directMessageId));
     }
 }

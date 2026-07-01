@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.dm.handler;
 
-import com.codeit.team5.mopl.dm.service.DmService;
+import com.codeit.team5.mopl.dm.service.ConversationService;
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
 import com.codeit.team5.mopl.global.web.ws.stomp.handler.AbstractStompSubscribeHandler;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
@@ -10,15 +10,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class DmSubscribeHandler extends AbstractStompSubscribeHandler {
 
-    private final DmService dmService;
+    private final ConversationService conversationService;
 
-    public DmSubscribeHandler(WebSocketSessionStore sessionStore, DmService dmService) {
+    public DmSubscribeHandler(WebSocketSessionStore sessionStore, ConversationService conversationService) {
         super(sessionStore, StompConstants.SUB_CONVERSATION_DM);
-        this.dmService = dmService;
+        this.conversationService = conversationService;
     }
 
     @Override
     protected void doHandle(UUID conversationId, String email) {
-        dmService.validateParticipant(conversationId, email);
+        conversationService.validateParticipant(conversationId, email);
     }
 }

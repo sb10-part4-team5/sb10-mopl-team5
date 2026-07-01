@@ -4,12 +4,12 @@ import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.dm.controller.api.ConversationApi;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
-import com.codeit.team5.mopl.dm.service.DmService;
+import com.codeit.team5.mopl.dm.service.ConversationService;
+import com.codeit.team5.mopl.dm.service.DirectMessageService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,7 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class ConversationController implements ConversationApi {
 
-    private final DmService dmService;
+    private final ConversationService conversationService;
+    private final DirectMessageService directMessageService;
 
     @Override
     @PostMapping
@@ -35,9 +36,9 @@ public class ConversationController implements ConversationApi {
             @Valid @RequestBody ConversationCreateRequest request) {
         log.info("Conversation create request: POST /api/conversations, withUser={}", request.withUserId());
 
-        ConversationResponse response = dmService.getOrCreateConversation(userDetails.getId(), request.withUserId());
+        ConversationResponse response = conversationService.getOrCreateConversation(userDetails.getId(), request.withUserId());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -45,7 +46,7 @@ public class ConversationController implements ConversationApi {
     public ResponseEntity<ConversationResponse> getConversationWith(
             @AuthenticationPrincipal MoplUserDetails userDetails,
             @RequestParam UUID userId) {
-        return ResponseEntity.ok(dmService.getConversationWith(userDetails.getId(), userId));
+        return ResponseEntity.ok(conversationService.getConversationWith(userDetails.getId(), userId));
     }
 
     @Override
@@ -53,7 +54,7 @@ public class ConversationController implements ConversationApi {
     public ResponseEntity<ConversationResponse> getConversation(
             @AuthenticationPrincipal MoplUserDetails userDetails,
             @PathVariable UUID conversationId) {
-        return ResponseEntity.ok(dmService.getConversation(userDetails.getId(), conversationId));
+        return ResponseEntity.ok(conversationService.getConversation(userDetails.getId(), conversationId));
     }
 
     @Override
@@ -62,7 +63,7 @@ public class ConversationController implements ConversationApi {
             @AuthenticationPrincipal MoplUserDetails userDetails,
             @PathVariable UUID conversationId,
             @PathVariable UUID directMessageId) {
-        dmService.markMessagesAsRead(userDetails.getId(), conversationId, directMessageId);
+        directMessageService.markMessagesAsRead(userDetails.getId(), conversationId, directMessageId);
         return ResponseEntity.ok().build();
     }
 }

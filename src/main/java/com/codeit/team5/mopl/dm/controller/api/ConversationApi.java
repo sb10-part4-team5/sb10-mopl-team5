@@ -24,7 +24,7 @@ public interface ConversationApi {
     @Operation(operationId = "createConversation", summary = "대화 생성",
             description = "대상 사용자와의 대화를 생성합니다. 이미 존재하면 기존 대화를 반환합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "대화 생성/조회 성공",
+            @ApiResponse(responseCode = "200", description = "대화 생성/조회 성공",
                     content = @Content(schema = @Schema(implementation = ConversationResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청(자기 자신과 대화 등)",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
