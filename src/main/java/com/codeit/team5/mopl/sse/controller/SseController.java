@@ -103,40 +103,59 @@ public class SseController implements SseApi {
             throw new InvalidLastEventIdException(lastEventId);
         }
 
-        // 미수신 일반 알림 전송
-        List<NotificationPayload> missedNotifications =
+        List<NotificationPayload> notifications =
                 notificationService.findMissedNotifications(userId, lastNotificationId);
-        for (NotificationPayload payload : missedNotifications) {
-            try {
-                emitter.send(SseEmitter.event()
-                        .id(payload.notificationId().toString())
-                        .name("notifications")
-                        .data(payload));
-            } catch (Exception e) {
-                log.warn("SSE missed notification send failed: userId={}", userId);
-                emitterStore.remove(userId, emitter);
-                throw new SseMissedEventSendFailException();
-            }
-        }
-
-        // 미수신 DM 전송
         // TODO: DM 도메인 구현 후 DirectMessageDto로 교체
-        List<DirectMessagePayload> missedDms =
+        List<DirectMessagePayload> dms =
                 notificationService.findMissedDirectMessages(userId, lastNotificationId);
-        for (DirectMessagePayload payload : missedDms) {
-            try {
-                emitter.send(SseEmitter.event()
-                        .id(payload.id().toString())
-                        .name("direct-messages")
-                        .data(payload));
-            } catch (Exception e) {
-                log.warn("SSE missed DM send failed: userId={}", userId);
-                emitterStore.remove(userId, emitter);
-                throw new SseMissedEventSendFailException();
+
+        // 두 정렬 리스트를 (createdAt, id) 순서로 인터리빙하여 원래 스트림 순서 보존
+        int ni = 0, di = 0; // 두 리스트를 순회하기 위한 인덱스 (ni = notification index, di = dm index)
+        while (ni < notifications.size() || di < dms.size()) { // 알림 목록이나 dm 목록 둘 중 아무 목록이든 순회가 다 끝나면 반복문 종료
+            boolean pickNotification;
+            if (ni >= notifications.size()) { // 알림 목록 순회 끝
+                pickNotification = false; // 알림 잔재 X
+            } else if (di >= dms.size()) { // dm 목록 순회 끝
+                pickNotification = true; // 알림 잔재 O
+            } else {
+                // 두 목록 순회할 목록이 남아있으면 createdAt 비교
+                NotificationPayload n = notifications.get(ni); // ni 번째에 해당하는 알림 페이로드 가져옴
+                DirectMessagePayload d = dms.get(di); // di 번째에 해당하는 dm 페이로드 가져옴
+                int cmp = n.createdAt().compareTo(d.createdAt()); // 알림과 dm의 생성일자를 비교
+                pickNotification = cmp < 0 || (cmp == 0 && n.notificationId().compareTo(d.id()) < 0);
+            }
+
+            // 알림이 먼저왔으면 알림을 전송함
+            if (pickNotification) {
+                NotificationPayload payload = notifications.get(ni++); // ni가 가르키는 알림 페이로드를 가져오고 이후 ni를 1 증가
+                // 해당 알림 sse 전송
+                try {
+                    emitter.send(SseEmitter.event()
+                            .id(payload.notificationId().toString())
+                            .name("notifications")
+                            .data(payload));
+                } catch (Exception e) {
+                    log.warn("SSE missed notification send failed: userId={}", userId);
+                    emitterStore.remove(userId, emitter);
+                    throw new SseMissedEventSendFailException();
+                }
+                // DM 페이로드의 createdAt이 먼저면 dm 페이로드 sse 전송
+            } else {
+                DirectMessagePayload payload = dms.get(di++); // di가 가르키고 있는 dm 페이로드 추출 후 di 1 증가
+                try {
+                    emitter.send(SseEmitter.event()
+                            .id(payload.id().toString())
+                            .name("direct-messages")
+                            .data(payload));
+                } catch (Exception e) {
+                    log.warn("SSE missed DM send failed: userId={}", userId);
+                    emitterStore.remove(userId, emitter);
+                    throw new SseMissedEventSendFailException();
+                }
             }
         }
 
         log.debug("SSE missed events sent: userId={}, notifications={}, dms={}",
-                userId, missedNotifications.size(), missedDms.size());
+                userId, notifications.size(), dms.size());
     }
 }
