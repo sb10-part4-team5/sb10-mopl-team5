@@ -16,6 +16,7 @@ import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
@@ -77,7 +78,7 @@ class DirectMessageControllerTest {
     private Authentication authOf(UUID userId) {
         UserResponse dto = new UserResponse(
                 userId, Instant.now(), "user@mopl.com", "유저", null, "USER", false);
-        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        MoplUserDetails details = new MoplUserDetails(new AuthUser(dto.id(), dto.email(), dto.role(), dto.locked()), "password");
         return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
     }
 

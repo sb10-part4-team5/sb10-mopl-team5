@@ -21,10 +21,16 @@ public interface DmMapper {
     DirectMessageResponse toResponse(DirectMessage message);
 
     default CursorResponse<DirectMessageResponse> toDirectMessageCursor(List<DirectMessage> page, boolean hasNext,
-            long totalCount, Direction sortDirection) {
+            Direction sortDirection) {
         List<DirectMessageResponse> data = page.stream().map(this::toResponse).toList();
         DirectMessage last = page.isEmpty() ? null : page.get(page.size() - 1);
-        return CursorResponse.of(data, last, hasNext, totalCount,
-                DirectMessage::getCreatedAt, DirectMessage::getId, sortDirection, "createdAt");
+        String nextCursor = null;
+        String nextIdAfter = null;
+        if (hasNext && last != null) {
+            nextCursor = last.getCreatedAt().toString();
+            nextIdAfter = last.getId().toString();
+        }
+        String direction = sortDirection == Direction.ASC ? "ASCENDING" : "DESCENDING";
+        return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, 0L, "createdAt", direction);
     }
 }

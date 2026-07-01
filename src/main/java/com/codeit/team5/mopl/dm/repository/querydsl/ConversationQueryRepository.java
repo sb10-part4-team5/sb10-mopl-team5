@@ -8,6 +8,4 @@ import java.util.UUID;
 public interface ConversationQueryRepository {
 
     List<Conversation> findMyConversations(UUID currentUserId, ConversationCursorRequest request);
-
-    long countMyConversations(UUID currentUserId, ConversationCursorRequest request);
 }

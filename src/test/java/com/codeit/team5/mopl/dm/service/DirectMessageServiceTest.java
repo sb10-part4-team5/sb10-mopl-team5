@@ -171,8 +171,7 @@ class DirectMessageServiceTest {
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.findMessages(eq(conversationId), any())).thenReturn(List.of());
-        when(directMessageRepository.countMessages(conversationId)).thenReturn(1L);
-        when(dmMapper.toDirectMessageCursor(anyList(), eq(false), eq(1L), eq(Direction.DESC)))
+        when(dmMapper.toDirectMessageCursor(anyList(), eq(false), eq(Direction.DESC)))
                 .thenReturn(cursorResponse);
 
         DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);

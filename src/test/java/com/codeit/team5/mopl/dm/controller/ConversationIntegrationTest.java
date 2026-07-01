@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.entity.Conversation;
@@ -65,7 +66,7 @@ class ConversationIntegrationTest {
     private Authentication authOf(UUID userId, String email) {
         UserResponse dto = new UserResponse(
                 userId, Instant.now(), email, "유저", null, "USER", false);
-        MoplUserDetails details = new MoplUserDetails(dto, "password");
+        MoplUserDetails details = new MoplUserDetails(new AuthUser(dto.id(), dto.email(), dto.role(), dto.locked()), "password");
         return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
     }
 

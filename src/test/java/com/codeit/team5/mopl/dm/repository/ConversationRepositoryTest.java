@@ -99,11 +99,9 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
 
         // when
         List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request);
-        long count = conversationRepository.countMyConversations(me.getId(), request);
 
         // then
         assertThat(result).extracting(Conversation::getId).containsExactly(mine.getId());
-        assertThat(count).isEqualTo(1L);
     }
 
     @Test
@@ -120,11 +118,9 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
 
         // when
         List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request);
-        long count = conversationRepository.countMyConversations(me.getId(), request);
 
         // then
         assertThat(result).extracting(Conversation::getId).containsExactly(alice.getId());
-        assertThat(count).isEqualTo(1L);
     }
 
     @Test

@@ -38,18 +38,6 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
                 .fetch();
     }
 
-    @Override
-    public long countMyConversations(UUID currentUserId, ConversationCursorRequest request) {
-        BooleanBuilder where = new BooleanBuilder();
-        applyFilters(where, currentUserId, request);
-        Long count = queryFactory
-                .select(conversation.count())
-                .from(conversation)
-                .where(where)
-                .fetchOne();
-        return count != null ? count : 0L;
-    }
-
     private BooleanBuilder buildWhere(UUID currentUserId, ConversationCursorRequest request) {
         BooleanBuilder where = new BooleanBuilder();
         applyFilters(where, currentUserId, request);
@@ -58,8 +46,8 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
     }
 
     private void applyFilters(BooleanBuilder where, UUID currentUserId, ConversationCursorRequest request) {
-        where.and(participantFilter(currentUserId));
-        where.and(keywordFilter(currentUserId, request.keywordLike()));
+        BooleanExpression keyword = keywordFilter(currentUserId, request.keywordLike());
+        where.and(keyword != null ? keyword : participantFilter(currentUserId));
     }
 
     private BooleanExpression participantFilter(UUID me) {

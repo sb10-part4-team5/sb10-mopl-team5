@@ -12,8 +12,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface DirectMessageRepository extends JpaRepository<DirectMessage, UUID>, DirectMessageQueryRepository {
 
-    // 특정 대화에서 내가 받은 안 읽은 메시지 개수
-    long countByConversationIdAndReceiverIdAndReadFalse(UUID conversationId, UUID receiverId);
+    // 특정 대화에서 내가 받은 안 읽은 메시지 존재 여부
+    boolean existsByConversationIdAndReceiverIdAndReadFalse(UUID conversationId, UUID receiverId);
 
     // 대화의 가장 최근 메시지
     Optional<DirectMessage> findTopByConversationIdOrderByCreatedAtDesc(UUID conversationId);

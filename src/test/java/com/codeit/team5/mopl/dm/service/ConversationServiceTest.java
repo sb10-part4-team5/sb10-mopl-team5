@@ -87,12 +87,9 @@ class ConversationServiceTest {
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(conversationRepository.findMyConversations(eq(currentUserId), any()))
                 .thenReturn(List.of(c1, c2, c3));
-        when(conversationRepository.countMyConversations(eq(currentUserId), any())).thenReturn(5L);
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
-        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
-                .thenReturn(Optional.empty());
-        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
-                .thenReturn(0L);
+        when(directMessageRepository.findLatestMessagesByConversationIds(any())).thenReturn(List.of());
+        when(directMessageRepository.findConversationIdsWithUnread(any(), any())).thenReturn(List.of());
 
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
 
@@ -102,7 +99,6 @@ class ConversationServiceTest {
         // then
         assertThat(result.data()).hasSize(2);
         assertThat(result.hasNext()).isTrue();
-        assertThat(result.totalCount()).isEqualTo(5L);
         assertThat(result.sortBy()).isEqualTo("createdAt");
         assertThat(result.sortDirection()).isEqualTo("DESCENDING");
         assertThat(result.nextCursor()).isEqualTo(c2.getCreatedAt().toString());
@@ -121,12 +117,9 @@ class ConversationServiceTest {
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(conversationRepository.findMyConversations(eq(currentUserId), any()))
                 .thenReturn(List.of(c1));
-        when(conversationRepository.countMyConversations(eq(currentUserId), any())).thenReturn(1L);
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
-        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
-                .thenReturn(Optional.empty());
-        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
-                .thenReturn(0L);
+        when(directMessageRepository.findLatestMessagesByConversationIds(any())).thenReturn(List.of());
+        when(directMessageRepository.findConversationIdsWithUnread(any(), any())).thenReturn(List.of());
 
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
 
@@ -172,8 +165,8 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
                 .thenReturn(Optional.empty());
-        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
-                .thenReturn(0L);
+        when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
+                .thenReturn(false);
 
         // when
         ConversationResponse result = conversationService.getOrCreateConversation(currentUserId, otherId);
@@ -208,8 +201,8 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
                 .thenReturn(Optional.empty());
-        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
-                .thenReturn(2L);
+        when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
+                .thenReturn(true);
 
         // when
         ConversationResponse result = conversationService.getOrCreateConversation(currentUserId, otherId);
@@ -318,8 +311,8 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
                 .thenReturn(Optional.empty());
-        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
-                .thenReturn(0L);
+        when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
+                .thenReturn(false);
 
         // when
         ConversationResponse result = conversationService.getConversation(currentUserId, conversationId);
@@ -383,8 +376,8 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
                 .thenReturn(Optional.empty());
-        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
-                .thenReturn(3L);
+        when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
+                .thenReturn(true);
 
         // when
         ConversationResponse result = conversationService.getConversationWith(currentUserId, withUserId);

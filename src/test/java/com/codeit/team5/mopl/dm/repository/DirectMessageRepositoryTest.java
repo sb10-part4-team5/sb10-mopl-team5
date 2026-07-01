@@ -10,6 +10,7 @@ import com.codeit.team5.mopl.user.entity.User;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -72,26 +73,25 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    @DisplayName("받은 안 읽은 메시지 개수 조회 성공")
-    void countByConversationIdAndReceiverIdAndReadFalse_success() {
+    @DisplayName("받은 안 읽은 메시지 존재 여부 조회 성공")
+    void existsByConversationIdAndReceiverIdAndReadFalse_success() {
         // given - userA가 보낸 메시지는 receiver가 userB
         persistMessage(userA, "안읽음1");
-        persistMessage(userA, "안읽음2");
-        DirectMessage readMessage = persistMessage(userA, "읽음");
+        DirectMessage readMessage = persistMessage(userB, "userA에게");
         readMessage.markAsRead();
-        persistMessage(userB, "userA에게");
+        persistAndFlush(readMessage);
         flush();
         clear();
 
         // when
-        long unreadForB = directMessageRepository
-                .countByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), userB.getId());
-        long unreadForA = directMessageRepository
-                .countByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), userA.getId());
+        boolean unreadForB = directMessageRepository
+                .existsByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), userB.getId());
+        boolean unreadForA = directMessageRepository
+                .existsByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), userA.getId());
 
         // then
-        assertThat(unreadForB).isEqualTo(2L);
-        assertThat(unreadForA).isEqualTo(1L);
+        assertThat(unreadForB).isTrue();
+        assertThat(unreadForA).isFalse();
     }
 
     @Test
@@ -189,21 +189,47 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    @DisplayName("다른 대화의 메시지는 제외하고 메시지 개수 조회 성공")
-    void countMessages_success() {
+    @DisplayName("대화별 최근 메시지 일괄 조회 성공")
+    void findLatestMessagesByConversationIds_success() {
         // given
-        persistMessage(userA, "1");
-        persistMessage(userB, "2");
         User userC = persistUser("c@mopl.com", "C");
         Conversation other = persistAndFlush(Conversation.create(userA, userC));
-        persistAndFlush(DirectMessage.create(other, userA, "other"));
+        persistMessage(userA, "1");
+        persistMessage(userB, "2");
+        persistAndFlush(DirectMessage.create(other, userA, "other1"));
+        sleep();
+        persistAndFlush(DirectMessage.create(other, userC, "other2"));
+        sleep();
         flush();
         clear();
 
         // when
-        long count = directMessageRepository.countMessages(conversation.getId());
+        List<DirectMessage> result = directMessageRepository
+                .findLatestMessagesByConversationIds(List.of(conversation.getId(), other.getId()));
 
         // then
-        assertThat(count).isEqualTo(2L);
+        assertThat(result).extracting(DirectMessage::getContent)
+                .containsExactlyInAnyOrder("2", "other2");
+    }
+
+    @Test
+    @DisplayName("안 읽은 메시지가 있는 대화 ID 일괄 조회 성공")
+    void findConversationIdsWithUnread_success() {
+        // given
+        User userC = persistUser("c@mopl.com", "C");
+        Conversation other = persistAndFlush(Conversation.create(userB, userC));
+        persistMessage(userA, "안읽음");
+        DirectMessage readMessage = persistAndFlush(DirectMessage.create(other, userC, "읽음"));
+        readMessage.markAsRead();
+        persistAndFlush(readMessage);
+        flush();
+        clear();
+
+        // when
+        List<UUID> result = directMessageRepository.findConversationIdsWithUnread(
+                List.of(conversation.getId(), other.getId()), userB.getId());
+
+        // then
+        assertThat(result).containsExactly(conversation.getId());
     }
 }

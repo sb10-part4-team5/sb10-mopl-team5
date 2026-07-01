@@ -16,9 +16,13 @@ import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,15 +67,18 @@ public class ConversationService {
         List<Conversation> fetched = conversationRepository.findMyConversations(currentUserId, request);
         boolean hasNext = fetched.size() > request.limit();
         List<Conversation> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
-        long totalCount = conversationRepository.countMyConversations(currentUserId, request);
 
-        List<ConversationResponse> data = page.stream()
-                .map(conversation -> toConversationResponse(conversation, currentUser))
-                .toList();
+        List<ConversationResponse> data = toConversationResponses(page, currentUser);
 
         Conversation last = page.isEmpty() ? null : page.get(page.size() - 1);
-        return CursorResponse.of(data, last, hasNext, totalCount,
-                Conversation::getCreatedAt, Conversation::getId, request.sortDirection(), "createdAt");
+        String nextCursor = null;
+        String nextIdAfter = null;
+        if (hasNext && last != null) {
+            nextCursor = last.getCreatedAt().toString();
+            nextIdAfter = last.getId().toString();
+        }
+        String direction = request.sortDirection() == Direction.ASC ? "ASCENDING" : "DESCENDING";
+        return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, 0L, "createdAt", direction);
     }
 
     public ConversationResponse getConversationWith(UUID currentUserId, UUID withUserId) {
@@ -92,6 +99,31 @@ public class ConversationService {
         conversation.validateParticipant(user.getId());
     }
 
+    private List<ConversationResponse> toConversationResponses(List<Conversation> conversations, User currentUser) {
+        if (conversations.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> conversationIds = conversations.stream().map(Conversation::getId).toList();
+
+        Map<UUID, DirectMessageResponse> latestByConversation = directMessageRepository
+                .findLatestMessagesByConversationIds(conversationIds).stream()
+                .collect(Collectors.toMap(
+                        message -> message.getConversation().getId(),
+                        dmMapper::toResponse,
+                        (existing, ignored) -> existing));
+
+        Set<UUID> unreadConversationIds = Set.copyOf(
+                directMessageRepository.findConversationIdsWithUnread(conversationIds, currentUser.getId()));
+
+        return conversations.stream()
+                .map(conversation -> new ConversationResponse(
+                        conversation.getId(),
+                        userMapper.toSummaryResponse(conversation.getOtherParticipant(currentUser)),
+                        latestByConversation.get(conversation.getId()),
+                        unreadConversationIds.contains(conversation.getId())))
+                .toList();
+    }
+
     private ConversationResponse toConversationResponse(Conversation conversation, User currentUser) {
         UserSummaryResponse with = userMapper.toSummaryResponse(conversation.getOtherParticipant(currentUser));
         DirectMessageResponse latestMessage = directMessageRepository
@@ -99,7 +131,7 @@ public class ConversationService {
                 .map(dmMapper::toResponse)
                 .orElse(null);
         boolean hasUnread = directMessageRepository
-                .countByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), currentUser.getId()) > 0;
+                .existsByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), currentUser.getId());
         return new ConversationResponse(conversation.getId(), with, latestMessage, hasUnread);
     }
 
