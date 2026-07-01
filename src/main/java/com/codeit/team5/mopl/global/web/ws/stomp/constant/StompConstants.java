@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.constant;
 
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -12,5 +13,12 @@ public final class StompConstants {
     public static final String PUB_WATCHING_CONTENT_CHAT = "/contents/{id}/chat";
     public static final String SUB_WATCHING_CONTENT_CHAT = SUB_PREFIX + "/contents/{id}/chat";
     public static final String SUB_WATCHING_CONTENT = SUB_PREFIX + "/contents/{id}/watch";
+
+    public static final String PUB_CONVERSATION_DM = "/conversations/{id}/direct-messages";
+    public static final String SUB_CONVERSATION_DM = SUB_PREFIX + "/conversations/{id}/direct-messages";
+
+    public static String conversationDmDestination(UUID conversationId) {
+        return SUB_CONVERSATION_DM.replace("{id}", conversationId.toString());
+    }
 
 }

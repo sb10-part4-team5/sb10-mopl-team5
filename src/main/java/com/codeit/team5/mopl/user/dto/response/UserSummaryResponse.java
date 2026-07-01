@@ -1,0 +1,10 @@
+package com.codeit.team5.mopl.user.dto.response;
+
+import java.util.UUID;
+
+public record UserSummaryResponse(
+        UUID userId,
+        String name,
+        String profileImageUrl
+) {
+}

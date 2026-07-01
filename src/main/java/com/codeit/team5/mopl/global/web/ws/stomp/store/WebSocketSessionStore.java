@@ -32,6 +32,11 @@ public class WebSocketSessionStore {
         return session.getOrDefault(email, Collections.emptyMap()).get(subscriptionId);
     }
 
+    // 해당 사용자가 특정 destination을 구독 중인지 (활성 여부 판단)
+    public boolean isSubscribed(String email, String destination) {
+        return session.getOrDefault(email, Collections.emptyMap()).containsValue(destination);
+    }
+
     private Map<String, String> addSubscription(Map<String, String> innerMap, String subscriptionId,
             String destination) {
         Map<String, String> map = (innerMap != null) ? innerMap : new ConcurrentHashMap<>();
