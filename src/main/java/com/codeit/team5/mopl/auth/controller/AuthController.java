@@ -35,27 +35,15 @@ public class AuthController implements AuthApi {
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
     public ResponseEntity<JwtResponse> login(
-            @Valid @ModelAttribute SignInRequest request,
-            CsrfToken csrfToken
+            @Valid @ModelAttribute SignInRequest request
     ) {
         log.info("Login request: POST /api/auth/sign-in");
 
         AuthPayload authPayload = authService.login(request);
         ResponseCookie refreshTokenCookie = cookieManager.createCookie(authPayload.refreshToken());
 
-        ResponseCookie csrfCookie = ResponseCookie.from("XSRF-TOKEN", csrfToken.getToken())
-                .path("/")
-                .maxAge(Duration.ofHours(1))
-                .httpOnly(false)
-                .secure(false)
-                .sameSite("Lax")
-                .build();
-
         return ResponseEntity.ok()
-                .headers(headers -> {
-                    headers.add(HttpHeaders.SET_COOKIE, csrfCookie.toString());
-                    headers.add(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
-                })
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
                 .body(authPayload.jwtResponse());
     }
 
@@ -73,29 +61,19 @@ public class AuthController implements AuthApi {
                 .build();
     }
 
-    @PostMapping("/refresh")
+    @Override
     public ResponseEntity<JwtResponse> refresh(
-            @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken,
-            CsrfToken csrfToken
+            @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
     ) {
+        log.info("RefreshToken regenerate request: POST /api/auth/refresh");
+
         AuthPayload authPayload = authService.refresh(refreshToken);
 
         ResponseCookie refreshTokenCookie =
                 cookieManager.createCookie(authPayload.refreshToken());
 
-        ResponseCookie csrfCookie = ResponseCookie.from("XSRF-TOKEN", csrfToken.getToken())
-                .path("/")
-                .maxAge(Duration.ofHours(1))
-                .httpOnly(false)
-                .secure(false)
-                .sameSite("Lax")
-                .build();
-
         return ResponseEntity.ok()
-                .headers(headers -> {
-                    headers.add(HttpHeaders.SET_COOKIE, csrfCookie.toString());
-                    headers.add(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
-                })
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
                 .body(authPayload.jwtResponse());
     }
 
