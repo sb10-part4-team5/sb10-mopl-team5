@@ -56,14 +56,14 @@ public class AuthService {
         UserResponse userDto = userMapper.toDto(user);
 
         String accessToken = jwtTokenizer.generateAccessToken(
-                userDto.id().toString(),
-                userDto.email(),
-                userDto.role()
+                user.getId().toString(),
+                user.getEmail(),
+                user.getRole().name()
         );
-        String refreshToken = jwtTokenizer.generateRefreshToken(userDto.id().toString());
-        refreshTokenStore.save(userDto.id(), refreshToken, calculateExpiresAt());
+        String refreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
+        refreshTokenStore.save(user.getId(), refreshToken, calculateExpiresAt());
 
-        log.info("Login success: id={}", userDto.id());
+        log.info("Login success: id={}", user.getId());
 
         JwtResponse response = authMapper.toJwtResponse(userDto, accessToken);
 
