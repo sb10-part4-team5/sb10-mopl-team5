@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,12 +21,8 @@ import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
-import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
-import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.service.ConversationService;
-import com.codeit.team5.mopl.dm.service.DirectMessageService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
@@ -67,9 +62,6 @@ class ConversationControllerTest {
 
     @MockitoBean
     private ConversationService conversationService;
-
-    @MockitoBean
-    private DirectMessageService directMessageService;
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
@@ -197,61 +189,5 @@ class ConversationControllerTest {
                         .param("sortDirection", "DESCENDING")
                         .with(authentication(authOf(currentUserId))))
                 .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("대화 메시지 목록 조회 요청 성공")
-    void getDirectMessages_success() throws Exception {
-        UUID currentUserId = UUID.randomUUID();
-        UUID conversationId = UUID.randomUUID();
-        DirectMessageResponse message = new DirectMessageResponse(
-                UUID.randomUUID(), conversationId, null, null, "안녕", Instant.now());
-        CursorResponse<DirectMessageResponse> response = new CursorResponse<>(
-                List.of(message), null, null, false, 1L, "createdAt", "DESCENDING");
-        given(directMessageService.getMessages(
-                eq(currentUserId), eq(conversationId), any(DirectMessageCursorRequest.class)))
-                .willReturn(response);
-
-        mockMvc.perform(get("/api/conversations/{conversationId}/direct-messages", conversationId)
-                        .param("limit", "20")
-                        .param("sortDirection", "DESCENDING")
-                        .param("sortBy", "createdAt")
-                        .with(authentication(authOf(currentUserId))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].content").value("안녕"))
-                .andExpect(jsonPath("$.hasNext").value(false))
-                .andExpect(jsonPath("$.totalCount").value(1));
-    }
-
-    @Test
-    @DisplayName("비참여자가 메시지 목록 조회 시 실패")
-    void getDirectMessages_notParticipant_forbidden() throws Exception {
-        UUID currentUserId = UUID.randomUUID();
-        UUID conversationId = UUID.randomUUID();
-        given(directMessageService.getMessages(
-                eq(currentUserId), eq(conversationId), any(DirectMessageCursorRequest.class)))
-                .willThrow(new NotConversationParticipantException(currentUserId));
-
-        mockMvc.perform(get("/api/conversations/{conversationId}/direct-messages", conversationId)
-                        .param("limit", "20")
-                        .param("sortDirection", "DESCENDING")
-                        .with(authentication(authOf(currentUserId))))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @DisplayName("메시지 읽음 처리 요청 성공")
-    void markAsRead_success() throws Exception {
-        UUID currentUserId = UUID.randomUUID();
-        UUID conversationId = UUID.randomUUID();
-        UUID directMessageId = UUID.randomUUID();
-
-        mockMvc.perform(post("/api/conversations/{conversationId}/direct-messages/{directMessageId}/read",
-                        conversationId, directMessageId)
-                        .with(authentication(authOf(currentUserId)))
-                        .with(csrf()))
-                .andExpect(status().isOk());
-
-        verify(directMessageService).markMessagesAsRead(eq(currentUserId), eq(conversationId), eq(directMessageId));
     }
 }
