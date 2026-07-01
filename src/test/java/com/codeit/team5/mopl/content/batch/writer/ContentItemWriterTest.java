@@ -1,9 +1,11 @@
 package com.codeit.team5.mopl.content.batch.writer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.batch.dto.ContentWithMetaData;
 import com.codeit.team5.mopl.content.entity.Content;
@@ -76,5 +78,39 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item1, item2)));
 
         verify(contentRepository).saveAll(List.of(content1));
+    }
+
+    @Test
+    @DisplayName("썸네일 URL이 있으면 saveAll로 일괄 저장 후 content에 연결한다")
+    void write_savesThumbnailsAndAttachesToContent() throws Exception {
+        Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        ContentWithMetaData item = new ContentWithMetaData(content, "https://img.example.com/poster.jpg", List.of());
+
+        BinaryContent savedThumbnail = BinaryContent.externalUrl("https://img.example.com/poster.jpg");
+
+        given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+        given(binaryContentRepository.saveAll(anyList())).willReturn(List.of(savedThumbnail));
+
+        writer.write(new Chunk<>(List.of(item)));
+
+        verify(binaryContentRepository).saveAll(anyList());
+        assertThat(content.getThumbnail()).isEqualTo(savedThumbnail);
+    }
+
+    @Test
+    @DisplayName("썸네일 URL이 없으면 binaryContentRepository를 호출하지 않는다")
+    void write_skipsThumbnailWhenUrlIsNull() throws Exception {
+        Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        ContentWithMetaData item = new ContentWithMetaData(content, null, List.of());
+
+        given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+
+        writer.write(new Chunk<>(List.of(item)));
+
+        verify(binaryContentRepository, org.mockito.Mockito.never()).saveAll(anyList());
     }
 }

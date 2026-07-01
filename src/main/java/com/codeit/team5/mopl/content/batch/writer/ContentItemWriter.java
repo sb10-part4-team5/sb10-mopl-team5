@@ -58,14 +58,19 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 .toList();
         contentStatsRepository.saveAll(stats);
 
-        // 3. 썸네일 저장
-        deduplicatedItems.forEach(item -> {
-            if (StringUtils.hasText(item.thumbnailUrl())) {
-                BinaryContent thumbnail = binaryContentRepository.save(
-                        BinaryContent.externalUrl(item.thumbnailUrl()));
-                item.content().attachThumbnail(thumbnail);
-            }
-        });
+        // 3. 썸네일 일괄 저장
+        List<ContentWithMetaData> itemsWithThumbnail = deduplicatedItems.stream()
+                .filter(item -> StringUtils.hasText(item.thumbnailUrl()))
+                .toList();
+        if (!itemsWithThumbnail.isEmpty()) {
+            Map<String, BinaryContent> savedThumbnailByUrl = binaryContentRepository.saveAll(
+                    itemsWithThumbnail.stream()
+                            .map(item -> BinaryContent.externalUrl(item.thumbnailUrl()))
+                            .toList()
+            ).stream().collect(Collectors.toMap(BinaryContent::getUrl, Function.identity()));
+            itemsWithThumbnail.forEach(item ->
+                    item.content().attachThumbnail(savedThumbnailByUrl.get(item.thumbnailUrl())));
+        }
 
         // 4. 태그 저장
         List<String> allTagNames = deduplicatedItems.stream()
