@@ -79,8 +79,17 @@ public class UserQueryRepositoryImpl implements UserQueryRepository {
     }
 
     private void applyCursor(BooleanBuilder where, UserCursorRequest request) {
-        if (request.cursor() == null || request.cursor().isBlank() || request.idAfter() == null) {
+        boolean hasCursor = request.cursor() != null && !request.cursor().isBlank();
+        boolean hasIdAfter = request.idAfter() != null;
+
+        // cursor와 idAfter가 모두 없으면 첫 페이지를 조회
+        if (!hasCursor && !hasIdAfter) {
             return;
+        }
+
+        // cursor와 idAfter 중 하나만 전달된 경우 잘못된 요청으로 처리
+        if (hasCursor != hasIdAfter) {
+            throw new InvalidCursorException();
         }
 
         BooleanExpression cursorCondition = cursorCondition(request);
