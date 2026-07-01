@@ -11,7 +11,7 @@ public enum UserSortBy {
     NAME("name"),
     EMAIL("email"),
     CREATED_AT("createdAt"),
-    LOCKED("locked"),
+    LOCKED("isLocked"),
     ROLE("role")
     ;
 
