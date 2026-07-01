@@ -142,8 +142,7 @@ class ConversationServiceTest {
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
 
         // when & then
-        org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> conversationService.findMyConversations(currentUserId, request))
+        assertThatThrownBy(() -> conversationService.findMyConversations(currentUserId, request))
                 .isInstanceOf(UserNotFoundException.class);
     }
 

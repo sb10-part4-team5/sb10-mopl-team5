@@ -19,7 +19,7 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, UU
     Optional<DirectMessage> findTopByConversationIdOrderByCreatedAtDescIdDesc(UUID conversationId);
 
     // 기준 메시지(createdAt, id)까지 내가 받은 안 읽은 메시지를 일괄 읽음 처리
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update DirectMessage dm set dm.read = true, dm.readAt = :readAt "
             + "where dm.conversation.id = :conversationId and dm.receiver.id = :receiverId "
             + "and dm.read = false "

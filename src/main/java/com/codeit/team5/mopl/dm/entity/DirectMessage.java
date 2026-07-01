@@ -25,6 +25,8 @@ import org.hibernate.annotations.Check;
 @Table(name = "direct_messages")
 public class DirectMessage extends BaseEntity {
 
+    private static final int MAX_CONTENT_LENGTH = 1000;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "conversation_id", nullable = false)
     private Conversation conversation;
@@ -54,7 +56,7 @@ public class DirectMessage extends BaseEntity {
     }
 
     public static DirectMessage create(Conversation conversation, User sender, String content) {
-        if (content == null || content.isBlank()) {
+        if (content == null || content.isBlank() || content.length() > MAX_CONTENT_LENGTH) {
             throw new InvalidDirectMessageContentException();
         }
         User receiver = conversation.getOtherParticipant(sender);

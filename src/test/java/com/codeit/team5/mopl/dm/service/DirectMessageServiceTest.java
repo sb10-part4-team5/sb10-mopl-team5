@@ -15,6 +15,7 @@ import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
+import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
 import com.codeit.team5.mopl.dm.exception.DirectMessageNotFoundException;
 import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
@@ -93,6 +94,7 @@ class DirectMessageServiceTest {
         // then
         assertThat(result).isSameAs(response);
         verify(directMessageRepository).save(any(DirectMessage.class));
+        verify(eventPublisher).publishEvent(any(DirectMessageBroadcastEvent.class));
         verify(eventPublisher).publishEvent(any(DirectMessageSentEvent.class));
     }
 
