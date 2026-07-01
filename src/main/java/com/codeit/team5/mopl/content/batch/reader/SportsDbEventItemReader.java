@@ -19,7 +19,6 @@ public class SportsDbEventItemReader implements ItemReader<SportsDbEventDto> {
     private final SportsDbApiClient sportsDbApiClient;
 
     private final Queue<SportsDbEventDto> buffer = new LinkedList<>();
-    private boolean fetched = false;
 
     @BeforeStep
     public void beforeStep(StepExecution stepExecution) {
@@ -38,14 +37,10 @@ public class SportsDbEventItemReader implements ItemReader<SportsDbEventDto> {
             buffer.addAll(events);
             log.info("[SportsDB] leagueId={}, season={} - {}건 로드 완료", leagueId, season, events.size());
         }
-        fetched = true;
     }
 
     @Override
     public SportsDbEventDto read() {
-        if (!fetched) {
-            return null;
-        }
         return buffer.poll();
     }
 }
