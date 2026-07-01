@@ -7,7 +7,6 @@ import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.service.AuthService;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import jakarta.validation.Valid;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -62,6 +61,7 @@ public class AuthController implements AuthApi {
     }
 
     @Override
+    @PostMapping("/refresh")
     public ResponseEntity<JwtResponse> refresh(
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
     ) {
