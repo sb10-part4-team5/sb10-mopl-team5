@@ -22,15 +22,9 @@ public interface DmMapper {
 
     default CursorResponse<DirectMessageResponse> toDirectMessageCursor(List<DirectMessage> page, boolean hasNext,
             long totalCount, Direction sortDirection) {
-        String nextCursor = null;
-        String nextIdAfter = null;
-        if (hasNext && !page.isEmpty()) {
-            DirectMessage last = page.get(page.size() - 1);
-            nextCursor = last.getCreatedAt().toString();
-            nextIdAfter = last.getId().toString();
-        }
         List<DirectMessageResponse> data = page.stream().map(this::toResponse).toList();
-        String direction = sortDirection == Direction.ASC ? "ASCENDING" : "DESCENDING";
-        return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, totalCount, "createdAt", direction);
+        DirectMessage last = page.isEmpty() ? null : page.get(page.size() - 1);
+        return CursorResponse.of(data, last, hasNext, totalCount,
+                DirectMessage::getCreatedAt, DirectMessage::getId, sortDirection, "createdAt");
     }
 }

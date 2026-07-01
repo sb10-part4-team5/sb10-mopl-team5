@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,8 +60,7 @@ public class ConversationService {
 
     public CursorResponse<ConversationResponse> findMyConversations(UUID currentUserId, ConversationCursorRequest request) {
         User currentUser = getUser(currentUserId);
-        int fetchLimit = request.limit() + 1;
-        List<Conversation> fetched = conversationRepository.findMyConversations(currentUserId, request, fetchLimit);
+        List<Conversation> fetched = conversationRepository.findMyConversations(currentUserId, request);
         boolean hasNext = fetched.size() > request.limit();
         List<Conversation> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
         long totalCount = conversationRepository.countMyConversations(currentUserId, request);
@@ -71,15 +69,9 @@ public class ConversationService {
                 .map(conversation -> toConversationResponse(conversation, currentUser))
                 .toList();
 
-        String nextCursor = null;
-        String nextIdAfter = null;
-        if (hasNext && !page.isEmpty()) {
-            Conversation last = page.get(page.size() - 1);
-            nextCursor = last.getCreatedAt().toString();
-            nextIdAfter = last.getId().toString();
-        }
-        String direction = request.sortDirection() == Direction.ASC ? "ASCENDING" : "DESCENDING";
-        return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, totalCount, "createdAt", direction);
+        Conversation last = page.isEmpty() ? null : page.get(page.size() - 1);
+        return CursorResponse.of(data, last, hasNext, totalCount,
+                Conversation::getCreatedAt, Conversation::getId, request.sortDirection(), "createdAt");
     }
 
     public ConversationResponse getConversationWith(UUID currentUserId, UUID withUserId) {

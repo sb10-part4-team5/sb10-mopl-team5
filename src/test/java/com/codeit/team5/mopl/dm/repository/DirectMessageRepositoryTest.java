@@ -154,12 +154,12 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
 
         // when: DESC 최신순 → m5, m4, m3, m2, m1
         DirectMessageCursorRequest first = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
-        List<DirectMessage> firstFetched = directMessageRepository.findMessages(conversation.getId(), first, 3);
+        List<DirectMessage> firstFetched = directMessageRepository.findMessages(conversation.getId(), first);
         List<DirectMessage> firstPage = firstFetched.subList(0, 2);
         DirectMessage cursor = firstPage.get(1);
         DirectMessageCursorRequest second = new DirectMessageCursorRequest(
                 cursor.getCreatedAt().toString(), cursor.getId().toString(), 2, Direction.DESC);
-        List<DirectMessage> secondFetched = directMessageRepository.findMessages(conversation.getId(), second, 3);
+        List<DirectMessage> secondFetched = directMessageRepository.findMessages(conversation.getId(), second);
 
         // then
         assertThat(firstFetched).hasSize(3);
@@ -182,7 +182,7 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
         DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 10, Direction.ASC);
 
         // when
-        List<DirectMessage> result = directMessageRepository.findMessages(conversation.getId(), request, 11);
+        List<DirectMessage> result = directMessageRepository.findMessages(conversation.getId(), request);
 
         // then
         assertThat(result).extracting(DirectMessage::getContent).containsExactly("1", "2", "3");

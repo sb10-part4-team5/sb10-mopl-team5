@@ -4,9 +4,9 @@ import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.dm.entity.QDirectMessage;
 import com.codeit.team5.mopl.dm.exception.InvalidCursorException;
+import com.codeit.team5.mopl.global.querydsl.CursorQueryDslSupport;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -25,7 +25,8 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
     private static final QDirectMessage directMessage = QDirectMessage.directMessage;
 
     @Override
-    public List<DirectMessage> findMessages(UUID conversationId, DirectMessageCursorRequest request, int fetchLimit) {
+    public List<DirectMessage> findMessages(UUID conversationId, DirectMessageCursorRequest request) {
+        int fetchLimit = request.limit() + 1;
         return queryFactory
                 .selectFrom(directMessage)
                 .join(directMessage.sender).fetchJoin()
@@ -69,19 +70,12 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
             throw new InvalidCursorException(cursor, idAfter);
         }
         boolean isAsc = request.sortDirection() == Direction.ASC;
-
-        BooleanExpression cursorCondition = isAsc
-                ? directMessage.createdAt.gt(cursorInstant)
-                        .or(directMessage.createdAt.eq(cursorInstant).and(directMessage.id.gt(id)))
-                : directMessage.createdAt.lt(cursorInstant)
-                        .or(directMessage.createdAt.eq(cursorInstant).and(directMessage.id.lt(id)));
-        where.and(cursorCondition);
+        where.and(CursorQueryDslSupport.cursorPredicate(
+                directMessage.createdAt, directMessage.id, cursorInstant, id, isAsc));
     }
 
     private OrderSpecifier<?>[] buildOrder(DirectMessageCursorRequest request) {
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        OrderSpecifier<?> primary = isAsc ? directMessage.createdAt.asc() : directMessage.createdAt.desc();
-        OrderSpecifier<?> secondary = isAsc ? directMessage.id.asc() : directMessage.id.desc();
-        return new OrderSpecifier<?>[]{primary, secondary};
+        return CursorQueryDslSupport.cursorOrder(directMessage.createdAt, directMessage.id, isAsc);
     }
 }

@@ -170,7 +170,7 @@ class DirectMessageServiceTest {
                 List.of(messageResponse), null, null, false, 1L, "createdAt", "DESCENDING");
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
-        when(directMessageRepository.findMessages(eq(conversationId), any(), eq(3))).thenReturn(List.of());
+        when(directMessageRepository.findMessages(eq(conversationId), any())).thenReturn(List.of());
         when(directMessageRepository.countMessages(conversationId)).thenReturn(1L);
         when(dmMapper.toDirectMessageCursor(anyList(), eq(false), eq(1L), eq(Direction.DESC)))
                 .thenReturn(cursorResponse);
@@ -202,7 +202,7 @@ class DirectMessageServiceTest {
         // when & then
         assertThatThrownBy(() -> directMessageService.getMessages(currentUserId, conversationId, request))
                 .isInstanceOf(NotConversationParticipantException.class);
-        verify(directMessageRepository, never()).findMessages(any(), any(), anyInt());
+        verify(directMessageRepository, never()).findMessages(any(), any());
     }
 
     @Test
@@ -219,7 +219,7 @@ class DirectMessageServiceTest {
         // when & then
         assertThatThrownBy(() -> directMessageService.getMessages(currentUserId, conversationId, request))
                 .isInstanceOf(ConversationNotFoundException.class);
-        verify(directMessageRepository, never()).findMessages(any(), any(), anyInt());
+        verify(directMessageRepository, never()).findMessages(any(), any());
     }
 
     @Test

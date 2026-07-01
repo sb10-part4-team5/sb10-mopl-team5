@@ -69,8 +69,7 @@ public class DirectMessageService {
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
         conversation.validateParticipant(currentUserId);
 
-        int fetchLimit = request.limit() + 1;
-        List<DirectMessage> fetched = directMessageRepository.findMessages(conversationId, request, fetchLimit);
+        List<DirectMessage> fetched = directMessageRepository.findMessages(conversationId, request);
         boolean hasNext = fetched.size() > request.limit();
         List<DirectMessage> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
         long totalCount = directMessageRepository.countMessages(conversationId);

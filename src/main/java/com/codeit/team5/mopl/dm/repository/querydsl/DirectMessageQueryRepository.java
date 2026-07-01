@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface DirectMessageQueryRepository {
 
-    List<DirectMessage> findMessages(UUID conversationId, DirectMessageCursorRequest request, int fetchLimit);
+    List<DirectMessage> findMessages(UUID conversationId, DirectMessageCursorRequest request);
 
     long countMessages(UUID conversationId);
 }

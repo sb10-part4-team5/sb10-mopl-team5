@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.QConversation;
 import com.codeit.team5.mopl.dm.exception.InvalidCursorException;
+import com.codeit.team5.mopl.global.querydsl.CursorQueryDslSupport;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -25,11 +26,8 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
     private static final QConversation conversation = QConversation.conversation;
 
     @Override
-    public List<Conversation> findMyConversations(
-            UUID currentUserId,
-            ConversationCursorRequest request,
-            int fetchLimit
-    ) {
+    public List<Conversation> findMyConversations(UUID currentUserId, ConversationCursorRequest request) {
+        int fetchLimit = request.limit() + 1;
         return queryFactory
                 .selectFrom(conversation)
                 .join(conversation.participant1).fetchJoin()
@@ -94,19 +92,12 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
             throw new InvalidCursorException(cursor, idAfter);
         }
         boolean isAsc = request.sortDirection() == Direction.ASC;
-
-        BooleanExpression cursorCondition = isAsc
-                ? conversation.createdAt.gt(cursorInstant)
-                        .or(conversation.createdAt.eq(cursorInstant).and(conversation.id.gt(id)))
-                : conversation.createdAt.lt(cursorInstant)
-                        .or(conversation.createdAt.eq(cursorInstant).and(conversation.id.lt(id)));
-        where.and(cursorCondition);
+        where.and(CursorQueryDslSupport.cursorPredicate(
+                conversation.createdAt, conversation.id, cursorInstant, id, isAsc));
     }
 
     private OrderSpecifier<?>[] buildOrder(ConversationCursorRequest request) {
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        OrderSpecifier<?> primary = isAsc ? conversation.createdAt.asc() : conversation.createdAt.desc();
-        OrderSpecifier<?> secondary = isAsc ? conversation.id.asc() : conversation.id.desc();
-        return new OrderSpecifier<?>[]{primary, secondary};
+        return CursorQueryDslSupport.cursorOrder(conversation.createdAt, conversation.id, isAsc);
     }
 }

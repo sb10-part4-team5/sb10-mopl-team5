@@ -98,7 +98,7 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 10, Direction.DESC);
 
         // when
-        List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request, 11);
+        List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request);
         long count = conversationRepository.countMyConversations(me.getId(), request);
 
         // then
@@ -119,7 +119,7 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
         ConversationCursorRequest request = new ConversationCursorRequest("ali", null, null, 10, Direction.DESC);
 
         // when
-        List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request, 11);
+        List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request);
         long count = conversationRepository.countMyConversations(me.getId(), request);
 
         // then
@@ -141,12 +141,12 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
 
         // when: DESC 최신순 → c4, c3, c2, c1
         ConversationCursorRequest first = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
-        List<Conversation> firstFetched = conversationRepository.findMyConversations(me.getId(), first, 3);
+        List<Conversation> firstFetched = conversationRepository.findMyConversations(me.getId(), first);
         List<Conversation> firstPage = firstFetched.subList(0, 2);
         Conversation cursor = firstPage.get(1);
         ConversationCursorRequest second = new ConversationCursorRequest(
                 null, cursor.getCreatedAt().toString(), cursor.getId().toString(), 2, Direction.DESC);
-        List<Conversation> secondFetched = conversationRepository.findMyConversations(me.getId(), second, 3);
+        List<Conversation> secondFetched = conversationRepository.findMyConversations(me.getId(), second);
 
         // then
         assertThat(firstFetched).hasSize(3);
@@ -170,7 +170,7 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 10, Direction.ASC);
 
         // when
-        List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request, 11);
+        List<Conversation> result = conversationRepository.findMyConversations(me.getId(), request);
 
         // then
         assertThat(result).extracting(Conversation::getId)

@@ -85,7 +85,7 @@ class ConversationServiceTest {
         UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
-        when(conversationRepository.findMyConversations(eq(currentUserId), any(), eq(3)))
+        when(conversationRepository.findMyConversations(eq(currentUserId), any()))
                 .thenReturn(List.of(c1, c2, c3));
         when(conversationRepository.countMyConversations(eq(currentUserId), any())).thenReturn(5L);
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
@@ -119,7 +119,7 @@ class ConversationServiceTest {
         UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
-        when(conversationRepository.findMyConversations(eq(currentUserId), any(), eq(3)))
+        when(conversationRepository.findMyConversations(eq(currentUserId), any()))
                 .thenReturn(List.of(c1));
         when(conversationRepository.countMyConversations(eq(currentUserId), any())).thenReturn(1L);
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
