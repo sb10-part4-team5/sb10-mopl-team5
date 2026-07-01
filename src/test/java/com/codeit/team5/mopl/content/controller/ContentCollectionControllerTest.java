@@ -45,6 +45,9 @@ class ContentCollectionControllerTest {
     @MockitoBean(name = "sportsDbEventJob")
     private Job sportsDbEventJob;
 
+    @MockitoBean(name = "sportsDbDayJob")
+    private Job sportsDbDayJob;
+
     // --- TMDB 영화 수집 ---
 
     @Test
@@ -57,10 +60,10 @@ class ContentCollectionControllerTest {
     }
 
     @Test
-    @DisplayName("TMDB 영화 수집 파라미터 생략 시 기본값으로 202 응답을 반환한다")
-    void collectTmdbMovies_defaultParams_success() throws Exception {
+    @DisplayName("TMDB 영화 수집 파라미터 생략 시 400 응답을 반환한다")
+    void collectTmdbMovies_missingParams_returnsBadRequest() throws Exception {
         mockMvc.perform(post("/api/admin/contents/collect/tmdb/movies"))
-                .andExpect(status().isAccepted());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -93,10 +96,10 @@ class ContentCollectionControllerTest {
     }
 
     @Test
-    @DisplayName("TMDB TV 수집 파라미터 생략 시 기본값으로 202 응답을 반환한다")
-    void collectTmdbTvSeries_defaultParams_success() throws Exception {
+    @DisplayName("TMDB TV 수집 파라미터 생략 시 400 응답을 반환한다")
+    void collectTmdbTvSeries_missingParams_returnsBadRequest() throws Exception {
         mockMvc.perform(post("/api/admin/contents/collect/tmdb/tv"))
-                .andExpect(status().isAccepted());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -141,6 +144,31 @@ class ContentCollectionControllerTest {
         mockMvc.perform(post("/api/admin/contents/collect/sports")
                         .param("league", "EPL")
                         .param("season", "2023/2024"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // --- SportsDB 일별 경기 수집 ---
+
+    @Test
+    @DisplayName("SportsDB 일별 경기 수집 요청이면 202 응답을 반환한다")
+    void collectSportsEventsByDay_success() throws Exception {
+        mockMvc.perform(post("/api/admin/contents/collect/sports/day")
+                        .param("date", "2024-12-26"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    @DisplayName("SportsDB 일별 경기 수집 시 date 파라미터가 누락되면 400 응답을 반환한다")
+    void collectSportsEventsByDay_missingDate_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/admin/contents/collect/sports/day"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("SportsDB 일별 경기 수집 시 date 형식이 YYYY-MM-DD가 아니면 400 응답을 반환한다")
+    void collectSportsEventsByDay_invalidDateFormat_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/admin/contents/collect/sports/day")
+                        .param("date", "2024/12/26"))
                 .andExpect(status().isBadRequest());
     }
 }

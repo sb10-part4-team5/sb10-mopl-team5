@@ -1,9 +1,10 @@
 package com.codeit.team5.mopl.content.dto.request;
 
-import org.springframework.web.bind.annotation.RequestParam;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 
 @ValidPageRange
 public record PageRangeRequest(
-        @RequestParam(defaultValue = "1") int startPage,
-        @RequestParam(defaultValue = "1") int endPage
+        @NotNull @Min(1) Integer startPage,
+        @NotNull @Min(1) Integer endPage
 ) {}
