@@ -4,6 +4,8 @@ import com.codeit.team5.mopl.auth.exception.AccountLockedException;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
+import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Component;
 public class MoplAuthenticationProvider implements AuthenticationProvider {
 
     private final MoplUserDetailsService userDetailsService;
+    private final TemporaryPasswordService temporaryPasswordService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -31,18 +34,23 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
         }
         String rawPassword = credentials.toString();
 
-
         MoplUserDetails userDetails =
                 (MoplUserDetails) userDetailsService.loadUserByUsername(email);
-
-        if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
-            log.warn("Login failed: id={}", userDetails.getId());
-            throw new InvalidCredentialsException("비밀번호가 일치하지 않습니다.");
-        }
 
         if (!userDetails.isAccountNonLocked()) {
             log.warn("Login failed - Account is locked: id={}", userDetails.getId());
             throw new AccountLockedException("잠긴 계정입니다");
+        }
+
+        boolean matchesPassword =
+                passwordEncoder.matches(rawPassword, userDetails.getPassword());
+
+        boolean matchesTemporaryPassword =
+                temporaryPasswordService.matches(userDetails.getId(), rawPassword);
+
+        // 비밀번호가 틀렸는데 임시비밀번호도 아닌 경우
+        if (!matchesPassword && !matchesTemporaryPassword) {
+            throw new InvalidCredentialsException("Invalid credentials");
         }
 
         return new UsernamePasswordAuthenticationToken(
