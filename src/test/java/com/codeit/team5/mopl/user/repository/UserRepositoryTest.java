@@ -7,9 +7,15 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
+import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
+import com.codeit.team5.mopl.user.constant.UserSortBy;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.entity.UserRole;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
@@ -134,6 +141,303 @@ class UserRepositoryTest {
 
         // Then
         assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("사용자 목록을 조건으로 필터링하고 이름 오름차순 커서로 이어서 조회한다")
+    void findUsers_filterByRoleAndLocked_success() {
+        // Given
+        User first = User.create("list-a@example.com", "password", "목록 A");
+        User sameName = User.create("list-aa@example.com", "password", "목록 A");
+        User second = User.create("list-b@example.com", "password", "목록 B");
+        User locked = User.create("list-c@example.com", "password", "목록 C");
+        locked.updateLocked(true);
+        User admin = User.create("list-admin@example.com", "password", "목록 관리자");
+        admin.updateRole(UserRole.ADMIN);
+
+        userRepository.saveAll(List.of(second, admin, locked, sameName, first));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "list",
+                UserRole.USER,
+                false,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.NAME
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "list",
+                UserRole.USER,
+                false,
+                lastUserOfFirstPage.getName(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.NAME
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+        long count = userRepository.countUsers(firstPageRequest);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::getName)
+                .containsExactly("목록 A", "목록 A", "목록 B");
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).getName()).isEqualTo(lastUserOfFirstPage.getName());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+        assertThat(count).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("생성일 커서로 사용자 목록을 이어서 조회한다")
+    void findUsers_createdAtCursor_success() {
+        // Given
+        User first = User.create("created-cursor-a@example.com", "password", "생성일 A");
+        User second = User.create("created-cursor-b@example.com", "password", "생성일 B");
+        User third = User.create("created-cursor-c@example.com", "password", "생성일 C");
+
+        userRepository.saveAll(List.of(third, first, second));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "created-cursor",
+                UserRole.USER,
+                false,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.CREATED_AT
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "created-cursor",
+                UserRole.USER,
+                false,
+                lastUserOfFirstPage.getCreatedAt().toString(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.CREATED_AT
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder).hasSize(3);
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(lastUserOfFirstPage.getCreatedAt()).isNotNull();
+        assertThat(secondPage.get(0).getCreatedAt())
+                .isAfterOrEqualTo(lastUserOfFirstPage.getCreatedAt());
+    }
+
+    @Test
+    @DisplayName("잠금 상태 커서로 사용자 목록을 이어서 조회한다")
+    void findUsers_lockedCursor_success() {
+        // Given
+        User firstUnlocked = User.create("locked-cursor-a@example.com", "password", "잠금 A");
+        User secondUnlocked = User.create("locked-cursor-b@example.com", "password", "잠금 B");
+        User firstLocked = User.create("locked-cursor-c@example.com", "password", "잠금 C");
+        firstLocked.updateLocked(true);
+        User secondLocked = User.create("locked-cursor-d@example.com", "password", "잠금 D");
+        secondLocked.updateLocked(true);
+
+        userRepository.saveAll(List.of(firstLocked, secondUnlocked, secondLocked, firstUnlocked));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "locked-cursor",
+                UserRole.USER,
+                null,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.LOCKED
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "locked-cursor",
+                UserRole.USER,
+                null,
+                Boolean.toString(lastUserOfFirstPage.isLocked()),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.LOCKED
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::isLocked)
+                .containsExactly(false, false, true, true);
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).isLocked()).isEqualTo(lastUserOfFirstPage.isLocked());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+    }
+
+    @Test
+    @DisplayName("권한 커서로 사용자 목록을 이어서 조회한다")
+    void findUsers_roleCursor_success() {
+        // Given
+        User firstUser = User.create("role-cursor-a@example.com", "password", "권한 A");
+        User secondUser = User.create("role-cursor-b@example.com", "password", "권한 B");
+        User firstAdmin = User.create("role-cursor-c@example.com", "password", "권한 C");
+        firstAdmin.updateRole(UserRole.ADMIN);
+        User secondAdmin = User.create("role-cursor-d@example.com", "password", "권한 D");
+        secondAdmin.updateRole(UserRole.ADMIN);
+
+        userRepository.saveAll(List.of(secondUser, firstAdmin, firstUser, secondAdmin));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "role-cursor",
+                null,
+                false,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.ROLE
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "role-cursor",
+                null,
+                false,
+                lastUserOfFirstPage.getRole().name(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.ROLE
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::getRole)
+                .containsExactly(UserRole.ADMIN, UserRole.ADMIN, UserRole.USER, UserRole.USER);
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).getRole()).isEqualTo(lastUserOfFirstPage.getRole());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+    }
+
+    @Test
+    @DisplayName("잘못된 커서 값이면 예외가 발생한다")
+    void findUsers_malformedCursor_throwsException() {
+        // Given
+        User user = User.create("malformed-cursor@example.com", "password", "잘못된 커서");
+        User savedUser = userRepository.saveAndFlush(user);
+        entityManager.clear();
+
+        UserCursorRequest invalidCreatedAtCursorRequest = new UserCursorRequest(
+                "malformed-cursor",
+                UserRole.USER,
+                false,
+                "not-an-instant",
+                savedUser.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.CREATED_AT
+        );
+        UserCursorRequest invalidLockedCursorRequest = new UserCursorRequest(
+                "malformed-cursor",
+                UserRole.USER,
+                false,
+                "not-a-boolean",
+                savedUser.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.LOCKED
+        );
+
+        // When & Then
+        assertThatThrownBy(() -> userRepository.findUsers(invalidCreatedAtCursorRequest, 10))
+                .isInstanceOf(InvalidCursorException.class)
+                .hasMessage("커서 값이 유효하지 않습니다.");
+        assertThatThrownBy(() -> userRepository.findUsers(invalidLockedCursorRequest, 10))
+                .isInstanceOf(InvalidCursorException.class)
+                .hasMessage("커서 값이 유효하지 않습니다.");
     }
 
     @Test

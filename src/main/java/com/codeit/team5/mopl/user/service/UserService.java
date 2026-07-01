@@ -3,7 +3,9 @@ package com.codeit.team5.mopl.user.service;
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
@@ -17,6 +19,7 @@ import com.codeit.team5.mopl.user.exception.UserForbiddenException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -114,6 +117,16 @@ public class UserService {
         refreshTokenStore.deleteByUserId(userId);
 
         log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
+    }
+
+    public CursorResponse<UserResponse> findUsers(UserCursorRequest request) {
+        int fetchLimit = request.limit() + 1;
+        List<User> fetched = userRepository.findUsers(request, fetchLimit);
+        boolean hasNext = fetched.size() > request.limit();
+        List<User> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
+        long totalCount = userRepository.countUsers(request);
+
+        return userMapper.toCursor(page, hasNext, totalCount, request.sortBy(), request.sortDirection());
     }
 
     private void validateOwner(UUID currentUserId, UUID userId) {

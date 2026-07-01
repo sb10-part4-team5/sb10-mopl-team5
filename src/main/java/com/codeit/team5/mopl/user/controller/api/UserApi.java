@@ -1,7 +1,9 @@
 package com.codeit.team5.mopl.user.controller.api;
 
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
@@ -139,5 +141,25 @@ public interface UserApi {
 
             @Parameter(description = "변경할 사용자 잠금 상태", required = true)
             @Valid @RequestBody UserLockedUpdateRequest request
+    );
+
+    @Operation(
+            summary = "[어드민] 사용자 목록 조회",
+            description = "[어드민 기능] 사용자의 목록을 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "목록 조회 성공",
+                    content = @Content(schema = @Schema(implementation = CursorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 조회 가능)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<CursorResponse<UserResponse>> getUsers(
+            @Parameter(hidden = true)UserCursorRequest request
     );
 }

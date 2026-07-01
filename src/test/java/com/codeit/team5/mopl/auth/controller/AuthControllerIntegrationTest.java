@@ -66,14 +66,16 @@ class AuthControllerIntegrationTest {
                         .param("username", request.username())
                         .param("password", request.password()))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        Matchers.allOf(
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        Matchers.hasItem(Matchers.allOf(
                                 Matchers.containsString("REFRESH_TOKEN="),
                                 Matchers.containsString("Path=/api/auth"),
                                 Matchers.containsString("Max-Age=25200"),
                                 Matchers.containsString("HttpOnly"),
                                 Matchers.containsString("SameSite=Lax")
-                        )))
+                        ))))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        Matchers.not(Matchers.hasItem(Matchers.containsString("XSRF-TOKEN=")))))
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.userDto.email").value(request.username()))
@@ -210,13 +212,16 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(latestRefreshTokenCookie))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        Matchers.allOf(
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        Matchers.hasItem(Matchers.allOf(
                                 Matchers.containsString("REFRESH_TOKEN="),
                                 Matchers.containsString("Path=/api/auth"),
+                                Matchers.containsString("Max-Age=25200"),
                                 Matchers.containsString("HttpOnly"),
                                 Matchers.containsString("SameSite=Lax")
-                        )))
+                        ))))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        Matchers.not(Matchers.hasItem(Matchers.containsString("XSRF-TOKEN=")))))
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.userDto.email").value(request.username()));
