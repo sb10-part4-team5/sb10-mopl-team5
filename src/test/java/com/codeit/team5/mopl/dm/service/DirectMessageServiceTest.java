@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
@@ -18,12 +21,15 @@ import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Sort.Direction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -118,6 +124,73 @@ class DirectMessageServiceTest {
         assertThatThrownBy(() -> directMessageService.sendMessage("c@mopl.com", conversationId, "hello"))
                 .isInstanceOf(NotConversationParticipantException.class);
         verify(directMessageRepository, never()).save(any(DirectMessage.class));
+    }
+
+    @Test
+    @DisplayName("참여자가 메시지 목록을 커서 조회하면 성공")
+    void getMessages_participant_success() {
+        // given
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        User currentUser = userWithId("a@mopl.com", "A", currentUserId);
+        User other = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        Conversation conversation = Conversation.create(currentUser, other);
+        DirectMessageResponse messageResponse = new DirectMessageResponse(
+                UUID.randomUUID(), conversationId, null, null, "hi", null);
+        CursorResponse<DirectMessageResponse> cursorResponse = new CursorResponse<>(
+                List.of(messageResponse), null, null, false, 1L, "createdAt", "DESCENDING");
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(directMessageRepository.findMessages(eq(conversationId), any(), eq(3))).thenReturn(List.of());
+        when(directMessageRepository.countMessages(conversationId)).thenReturn(1L);
+        when(dmMapper.toDirectMessageCursor(anyList(), eq(false), eq(1L), eq(Direction.DESC)))
+                .thenReturn(cursorResponse);
+
+        DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
+
+        // when
+        CursorResponse<DirectMessageResponse> result =
+                directMessageService.getMessages(currentUserId, conversationId, request);
+
+        // then
+        assertThat(result).isSameAs(cursorResponse);
+    }
+
+    @Test
+    @DisplayName("비참여자가 메시지 목록을 조회하면 실패")
+    void getMessages_notParticipant_throwsException() {
+        // given
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        User participant1 = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        User participant2 = userWithId("c@mopl.com", "C", UUID.randomUUID());
+        Conversation conversation = Conversation.create(participant1, participant2);
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
+
+        // when & then
+        assertThatThrownBy(() -> directMessageService.getMessages(currentUserId, conversationId, request))
+                .isInstanceOf(NotConversationParticipantException.class);
+        verify(directMessageRepository, never()).findMessages(any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("대화가 없으면 메시지 목록 조회 실패")
+    void getMessages_conversationNotFound_throwsException() {
+        // given
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
+
+        DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
+
+        // when & then
+        assertThatThrownBy(() -> directMessageService.getMessages(currentUserId, conversationId, request))
+                .isInstanceOf(ConversationNotFoundException.class);
+        verify(directMessageRepository, never()).findMessages(any(), any(), anyInt());
     }
 
     @Test

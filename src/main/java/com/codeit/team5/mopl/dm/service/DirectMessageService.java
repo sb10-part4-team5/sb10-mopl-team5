@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.dm.service;
 
+import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
@@ -9,11 +10,13 @@ import com.codeit.team5.mopl.dm.exception.DirectMessageNotFoundException;
 import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +52,21 @@ public class DirectMessageService {
 
         log.info("DM sent: conversationId={}, senderId={}", conversationId, sender.getId());
         return response;
+    }
+
+    public CursorResponse<DirectMessageResponse> getMessages(UUID currentUserId, UUID conversationId,
+            DirectMessageCursorRequest request) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        conversation.validateParticipant(currentUserId);
+
+        int fetchLimit = request.limit() + 1;
+        List<DirectMessage> fetched = directMessageRepository.findMessages(conversationId, request, fetchLimit);
+        boolean hasNext = fetched.size() > request.limit();
+        List<DirectMessage> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
+        long totalCount = directMessageRepository.countMessages(conversationId);
+
+        return dmMapper.toDirectMessageCursor(page, hasNext, totalCount, request.sortDirection());
     }
 
     @Transactional

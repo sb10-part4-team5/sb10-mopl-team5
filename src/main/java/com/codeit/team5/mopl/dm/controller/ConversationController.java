@@ -3,9 +3,13 @@ package com.codeit.team5.mopl.dm.controller;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.dm.controller.api.ConversationApi;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
+import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
+import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.service.ConversationService;
 import com.codeit.team5.mopl.dm.service.DirectMessageService;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +43,25 @@ public class ConversationController implements ConversationApi {
         ConversationResponse response = conversationService.getOrCreateConversation(userDetails.getId(), request.withUserId());
 
         return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @GetMapping
+    public ResponseEntity<CursorResponse<ConversationResponse>> getMyConversations(
+            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @Valid ConversationCursorRequest request) {
+        log.info("Request API: GET /api/conversations, userId={}", userDetails.getId());
+        return ResponseEntity.ok(conversationService.findMyConversations(userDetails.getId(), request));
+    }
+
+    @Override
+    @GetMapping("/{conversationId}/direct-messages")
+    public ResponseEntity<CursorResponse<DirectMessageResponse>> getDirectMessages(
+            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @PathVariable UUID conversationId,
+            @Valid DirectMessageCursorRequest request) {
+        log.info("Request API: GET /api/conversations/{}/direct-messages", conversationId);
+        return ResponseEntity.ok(directMessageService.getMessages(userDetails.getId(), conversationId, request));
     }
 
     @Override

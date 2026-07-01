@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
@@ -17,13 +19,17 @@ import com.codeit.team5.mopl.dm.exception.SelfConversationException;
 import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Sort.Direction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,6 +64,94 @@ class ConversationServiceTest {
         User user = User.create(email, "pw", name);
         ReflectionTestUtils.setField(user, "id", id);
         return user;
+    }
+
+    private Conversation conversationOf(User me, User other) {
+        Conversation conversation = Conversation.create(me, other);
+        ReflectionTestUtils.setField(conversation, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(conversation, "createdAt", Instant.now());
+        return conversation;
+    }
+
+    @Test
+    @DisplayName("내 대화 목록 커서 조회 성공")
+    void findMyConversations_success() {
+        // given
+        UUID currentUserId = UUID.randomUUID();
+        User currentUser = userWithId("me@mopl.com", "ME", currentUserId);
+        Conversation c1 = conversationOf(currentUser, userWithId("o1@mopl.com", "O1", UUID.randomUUID()));
+        Conversation c2 = conversationOf(currentUser, userWithId("o2@mopl.com", "O2", UUID.randomUUID()));
+        Conversation c3 = conversationOf(currentUser, userWithId("o3@mopl.com", "O3", UUID.randomUUID()));
+        UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
+
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
+        when(conversationRepository.findMyConversations(eq(currentUserId), any(), eq(3)))
+                .thenReturn(List.of(c1, c2, c3));
+        when(conversationRepository.countMyConversations(eq(currentUserId), any())).thenReturn(5L);
+        when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
+        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
+                .thenReturn(Optional.empty());
+        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
+                .thenReturn(0L);
+
+        ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
+
+        // when
+        CursorResponse<ConversationResponse> result = conversationService.findMyConversations(currentUserId, request);
+
+        // then
+        assertThat(result.data()).hasSize(2);
+        assertThat(result.hasNext()).isTrue();
+        assertThat(result.totalCount()).isEqualTo(5L);
+        assertThat(result.sortBy()).isEqualTo("createdAt");
+        assertThat(result.sortDirection()).isEqualTo("DESCENDING");
+        assertThat(result.nextCursor()).isEqualTo(c2.getCreatedAt().toString());
+        assertThat(result.nextIdAfter()).isEqualTo(c2.getId().toString());
+    }
+
+    @Test
+    @DisplayName("마지막 페이지면 다음 커서가 없는 대화 목록 조회 성공")
+    void findMyConversations_lastPage_success() {
+        // given
+        UUID currentUserId = UUID.randomUUID();
+        User currentUser = userWithId("me@mopl.com", "ME", currentUserId);
+        Conversation c1 = conversationOf(currentUser, userWithId("o1@mopl.com", "O1", UUID.randomUUID()));
+        UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
+
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
+        when(conversationRepository.findMyConversations(eq(currentUserId), any(), eq(3)))
+                .thenReturn(List.of(c1));
+        when(conversationRepository.countMyConversations(eq(currentUserId), any())).thenReturn(1L);
+        when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
+        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
+                .thenReturn(Optional.empty());
+        when(directMessageRepository.countByConversationIdAndReceiverIdAndReadFalse(any(), any()))
+                .thenReturn(0L);
+
+        ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
+
+        // when
+        CursorResponse<ConversationResponse> result = conversationService.findMyConversations(currentUserId, request);
+
+        // then
+        assertThat(result.data()).hasSize(1);
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.nextCursor()).isNull();
+        assertThat(result.nextIdAfter()).isNull();
+    }
+
+    @Test
+    @DisplayName("사용자가 없으면 대화 목록 조회 실패")
+    void findMyConversations_userNotFound_throwsException() {
+        // given
+        UUID currentUserId = UUID.randomUUID();
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.empty());
+        ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
+
+        // when & then
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> conversationService.findMyConversations(currentUserId, request))
+                .isInstanceOf(UserNotFoundException.class);
     }
 
     @Test

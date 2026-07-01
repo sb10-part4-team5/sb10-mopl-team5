@@ -21,15 +21,21 @@ import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
+import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
+import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.service.ConversationService;
 import com.codeit.team5.mopl.dm.service.DirectMessageService;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -154,6 +160,83 @@ class ConversationControllerTest {
                 .andExpect(jsonPath("$.id").value(conversationId.toString()))
                 .andExpect(jsonPath("$.with.userId").value(withUserId.toString()))
                 .andExpect(jsonPath("$.hasUnread").value(false));
+    }
+
+    @Test
+    @DisplayName("내 대화 목록 조회 요청 성공")
+    void getMyConversations_success() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        UserSummaryResponse with = new UserSummaryResponse(UUID.randomUUID(), "상대방", null);
+        ConversationResponse item = new ConversationResponse(conversationId, with, null, false);
+        CursorResponse<ConversationResponse> response = new CursorResponse<>(
+                List.of(item), null, null, false, 1L, "createdAt", "DESCENDING");
+        given(conversationService.findMyConversations(eq(currentUserId), any(ConversationCursorRequest.class)))
+                .willReturn(response);
+
+        mockMvc.perform(get("/api/conversations")
+                        .param("limit", "20")
+                        .param("sortDirection", "DESCENDING")
+                        .param("sortBy", "createdAt")
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(conversationId.toString()))
+                .andExpect(jsonPath("$.data[0].with.name").value("상대방"))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.totalCount").value(1))
+                .andExpect(jsonPath("$.sortBy").value("createdAt"))
+                .andExpect(jsonPath("$.sortDirection").value("DESCENDING"));
+    }
+
+    @Test
+    @DisplayName("limit 누락 시 내 대화 목록 조회 실패")
+    void getMyConversations_missingLimit_throwsBadRequest() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+
+        mockMvc.perform(get("/api/conversations")
+                        .param("sortDirection", "DESCENDING")
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("대화 메시지 목록 조회 요청 성공")
+    void getDirectMessages_success() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        DirectMessageResponse message = new DirectMessageResponse(
+                UUID.randomUUID(), conversationId, null, null, "안녕", Instant.now());
+        CursorResponse<DirectMessageResponse> response = new CursorResponse<>(
+                List.of(message), null, null, false, 1L, "createdAt", "DESCENDING");
+        given(directMessageService.getMessages(
+                eq(currentUserId), eq(conversationId), any(DirectMessageCursorRequest.class)))
+                .willReturn(response);
+
+        mockMvc.perform(get("/api/conversations/{conversationId}/direct-messages", conversationId)
+                        .param("limit", "20")
+                        .param("sortDirection", "DESCENDING")
+                        .param("sortBy", "createdAt")
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].content").value("안녕"))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.totalCount").value(1));
+    }
+
+    @Test
+    @DisplayName("비참여자가 메시지 목록 조회 시 실패")
+    void getDirectMessages_notParticipant_forbidden() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        given(directMessageService.getMessages(
+                eq(currentUserId), eq(conversationId), any(DirectMessageCursorRequest.class)))
+                .willThrow(new NotConversationParticipantException(currentUserId));
+
+        mockMvc.perform(get("/api/conversations/{conversationId}/direct-messages", conversationId)
+                        .param("limit", "20")
+                        .param("sortDirection", "DESCENDING")
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
