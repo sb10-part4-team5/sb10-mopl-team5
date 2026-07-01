@@ -88,7 +88,7 @@ public class ConversationService {
         UUID participant2Id = UuidUtils.max(currentUserId, withUserId);
         Conversation conversation = conversationRepository
                 .findByParticipant1IdAndParticipant2Id(participant1Id, participant2Id)
-                .orElseThrow(() -> new ConversationNotFoundException(null));
+                .orElseThrow(() -> ConversationNotFoundException.withUser(withUserId));
         return toConversationResponse(conversation, currentUser);
     }
 
@@ -102,13 +102,13 @@ public class ConversationService {
 
     private ConversationResponse toConversationResponse(Conversation conversation, User currentUser) {
         UserSummaryResponse with = userMapper.toSummaryResponse(conversation.getOtherParticipant(currentUser));
-        DirectMessageResponse lastestMessage = directMessageRepository
+        DirectMessageResponse latestMessage = directMessageRepository
                 .findTopByConversationIdOrderByCreatedAtDesc(conversation.getId())
                 .map(dmMapper::toResponse)
                 .orElse(null);
         boolean hasUnread = directMessageRepository
                 .countByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), currentUser.getId()) > 0;
-        return new ConversationResponse(conversation.getId(), with, lastestMessage, hasUnread);
+        return new ConversationResponse(conversation.getId(), with, latestMessage, hasUnread);
     }
 
     private User getUser(UUID userId) {

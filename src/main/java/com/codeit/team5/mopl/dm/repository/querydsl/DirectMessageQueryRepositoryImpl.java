@@ -3,11 +3,13 @@ package com.codeit.team5.mopl.dm.repository.querydsl;
 import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.dm.entity.QDirectMessage;
+import com.codeit.team5.mopl.dm.exception.InvalidCursorException;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -58,8 +60,14 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
             return;
         }
 
-        Instant cursorInstant = Instant.parse(cursor);
-        UUID id = UUID.fromString(idAfter);
+        Instant cursorInstant;
+        UUID id;
+        try {
+            cursorInstant = Instant.parse(cursor);
+            id = UUID.fromString(idAfter);
+        } catch (DateTimeParseException | IllegalArgumentException e) {
+            throw new InvalidCursorException(cursor, idAfter);
+        }
         boolean isAsc = request.sortDirection() == Direction.ASC;
 
         BooleanExpression cursorCondition = isAsc

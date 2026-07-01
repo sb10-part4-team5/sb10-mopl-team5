@@ -14,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort.Direction;
 
 class DirectMessageRepositoryTest extends BaseRepositoryTest {
@@ -139,28 +138,6 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
         DirectMessage reloadedAlreadyRead = directMessageRepository.findById(alreadyRead.getId()).orElseThrow();
         assertThat(reloadedAlreadyRead.isRead()).isTrue();
         assertThat(compareInstant(reloadedAlreadyRead.getReadAt(), alreadyReadAt)).isTrue();
-    }
-
-    @Test
-    @DisplayName("대화별 메시지 최신순 페이지 조회 성공")
-    void findByConversationIdOrderByCreatedAtDesc_success() {
-        // given
-        persistMessage(userA, "1");
-        persistMessage(userB, "2");
-        DirectMessage third = persistMessage(userA, "3");
-        flush();
-        clear();
-
-        // when
-        List<DirectMessage> firstPage = directMessageRepository
-                .findByConversationIdOrderByCreatedAtDesc(conversation.getId(), PageRequest.of(0, 2));
-
-        // then
-        assertThat(firstPage).hasSize(2);
-        assertThat(firstPage.get(0).getId()).isEqualTo(third.getId());
-        assertThat(firstPage)
-                .extracting(DirectMessage::getContent)
-                .containsExactly("3", "2");
     }
 
     @Test

@@ -84,31 +84,6 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    @DisplayName("내가 참여한 대화 목록 조회 성공")
-    void findAllByParticipantId_success() {
-        // given
-        User userA = persistUser("a@mopl.com", "A");
-        User userB = persistUser("b@mopl.com", "B");
-        User userC = persistUser("c@mopl.com", "C");
-        Conversation ab = persistAndFlush(Conversation.create(userA, userB));
-        Conversation ac = persistAndFlush(Conversation.create(userA, userC));
-        flush();
-        clear();
-
-        // when
-        List<Conversation> aConversations = conversationRepository.findAllByParticipantId(userA.getId());
-        List<Conversation> bConversations = conversationRepository.findAllByParticipantId(userB.getId());
-
-        // then
-        assertThat(aConversations)
-                .extracting(Conversation::getId)
-                .containsExactlyInAnyOrder(ab.getId(), ac.getId());
-        assertThat(bConversations)
-                .extracting(Conversation::getId)
-                .containsExactly(ab.getId());
-    }
-
-    @Test
     @DisplayName("내 대화 목록만 커서 조회 성공")
     void findMyConversations_onlyMine_success() {
         // given

@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.dm.controller;
 import com.codeit.team5.mopl.dm.dto.request.DirectMessageSendRequest;
 import com.codeit.team5.mopl.dm.service.DirectMessageService;
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
+import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ public class DmStompController {
     public void sendDirectMessage(
             Principal principal,
             @DestinationVariable("id") UUID conversationId,
-            @Payload DirectMessageSendRequest request) {
+            @Valid @Payload DirectMessageSendRequest request) {
         log.info("DM STOMP send: conversationId={}, sender={}", conversationId, principal.getName());
         directMessageService.sendMessage(principal.getName(), conversationId, request.content());
     }

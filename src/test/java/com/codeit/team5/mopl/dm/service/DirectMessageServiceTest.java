@@ -232,6 +232,7 @@ class DirectMessageServiceTest {
         User currentUser = userWithId("a@mopl.com", "A", currentUserId);
         User other = userWithId("b@mopl.com", "B", UUID.randomUUID());
         Conversation conversation = Conversation.create(currentUser, other);
+        ReflectionTestUtils.setField(conversation, "id", conversationId);
         DirectMessage message = DirectMessage.create(conversation, other, "hello");
         Instant createdAt = Instant.now();
         ReflectionTestUtils.setField(message, "createdAt", createdAt);
@@ -297,6 +298,30 @@ class DirectMessageServiceTest {
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.findById(directMessageId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))
+                .isInstanceOf(DirectMessageNotFoundException.class);
+        verify(directMessageRepository, never())
+                .markAsReadUntil(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("다른 대화의 메시지 ID로 읽음 처리하면 실패")
+    void markMessagesAsRead_messageFromOtherConversation_throwsException() {
+        // given
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        UUID directMessageId = UUID.randomUUID();
+        User currentUser = userWithId("a@mopl.com", "A", currentUserId);
+        User other = userWithId("b@mopl.com", "B", UUID.randomUUID());
+        Conversation conversation = Conversation.create(currentUser, other);
+        Conversation otherConversation = Conversation.create(currentUser, other);
+        ReflectionTestUtils.setField(otherConversation, "id", UUID.randomUUID());
+        DirectMessage message = DirectMessage.create(otherConversation, other, "hello");
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(directMessageRepository.findById(directMessageId)).thenReturn(Optional.of(message));
 
         // when & then
         assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))

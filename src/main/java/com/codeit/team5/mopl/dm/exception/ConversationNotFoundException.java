@@ -10,4 +10,12 @@ public class ConversationNotFoundException extends DmException {
         super(HttpStatus.NOT_FOUND, "대화를 찾을 수 없습니다.",
                 conversationId == null ? null : Map.of("conversationId", conversationId));
     }
+
+    private ConversationNotFoundException(Map<String, Object> details) {
+        super(HttpStatus.NOT_FOUND, "대화를 찾을 수 없습니다.", details);
+    }
+
+    public static ConversationNotFoundException withUser(UUID withUserId) {
+        return new ConversationNotFoundException(Map.of("withUserId", withUserId));
+    }
 }

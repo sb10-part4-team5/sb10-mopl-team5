@@ -53,7 +53,7 @@ public class DirectMessageService {
 
         // 수신자가 대화방을 보고 있지 않을 때(비활성)만 알림
         User receiver = message.getReceiver();
-        String destination = StompConstants.SUB_CONVERSATION_DM.replace("{id}", conversationId.toString());
+        String destination = StompConstants.conversationDmDestination(conversationId);
         if (!webSocketSessionStore.isSubscribed(receiver.getEmail(), destination)) {
             eventPublisher.publishEvent(new DirectMessageSentEvent(
                     receiver.getId(), sender.getName(), content));
@@ -85,6 +85,9 @@ public class DirectMessageService {
         conversation.validateParticipant(currentUserId);
         DirectMessage message = directMessageRepository.findById(directMessageId)
                 .orElseThrow(() -> new DirectMessageNotFoundException(directMessageId));
+        if (!message.getConversation().getId().equals(conversationId)) {
+            throw new DirectMessageNotFoundException(directMessageId);
+        }
         directMessageRepository.markAsReadUntil(
                 conversationId, currentUserId, message.getCreatedAt(), Instant.now());
         log.info("DM marked as read: conversationId={}, userId={}, untilMessageId={}",

@@ -181,7 +181,7 @@ class ConversationServiceTest {
         // then
         assertThat(result.with()).isSameAs(summary);
         assertThat(result.hasUnread()).isFalse();
-        assertThat(result.lastestMessage()).isNull();
+        assertThat(result.latestMessage()).isNull();
 
         ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
         verify(conversationRepository).save(captor.capture());

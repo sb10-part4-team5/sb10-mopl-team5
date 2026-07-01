@@ -22,6 +22,7 @@ import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
+import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.service.ConversationService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
@@ -133,6 +134,19 @@ class ConversationControllerTest {
                 .andExpect(jsonPath("$.id").value(conversationId.toString()))
                 .andExpect(jsonPath("$.with.userId").value(withUserId.toString()))
                 .andExpect(jsonPath("$.hasUnread").value(true));
+    }
+
+    @Test
+    @DisplayName("비참여자가 단건 대화를 조회하면 실패")
+    void getConversation_notParticipant_forbidden() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        given(conversationService.getConversation(eq(currentUserId), eq(conversationId)))
+                .willThrow(new NotConversationParticipantException(currentUserId));
+
+        mockMvc.perform(get("/api/conversations/{conversationId}", conversationId)
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
