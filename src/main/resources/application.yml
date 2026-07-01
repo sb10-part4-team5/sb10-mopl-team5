@@ -51,6 +51,8 @@ mopl:
 tmdb:
   access-token: ${TMDB_ACCESS_TOKEN}
   base-url: https://api.themoviedb.org/3
+  batch:
+    daily-end-page: 5
 
 sports-db:
   api-key: ${SPORTS_DB_API_KEY}
