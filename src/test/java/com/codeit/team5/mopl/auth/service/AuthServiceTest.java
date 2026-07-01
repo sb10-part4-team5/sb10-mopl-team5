@@ -16,6 +16,7 @@ import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
@@ -87,7 +88,9 @@ class AuthServiceTest {
                 "USER",
                 false
         );
-        MoplUserDetails userDetails = new MoplUserDetails(userResponse, "encoded-password");
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        ReflectionTestUtils.setField(user, "id", userId);
+        MoplUserDetails userDetails = new MoplUserDetails(new AuthUser(userResponse.id(), userResponse.email(), userResponse.role(), userResponse.locked()), "encoded-password");
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userDetails,
                 null,
@@ -101,6 +104,8 @@ class AuthServiceTest {
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userMapper.toDto(user)).thenReturn(userResponse);
         when(jwtTokenizer.generateAccessToken(userId.toString(), userResponse.email(), userResponse.role()))
                 .thenReturn(accessToken);
         when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(refreshToken);

@@ -37,7 +37,7 @@ public class NotificationController implements NotificationApi {
         @RequestParam(defaultValue = "DESCENDING") String sortDirection,
         @RequestParam(defaultValue = "createdAt") String sortBy) {
 
-        UUID receiverId = userDetails.getUserDto().id();
+        UUID receiverId = userDetails.getId();
 
         log.info("알림 목록 요청 : GET /api/notifications");
         log.debug("알림 목록 요청 : GET /api/notifications, receiverId={}", receiverId);
@@ -53,7 +53,7 @@ public class NotificationController implements NotificationApi {
     public ResponseEntity<Void> readNotification(
         @AuthenticationPrincipal MoplUserDetails userDetails,
         @PathVariable UUID notificationId) {
-        UUID receiverId = userDetails.getUserDto().id();
+        UUID receiverId = userDetails.getId();
         log.info("Notification read request: DELETE /api/notifications/{}", notificationId);
         log.debug("Notification read request: DELETE /api/notifications/{}, receiverId={}",
             notificationId, receiverId);

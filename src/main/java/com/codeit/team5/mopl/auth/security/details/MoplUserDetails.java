@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.auth.security.details;
 
-import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -14,13 +13,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 @RequiredArgsConstructor
 public class MoplUserDetails implements UserDetails, MoplPrincipal {
 
-    private final UserResponse userDto;
+    private final AuthUser authUser;
     private final String password;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(
-                new SimpleGrantedAuthority("ROLE_" + userDto.role())
+                new SimpleGrantedAuthority("ROLE_" + authUser.role())
         );
     }
 
@@ -31,29 +30,29 @@ public class MoplUserDetails implements UserDetails, MoplPrincipal {
 
     @Override
     public String getUsername() {
-        return userDto.email();
+        return authUser.email();
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return !userDto.locked();
+        return !authUser.locked();
     }
 
     public UUID getId() {
-        return userDto.id();
+        return authUser.id();
     }
 
     @Override
     public String getEmail() {
-        return userDto.email();
+        return authUser.email();
     }
 
     public String getRole() {
-        return userDto.role();
+        return authUser.role();
     }
 
     @Override
     public boolean isLocked() {
-        return userDto.locked();
+        return authUser.locked();
     }
 }
