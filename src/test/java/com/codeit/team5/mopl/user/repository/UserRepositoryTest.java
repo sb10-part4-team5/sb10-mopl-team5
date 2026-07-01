@@ -13,6 +13,7 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.entity.UserRole;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -142,40 +143,71 @@ class UserRepositoryTest {
     }
 
     @Test
-    @DisplayName("사용자 목록을 조건으로 필터링하고 이메일 오름차순으로 조회한다")
+    @DisplayName("사용자 목록을 조건으로 필터링하고 이름 오름차순 커서로 이어서 조회한다")
     void findUsers_filterByRoleAndLocked_success() {
         // Given
         User first = User.create("list-a@example.com", "password", "목록 A");
+        User sameName = User.create("list-aa@example.com", "password", "목록 A");
         User second = User.create("list-b@example.com", "password", "목록 B");
         User locked = User.create("list-c@example.com", "password", "목록 C");
         locked.updateLocked(true);
         User admin = User.create("list-admin@example.com", "password", "목록 관리자");
         admin.updateRole(UserRole.ADMIN);
 
-        userRepository.saveAll(List.of(second, admin, locked, first));
+        userRepository.saveAll(List.of(second, admin, locked, sameName, first));
         entityManager.flush();
         entityManager.clear();
 
-        UserCursorRequest request = new UserCursorRequest(
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
                 "list",
                 UserRole.USER,
                 false,
                 null,
                 null,
-                10,
+                1,
                 Sort.Direction.ASC,
-                UserSortBy.EMAIL
+                UserSortBy.NAME
         );
 
         // When
-        List<User> result = userRepository.findUsers(request, 10);
-        long count = userRepository.countUsers(request);
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "list",
+                UserRole.USER,
+                false,
+                lastUserOfFirstPage.getName(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.NAME
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+        long count = userRepository.countUsers(firstPageRequest);
 
         // Then
-        assertThat(result)
-                .extracting(User::getEmail)
-                .containsExactly("list-a@example.com", "list-b@example.com");
-        assertThat(count).isEqualTo(2);
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::getName)
+                .containsExactly("목록 A", "목록 A", "목록 B");
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).getName()).isEqualTo(lastUserOfFirstPage.getName());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+        assertThat(count).isEqualTo(3);
     }
 
     @Test

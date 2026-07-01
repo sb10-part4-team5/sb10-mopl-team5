@@ -127,6 +127,9 @@ class AuthControllerTest {
                                 org.hamcrest.Matchers.containsString("HttpOnly"),
                                 org.hamcrest.Matchers.containsString("SameSite=Lax")
                         ))))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(
+                                org.hamcrest.Matchers.containsString("XSRF-TOKEN=")))))
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.userDto.id").value(userId.toString()))
@@ -493,6 +496,9 @@ class AuthControllerTest {
                                 org.hamcrest.Matchers.containsString("HttpOnly"),
                                 org.hamcrest.Matchers.containsString("SameSite=Lax")
                         ))))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(
+                                org.hamcrest.Matchers.containsString("XSRF-TOKEN=")))))
                 .andExpect(jsonPath("$.accessToken").value("new-access-token"))
                 .andExpect(jsonPath("$.refreshToken").doesNotExist());
 

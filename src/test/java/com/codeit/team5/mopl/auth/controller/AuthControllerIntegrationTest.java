@@ -74,6 +74,8 @@ class AuthControllerIntegrationTest {
                                 Matchers.containsString("HttpOnly"),
                                 Matchers.containsString("SameSite=Lax")
                         ))))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        Matchers.not(Matchers.hasItem(Matchers.containsString("XSRF-TOKEN=")))))
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.userDto.email").value(request.username()))
@@ -218,6 +220,8 @@ class AuthControllerIntegrationTest {
                                 Matchers.containsString("HttpOnly"),
                                 Matchers.containsString("SameSite=Lax")
                         ))))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        Matchers.not(Matchers.hasItem(Matchers.containsString("XSRF-TOKEN=")))))
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.userDto.email").value(request.username()));
