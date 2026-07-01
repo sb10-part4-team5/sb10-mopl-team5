@@ -1,23 +1,28 @@
 package com.codeit.team5.mopl.playlist.controller;
 
-import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
-import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
-import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
-import com.codeit.team5.mopl.playlist.service.PlaylistService;
 import java.security.Principal;
 import java.util.UUID;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
+import com.codeit.team5.mopl.playlist.dto.request.PlaylistCursorRequest;
+import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
+import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
+import com.codeit.team5.mopl.playlist.mapper.PlaylistMapper;
+import com.codeit.team5.mopl.playlist.service.PlaylistService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/playlists")
@@ -25,10 +30,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlaylistController {
 
     private final PlaylistService service;
+    private final PlaylistMapper mapper;
 
     @GetMapping("/{id}")
     public ResponseEntity<PlaylistResponse> find(@PathVariable UUID id) {
         return ResponseEntity.status(HttpStatus.OK).body(service.find(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<CursorResponse<PlaylistResponse>> findCursor(
+            @ModelAttribute @Valid PlaylistCursorRequest request) {
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(service.findByCursor(mapper.toCommand(request)));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -39,8 +52,8 @@ public class PlaylistController {
     }
 
     @PatchMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<PlaylistResponse> update(Principal principal, @PathVariable UUID id, @RequestBody
-            PlaylistUpdateRequest request) {
+    public ResponseEntity<PlaylistResponse> update(Principal principal, @PathVariable UUID id,
+            @RequestBody PlaylistUpdateRequest request) {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(service.update(id, principal.getName(), request));
     }
