@@ -41,36 +41,6 @@ public class AuthService {
     private final UserMapper userMapper;
 
     @Transactional
-    public AuthPayload login(SignInRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        normalizeEmail(request.username()),
-                        request.password()
-                )
-        );
-
-        MoplUserDetails principals = (MoplUserDetails) authentication.getPrincipal();
-
-        User user = userRepository.findById(principals.getId())
-                .orElseThrow(() -> new UserNotFoundException(principals.getId()));
-        UserResponse userDto = userMapper.toDto(user);
-
-        String accessToken = jwtTokenizer.generateAccessToken(
-                user.getId().toString(),
-                user.getEmail(),
-                user.getRole().name()
-        );
-        String refreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
-        refreshTokenStore.save(user.getId(), refreshToken, calculateExpiresAt());
-
-        log.info("Login success");
-
-        JwtResponse response = authMapper.toJwtResponse(userDto, accessToken);
-
-        return authMapper.toAuthPayload(response, refreshToken);
-    }
-
-    @Transactional
     public void logout(String refreshToken) {
         SecurityContextHolder.clearContext();
 

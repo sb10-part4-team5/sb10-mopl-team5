@@ -38,12 +38,7 @@ public class AuthController implements AuthApi {
     ) {
         log.info("Login request: POST /api/auth/sign-in");
 
-        AuthPayload authPayload = authService.login(request);
-        ResponseCookie refreshTokenCookie = cookieManager.createCookie(authPayload.refreshToken());
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                .body(authPayload.jwtResponse());
+        throw new UnsupportedOperationException("Handled by Spring Security filter");
     }
 
     @PostMapping("/sign-out")

@@ -1,17 +1,16 @@
 package com.codeit.team5.mopl.auth.security.provider;
 
-import com.codeit.team5.mopl.auth.exception.AccountLockedException;
-import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +29,7 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
         String email = authentication.getName();
         Object credentials = authentication.getCredentials();
         if (credentials == null) {
-            throw new InvalidCredentialsException("비밀번호가 일치하지 않습니다.");
+            throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
         String rawPassword = credentials.toString();
 
@@ -39,7 +38,7 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
 
         if (!userDetails.isAccountNonLocked()) {
             log.warn("Login failed - Account is locked: id={}", userDetails.getId());
-            throw new AccountLockedException("잠긴 계정입니다");
+            throw new LockedException("잠긴 계정입니다.");
         }
 
         boolean matchesPassword =
@@ -50,7 +49,7 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
 
         // 비밀번호가 틀렸는데 임시비밀번호도 아닌 경우
         if (!matchesPassword && !matchesTemporaryPassword) {
-            throw new InvalidCredentialsException("Invalid credentials");
+            throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         return new UsernamePasswordAuthenticationToken(
