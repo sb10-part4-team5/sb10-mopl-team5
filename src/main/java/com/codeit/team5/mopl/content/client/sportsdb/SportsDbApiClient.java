@@ -25,4 +25,16 @@ public class SportsDbApiClient {
                 .bodyToMono(SportsDbEventListResponse.class)
                 .block();
     }
+
+    public SportsDbEventListResponse fetchEventsByDay(String leagueId, String date) {
+        return sportsDbWebClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/eventsday.php")
+                        .queryParam("d", date)
+                        .queryParam("l", leagueId)
+                        .build())
+                .retrieve()
+                .bodyToMono(SportsDbEventListResponse.class)
+                .block();
+    }
 }

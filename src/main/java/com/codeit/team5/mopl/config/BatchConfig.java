@@ -5,6 +5,7 @@ import com.codeit.team5.mopl.content.batch.dto.ContentWithMetaData;
 import com.codeit.team5.mopl.content.batch.processor.SportsDbEventItemProcessor;
 import com.codeit.team5.mopl.content.batch.processor.TmdbMovieItemProcessor;
 import com.codeit.team5.mopl.content.batch.processor.TmdbTvSeriesItemProcessor;
+import com.codeit.team5.mopl.content.batch.reader.SportsDbDayItemReader;
 import com.codeit.team5.mopl.content.batch.reader.SportsDbEventItemReader;
 import com.codeit.team5.mopl.content.batch.reader.TmdbMovieItemReader;
 import com.codeit.team5.mopl.content.batch.reader.TmdbTvSeriesItemReader;
@@ -36,7 +37,8 @@ public class BatchConfig {
 
     private static final int CHUNK_SIZE = 100;
     private static final int RETRY_LIMIT = 3;
-    private static final int SKIP_LIMIT = 10;
+    private static final int TMDB_SKIP_LIMIT = 10;
+    private static final int SPORTS_DB_SKIP_LIMIT = 3;
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
@@ -68,7 +70,7 @@ public class BatchConfig {
                 .retryLimit(RETRY_LIMIT)
                 .retry(WebClientException.class)
                 .retry(TransientDataAccessException.class)
-                .skipLimit(SKIP_LIMIT)
+                .skipLimit(TMDB_SKIP_LIMIT)
                 .skip(Exception.class)
                 .noSkip(WebClientException.class)
                 .noSkip(TransientDataAccessException.class)
@@ -105,7 +107,7 @@ public class BatchConfig {
                 .retryLimit(RETRY_LIMIT)
                 .retry(WebClientException.class)
                 .retry(TransientDataAccessException.class)
-                .skipLimit(SKIP_LIMIT)
+                .skipLimit(TMDB_SKIP_LIMIT)
                 .skip(Exception.class)
                 .noSkip(WebClientException.class)
                 .noSkip(TransientDataAccessException.class)
@@ -122,7 +124,7 @@ public class BatchConfig {
         return new TmdbTvSeriesItemProcessor(contentRepository, objectMapper);
     }
 
-    // ── SportsDB Job ───────────────────────────────────────────────
+    // ── SportsDB 리그-시즌 Job ───────────────────────────────────────────────
 
     @Bean
     public Job sportsDbEventJob() {
@@ -142,7 +144,7 @@ public class BatchConfig {
                 .retryLimit(RETRY_LIMIT)
                 .retry(WebClientException.class)
                 .retry(TransientDataAccessException.class)
-                .skipLimit(SKIP_LIMIT)
+                .skipLimit(SPORTS_DB_SKIP_LIMIT)
                 .skip(Exception.class)
                 .noSkip(WebClientException.class)
                 .noSkip(TransientDataAccessException.class)
@@ -157,6 +159,38 @@ public class BatchConfig {
     @Bean
     public SportsDbEventItemProcessor sportsDbEventItemProcessor() {
         return new SportsDbEventItemProcessor(contentRepository, objectMapper);
+    }
+
+    // ── SportsDB 일별 Job ──────────────────────────────────────────
+
+    @Bean
+    public Job sportsDbDayJob() {
+        return new JobBuilder("sportsDbDayJob", jobRepository)
+                .start(sportsDbDayStep())
+                .build();
+    }
+
+    @Bean
+    public Step sportsDbDayStep() {
+        return new StepBuilder("sportsDbDayStep", jobRepository)
+                .<SportsDbEventDto, ContentWithMetaData>chunk(CHUNK_SIZE, transactionManager)
+                .reader(sportsDbDayItemReader())
+                .processor(sportsDbEventItemProcessor())
+                .writer(contentItemWriter())
+                .faultTolerant()
+                .retryLimit(RETRY_LIMIT)
+                .retry(WebClientException.class)
+                .retry(TransientDataAccessException.class)
+                .skipLimit(SPORTS_DB_SKIP_LIMIT)
+                .skip(Exception.class)
+                .noSkip(WebClientException.class)
+                .noSkip(TransientDataAccessException.class)
+                .build();
+    }
+
+    @Bean
+    public SportsDbDayItemReader sportsDbDayItemReader() {
+        return new SportsDbDayItemReader(sportsDbApiClient);
     }
 
     // ── 공통 Writer ────────────────────────────────────────────────
