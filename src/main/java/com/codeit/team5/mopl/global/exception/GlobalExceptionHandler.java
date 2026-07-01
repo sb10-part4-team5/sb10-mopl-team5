@@ -8,6 +8,7 @@ import com.codeit.team5.mopl.auth.exception.RefreshTokenNotFoundException;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.global.exception.util.ViolationExceptionUtils;
 import jakarta.validation.ConstraintViolationException;
+import java.io.IOException;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -78,6 +80,14 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponseSuggestion.from(e));
     }
 
+    // 클라이언트가 SSE 연결을 끊을 때(브라우저 탭 닫기, 새로고침 등) 응답 스트림에 쓰다가 발생하는
+    // broken pipe성 IOException. 클라이언트가 이미 떠난 상태라 응답을 보낼 수 없고, 버그도 아니므로
+    // ERROR로 로그를 남기지 않고 조용히 무시한다.
+    @ExceptionHandler(IOException.class)
+    public void handleIOException(IOException e) {
+        log.debug("클라이언트 연결 종료로 응답 전송 실패: {}", e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseSuggestion> handleException(Exception e) {
         log.error("Unexpected exception", e);
@@ -99,4 +109,15 @@ public class GlobalExceptionHandler {
                 .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
                 .body(ErrorResponseSuggestion.from(e));
     }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponseSuggestion> handleMissingServletRequestParameterException(
+        MissingServletRequestParameterException e
+    ){
+        log.warn(e.toString());
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponseSuggestion.from(e));
+    }
+
 }

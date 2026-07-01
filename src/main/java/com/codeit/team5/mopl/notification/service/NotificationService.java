@@ -1,13 +1,16 @@
 package com.codeit.team5.mopl.notification.service;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
+import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.dto.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
+import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
@@ -22,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -39,20 +43,32 @@ public class NotificationService {
     private final ApplicationEventPublisher publisher;
 
     // 알림 생성 및 저장
-    @Transactional
+    // AFTER_COMMIT 이벤트 리스너(트랜잭션 동기화 콜백)에서 호출되므로,
+    // 활성 트랜잭션 유무와 무관하게 항상 새 물리 트랜잭션을 보장하기 위해 REQUIRES_NEW 사용
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationResponse create(
             UUID receiverId, NotificationType type, String title, String content,
             NotificationLevel level) {
         Notification notification = Notification.create(receiverId, type, title, content, level);
         Notification saved = notificationRepository.save(notification);
-        NotificationPayload payload = notificationMapper.toPayload(saved); // Notification을 내부에서 사용 될 Payload로 변환
-        NotificationResponse response = notificationMapper.toResponse(saved); // Notification을 ResponseDto로 변환
+        NotificationPayload payload = notificationMapper.toPayload(saved);
+        NotificationResponse response = notificationMapper.toResponse(saved);
         log.info("알림 생성됨: type={}", type);
-        publisher.publishEvent(new NotificationCreatedEvent(payload));
+
+        if (type == NotificationType.DIRECT_MESSAGE) {
+            // sse 명세에 맞게 DM 전용 direct-message SSE 이벤트를 발행
+            DirectMessagePayload dmPayload = notificationMapper.toDirectMessagePayload(saved);
+            publisher.publishEvent(new DirectMessageCreatedEvent(dmPayload));
+        } else {
+            // 그 이외의 알림 타입들은 notifications SSE 이벤트 발행
+            publisher.publishEvent(new NotificationCreatedEvent(payload));
+        }
+
         return response;
     }
 
     // 수신자별 알림 목록 조회 (커서 페이지네이션)
+    // 안 읽은 알림만 조회하여, 이미 읽은 알림이 조회할 때마다 계속 다시 뜨는 것을 방지
     public CursorResponseNotificationDto getNotifications(
             UUID receiverId, String cursor, UUID idAfter, int limit,
             String sortDirection, String sortBy) {
@@ -89,8 +105,8 @@ public class NotificationService {
             nextIdAfter = last.getId();
         }
 
-        // 응답의 totalCount (수신자의 전체 알림 개수)
-        long totalCount = notificationRepository.countByReceiverId(receiverId);
+        // 응답의 totalCount (안 읽은 알림 수)
+        long totalCount = notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
 
         return new CursorResponseNotificationDto(
                 notificationMapper.toResponseList(page),
@@ -100,6 +116,30 @@ public class NotificationService {
     // 안 읽은 알림 개수
     public long countUnread(UUID receiverId) {
         return notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
+    }
+
+    // SSE 재연결 시 미수신 일반 알림 조회 (DM 제외)
+    public List<NotificationPayload> findMissedNotifications(UUID receiverId, UUID lastEventId) {
+        validateLastEventId(receiverId, lastEventId);
+
+        return notificationRepository.findMissedNotifications(receiverId, lastEventId).stream()
+                .map(notificationMapper::toPayload)
+                .toList();
+    }
+
+    // SSE 재연결 시 미수신 DM 조회
+    // TODO: DM 도메인 구현 후 DirectMessageDto로 hydrate하도록 변경
+    public List<DirectMessagePayload> findMissedDirectMessages(UUID receiverId, UUID lastEventId) {
+        validateLastEventId(receiverId, lastEventId);
+
+        return notificationRepository.findMissedDirectMessages(receiverId, lastEventId).stream()
+                .map(notificationMapper::toDirectMessagePayload)
+                .toList();
+    }
+
+    private void validateLastEventId(UUID receiverId, UUID lastEventId) {
+        notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
+                .orElseThrow(() -> new InvalidLastEventIdException(lastEventId.toString()));
     }
 
     // 단건 읽음 처리

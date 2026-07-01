@@ -1,14 +1,17 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
+import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
-import com.codeit.team5.mopl.notification.event.FollowingUserWatchingEvent;
-import com.codeit.team5.mopl.notification.event.PlaylistSubscribedEvent;
-import com.codeit.team5.mopl.notification.event.PlaylistUpdatedEvent;
-import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
-import com.codeit.team5.mopl.notification.event.UserFollowedEvent;
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
+import com.codeit.team5.mopl.playlist.entity.event.PlaylistSubscribedEvent;
+import com.codeit.team5.mopl.playlist.entity.event.PlaylistUpdatedEvent;
+import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -20,6 +23,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class NotificationEventListener {
     private final NotificationService notificationService;
+    private final FollowRepository followRepository;
 
     // DM을 수신받으면 알림을 생성
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -68,15 +72,20 @@ public class NotificationEventListener {
             title, content, NotificationLevel.INFO);
     }
 
-    // 내가 팔로우한 사용자가 시청을 할 때 알림 생성
-    // WatchingSession 서비스 계층에서 FollowingUserWatchingEvent를 발행하면, 이벤트 리스닝함
+    // 시청 세션이 생성되면 해당 유저의 팔로워들에게 알림 생성 (fan-out)
+    // [계약] 팔로워 목록은 리스너 실행 시점(AFTER_COMMIT) 기준으로 조회합니다.
+    // 시청 시작과 리스너 실행 사이에 follow/unfollow가 발생하면 결과가 달라질 수 있으나,
+    // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
-    public void onFollowingUserActivity(FollowingUserWatchingEvent event){
-        String title = event.userNickname() + " 님이 컨텐츠 시청중입니다.";
+    public void onWatchingSessionCreated(WatchingSessionCreatedEvent event){
+        String title = event.watcherNickname() + " 님이 컨텐츠 시청중입니다.";
         String content = event.contentName() + " 시청 중";
 
-        notificationService.create(event.receiverId(), NotificationType.WATCHING_ACTIVITY,
-            title, content, NotificationLevel.INFO);
+        List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.watcherUserId());
+        for (UUID followerId : followerIds) {
+            notificationService.create(followerId, NotificationType.WATCHING_ACTIVITY,
+                title, content, NotificationLevel.INFO);
+        }
     }
 
 

@@ -14,11 +14,13 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.test.context.ActiveProfiles;
 
 @Import({HibernateConfig.class, QueryInspector.class, TestcontainersConfiguration.class, QueryDslTestConfig.class})
 @DataJpaTest
 @EnableJpaAuditing
 @AutoConfigureTestDatabase(replace = Replace.NONE)
+@ActiveProfiles("test")
 public abstract class BaseRepositoryTest {
 
     @Autowired

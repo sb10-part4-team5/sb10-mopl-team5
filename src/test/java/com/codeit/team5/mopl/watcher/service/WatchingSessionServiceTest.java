@@ -21,6 +21,7 @@ import com.codeit.team5.mopl.watcher.constant.SortByType;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
@@ -33,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.ScrollPosition;
 import org.springframework.data.domain.Sort;
@@ -53,6 +55,9 @@ class WatchingSessionServiceTest {
 
     @Mock
     private ContentRepository contentRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private WatchingSessionService service;
@@ -82,6 +87,7 @@ class WatchingSessionServiceTest {
         // then
         assertThat(result).isNotNull();
         verify(repository).save(any(WatchingSession.class));
+        verify(eventPublisher).publishEvent(any(WatchingSessionCreatedEvent.class));
     }
 
     @Test

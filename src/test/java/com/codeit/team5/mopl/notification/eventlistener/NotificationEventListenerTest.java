@@ -2,16 +2,19 @@ package com.codeit.team5.mopl.notification.eventlistener;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
-import com.codeit.team5.mopl.notification.event.FollowingUserWatchingEvent;
-import com.codeit.team5.mopl.notification.event.PlaylistSubscribedEvent;
-import com.codeit.team5.mopl.notification.event.PlaylistUpdatedEvent;
-import com.codeit.team5.mopl.notification.event.RoleChangedEvent;
-import com.codeit.team5.mopl.notification.event.UserFollowedEvent;
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
+import com.codeit.team5.mopl.playlist.entity.event.PlaylistSubscribedEvent;
+import com.codeit.team5.mopl.playlist.entity.event.PlaylistUpdatedEvent;
+import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,9 @@ class NotificationEventListenerTest {
 
     @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private FollowRepository followRepository;
 
     @InjectMocks
     private NotificationEventListener notificationEventListener;
@@ -135,19 +141,28 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("팔로우한 사용자의 시청 이벤트로 WATCHING_ACTIVITY 알림을 생성한다")
-    void onFollowingUserActivity_createsNotification() {
+    @DisplayName("시청 세션 생성 이벤트로 팔로워들에게 WATCHING_ACTIVITY 알림을 생성한다")
+    void onWatchingSessionCreated_createsNotificationForFollowers() {
         // given
-        UUID receiverId = UUID.randomUUID();
-        FollowingUserWatchingEvent event =
-                new FollowingUserWatchingEvent(receiverId, "다린", "콘텐츠A");
+        UUID watcherUserId = UUID.randomUUID();
+        UUID follower1 = UUID.randomUUID();
+        UUID follower2 = UUID.randomUUID();
+        WatchingSessionCreatedEvent event =
+                new WatchingSessionCreatedEvent(watcherUserId, "다린", "콘텐츠A");
+
+        when(followRepository.findFollowerIdsByFolloweeId(watcherUserId))
+                .thenReturn(List.of(follower1, follower2));
 
         // when
-        notificationEventListener.onFollowingUserActivity(event);
+        notificationEventListener.onWatchingSessionCreated(event);
 
         // then
         verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.WATCHING_ACTIVITY),
+                eq(follower1), eq(NotificationType.WATCHING_ACTIVITY),
+                eq("다린 님이 컨텐츠 시청중입니다."),
+                eq("콘텐츠A 시청 중"), eq(NotificationLevel.INFO));
+        verify(notificationService).create(
+                eq(follower2), eq(NotificationType.WATCHING_ACTIVITY),
                 eq("다린 님이 컨텐츠 시청중입니다."),
                 eq("콘텐츠A 시청 중"), eq(NotificationLevel.INFO));
     }

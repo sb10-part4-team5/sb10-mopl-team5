@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 public record ErrorResponseSuggestion(String exceptionType, String message, Object details) {
 
@@ -81,5 +82,13 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
                 "요청 본문을 읽을 수 없습니다.",
                 null
         );
+    }
+
+    public static ErrorResponseSuggestion from(MissingServletRequestParameterException ex) {
+        Map<String, List<String>> details = Map.of(
+                ex.getParameterName(),
+                List.of("필수 파라미터 '" + ex.getParameterName() + "'이(가) 누락되었습니다.")
+        );
+        return new ErrorResponseSuggestion("INVALID_INPUT", "잘못된 입력값입니다.", details);
     }
 }

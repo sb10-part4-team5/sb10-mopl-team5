@@ -4,11 +4,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.UserFollowedEvent;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ActiveProfiles("test")
 class NotificationEventListenerIntegrationTest {
 
-    @MockitoBean                       // create 호출 여부만 검증 (실제 저장은 안 함)
+    @MockitoBean    // create 호출 여부만 검증 (실제 저장은 안 함)
     NotificationService notificationService;
     @Autowired
     ApplicationEventPublisher publisher;
@@ -47,8 +48,6 @@ class NotificationEventListenerIntegrationTest {
         );   // 커밋 후 호출 확인
     }
 
-    private void verifyNoInteractions(NotificationService notificationService) {
-    }
 
     @Test
     void notificationFail_whenRollback() {
