@@ -119,6 +119,7 @@ class DirectMessageServiceTest {
         directMessageService.sendMessage("a@mopl.com", conversationId, "hello");
 
         // then
+        verify(eventPublisher).publishEvent(any(DirectMessageBroadcastEvent.class));
         verify(eventPublisher, never()).publishEvent(any(DirectMessageSentEvent.class));
     }
 
