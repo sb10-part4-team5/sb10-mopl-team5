@@ -25,7 +25,9 @@ import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
@@ -40,6 +42,7 @@ import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.user.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,6 +50,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -386,6 +390,97 @@ class UserControllerTest {
 
     private Authentication authOf(UUID userId) {
         return authOf(userId, "USER", false);
+    }
+
+    @Test
+    @DisplayName("관리자가 사용자 목록을 조회하면 커서 응답을 반환한다")
+    void getUsers_byAdmin_success() throws Exception {
+        // Given
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        UserResponse user = new UserResponse(
+                userId,
+                Instant.parse("2026-06-23T00:00:00Z"),
+                "admin@example.com",
+                "관리자",
+                null,
+                "ADMIN",
+                false
+        );
+        CursorResponse<UserResponse> response = new CursorResponse<>(
+                List.of(user),
+                "admin@example.com",
+                userId.toString(),
+                true,
+                3,
+                "email",
+                "DESCENDING"
+        );
+        given(userService.findUsers(any(UserCursorRequest.class))).willReturn(response);
+
+        // When & Then
+        mockMvc.perform(get("/api/users")
+                        .with(authentication(authOf(UUID.randomUUID(), "ADMIN", false)))
+                        .param("emailLike", "admin")
+                        .param("roleEqual", "ADMIN")
+                        .param("isLocked", "false")
+                        .param("limit", "1")
+                        .param("sortDirection", "DESCENDING")
+                        .param("sortBy", "email"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(userId.toString()))
+                .andExpect(jsonPath("$.data[0].email").value("admin@example.com"))
+                .andExpect(jsonPath("$.data[0].name").value("관리자"))
+                .andExpect(jsonPath("$.data[0].role").value("ADMIN"))
+                .andExpect(jsonPath("$.data[0].locked").value(false))
+                .andExpect(jsonPath("$.nextCursor").value("admin@example.com"))
+                .andExpect(jsonPath("$.nextIdAfter").value(userId.toString()))
+                .andExpect(jsonPath("$.hasNext").value(true))
+                .andExpect(jsonPath("$.totalCount").value(3))
+                .andExpect(jsonPath("$.sortBy").value("email"))
+                .andExpect(jsonPath("$.sortDirection").value("DESCENDING"));
+
+        ArgumentCaptor<UserCursorRequest> requestCaptor = ArgumentCaptor.forClass(UserCursorRequest.class);
+        verify(userService).findUsers(requestCaptor.capture());
+        UserCursorRequest captured = requestCaptor.getValue();
+        assertThat(captured.emailLike()).isEqualTo("admin");
+        assertThat(captured.roleEqual()).isEqualTo(UserRole.ADMIN);
+        assertThat(captured.isLocked()).isFalse();
+        assertThat(captured.limit()).isEqualTo(1);
+        assertThat(captured.sortDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(captured.sortBy().getValue()).isEqualTo("email");
+    }
+
+    @Test
+    @DisplayName("일반 사용자가 사용자 목록을 조회하면 403 접근 거부 응답을 반환한다")
+    void getUsers_byUser_returnsForbidden() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/api/users")
+                        .with(authentication(authOf(UUID.randomUUID(), "USER", false)))
+                        .param("limit", "10")
+                        .param("sortDirection", "ASCENDING")
+                        .param("sortBy", "name"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.exceptionType").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(userService, never()).findUsers(any());
+    }
+
+    @Test
+    @DisplayName("인증 없이 사용자 목록을 조회하면 401 인증 실패 응답을 반환한다")
+    void getUsers_unauthenticated_returnsUnauthorized() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/api/users")
+                        .param("limit", "10")
+                        .param("sortDirection", "ASCENDING")
+                        .param("sortBy", "name"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(userService, never()).findUsers(any());
     }
 
     @Test

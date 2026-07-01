@@ -15,7 +15,10 @@ import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.user.constant.UserSortBy;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
@@ -32,6 +35,7 @@ import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +46,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -173,6 +178,54 @@ class UserServiceTest {
 
         verify(userRepository).findById(userId);
         verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    @DisplayName("사용자 목록 조회 성공")
+    void findUsers_success() {
+        // Given
+        UserCursorRequest request = new UserCursorRequest(
+                "user",
+                UserRole.USER,
+                false,
+                null,
+                null,
+                2,
+                Sort.Direction.ASC,
+                UserSortBy.EMAIL
+        );
+        User first = User.create("a-user@example.com", "encoded-password", "사용자A");
+        User second = User.create("b-user@example.com", "encoded-password", "사용자B");
+        User extra = User.create("c-user@example.com", "encoded-password", "사용자C");
+        List<User> fetched = List.of(first, second, extra);
+        CursorResponse<UserResponse> expectedResponse = new CursorResponse<>(
+                List.of(
+                        new UserResponse(UUID.randomUUID(), Instant.parse("2026-06-22T00:00:00Z"),
+                                "a-user@example.com", "사용자A", null, "USER", false),
+                        new UserResponse(UUID.randomUUID(), Instant.parse("2026-06-22T00:00:01Z"),
+                                "b-user@example.com", "사용자B", null, "USER", false)
+                ),
+                "b-user@example.com",
+                UUID.randomUUID().toString(),
+                true,
+                3,
+                "email",
+                "ASCENDING"
+        );
+
+        when(userRepository.findUsers(request, 3)).thenReturn(fetched);
+        when(userRepository.countUsers(request)).thenReturn(3L);
+        when(userMapper.toCursor(List.of(first, second), true, 3L, UserSortBy.EMAIL, Sort.Direction.ASC))
+                .thenReturn(expectedResponse);
+
+        // When
+        CursorResponse<UserResponse> result = userService.findUsers(request);
+
+        // Then
+        assertThat(result).isSameAs(expectedResponse);
+        verify(userRepository).findUsers(request, 3);
+        verify(userRepository).countUsers(request);
+        verify(userMapper).toCursor(List.of(first, second), true, 3L, UserSortBy.EMAIL, Sort.Direction.ASC);
     }
 
     @Test

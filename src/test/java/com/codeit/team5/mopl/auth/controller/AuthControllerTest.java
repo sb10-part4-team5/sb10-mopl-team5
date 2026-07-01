@@ -119,14 +119,14 @@ class AuthControllerTest {
                         .param("username", request.username())
                         .param("password", request.password()))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        org.hamcrest.Matchers.allOf(
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.allOf(
                                 org.hamcrest.Matchers.containsString("REFRESH_TOKEN=refresh-token"),
                                 org.hamcrest.Matchers.containsString("Path=/api/auth"),
                                 org.hamcrest.Matchers.containsString("Max-Age=25200"),
                                 org.hamcrest.Matchers.containsString("HttpOnly"),
                                 org.hamcrest.Matchers.containsString("SameSite=Lax")
-                        )))
+                        ))))
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.userDto.id").value(userId.toString()))
@@ -485,12 +485,14 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(new jakarta.servlet.http.Cookie("REFRESH_TOKEN", "refresh-token")))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        org.hamcrest.Matchers.allOf(
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.allOf(
                                 org.hamcrest.Matchers.containsString("REFRESH_TOKEN=new-refresh-token"),
+                                org.hamcrest.Matchers.containsString("Path=/api/auth"),
                                 org.hamcrest.Matchers.containsString("Max-Age=25200"),
+                                org.hamcrest.Matchers.containsString("HttpOnly"),
                                 org.hamcrest.Matchers.containsString("SameSite=Lax")
-                        )))
+                        ))))
                 .andExpect(jsonPath("$.accessToken").value("new-access-token"))
                 .andExpect(jsonPath("$.refreshToken").doesNotExist());
 

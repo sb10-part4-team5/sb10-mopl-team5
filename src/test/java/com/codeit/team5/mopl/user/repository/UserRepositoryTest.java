@@ -7,9 +7,13 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
+import com.codeit.team5.mopl.user.constant.UserSortBy;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.entity.UserRole;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +23,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
@@ -134,6 +139,43 @@ class UserRepositoryTest {
 
         // Then
         assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("사용자 목록을 조건으로 필터링하고 이메일 오름차순으로 조회한다")
+    void findUsers_filterByRoleAndLocked_success() {
+        // Given
+        User first = User.create("list-a@example.com", "password", "목록 A");
+        User second = User.create("list-b@example.com", "password", "목록 B");
+        User locked = User.create("list-c@example.com", "password", "목록 C");
+        locked.updateLocked(true);
+        User admin = User.create("list-admin@example.com", "password", "목록 관리자");
+        admin.updateRole(UserRole.ADMIN);
+
+        userRepository.saveAll(List.of(second, admin, locked, first));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest request = new UserCursorRequest(
+                "list",
+                UserRole.USER,
+                false,
+                null,
+                null,
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.EMAIL
+        );
+
+        // When
+        List<User> result = userRepository.findUsers(request, 10);
+        long count = userRepository.countUsers(request);
+
+        // Then
+        assertThat(result)
+                .extracting(User::getEmail)
+                .containsExactly("list-a@example.com", "list-b@example.com");
+        assertThat(count).isEqualTo(2);
     }
 
     @Test
