@@ -16,6 +16,7 @@ public class ConversationNotFoundException extends DmException {
     }
 
     public static ConversationNotFoundException withUser(UUID withUserId) {
-        return new ConversationNotFoundException(Map.of("withUserId", withUserId));
+        return new ConversationNotFoundException(
+                withUserId == null ? null : Map.of("withUserId", withUserId));
     }
 }

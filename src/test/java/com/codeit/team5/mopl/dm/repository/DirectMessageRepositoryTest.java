@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
+import com.codeit.team5.mopl.global.util.UuidUtils;
 import com.codeit.team5.mopl.user.entity.User;
 import java.time.Instant;
 import java.util.List;
@@ -64,7 +65,7 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
 
         // when
         Optional<DirectMessage> result = directMessageRepository
-                .findTopByConversationIdOrderByCreatedAtDesc(conversation.getId());
+                .findTopByConversationIdOrderByCreatedAtDescIdDesc(conversation.getId());
 
         // then
         assertThat(result).isPresent();
@@ -114,7 +115,7 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
 
         // when
         int updated = directMessageRepository.markAsReadUntil(
-                conversation.getId(), userB.getId(), atBoundary.getCreatedAt(), readAt);
+                conversation.getId(), userB.getId(), atBoundary.getCreatedAt(), atBoundary.getId(), readAt);
 
         // then
         assertThat(updated).isEqualTo(2);
@@ -231,5 +232,31 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
 
         // then
         assertThat(result).containsExactly(conversation.getId());
+    }
+
+    @Test
+    @DisplayName("최근 메시지 조회 시 createdAt이 같으면 id로 tie-break 성공")
+    void findLatestMessagesByConversationIds_tieBreak_success() {
+        // given - 동일 createdAt 메시지 2건 (createdAt은 updatable=false라 native로 통일)
+        DirectMessage m1 = persistAndFlush(DirectMessage.create(conversation, userA, "동시1"));
+        DirectMessage m2 = persistAndFlush(DirectMessage.create(conversation, userA, "동시2"));
+        Instant sameTime = Instant.parse("2030-01-01T00:00:00Z");
+        entityManager.getEntityManager()
+                .createNativeQuery("update direct_messages set created_at = :t where id in (:a, :b)")
+                .setParameter("t", sameTime)
+                .setParameter("a", m1.getId())
+                .setParameter("b", m2.getId())
+                .executeUpdate();
+        flush();
+        clear();
+
+        // when
+        List<DirectMessage> result = directMessageRepository
+                .findLatestMessagesByConversationIds(List.of(conversation.getId()));
+
+        // then
+        assertThat(result).hasSize(1);
+        UUID expectedId = UuidUtils.compareUnsigned(m1.getId(), m2.getId()) >= 0 ? m1.getId() : m2.getId();
+        assertThat(result.get(0).getId()).isEqualTo(expectedId);
     }
 }

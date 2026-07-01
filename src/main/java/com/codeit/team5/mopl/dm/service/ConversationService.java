@@ -43,11 +43,10 @@ public class ConversationService {
         User currentUser = getUser(currentUserId);
         User otherParticipant = getUser(otherParticipantId);
 
-        UUID participant1Id = UuidUtils.min(currentUserId, otherParticipantId);
-        UUID participant2Id = UuidUtils.max(currentUserId, otherParticipantId);
+        UUID[] participants = UuidUtils.sorted(currentUserId, otherParticipantId);
 
         Conversation conversation = conversationRepository
-                .findByParticipant1IdAndParticipant2Id(participant1Id, participant2Id)
+                .findByParticipant1IdAndParticipant2Id(participants[0], participants[1])
                 .orElseGet(() -> conversationRepository.save(Conversation.create(currentUser, otherParticipant)));
 
         log.info("Conversation ready: id={}, currentUserId={}", conversation.getId(), currentUserId);
@@ -83,10 +82,9 @@ public class ConversationService {
 
     public ConversationResponse getConversationWith(UUID currentUserId, UUID withUserId) {
         User currentUser = getUser(currentUserId);
-        UUID participant1Id = UuidUtils.min(currentUserId, withUserId);
-        UUID participant2Id = UuidUtils.max(currentUserId, withUserId);
+        UUID[] participants = UuidUtils.sorted(currentUserId, withUserId);
         Conversation conversation = conversationRepository
-                .findByParticipant1IdAndParticipant2Id(participant1Id, participant2Id)
+                .findByParticipant1IdAndParticipant2Id(participants[0], participants[1])
                 .orElseThrow(() -> ConversationNotFoundException.withUser(withUserId));
         return toConversationResponse(conversation, currentUser);
     }
@@ -127,7 +125,7 @@ public class ConversationService {
     private ConversationResponse toConversationResponse(Conversation conversation, User currentUser) {
         UserSummaryResponse with = userMapper.toSummaryResponse(conversation.getOtherParticipant(currentUser));
         DirectMessageResponse latestMessage = directMessageRepository
-                .findTopByConversationIdOrderByCreatedAtDesc(conversation.getId())
+                .findTopByConversationIdOrderByCreatedAtDescIdDesc(conversation.getId())
                 .map(dmMapper::toResponse)
                 .orElse(null);
         boolean hasUnread = directMessageRepository

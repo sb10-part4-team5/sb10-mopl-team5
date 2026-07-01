@@ -9,7 +9,6 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
@@ -65,23 +64,17 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
     }
 
     private void applyCursor(BooleanBuilder where, ConversationCursorRequest request) {
-        String cursor = request.cursor();
-        String idAfter = request.idAfter();
-        if (cursor == null || idAfter == null) {
-            return;
-        }
-
-        Instant cursorInstant;
-        UUID id;
-        try {
-            cursorInstant = Instant.parse(cursor);
-            id = UUID.fromString(idAfter);
-        } catch (DateTimeParseException | IllegalArgumentException e) {
-            throw new InvalidCursorException(cursor, idAfter);
-        }
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        where.and(CursorQueryDslSupport.cursorPredicate(
-                conversation.createdAt, conversation.id, cursorInstant, id, isAsc));
+        try {
+            BooleanExpression predicate = CursorQueryDslSupport.cursorPredicateFrom(
+                    conversation.createdAt, conversation.id,
+                    request.cursor(), request.idAfter(), isAsc);
+            if (predicate != null) {
+                where.and(predicate);
+            }
+        } catch (DateTimeParseException | IllegalArgumentException e) {
+            throw new InvalidCursorException(request.cursor(), request.idAfter());
+        }
     }
 
     private OrderSpecifier<?>[] buildOrder(ConversationCursorRequest request) {

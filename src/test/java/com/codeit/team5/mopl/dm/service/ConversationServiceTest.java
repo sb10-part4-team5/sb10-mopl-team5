@@ -163,7 +163,7 @@ class ConversationServiceTest {
                 .thenReturn(Optional.empty());
         when(conversationRepository.save(any(Conversation.class))).then(returnsFirstArg());
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
-        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
+        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDescIdDesc(any()))
                 .thenReturn(Optional.empty());
         when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
                 .thenReturn(false);
@@ -199,7 +199,7 @@ class ConversationServiceTest {
         when(conversationRepository.findByParticipant1IdAndParticipant2Id(any(), any()))
                 .thenReturn(Optional.of(existing));
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
-        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
+        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDescIdDesc(any()))
                 .thenReturn(Optional.empty());
         when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
                 .thenReturn(true);
@@ -309,7 +309,7 @@ class ConversationServiceTest {
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
-        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
+        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDescIdDesc(any()))
                 .thenReturn(Optional.empty());
         when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
                 .thenReturn(false);
@@ -374,7 +374,7 @@ class ConversationServiceTest {
         when(conversationRepository.findByParticipant1IdAndParticipant2Id(any(), any()))
                 .thenReturn(Optional.of(conversation));
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
-        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDesc(any()))
+        when(directMessageRepository.findTopByConversationIdOrderByCreatedAtDescIdDesc(any()))
                 .thenReturn(Optional.empty());
         when(directMessageRepository.existsByConversationIdAndReceiverIdAndReadFalse(any(), any()))
                 .thenReturn(true);

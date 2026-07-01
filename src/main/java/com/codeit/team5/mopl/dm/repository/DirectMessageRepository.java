@@ -15,16 +15,18 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, UU
     // 특정 대화에서 내가 받은 안 읽은 메시지 존재 여부
     boolean existsByConversationIdAndReceiverIdAndReadFalse(UUID conversationId, UUID receiverId);
 
-    // 대화의 가장 최근 메시지
-    Optional<DirectMessage> findTopByConversationIdOrderByCreatedAtDesc(UUID conversationId);
+    // 대화의 가장 최근 메시지 (createdAt 동일 시 id로 tie-break)
+    Optional<DirectMessage> findTopByConversationIdOrderByCreatedAtDescIdDesc(UUID conversationId);
 
-    // 기준 시점까지 내가 받은 안 읽은 메시지를 일괄 읽음 처리
+    // 기준 메시지(createdAt, id)까지 내가 받은 안 읽은 메시지를 일괄 읽음 처리
     @Modifying(clearAutomatically = true)
     @Query("update DirectMessage dm set dm.read = true, dm.readAt = :readAt "
             + "where dm.conversation.id = :conversationId and dm.receiver.id = :receiverId "
-            + "and dm.read = false and dm.createdAt <= :until")
+            + "and dm.read = false "
+            + "and (dm.createdAt < :until or (dm.createdAt = :until and dm.id <= :untilId))")
     int markAsReadUntil(@Param("conversationId") UUID conversationId,
             @Param("receiverId") UUID receiverId,
             @Param("until") Instant until,
+            @Param("untilId") UUID untilId,
             @Param("readAt") Instant readAt);
 }

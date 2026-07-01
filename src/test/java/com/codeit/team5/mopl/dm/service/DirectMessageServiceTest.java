@@ -235,6 +235,7 @@ class DirectMessageServiceTest {
         DirectMessage message = DirectMessage.create(conversation, other, "hello");
         Instant createdAt = Instant.now();
         ReflectionTestUtils.setField(message, "createdAt", createdAt);
+        ReflectionTestUtils.setField(message, "id", directMessageId);
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.findById(directMessageId)).thenReturn(Optional.of(message));
@@ -244,7 +245,8 @@ class DirectMessageServiceTest {
 
         // then
         verify(directMessageRepository)
-                .markAsReadUntil(eq(conversationId), eq(currentUserId), eq(createdAt), any(Instant.class));
+                .markAsReadUntil(eq(conversationId), eq(currentUserId), eq(createdAt), eq(directMessageId),
+                        any(Instant.class));
     }
 
     @Test
@@ -264,7 +266,7 @@ class DirectMessageServiceTest {
         assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))
                 .isInstanceOf(NotConversationParticipantException.class);
         verify(directMessageRepository, never())
-                .markAsReadUntil(any(), any(), any(), any());
+                .markAsReadUntil(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -281,7 +283,7 @@ class DirectMessageServiceTest {
         assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))
                 .isInstanceOf(ConversationNotFoundException.class);
         verify(directMessageRepository, never())
-                .markAsReadUntil(any(), any(), any(), any());
+                .markAsReadUntil(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -302,7 +304,7 @@ class DirectMessageServiceTest {
         assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))
                 .isInstanceOf(DirectMessageNotFoundException.class);
         verify(directMessageRepository, never())
-                .markAsReadUntil(any(), any(), any(), any());
+                .markAsReadUntil(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -326,6 +328,6 @@ class DirectMessageServiceTest {
         assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))
                 .isInstanceOf(DirectMessageNotFoundException.class);
         verify(directMessageRepository, never())
-                .markAsReadUntil(any(), any(), any(), any());
+                .markAsReadUntil(any(), any(), any(), any(), any());
     }
 }

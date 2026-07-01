@@ -21,6 +21,21 @@ public final class CursorQueryDslSupport {
                 : createdAt.lt(cursor).or(createdAt.eq(cursor).and(id.lt(idAfter)));
     }
 
+    // 문자열 커서를 파싱해 조건을 만든다. 둘 다 없으면 null, 한쪽만 있으면 파싱 실패로 예외
+    public static BooleanExpression cursorPredicateFrom(
+            DateTimePath<Instant> createdAt, ComparablePath<UUID> id,
+            String cursor, String idAfter, boolean isAsc) {
+        if (cursor == null && idAfter == null) {
+            return null;
+        }
+        if (cursor == null || idAfter == null) {
+            throw new IllegalArgumentException("cursor and idAfter must be provided together");
+        }
+        Instant cursorInstant = Instant.parse(cursor);
+        UUID cursorId = UUID.fromString(idAfter);
+        return cursorPredicate(createdAt, id, cursorInstant, cursorId, isAsc);
+    }
+
     public static OrderSpecifier<?>[] cursorOrder(
             DateTimePath<Instant> createdAt, ComparablePath<UUID> id, boolean isAsc) {
         OrderSpecifier<?> primary = isAsc ? createdAt.asc() : createdAt.desc();

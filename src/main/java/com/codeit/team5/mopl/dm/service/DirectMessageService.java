@@ -87,7 +87,7 @@ public class DirectMessageService {
             throw new DirectMessageNotFoundException(directMessageId);
         }
         directMessageRepository.markAsReadUntil(
-                conversationId, currentUserId, message.getCreatedAt(), Instant.now());
+                conversationId, currentUserId, message.getCreatedAt(), message.getId(), Instant.now());
         log.info("DM marked as read: conversationId={}, userId={}, untilMessageId={}",
                 conversationId, currentUserId, directMessageId);
     }

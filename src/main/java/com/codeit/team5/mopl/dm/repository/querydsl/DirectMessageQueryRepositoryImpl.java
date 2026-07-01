@@ -7,9 +7,9 @@ import com.codeit.team5.mopl.dm.exception.InvalidCursorException;
 import com.codeit.team5.mopl.global.querydsl.CursorQueryDslSupport;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.List;
@@ -44,16 +44,19 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
         if (conversationIds.isEmpty()) {
             return List.of();
         }
-        QDirectMessage latest = new QDirectMessage("latest");
+        QDirectMessage newer = new QDirectMessage("newer");
         return queryFactory
                 .selectFrom(directMessage)
                 .join(directMessage.sender).fetchJoin()
                 .join(directMessage.receiver).fetchJoin()
                 .where(directMessage.conversation.id.in(conversationIds)
-                        .and(directMessage.createdAt.eq(
-                                JPAExpressions.select(latest.createdAt.max())
-                                        .from(latest)
-                                        .where(latest.conversation.id.eq(directMessage.conversation.id)))))
+                        .and(JPAExpressions.selectOne()
+                                .from(newer)
+                                .where(newer.conversation.id.eq(directMessage.conversation.id)
+                                        .and(newer.createdAt.gt(directMessage.createdAt)
+                                                .or(newer.createdAt.eq(directMessage.createdAt)
+                                                        .and(newer.id.gt(directMessage.id)))))
+                                .notExists()))
                 .fetch();
     }
 
@@ -80,23 +83,17 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
     }
 
     private void applyCursor(BooleanBuilder where, DirectMessageCursorRequest request) {
-        String cursor = request.cursor();
-        String idAfter = request.idAfter();
-        if (cursor == null || idAfter == null) {
-            return;
-        }
-
-        Instant cursorInstant;
-        UUID id;
-        try {
-            cursorInstant = Instant.parse(cursor);
-            id = UUID.fromString(idAfter);
-        } catch (DateTimeParseException | IllegalArgumentException e) {
-            throw new InvalidCursorException(cursor, idAfter);
-        }
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        where.and(CursorQueryDslSupport.cursorPredicate(
-                directMessage.createdAt, directMessage.id, cursorInstant, id, isAsc));
+        try {
+            BooleanExpression predicate = CursorQueryDslSupport.cursorPredicateFrom(
+                    directMessage.createdAt, directMessage.id,
+                    request.cursor(), request.idAfter(), isAsc);
+            if (predicate != null) {
+                where.and(predicate);
+            }
+        } catch (DateTimeParseException | IllegalArgumentException e) {
+            throw new InvalidCursorException(request.cursor(), request.idAfter());
+        }
     }
 
     private OrderSpecifier<?>[] buildOrder(DirectMessageCursorRequest request) {
