@@ -4,8 +4,10 @@ import com.codeit.team5.mopl.subscription.service.SubscriptionService;
 import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,5 +24,11 @@ public class SubscriptionController {
     public ResponseEntity<Void> create(@PathVariable UUID playlistId, Principal principal) {
         service.create(playlistId, principal.getName());
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/playlists/{playlistId}/subscription")
+    public ResponseEntity<Void> delete(@PathVariable UUID playlistId, Principal principal) {
+        service.delete(playlistId, principal.getName());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }
