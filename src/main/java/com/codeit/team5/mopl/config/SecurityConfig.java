@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.handler.LoginFailureHandler;
+import com.codeit.team5.mopl.auth.handler.LoginSuccessHandler;
 import com.codeit.team5.mopl.auth.handler.SpaCsrfTokenRequestHandler;
 import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
@@ -28,6 +30,8 @@ public class SecurityConfig {
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
     private final UserAccessDeniedHandler userAccessDeniedHandler;
     private final MoplAuthenticationProvider moplAuthenticationProvider;
+    private final LoginSuccessHandler loginSuccessHandler;
+    private final LoginFailureHandler loginFailureHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -71,6 +75,11 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
                         .anyRequest().permitAll()
+                )
+                .formLogin(login -> login
+                        .loginProcessingUrl("/api/auth/sign-in")
+                        .successHandler(loginSuccessHandler)
+                        .failureHandler(loginFailureHandler)
                 )
                 .addFilterBefore(
                         jwtAuthenticationFilter,
