@@ -28,12 +28,12 @@ public class ContentCollectionScheduler {
     private int dailyEndPage;
 
     public ContentCollectionScheduler(
-            JobLauncher jobLauncher,
+            @Qualifier("asyncJobLauncher") JobLauncher asyncJobLauncher,
             @Qualifier("tmdbMovieJob") Job tmdbMovieJob,
             @Qualifier("tmdbTvSeriesJob") Job tmdbTvSeriesJob,
             @Qualifier("sportsDbDayJob") Job sportsDbDayJob
     ) {
-        this.jobLauncher = jobLauncher;
+        this.jobLauncher = asyncJobLauncher;
         this.tmdbMovieJob = tmdbMovieJob;
         this.tmdbTvSeriesJob = tmdbTvSeriesJob;
         this.sportsDbDayJob = sportsDbDayJob;
