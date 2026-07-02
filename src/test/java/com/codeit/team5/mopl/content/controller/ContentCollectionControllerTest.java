@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.content.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -9,6 +11,7 @@ import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -57,6 +60,18 @@ class ContentCollectionControllerTest {
                         .param("startPage", "1")
                         .param("endPage", "5"))
                 .andExpect(status().isAccepted());
+    }
+
+    @Test
+    @DisplayName("Job 실행(launch) 자체가 실패하면 500 응답을 반환한다")
+    void collectTmdbMovies_jobLaunchFails_returnsInternalServerError() throws Exception {
+        given(asyncJobLauncher.run(any(), any()))
+                .willThrow(new JobParametersInvalidException("잘못된 Job 파라미터"));
+
+        mockMvc.perform(post("/api/admin/contents/collect/tmdb/movies")
+                        .param("startPage", "1")
+                        .param("endPage", "5"))
+                .andExpect(status().isInternalServerError());
     }
 
     @Test

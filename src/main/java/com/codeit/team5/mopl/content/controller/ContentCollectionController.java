@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.content.controller;
 
+import com.codeit.team5.mopl.content.batch.exception.BatchJobLaunchException;
 import com.codeit.team5.mopl.content.controller.api.ContentCollectionApi;
 import com.codeit.team5.mopl.content.dto.external.sportsdb.SportsDbLeague;
 import com.codeit.team5.mopl.content.dto.request.PageRangeRequest;
@@ -106,7 +107,8 @@ public class ContentCollectionController implements ContentCollectionApi {
             asyncJobLauncher.run(job, params);
         } catch (JobExecutionAlreadyRunningException | JobRestartException |
                  JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
-            log.error("[Controller] Job 실행 실패 - job={}, error={}", job.getName(), e.getMessage());
+            log.error("[Controller] Job 실행 실패 - job={}, error={}", job.getName(), e.getMessage(), e);
+            throw new BatchJobLaunchException(job.getName());
         }
     }
 }
