@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContentCollectionScheduler {
 
-    private final JobLauncher jobLauncher;
+    private final JobLauncher asyncJobLauncher;
     private final Job tmdbMovieJob;
     private final Job tmdbTvSeriesJob;
     private final Job sportsDbDayJob;
@@ -33,7 +33,7 @@ public class ContentCollectionScheduler {
             @Qualifier("tmdbTvSeriesJob") Job tmdbTvSeriesJob,
             @Qualifier("sportsDbDayJob") Job sportsDbDayJob
     ) {
-        this.jobLauncher = asyncJobLauncher;
+        this.asyncJobLauncher = asyncJobLauncher;
         this.tmdbMovieJob = tmdbMovieJob;
         this.tmdbTvSeriesJob = tmdbTvSeriesJob;
         this.sportsDbDayJob = sportsDbDayJob;
@@ -70,7 +70,7 @@ public class ContentCollectionScheduler {
 
 private void run(Job job, JobParameters params) {
         try {
-            jobLauncher.run(job, params);
+            asyncJobLauncher.run(job, params);
         } catch (JobExecutionAlreadyRunningException | JobRestartException |
                  JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
             log.error("[Scheduler] Job 실행 실패 - job={}, error={}", job.getName(), e.getMessage());

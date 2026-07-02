@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -86,6 +87,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IOException.class)
     public void handleIOException(IOException e) {
         log.debug("클라이언트 연결 종료로 응답 전송 실패: {}", e.getMessage());
+    }
+
+    // 배치 작업 스레드 풀의 큐까지 가득 찬 상태에서 새 수집 요청이 들어오면 AbortPolicy가
+    // TaskRejectedException을 던진다. 일시적인 과부하이므로 503으로 매핑해 재시도를 유도한다.
+    @ExceptionHandler(TaskRejectedException.class)
+    public ResponseEntity<ErrorResponseSuggestion> handleTaskRejectedException(TaskRejectedException e) {
+        log.warn("배치 작업 큐 포화로 요청 거부: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponseSuggestion("SERVICE_UNAVAILABLE",
+                        "현재 수집 작업이 많아 요청을 처리할 수 없습니다. 잠시 후 다시 시도해주세요.", null));
     }
 
     @ExceptionHandler(Exception.class)
