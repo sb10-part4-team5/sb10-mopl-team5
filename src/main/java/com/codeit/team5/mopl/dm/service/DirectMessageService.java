@@ -12,9 +12,6 @@ import com.codeit.team5.mopl.dm.mapper.DirectMessageMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
-import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -41,7 +38,6 @@ public class DirectMessageService {
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
     private final DirectMessageMapper directMessageMapper;
-    private final WebSocketSessionStore webSocketSessionStore;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -57,18 +53,8 @@ public class DirectMessageService {
         DirectMessage message = directMessageRepository.save(directMessage);
         DirectMessageResponse response = directMessageMapper.toResponse(message);
 
-        eventPublisher.publishEvent(new DirectMessageBroadcastEvent(response));
-
-        // 수신자가 대화방을 보고 있지 않을 때(비활성)만 알림
-        User receiver = message.getReceiver();
-        String destination = StompConstants.conversationDmDestination(conversationId);
-        if (!webSocketSessionStore.isSubscribed(receiver.getEmail(), destination)) {
-            eventPublisher.publishEvent(new DirectMessageSentEvent(
-                    receiver.getId(),
-                    sender.getName(),
-                    content
-            ));
-        }
+        eventPublisher.publishEvent(
+                new DirectMessageBroadcastEvent(response, message.getReceiver().getEmail()));
 
         log.info("DM sent: conversationId={}, senderId={}", conversationId, sender.getId());
         return response;
