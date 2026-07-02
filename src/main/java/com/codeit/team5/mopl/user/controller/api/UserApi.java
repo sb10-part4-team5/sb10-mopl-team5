@@ -157,6 +157,8 @@ public interface UserApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류(본인만 변경 가능)",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
