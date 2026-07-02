@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.sse.dto;
 
+import com.codeit.team5.mopl.sse.SseEventPayload;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -9,5 +10,9 @@ public record DirectMessagePayload(
     UUID receiverId,
     String content,
     Instant createdAt
-) {
+) implements SseEventPayload {
+    @Override
+    public UUID eventId() {
+        return id();
+    }
 }

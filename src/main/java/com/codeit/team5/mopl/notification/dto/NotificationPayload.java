@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.notification.dto;
 
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.sse.SseEventPayload;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -15,5 +16,10 @@ public record NotificationPayload(
     String content,
     NotificationLevel level,
     Instant createdAt
-) {}
+) implements SseEventPayload {
+    @Override
+    public UUID eventId(){
+        return notificationId();
+    }
+}
 
