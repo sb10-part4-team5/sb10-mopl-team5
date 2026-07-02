@@ -2,17 +2,15 @@ package com.codeit.team5.mopl.sse.eventlistener;
 
 import static org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT;
 
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
-import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
-import java.util.UUID;
+import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
+import com.codeit.team5.mopl.sse.sender.SseSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Component
@@ -20,59 +18,25 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 public class SseNotificationListener {
 
-    private final SseEmitterStore emitterStore;
+    private final SseSender sseSender;
 
-    // NotificationService에서 알림이 생성되고 알림 생성 이벤트가 발행될 때 수행
     @TransactionalEventListener(phase = AFTER_COMMIT)
     public void onNotificationCreated(NotificationCreatedEvent event) {
-        // 전달받은 이벤트에서 payload 추출
         NotificationPayload payload = event.notificationPayload();
-        // 페이로드 내의 수신자 ID 추출
-        UUID receiverId = payload.receiverId();
-
-        // 수신자의 SseEmitter를 가져옴
-        SseEmitter emitter = emitterStore.get(receiverId);
-        if (emitter == null) {
-            log.debug("SSE emitter not found for receiverId={}, skipping", receiverId);
-            return;
-        }
-
-        try {
-            emitter.send(SseEmitter.event()
-                    .id(payload.notificationId().toString())
-                    .name("notifications")
-                    .data(payload));
-            log.debug("SSE notification sent: receiverId={}, notificationId={}",
-                    receiverId, payload.notificationId());
-        } catch (Exception e) {
-            log.warn("SSE send failed: receiverId={}", receiverId);
-            emitterStore.remove(receiverId, emitter);
-        }
+        sseSender.sendToUser(payload.receiverId(),
+                SseEmitter.event()
+                        .id(payload.notificationId().toString())
+                        .name("notifications")
+                        .data(payload));
     }
 
-    // DM 알림이 생성되면 SSE "direct-messages" 이벤트로 전송
     @TransactionalEventListener(phase = AFTER_COMMIT)
-
     public void onDirectMessageCreated(DirectMessageCreatedEvent event) {
         DirectMessagePayload payload = event.directMessagePayload();
-        UUID receiverId = payload.receiverId();
-
-        SseEmitter emitter = emitterStore.get(receiverId);
-        if (emitter == null) {
-            log.debug("SSE emitter not found for receiverId={}, skipping DM", receiverId);
-            return;
-        }
-
-        try {
-            emitter.send(SseEmitter.event()
-                    .id(payload.id().toString())
-                    .name("direct-messages")
-                    .data(payload));
-            log.debug("SSE direct-message sent: receiverId={}, id={}",
-                    receiverId, payload.id());
-        } catch (Exception e) {
-            log.warn("SSE DM send failed: receiverId={}", receiverId);
-            emitterStore.remove(receiverId, emitter);
-        }
+        sseSender.sendToUser(payload.receiverId(),
+                SseEmitter.event()
+                        .id(payload.id().toString())
+                        .name("direct-messages")
+                        .data(payload));
     }
 }
