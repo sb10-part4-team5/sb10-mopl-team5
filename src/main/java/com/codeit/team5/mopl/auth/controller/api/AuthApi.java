@@ -131,7 +131,8 @@ public interface AuthApi {
 
     @Operation(
             summary = "비밀번호 초기화",
-            description = "임시 비밀번호로 초기화 후 이메일로 전송합니다."
+            description = "임시 비밀번호로 초기화 후 이메일로 전송합니다.",
+            security = {}
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "비밀번호 초기화 성공"),
