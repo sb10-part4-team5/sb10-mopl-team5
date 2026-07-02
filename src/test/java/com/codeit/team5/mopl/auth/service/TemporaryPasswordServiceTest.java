@@ -89,8 +89,8 @@ class TemporaryPasswordServiceTest {
     }
 
     @Test
-    @DisplayName("유효한 임시 비밀번호가 일치하면 인증에 성공한다")
-    void matches_success() {
+    @DisplayName("유효한 임시 비밀번호가 일치하면 인증에 성공하고 임시 비밀번호를 삭제한다")
+    void matchesAndDelete_success() {
         // Given
         UUID userId = UUID.randomUUID();
         TemporaryPassword temporaryPassword = TemporaryPassword.create(
@@ -98,20 +98,21 @@ class TemporaryPasswordServiceTest {
                 "encoded-temp-password",
                 Instant.now()
         );
-        when(temporaryPasswordRepository.findByUserId(userId)).thenReturn(Optional.of(temporaryPassword));
+        when(temporaryPasswordRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(temporaryPassword));
         when(passwordEncoder.matches("Temp1234", "encoded-temp-password")).thenReturn(true);
 
         // When
-        boolean result = temporaryPasswordService.matches(userId, "Temp1234");
+        boolean result = temporaryPasswordService.matchesAndDelete(userId, "Temp1234");
 
         // Then
         assertThat(result).isTrue();
         verify(passwordEncoder).matches("Temp1234", "encoded-temp-password");
+        verify(temporaryPasswordRepository).delete(temporaryPassword);
     }
 
     @Test
     @DisplayName("임시 비밀번호가 일치하지 않으면 인증에 실패한다")
-    void matches_mismatch_returnsFalse() {
+    void matchesAndDelete_mismatch_returnsFalse() {
         // Given
         UUID userId = UUID.randomUUID();
         TemporaryPassword temporaryPassword = TemporaryPassword.create(
@@ -119,20 +120,21 @@ class TemporaryPasswordServiceTest {
                 "encoded-temp-password",
                 Instant.now()
         );
-        when(temporaryPasswordRepository.findByUserId(userId)).thenReturn(Optional.of(temporaryPassword));
+        when(temporaryPasswordRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(temporaryPassword));
         when(passwordEncoder.matches("Wrong1234", "encoded-temp-password")).thenReturn(false);
 
         // When
-        boolean result = temporaryPasswordService.matches(userId, "Wrong1234");
+        boolean result = temporaryPasswordService.matchesAndDelete(userId, "Wrong1234");
 
         // Then
         assertThat(result).isFalse();
         verify(passwordEncoder).matches("Wrong1234", "encoded-temp-password");
+        verify(temporaryPasswordRepository, never()).delete(any());
     }
 
     @Test
     @DisplayName("만료된 임시 비밀번호면 인증에 실패한다")
-    void matches_expired_returnsFalse() {
+    void matchesAndDelete_expired_returnsFalse() {
         // Given
         UUID userId = UUID.randomUUID();
         TemporaryPassword temporaryPassword = TemporaryPassword.create(
@@ -140,28 +142,29 @@ class TemporaryPasswordServiceTest {
                 "encoded-temp-password",
                 Instant.now().minus(4, ChronoUnit.MINUTES)
         );
-        when(temporaryPasswordRepository.findByUserId(userId)).thenReturn(Optional.of(temporaryPassword));
+        when(temporaryPasswordRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(temporaryPassword));
 
         // When
-        boolean result = temporaryPasswordService.matches(userId, "Temp1234");
+        boolean result = temporaryPasswordService.matchesAndDelete(userId, "Temp1234");
 
         // Then
         assertThat(result).isFalse();
         verifyNoInteractions(passwordEncoder);
+        verify(temporaryPasswordRepository, never()).delete(any());
     }
 
     @Test
     @DisplayName("비어 있는 임시 비밀번호면 저장소 조회 없이 인증에 실패한다")
-    void matches_blankPassword_returnsFalse() {
+    void matchesAndDelete_blankPassword_returnsFalse() {
         // Given
         UUID userId = UUID.randomUUID();
 
         // When
-        boolean result = temporaryPasswordService.matches(userId, "   ");
+        boolean result = temporaryPasswordService.matchesAndDelete(userId, "   ");
 
         // Then
         assertThat(result).isFalse();
-        verify(temporaryPasswordRepository, never()).findByUserId(any());
+        verify(temporaryPasswordRepository, never()).findByUserIdForUpdate(any());
         verifyNoInteractions(passwordEncoder);
     }
 

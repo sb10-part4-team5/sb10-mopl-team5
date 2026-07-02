@@ -50,7 +50,7 @@ class MoplAuthenticationProviderTest {
 
         when(userDetailsService.loadUserByUsername("user@example.com")).thenReturn(userDetails);
         when(passwordEncoder.matches("Temp1234", "encoded-password")).thenReturn(false);
-        when(temporaryPasswordService.matches(userId, "Temp1234")).thenReturn(true);
+        when(temporaryPasswordService.matchesAndDelete(userId, "Temp1234")).thenReturn(true);
 
         // When
         Authentication result = authenticationProvider.authenticate(request);
@@ -60,7 +60,7 @@ class MoplAuthenticationProviderTest {
         assertThat(result.getPrincipal()).isSameAs(userDetails);
         assertThat(result.getCredentials()).isNull();
         verify(passwordEncoder).matches("Temp1234", "encoded-password");
-        verify(temporaryPasswordService).matches(userId, "Temp1234");
+        verify(temporaryPasswordService).matchesAndDelete(userId, "Temp1234");
     }
 
     @Test
@@ -77,7 +77,7 @@ class MoplAuthenticationProviderTest {
 
         when(userDetailsService.loadUserByUsername("user@example.com")).thenReturn(userDetails);
         when(passwordEncoder.matches("Wrong1234", "encoded-password")).thenReturn(false);
-        when(temporaryPasswordService.matches(userId, "Wrong1234")).thenReturn(false);
+        when(temporaryPasswordService.matchesAndDelete(userId, "Wrong1234")).thenReturn(false);
 
         // When & Then
         assertThatThrownBy(() -> authenticationProvider.authenticate(request))
@@ -85,6 +85,6 @@ class MoplAuthenticationProviderTest {
                 .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
 
         verify(passwordEncoder).matches("Wrong1234", "encoded-password");
-        verify(temporaryPasswordService).matches(userId, "Wrong1234");
+        verify(temporaryPasswordService).matchesAndDelete(userId, "Wrong1234");
     }
 }

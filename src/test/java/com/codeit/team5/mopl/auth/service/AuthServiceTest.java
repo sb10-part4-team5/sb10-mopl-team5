@@ -211,7 +211,7 @@ class AuthServiceTest {
 
         when(userDetailsService.loadUserByUsername("user@example.com")).thenReturn(userDetails);
         when(passwordEncoder.matches("wrong-password", "encoded-password")).thenReturn(false);
-        when(temporaryPasswordService.matches(userId, "wrong-password")).thenReturn(false);
+        when(temporaryPasswordService.matchesAndDelete(userId, "wrong-password")).thenReturn(false);
 
         // When & Then
         assertThatThrownBy(() -> provider.authenticate(authentication))
@@ -220,7 +220,7 @@ class AuthServiceTest {
 
         verify(userDetailsService).loadUserByUsername("user@example.com");
         verify(passwordEncoder).matches("wrong-password", "encoded-password");
-        verify(temporaryPasswordService).matches(userId, "wrong-password");
+        verify(temporaryPasswordService).matchesAndDelete(userId, "wrong-password");
         verify(jwtTokenizer, never()).generateAccessToken(any(), any(), any());
         verify(jwtTokenizer, never()).generateRefreshToken(any());
         verifyNoInteractions(refreshTokenStore, authMapper);

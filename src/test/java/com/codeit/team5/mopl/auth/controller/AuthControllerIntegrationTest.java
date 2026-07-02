@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.auth.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -213,7 +214,7 @@ class AuthControllerIntegrationTest {
         TestTransaction.flagForCommit();
         TestTransaction.end();
 
-        verify(mailSender).send(mailCaptor.capture());
+        verify(mailSender, timeout(5000)).send(mailCaptor.capture());
         SimpleMailMessage mail = mailCaptor.getValue();
         assertThat(mail.getTo()).containsExactly(originalRequest.username());
         assertThat(mail.getSubject()).isEqualTo("[MOPL] 임시 비밀번호 안내");
