@@ -103,7 +103,7 @@ public class UserController implements UserApi {
     public ResponseEntity<Void> updatePassword(
             @AuthenticationPrincipal MoplPrincipal userDetails,
             @PathVariable UUID userId,
-            @RequestBody ChangePasswordRequest request) {
+            @Valid @RequestBody ChangePasswordRequest request) {
         log.info("User password update request: PATCH /api/users/{}/password", userId);
 
         userService.updatePassword(userDetails.getId(), userId, request);
