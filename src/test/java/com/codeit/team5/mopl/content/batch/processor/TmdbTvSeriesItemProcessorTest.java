@@ -33,24 +33,30 @@ class TmdbTvSeriesItemProcessorTest {
     @Test
     @DisplayName("이미 존재하는 TV 시리즈면 null을 반환한다")
     void process_duplicate_returnsNull() throws Exception {
+        // given
         TmdbTvDto dto = new TmdbTvDto(1L, "브레이킹 배드", "Breaking Bad", "overview",
                 "/poster.jpg", List.of(18L), "2008-01-20", 9.5, "en");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "1")).willReturn(true);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNull();
     }
 
     @Test
     @DisplayName("새로운 TV 시리즈면 ContentWithMetaData를 반환한다")
     void process_newTvSeries_returnsContentWithMetaData() throws Exception {
+        // given
         TmdbTvDto dto = new TmdbTvDto(1L, "브레이킹 배드", "Breaking Bad", "overview",
                 "/poster.jpg", List.of(18L), "2008-01-20", 9.5, "en");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "1")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.content().getTitle()).isEqualTo("브레이킹 배드");
         assertThat(result.content().getType()).isEqualTo(ContentType.TV_SERIES);
@@ -61,12 +67,15 @@ class TmdbTvSeriesItemProcessorTest {
     @Test
     @DisplayName("posterPath가 null이면 thumbnailUrl도 null이다")
     void process_nullPosterPath_thumbnailUrlIsNull() throws Exception {
+        // given
         TmdbTvDto dto = new TmdbTvDto(2L, "포스터없는시리즈", "No Poster", "overview",
                 null, List.of(), "2020-01-01", 7.0, "ko");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "2")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.thumbnailUrl()).isNull();
     }

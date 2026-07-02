@@ -33,24 +33,30 @@ class TmdbMovieItemProcessorTest {
     @Test
     @DisplayName("이미 존재하는 영화면 null을 반환한다")
     void process_duplicate_returnsNull() throws Exception {
+        // given
         TmdbMovieDto dto = new TmdbMovieDto(1L, "인터스텔라", "Interstellar", "overview",
                 "/poster.jpg", List.of(18L), "2014-11-05", 8.6, "en");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "1")).willReturn(true);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNull();
     }
 
     @Test
     @DisplayName("새로운 영화면 ContentWithMetaData를 반환한다")
     void process_newMovie_returnsContentWithMetaData() throws Exception {
+        // given
         TmdbMovieDto dto = new TmdbMovieDto(1L, "인터스텔라", "Interstellar", "overview",
                 "/poster.jpg", List.of(18L), "2014-11-05", 8.6, "en");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "1")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.content().getTitle()).isEqualTo("인터스텔라");
         assertThat(result.content().getType()).isEqualTo(ContentType.MOVIE);
@@ -61,12 +67,15 @@ class TmdbMovieItemProcessorTest {
     @Test
     @DisplayName("posterPath가 null이면 thumbnailUrl도 null이다")
     void process_nullPosterPath_thumbnailUrlIsNull() throws Exception {
+        // given
         TmdbMovieDto dto = new TmdbMovieDto(2L, "포스터없는영화", "No Poster", "overview",
                 null, List.of(), "2020-01-01", 7.0, "ko");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "2")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.thumbnailUrl()).isNull();
     }
@@ -74,12 +83,15 @@ class TmdbMovieItemProcessorTest {
     @Test
     @DisplayName("genreId가 매핑되면 tagNames에 포함된다")
     void process_validGenreId_tagNamesIncluded() throws Exception {
+        // given
         TmdbMovieDto dto = new TmdbMovieDto(3L, "드라마영화", "Drama", "overview",
                 null, List.of(18L), "2020-01-01", 7.0, "ko");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "3")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.tagNames()).isNotEmpty();
     }

@@ -52,8 +52,10 @@ class SportsDbDayItemReaderTest {
     @Test
     @DisplayName("date 파라미터가 없으면 예외가 발생한다")
     void beforeStep_missingDate_throwsException() {
+        // given
         StepExecution stepExecution = MetaDataInstanceFactory.createStepExecution();
 
+        // when, then
         assertThatThrownBy(() -> reader.beforeStep(stepExecution))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -61,47 +63,51 @@ class SportsDbDayItemReaderTest {
     @Test
     @DisplayName("경기가 있는 날짜면 버퍼에 적재되어 read()로 반환된다")
     void read_eventsExist_returnsEvents() {
+        // given
         SportsDbEventDto event = new SportsDbEventDto("1", "Arsenal vs Chelsea",
                 null, "2024-12-26", "English Premier League",
                 "Soccer", "Arsenal", "Chelsea", "2", "1");
         given(sportsDbApiClient.fetchEventsByDay(anyString(), eq("2024-12-26")))
                 .willReturn(new SportsDbEventListResponse(List.of(event)))
                 .willReturn(null);
-
         reader.beforeStep(createStepExecution("2024-12-26"));
 
+        // when, then
         assertThat(reader.read()).isEqualTo(event);
     }
 
     @Test
     @DisplayName("경기가 없는 날짜면 read()가 null을 반환한다")
     void read_noEvents_returnsNull() {
+        // given
         given(sportsDbApiClient.fetchEventsByDay(anyString(), eq("2024-07-01")))
                 .willReturn(null);
-
         reader.beforeStep(createStepExecution("2024-07-01"));
 
+        // when, then
         assertThat(reader.read()).isNull();
     }
 
     @Test
     @DisplayName("리그 조회가 첫 시도에 실패해도 재시도로 성공하면 데이터가 포함된다")
     void read_leagueFetchFailsOnce_retriesAndSucceeds() {
+        // given
         SportsDbEventDto event = new SportsDbEventDto("1", "Arsenal vs Chelsea",
                 null, "2024-12-26", "English Premier League",
                 "Soccer", "Arsenal", "Chelsea", "2", "1");
         given(sportsDbApiClient.fetchEventsByDay(eq("4328"), eq("2024-12-26")))
                 .willThrow(new RuntimeException("일시적 오류"))
                 .willReturn(new SportsDbEventListResponse(List.of(event)));
-
         reader.beforeStep(createStepExecution("2024-12-26"));
 
+        // when, then
         assertThat(reader.read()).isEqualTo(event);
     }
 
     @Test
     @DisplayName("한 리그가 재시도까지 모두 실패해도 다른 리그 데이터는 유지된다")
     void read_leagueFetchFailsAfterRetries_otherLeaguesPreserved() {
+        // given
         SportsDbEventDto event = new SportsDbEventDto("2", "Real Madrid vs Barcelona",
                 null, "2024-12-26", "Spanish La Liga",
                 "Soccer", "Real Madrid", "Barcelona", "3", "1");
@@ -111,9 +117,9 @@ class SportsDbDayItemReaderTest {
         // LA_LIGA(leagueId=4335)는 정상 응답한다.
         given(sportsDbApiClient.fetchEventsByDay(eq("4335"), eq("2024-12-26")))
                 .willReturn(new SportsDbEventListResponse(List.of(event)));
-
         reader.beforeStep(createStepExecution("2024-12-26"));
 
+        // when, then
         assertThat(reader.read()).isEqualTo(event);
         assertThat(reader.read()).isNull();
     }
