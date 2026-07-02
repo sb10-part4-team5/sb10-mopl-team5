@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
@@ -43,6 +44,7 @@ import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -124,6 +126,82 @@ class AuthControllerTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @Test
+    @DisplayName("비밀번호 초기화 요청에 성공하면 204 응답을 반환한다")
+    void resetPassword_success() throws Exception {
+        // Given
+        ResetPasswordRequest request = new ResetPasswordRequest("user@example.com");
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(passwordResetService).resetPassword(request);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 이메일로 비밀번호 초기화를 요청하면 404 응답을 반환한다")
+    void resetPassword_userNotFound_returnsNotFound() throws Exception {
+        // Given
+        ResetPasswordRequest request = new ResetPasswordRequest("unknown@example.com");
+        org.mockito.BDDMockito.willThrow(new UserNotFoundException(request.email()))
+                .given(passwordResetService)
+                .resetPassword(request);
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.exceptionType").value("UserNotFoundException"))
+                .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(passwordResetService).resetPassword(request);
+    }
+
+    @Test
+    @DisplayName("잘못된 이메일로 비밀번호 초기화를 요청하면 400 응답을 반환한다")
+    void resetPassword_invalidEmail_returnsBadRequest() throws Exception {
+        // Given
+        ResetPasswordRequest request = new ResetPasswordRequest("invalid-email");
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.email").isArray())
+                .andExpect(jsonPath("$.details.email").isNotEmpty());
+
+        verify(passwordResetService, never()).resetPassword(any());
+    }
+
+    @Test
+    @DisplayName("CSRF 토큰 없이 비밀번호 초기화를 요청하면 403 응답을 반환한다")
+    void resetPassword_missingCsrf_returnsForbidden() throws Exception {
+        // Given
+        ResetPasswordRequest request = new ResetPasswordRequest("user@example.com");
+
+        // When & Then
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.exceptionType").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."))
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        verify(passwordResetService, never()).resetPassword(any());
+    }
 
     @Test
     @DisplayName("로그인에 성공하면 accessToken과 사용자 정보를 반환한다")

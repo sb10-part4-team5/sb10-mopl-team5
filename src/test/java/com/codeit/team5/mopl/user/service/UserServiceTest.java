@@ -11,12 +11,14 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
+import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.constant.UserSortBy;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
@@ -71,6 +73,9 @@ class UserServiceTest {
 
     @Mock
     private RefreshTokenStore refreshTokenStore;
+
+    @Mock
+    private TemporaryPasswordService temporaryPasswordService;
 
     @InjectMocks
     private UserService userService;
@@ -473,5 +478,59 @@ class UserServiceTest {
         assertThat(user.isLocked()).isFalse();
         verify(userRepository).findById(userId);
         verifyNoInteractions(refreshTokenStore);
+    }
+
+    @Test
+    @DisplayName("비밀번호 변경 성공 시 새 비밀번호를 인코딩하고 임시 비밀번호를 삭제한다")
+    void updatePassword_success() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        User user = User.create("user@example.com", "encoded-password", "사용자");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("newPassword1")).thenReturn("new-encoded-password");
+
+        // When
+        userService.updatePassword(userId, userId, new ChangePasswordRequest("newPassword1"));
+
+        // Then
+        assertThat(user.getPassword()).isEqualTo("new-encoded-password");
+        verify(userRepository).findById(userId);
+        verify(passwordEncoder).encode("newPassword1");
+        verify(temporaryPasswordService).deleteByUserId(userId);
+    }
+
+    @Test
+    @DisplayName("본인이 아닌 사용자의 비밀번호 변경 요청은 실패하고 후속 처리를 하지 않는다")
+    void updatePassword_notOwner_throwsException() {
+        // Given
+        UUID currentUserId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updatePassword(
+                currentUserId,
+                userId,
+                new ChangePasswordRequest("newPassword1")
+        )).isInstanceOf(UserForbiddenException.class);
+
+        verifyNoInteractions(userRepository, passwordEncoder, temporaryPasswordService);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자 비밀번호 변경 요청은 실패하고 임시 비밀번호를 삭제하지 않는다")
+    void updatePassword_notFound_throwsException() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updatePassword(
+                userId,
+                userId,
+                new ChangePasswordRequest("newPassword1")
+        )).isInstanceOf(UserNotFoundException.class);
+
+        verify(userRepository).findById(userId);
+        verifyNoInteractions(passwordEncoder, temporaryPasswordService);
     }
 }
