@@ -101,8 +101,6 @@ public class SseController implements SseApi {
     }
 
     // 미수신된 이벤트를 다시 전송하는 private 메소드
-    // TODO: 임시적으로 for문을 돌려서 하나하나 비교해가면서 순서를 지키고 있는중
-    // TODO: 추후 Refactor 할 여지가 남아있다고 봄.
     private void sendMissedNotifications(SseEmitter emitter, UUID userId, String lastEventId) {
         UUID lastNotificationId;
         try {
