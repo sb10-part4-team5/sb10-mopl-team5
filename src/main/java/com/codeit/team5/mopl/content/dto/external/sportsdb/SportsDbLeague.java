@@ -1,5 +1,8 @@
 package com.codeit.team5.mopl.content.dto.external.sportsdb;
 
+import lombok.Getter;
+
+@Getter
 public enum SportsDbLeague {
     EPL("4328", "English Premier League"),
     EFL_CHAMPIONSHIP("4329", "English League Championship"),
@@ -18,13 +21,5 @@ public enum SportsDbLeague {
     SportsDbLeague(String leagueId, String name) {
         this.leagueId = leagueId;
         this.name = name;
-    }
-
-    public String getLeagueId() {
-        return leagueId;
-    }
-
-    public String getName() {
-        return name;
     }
 }

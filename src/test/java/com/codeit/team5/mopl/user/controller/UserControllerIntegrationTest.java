@@ -228,7 +228,7 @@ class UserControllerIntegrationTest {
         // When & Then
         mockMvc.perform(get("/api/users/{userId}", "invalid-uuid")
                         .with(authentication(authOf(UUID.randomUUID()))))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test

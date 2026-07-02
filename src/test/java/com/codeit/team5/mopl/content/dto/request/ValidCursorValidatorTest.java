@@ -31,6 +31,7 @@ class ValidCursorValidatorTest {
     @Test
     @DisplayName("cursor와 idAfter 모두 null이면 유효하다")
     void valid_bothNull() {
+        // given, when, then
         assertThat(validator.isValid(request(null, null, ContentSortByType.CREATED_AT), context)).isTrue();
     }
 
@@ -38,12 +39,14 @@ class ValidCursorValidatorTest {
     @Test
     @DisplayName("cursor만 있고 idAfter가 null이면 유효하지 않다")
     void invalid_onlyCursor() {
+        // given, when, then
         assertThat(validator.isValid(request(Instant.now().toString(), null, ContentSortByType.CREATED_AT), context)).isFalse();
     }
 
     @Test
     @DisplayName("idAfter만 있고 cursor가 null이면 유효하지 않다")
     void invalid_onlyIdAfter() {
+        // given, when, then
         assertThat(validator.isValid(request(null, UUID.randomUUID().toString(), ContentSortByType.CREATED_AT), context)).isFalse();
     }
 
@@ -51,6 +54,7 @@ class ValidCursorValidatorTest {
     @Test
     @DisplayName("idAfter가 UUID 형식이 아니면 유효하지 않다")
     void invalid_idAfterNotUuid() {
+        // given, when, then
         assertThat(validator.isValid(request(Instant.now().toString(), "not-a-uuid", ContentSortByType.CREATED_AT), context)).isFalse();
     }
 
@@ -58,14 +62,18 @@ class ValidCursorValidatorTest {
     @Test
     @DisplayName("CREATED_AT 정렬에서 유효한 ISO-8601 cursor는 유효하다")
     void valid_createdAt_cursor() {
+        // given
         String cursor = Instant.now().toString();
         String idAfter = UUID.randomUUID().toString();
+
+        // when, then
         assertThat(validator.isValid(request(cursor, idAfter, ContentSortByType.CREATED_AT), context)).isTrue();
     }
 
     @Test
     @DisplayName("CREATED_AT 정렬에서 날짜 형식이 아닌 cursor는 유효하지 않다")
     void invalid_createdAt_cursor() {
+        // given, when, then
         assertThat(validator.isValid(request("not-a-date", UUID.randomUUID().toString(), ContentSortByType.CREATED_AT), context)).isFalse();
     }
 
@@ -73,12 +81,14 @@ class ValidCursorValidatorTest {
     @Test
     @DisplayName("WATCHER_COUNT 정렬에서 유효한 숫자 cursor는 유효하다")
     void valid_watcherCount_cursor() {
+        // given, when, then
         assertThat(validator.isValid(request("100", UUID.randomUUID().toString(), ContentSortByType.WATCHER_COUNT), context)).isTrue();
     }
 
     @Test
     @DisplayName("WATCHER_COUNT 정렬에서 숫자가 아닌 cursor는 유효하지 않다")
     void invalid_watcherCount_cursor() {
+        // given, when, then
         assertThat(validator.isValid(request("abc", UUID.randomUUID().toString(), ContentSortByType.WATCHER_COUNT), context)).isFalse();
     }
 
@@ -86,24 +96,28 @@ class ValidCursorValidatorTest {
     @Test
     @DisplayName("RATE 정렬에서 유효한 소수 cursor는 유효하다")
     void valid_rate_cursor() {
+        // given, when, then
         assertThat(validator.isValid(request("4.5", UUID.randomUUID().toString(), ContentSortByType.RATE), context)).isTrue();
     }
 
     @Test
     @DisplayName("RATE 정렬에서 숫자가 아닌 cursor는 유효하지 않다")
     void invalid_rate_cursor_notNumber() {
+        // given, when, then
         assertThat(validator.isValid(request("abc", UUID.randomUUID().toString(), ContentSortByType.RATE), context)).isFalse();
     }
 
     @Test
     @DisplayName("RATE 정렬에서 NaN cursor는 유효하지 않다")
     void invalid_rate_cursor_nan() {
+        // given, when, then
         assertThat(validator.isValid(request("NaN", UUID.randomUUID().toString(), ContentSortByType.RATE), context)).isFalse();
     }
 
     @Test
     @DisplayName("RATE 정렬에서 Infinity cursor는 유효하지 않다")
     void invalid_rate_cursor_infinity() {
+        // given, when, then
         assertThat(validator.isValid(request("Infinity", UUID.randomUUID().toString(), ContentSortByType.RATE), context)).isFalse();
     }
 }
