@@ -9,7 +9,9 @@ import com.codeit.team5.mopl.content.batch.reader.SportsDbDayItemReader;
 import com.codeit.team5.mopl.content.batch.reader.SportsDbEventItemReader;
 import com.codeit.team5.mopl.content.batch.reader.TmdbMovieItemReader;
 import com.codeit.team5.mopl.content.batch.reader.TmdbTvSeriesItemReader;
+import com.codeit.team5.mopl.content.batch.retry.LoggingSkipListener;
 import com.codeit.team5.mopl.content.batch.retry.SelectiveRetryPolicy;
+import com.codeit.team5.mopl.content.batch.retry.SelectiveSkipPolicy;
 import com.codeit.team5.mopl.content.batch.writer.ContentItemWriter;
 import com.codeit.team5.mopl.content.client.sportsdb.SportsDbApiClient;
 import com.codeit.team5.mopl.content.client.tmdb.TmdbApiClient;
@@ -31,12 +33,10 @@ import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.TransientDataAccessException;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.web.reactive.function.client.WebClientException;
 
 @Configuration
 @RequiredArgsConstructor
@@ -89,10 +89,8 @@ public class BatchConfig {
                 .writer(contentItemWriter())
                 .faultTolerant()
                 .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
-                .skipLimit(TMDB_SKIP_LIMIT)
-                .skip(Exception.class)
-                .noSkip(WebClientException.class)
-                .noSkip(TransientDataAccessException.class)
+                .skipPolicy(new SelectiveSkipPolicy(TMDB_SKIP_LIMIT))
+                .listener(new LoggingSkipListener())
                 .build();
     }
 
@@ -125,10 +123,8 @@ public class BatchConfig {
                 .writer(contentItemWriter())
                 .faultTolerant()
                 .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
-                .skipLimit(TMDB_SKIP_LIMIT)
-                .skip(Exception.class)
-                .noSkip(WebClientException.class)
-                .noSkip(TransientDataAccessException.class)
+                .skipPolicy(new SelectiveSkipPolicy(TMDB_SKIP_LIMIT))
+                .listener(new LoggingSkipListener())
                 .build();
     }
 
@@ -161,10 +157,8 @@ public class BatchConfig {
                 .writer(contentItemWriter())
                 .faultTolerant()
                 .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
-                .skipLimit(SPORTS_DB_SKIP_LIMIT)
-                .skip(Exception.class)
-                .noSkip(WebClientException.class)
-                .noSkip(TransientDataAccessException.class)
+                .skipPolicy(new SelectiveSkipPolicy(SPORTS_DB_SKIP_LIMIT))
+                .listener(new LoggingSkipListener())
                 .build();
     }
 
@@ -197,10 +191,8 @@ public class BatchConfig {
                 .writer(contentItemWriter())
                 .faultTolerant()
                 .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
-                .skipLimit(SPORTS_DB_SKIP_LIMIT)
-                .skip(Exception.class)
-                .noSkip(WebClientException.class)
-                .noSkip(TransientDataAccessException.class)
+                .skipPolicy(new SelectiveSkipPolicy(SPORTS_DB_SKIP_LIMIT))
+                .listener(new LoggingSkipListener())
                 .build();
     }
 
