@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = ValidPageRangeValidator.class)
 public @interface ValidPageRange {
 
-    String message() default "startPage는 1 이상이어야 하고, endPage는 startPage 이상이어야 합니다.";
+    String message() default "endPage는 startPage 이상이어야 합니다.";
 
     Class<?>[] groups() default {};
 
