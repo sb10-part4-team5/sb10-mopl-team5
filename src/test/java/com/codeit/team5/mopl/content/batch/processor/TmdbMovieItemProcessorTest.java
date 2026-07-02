@@ -95,4 +95,20 @@ class TmdbMovieItemProcessorTest {
         assertThat(result).isNotNull();
         assertThat(result.tagNames()).isNotEmpty();
     }
+
+    @Test
+    @DisplayName("genreIds가 null이어도 예외 없이 tagNames가 빈 리스트로 처리된다")
+    void process_nullGenreIds_tagNamesEmpty() throws Exception {
+        // given
+        TmdbMovieDto dto = new TmdbMovieDto(4L, "장르없는영화", "NoGenre", "overview",
+                null, null, "2020-01-01", 7.0, "ko");
+        given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "4")).willReturn(false);
+
+        // when
+        ContentWithMetaData result = processor.process(dto);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.tagNames()).isEmpty();
+    }
 }

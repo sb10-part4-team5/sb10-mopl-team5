@@ -79,4 +79,20 @@ class TmdbTvSeriesItemProcessorTest {
         assertThat(result).isNotNull();
         assertThat(result.thumbnailUrl()).isNull();
     }
+
+    @Test
+    @DisplayName("genreIds가 null이어도 예외 없이 tagNames가 빈 리스트로 처리된다")
+    void process_nullGenreIds_tagNamesEmpty() throws Exception {
+        // given
+        TmdbTvDto dto = new TmdbTvDto(3L, "장르없는시리즈", "NoGenre", "overview",
+                null, null, "2020-01-01", 7.0, "ko");
+        given(contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, "3")).willReturn(false);
+
+        // when
+        ContentWithMetaData result = processor.process(dto);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.tagNames()).isEmpty();
+    }
 }
