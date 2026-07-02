@@ -13,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 public record ErrorResponseSuggestion(String exceptionType, String message, Object details) {
 
@@ -88,6 +89,14 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
         Map<String, List<String>> details = Map.of(
                 ex.getParameterName(),
                 List.of("필수 파라미터 '" + ex.getParameterName() + "'이(가) 누락되었습니다.")
+        );
+        return new ErrorResponseSuggestion("INVALID_INPUT", "잘못된 입력값입니다.", details);
+    }
+
+    public static ErrorResponseSuggestion from(MethodArgumentTypeMismatchException ex) {
+        Map<String, List<String>> details = Map.of(
+                ex.getName(),
+                List.of("허용되지 않는 값입니다: " + ex.getValue())
         );
         return new ErrorResponseSuggestion("INVALID_INPUT", "잘못된 입력값입니다.", details);
     }

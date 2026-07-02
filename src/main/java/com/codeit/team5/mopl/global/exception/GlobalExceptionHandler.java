@@ -22,6 +22,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
 @RestControllerAdvice
@@ -126,6 +127,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseSuggestion> handleMissingServletRequestParameterException(
         MissingServletRequestParameterException e
     ){
+        log.warn(e.toString());
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponseSuggestion.from(e));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponseSuggestion> handleMethodArgumentTypeMismatchException(
+        MethodArgumentTypeMismatchException e
+    ) {
         log.warn(e.toString());
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)

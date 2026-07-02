@@ -5,6 +5,7 @@ import com.codeit.team5.mopl.content.dto.external.sportsdb.SportsDbLeague;
 import com.codeit.team5.mopl.content.dto.request.PageRangeRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import java.time.LocalDate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
@@ -15,6 +16,7 @@ import org.springframework.batch.core.repository.JobExecutionAlreadyRunningExcep
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -88,12 +90,12 @@ public class ContentCollectionController implements ContentCollectionApi {
 
     @PostMapping("/sports/day")
     public ResponseEntity<Void> collectSportsEventsByDay(
-            @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "날짜 형식은 YYYY-MM-DD이어야 합니다. (예: 2024-12-26)")
-            @RequestParam String date
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            @RequestParam LocalDate date
     ) {
         log.info("SportsDB 일별 경기 수집 요청: date={}", date);
         run(sportsDbDayJob, new JobParametersBuilder()
-                .addString("date", date)
+                .addString("date", date.toString())
                 .addString("run.id", String.valueOf(System.currentTimeMillis()))
                 .toJobParameters());
         return ResponseEntity.accepted().build();

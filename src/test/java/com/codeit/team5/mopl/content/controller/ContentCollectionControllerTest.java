@@ -171,4 +171,12 @@ class ContentCollectionControllerTest {
                         .param("date", "2024/12/26"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("SportsDB 일별 경기 수집 시 실존하지 않는 날짜면 400 응답을 반환한다")
+    void collectSportsEventsByDay_nonExistentDate_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/admin/contents/collect/sports/day")
+                        .param("date", "2024-02-31"))
+                .andExpect(status().isBadRequest());
+    }
 }
