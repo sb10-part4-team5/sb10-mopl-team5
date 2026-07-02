@@ -11,5 +11,4 @@ public record CursorResponse<T>(List<T> data,
                                 long totalCount,
                                 String sortBy,
                                 String sortDirection) {
-
 }
