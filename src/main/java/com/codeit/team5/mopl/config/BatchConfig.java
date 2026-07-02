@@ -9,6 +9,7 @@ import com.codeit.team5.mopl.content.batch.reader.SportsDbDayItemReader;
 import com.codeit.team5.mopl.content.batch.reader.SportsDbEventItemReader;
 import com.codeit.team5.mopl.content.batch.reader.TmdbMovieItemReader;
 import com.codeit.team5.mopl.content.batch.reader.TmdbTvSeriesItemReader;
+import com.codeit.team5.mopl.content.batch.retry.SelectiveRetryPolicy;
 import com.codeit.team5.mopl.content.batch.writer.ContentItemWriter;
 import com.codeit.team5.mopl.content.client.sportsdb.SportsDbApiClient;
 import com.codeit.team5.mopl.content.client.tmdb.TmdbApiClient;
@@ -31,6 +32,8 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.TransientDataAccessException;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.reactive.function.client.WebClientException;
@@ -43,6 +46,8 @@ public class BatchConfig {
     private static final int RETRY_LIMIT = 3;
     private static final int TMDB_SKIP_LIMIT = 10;
     private static final int SPORTS_DB_SKIP_LIMIT = 3;
+    private static final int SPORTS_DB_DAY_FETCH_MAX_ATTEMPTS = 2;
+    private static final long SPORTS_DB_DAY_FETCH_BACKOFF_MS = 200;
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
@@ -83,9 +88,7 @@ public class BatchConfig {
                 .processor(tmdbMovieItemProcessor())
                 .writer(contentItemWriter())
                 .faultTolerant()
-                .retryLimit(RETRY_LIMIT)
-                .retry(WebClientException.class)
-                .retry(TransientDataAccessException.class)
+                .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
                 .skipLimit(TMDB_SKIP_LIMIT)
                 .skip(Exception.class)
                 .noSkip(WebClientException.class)
@@ -121,9 +124,7 @@ public class BatchConfig {
                 .processor(tmdbTvSeriesItemProcessor())
                 .writer(contentItemWriter())
                 .faultTolerant()
-                .retryLimit(RETRY_LIMIT)
-                .retry(WebClientException.class)
-                .retry(TransientDataAccessException.class)
+                .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
                 .skipLimit(TMDB_SKIP_LIMIT)
                 .skip(Exception.class)
                 .noSkip(WebClientException.class)
@@ -159,9 +160,7 @@ public class BatchConfig {
                 .processor(sportsDbEventItemProcessor())
                 .writer(contentItemWriter())
                 .faultTolerant()
-                .retryLimit(RETRY_LIMIT)
-                .retry(WebClientException.class)
-                .retry(TransientDataAccessException.class)
+                .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
                 .skipLimit(SPORTS_DB_SKIP_LIMIT)
                 .skip(Exception.class)
                 .noSkip(WebClientException.class)
@@ -197,9 +196,7 @@ public class BatchConfig {
                 .processor(sportsDbEventItemProcessor())
                 .writer(contentItemWriter())
                 .faultTolerant()
-                .retryLimit(RETRY_LIMIT)
-                .retry(WebClientException.class)
-                .retry(TransientDataAccessException.class)
+                .retryPolicy(new SelectiveRetryPolicy(RETRY_LIMIT))
                 .skipLimit(SPORTS_DB_SKIP_LIMIT)
                 .skip(Exception.class)
                 .noSkip(WebClientException.class)
@@ -210,7 +207,22 @@ public class BatchConfig {
     @Bean
     @StepScope
     public SportsDbDayItemReader sportsDbDayItemReader() {
-        return new SportsDbDayItemReader(sportsDbApiClient);
+        return new SportsDbDayItemReader(sportsDbApiClient, sportsDbDayFetchRetryTemplate());
+    }
+
+    // 리그별 일별 경기 조회 실패 시 사용하는 재시도 정책 (최대 2회 시도, 200ms 고정 백오프).
+    // @BeforeStep에서 한 리그의 일시적 오류로 전체 Step이 실패해 이미 수집한 다른 리그
+    // 데이터까지 유실되는 것을 막지 않도록, 재시도해도 성공 가능성이 있는 오류만 재시도한다.
+    @Bean
+    public RetryTemplate sportsDbDayFetchRetryTemplate() {
+        RetryTemplate retryTemplate = new RetryTemplate();
+        retryTemplate.setRetryPolicy(new SelectiveRetryPolicy(SPORTS_DB_DAY_FETCH_MAX_ATTEMPTS));
+
+        FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
+        backOffPolicy.setBackOffPeriod(SPORTS_DB_DAY_FETCH_BACKOFF_MS);
+        retryTemplate.setBackOffPolicy(backOffPolicy);
+
+        return retryTemplate;
     }
 
     // ── 공통 Writer ────────────────────────────────────────────────
