@@ -165,7 +165,7 @@ public class BatchConfig {
     @Bean
     @StepScope
     public SportsDbEventItemReader sportsDbEventItemReader() {
-        return new SportsDbEventItemReader(sportsDbApiClient);
+        return new SportsDbEventItemReader(sportsDbApiClient, externalFetchRetryTemplate());
     }
 
     @Bean
@@ -202,7 +202,7 @@ public class BatchConfig {
         return new SportsDbDayItemReader(sportsDbApiClient, externalFetchRetryTemplate());
     }
 
-    // @BeforeStep에서 여러 건을 순회 조회하는 Reader(TMDB 영화/TV, SportsDB 일별)가 공용으로 쓰는
+    // @BeforeStep에서 여러 건을 순회 조회하는 Reader(TMDB 영화/TV, SportsDB)가 공용으로 쓰는
     // 재시도 정책 (최대 2회 시도, 200ms 고정 백오프). @BeforeStep은 청크 단위 faultTolerant 재시도의
     // 보호 범위 밖이라, 한 건의 일시적 오류로 전체 수집이 실패해 이미 모은 데이터까지 유실되는 것을
     // 막기 위해 재시도해도 성공 가능성이 있는 오류만 재시도한다.

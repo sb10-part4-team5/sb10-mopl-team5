@@ -11,12 +11,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.retry.support.RetryTemplate;
 
 @Slf4j
 @RequiredArgsConstructor
 public class SportsDbEventItemReader implements ItemReader<SportsDbEventDto> {
 
     private final SportsDbApiClient sportsDbApiClient;
+    private final RetryTemplate retryTemplate;
 
     private final Queue<SportsDbEventDto> buffer = new LinkedList<>();
 
@@ -28,7 +30,8 @@ public class SportsDbEventItemReader implements ItemReader<SportsDbEventDto> {
             throw new IllegalArgumentException("leagueId, season 파라미터는 필수입니다.");
         }
 
-        SportsDbEventListResponse response = sportsDbApiClient.fetchEventsBySeason(leagueId, season);
+        SportsDbEventListResponse response = retryTemplate.execute(context ->
+                sportsDbApiClient.fetchEventsBySeason(leagueId, season));
 
         if (response == null || response.events() == null) {
             log.warn("[SportsDB] 수집된 경기 없음 - leagueId={}, season={}", leagueId, season);
