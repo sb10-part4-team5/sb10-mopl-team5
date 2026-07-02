@@ -7,8 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.content.client.tmdb.TmdbApiClient;
-import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbMovieDto;
-import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbMovieListResponse;
+import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbTvDto;
+import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbTvListResponse;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,25 +16,26 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.test.MetaDataInstanceFactory;
 
 @ExtendWith(MockitoExtension.class)
-class TmdbMovieItemReaderTest {
+class TmdbTvSeriesItemReaderTest {
 
     @Mock
     private TmdbApiClient tmdbApiClient;
 
-    private TmdbMovieItemReader reader;
+    private TmdbTvSeriesItemReader reader;
 
     @BeforeEach
     void setUp() {
-        reader = new TmdbMovieItemReader(tmdbApiClient);
+        reader = new TmdbTvSeriesItemReader(tmdbApiClient);
     }
 
     private StepExecution createStepExecution(String startPage, String endPage) {
         return MetaDataInstanceFactory.createStepExecution(
-                new org.springframework.batch.core.JobParametersBuilder()
+                new JobParametersBuilder()
                         .addString("startPage", startPage)
                         .addString("endPage", endPage)
                         .toJobParameters()
@@ -53,35 +54,35 @@ class TmdbMovieItemReaderTest {
     @Test
     @DisplayName("1페이지 데이터를 순서대로 읽는다")
     void read_returnsItemsInOrder() throws Exception {
-        TmdbMovieDto movie1 = new TmdbMovieDto(1L, "영화1", "Movie1", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
-        TmdbMovieDto movie2 = new TmdbMovieDto(2L, "영화2", "Movie2", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
-        given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(movie1, movie2), 1, 2));
+        TmdbTvDto tv1 = new TmdbTvDto(1L, "시리즈1", "Series1", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
+        TmdbTvDto tv2 = new TmdbTvDto(2L, "시리즈2", "Series2", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
+        given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(tv1, tv2), 1, 2));
 
         reader.beforeStep(createStepExecution("1", "1"));
 
-        assertThat(reader.read()).isEqualTo(movie1);
-        assertThat(reader.read()).isEqualTo(movie2);
+        assertThat(reader.read()).isEqualTo(tv1);
+        assertThat(reader.read()).isEqualTo(tv2);
         assertThat(reader.read()).isNull();
     }
 
     @Test
-    @DisplayName("title이 빈 영화는 필터링된다")
-    void read_emptyTitle_filtered() throws Exception {
-        TmdbMovieDto validMovie = new TmdbMovieDto(1L, "영화1", "Movie1", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
-        TmdbMovieDto emptyTitle = new TmdbMovieDto(2L, "", "NoTitle", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
-        given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(validMovie, emptyTitle), 1, 2));
+    @DisplayName("name이 빈 시리즈는 필터링된다")
+    void read_emptyName_filtered() throws Exception {
+        TmdbTvDto validTv = new TmdbTvDto(1L, "시리즈1", "Series1", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
+        TmdbTvDto emptyName = new TmdbTvDto(2L, "", "NoName", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
+        given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(validTv, emptyName), 1, 2));
 
         reader.beforeStep(createStepExecution("1", "1"));
 
-        assertThat(reader.read()).isEqualTo(validMovie);
+        assertThat(reader.read()).isEqualTo(validTv);
         assertThat(reader.read()).isNull();
     }
 
     @Test
     @DisplayName("endPage가 MAX_PAGE(500)를 초과하면 500으로 클램핑된다")
     void beforeStep_endPageExceedsMax_clampsTo500() throws Exception {
-        TmdbMovieDto movie = new TmdbMovieDto(1L, "영화", "Movie", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
-        given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(movie), 1, 1));
+        TmdbTvDto tv = new TmdbTvDto(1L, "시리즈", "Series", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
+        given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(tv), 1, 1));
 
         reader.beforeStep(createStepExecution("1", "9999"));
         reader.read();
@@ -92,12 +93,11 @@ class TmdbMovieItemReaderTest {
     @Test
     @DisplayName("응답 results가 비어있으면 totalPages와 무관하게 즉시 종료하고 이후 페이지는 호출하지 않는다")
     void read_emptyResults_stopsImmediatelyWithoutCallingLaterPages() throws Exception {
-        // totalPages를 크게 줘서, endPage 도달이 아니라 빈 results 자체 때문에 멈추는지 검증한다.
-        given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(), 500, 0));
+        given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(), 500, 0));
 
         reader.beforeStep(createStepExecution("1", "500"));
 
         assertThat(reader.read()).isNull();
-        verify(tmdbApiClient, never()).fetchMovies(2);
+        verify(tmdbApiClient, never()).fetchTvSeries(2);
     }
 }

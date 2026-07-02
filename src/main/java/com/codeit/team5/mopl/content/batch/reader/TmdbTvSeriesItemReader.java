@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.content.client.tmdb.TmdbApiClient;
 import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbTvDto;
 import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbTvListResponse;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class TmdbTvSeriesItemReader implements ItemReader<TmdbTvDto> {
     private int currentPage;
     private int endPage;
     private int totalPages = Integer.MAX_VALUE;
+    private boolean noMoreData = false;
     private final Queue<TmdbTvDto> buffer = new LinkedList<>();
 
     @BeforeStep
@@ -37,13 +39,14 @@ public class TmdbTvSeriesItemReader implements ItemReader<TmdbTvDto> {
         endPage = Math.min(Integer.parseInt(endPageParam), MAX_PAGE);
         buffer.clear();
         totalPages = Integer.MAX_VALUE;
+        noMoreData = false;
         log.info("[TMDB] TV 시리즈 수집 범위 설정 - {}~{}페이지", currentPage, endPage);
     }
 
     @Override
     public TmdbTvDto read() throws InterruptedException {
         while (buffer.isEmpty()) {
-            if (currentPage > Math.min(totalPages, endPage)) {
+            if (noMoreData || currentPage > Math.min(totalPages, endPage)) {
                 return null;
             }
             fetchNextPage();
@@ -55,7 +58,14 @@ public class TmdbTvSeriesItemReader implements ItemReader<TmdbTvDto> {
         TmdbTvListResponse response = tmdbApiClient.fetchTvSeries(currentPage);
         totalPages = response.totalPages();
 
-        response.results().stream()
+        List<TmdbTvDto> results = response.results();
+        if (results.isEmpty()) {
+            log.info("[TMDB] TV 시리즈 {}페이지 응답이 비어 있어 수집을 종료합니다 - 전체 {}페이지", currentPage, totalPages);
+            noMoreData = true;
+            return;
+        }
+
+        results.stream()
                 .filter(dto -> StringUtils.hasText(dto.name()))
                 .forEach(buffer::add);
 
