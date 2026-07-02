@@ -132,6 +132,7 @@ public class UserService {
         requestUser.updatePassword(encodedPassword);
 
         temporaryPasswordService.deleteByUserId(userId);
+        refreshTokenStore.deleteByUserId(userId);
 
         log.info("User password updated: userId={}", userId);
     }
