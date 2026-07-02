@@ -46,8 +46,8 @@ public class BatchConfig {
     private static final int RETRY_LIMIT = 3;
     private static final int TMDB_SKIP_LIMIT = 10;
     private static final int SPORTS_DB_SKIP_LIMIT = 3;
-    private static final int SPORTS_DB_DAY_FETCH_MAX_ATTEMPTS = 2;
-    private static final long SPORTS_DB_DAY_FETCH_BACKOFF_MS = 200;
+    private static final int EXTERNAL_FETCH_MAX_ATTEMPTS = 2;
+    private static final long EXTERNAL_FETCH_BACKOFF_MS = 200;
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
@@ -99,7 +99,7 @@ public class BatchConfig {
     @Bean
     @StepScope
     public TmdbMovieItemReader tmdbMovieItemReader() {
-        return new TmdbMovieItemReader(tmdbApiClient);
+        return new TmdbMovieItemReader(tmdbApiClient, externalFetchRetryTemplate());
     }
 
     @Bean
@@ -135,7 +135,7 @@ public class BatchConfig {
     @Bean
     @StepScope
     public TmdbTvSeriesItemReader tmdbTvSeriesItemReader() {
-        return new TmdbTvSeriesItemReader(tmdbApiClient);
+        return new TmdbTvSeriesItemReader(tmdbApiClient, externalFetchRetryTemplate());
     }
 
     @Bean
@@ -207,19 +207,20 @@ public class BatchConfig {
     @Bean
     @StepScope
     public SportsDbDayItemReader sportsDbDayItemReader() {
-        return new SportsDbDayItemReader(sportsDbApiClient, sportsDbDayFetchRetryTemplate());
+        return new SportsDbDayItemReader(sportsDbApiClient, externalFetchRetryTemplate());
     }
 
-    // 리그별 일별 경기 조회 실패 시 사용하는 재시도 정책 (최대 2회 시도, 200ms 고정 백오프).
-    // @BeforeStep에서 한 리그의 일시적 오류로 전체 Step이 실패해 이미 수집한 다른 리그
-    // 데이터까지 유실되는 것을 막지 않도록, 재시도해도 성공 가능성이 있는 오류만 재시도한다.
+    // @BeforeStep에서 여러 건을 순회 조회하는 Reader(TMDB 영화/TV, SportsDB 일별)가 공용으로 쓰는
+    // 재시도 정책 (최대 2회 시도, 200ms 고정 백오프). @BeforeStep은 청크 단위 faultTolerant 재시도의
+    // 보호 범위 밖이라, 한 건의 일시적 오류로 전체 수집이 실패해 이미 모은 데이터까지 유실되는 것을
+    // 막기 위해 재시도해도 성공 가능성이 있는 오류만 재시도한다.
     @Bean
-    public RetryTemplate sportsDbDayFetchRetryTemplate() {
+    public RetryTemplate externalFetchRetryTemplate() {
         RetryTemplate retryTemplate = new RetryTemplate();
-        retryTemplate.setRetryPolicy(new SelectiveRetryPolicy(SPORTS_DB_DAY_FETCH_MAX_ATTEMPTS));
+        retryTemplate.setRetryPolicy(new SelectiveRetryPolicy(EXTERNAL_FETCH_MAX_ATTEMPTS));
 
         FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
-        backOffPolicy.setBackOffPeriod(SPORTS_DB_DAY_FETCH_BACKOFF_MS);
+        backOffPolicy.setBackOffPeriod(EXTERNAL_FETCH_BACKOFF_MS);
         retryTemplate.setBackOffPolicy(backOffPolicy);
 
         return retryTemplate;

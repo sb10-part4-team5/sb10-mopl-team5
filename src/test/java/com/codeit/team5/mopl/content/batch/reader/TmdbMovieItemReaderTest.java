@@ -17,8 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.test.MetaDataInstanceFactory;
+import org.springframework.retry.support.RetryTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class TmdbMovieItemReaderTest {
@@ -30,12 +32,19 @@ class TmdbMovieItemReaderTest {
 
     @BeforeEach
     void setUp() {
-        reader = new TmdbMovieItemReader(tmdbApiClient);
+        // 운영 설정(BatchConfig)과 동일하게 최대 2회 시도하되, 테스트 속도를 위해
+        // 백오프(운영은 200ms)는 두지 않는다.
+        RetryTemplate retryTemplate = RetryTemplate.builder()
+                .maxAttempts(2)
+                .noBackoff()
+                .retryOn(Exception.class)
+                .build();
+        reader = new TmdbMovieItemReader(tmdbApiClient, retryTemplate);
     }
 
     private StepExecution createStepExecution(String startPage, String endPage) {
         return MetaDataInstanceFactory.createStepExecution(
-                new org.springframework.batch.core.JobParametersBuilder()
+                new JobParametersBuilder()
                         .addString("startPage", startPage)
                         .addString("endPage", endPage)
                         .toJobParameters()
@@ -60,9 +69,11 @@ class TmdbMovieItemReaderTest {
         TmdbMovieDto movie1 = new TmdbMovieDto(1L, "영화1", "Movie1", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
         TmdbMovieDto movie2 = new TmdbMovieDto(2L, "영화2", "Movie2", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
         given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(movie1, movie2), 1, 2));
+
+        // when
         reader.beforeStep(createStepExecution("1", "1"));
 
-        // when, then
+        // then
         assertThat(reader.read()).isEqualTo(movie1);
         assertThat(reader.read()).isEqualTo(movie2);
         assertThat(reader.read()).isNull();
@@ -75,9 +86,11 @@ class TmdbMovieItemReaderTest {
         TmdbMovieDto validMovie = new TmdbMovieDto(1L, "영화1", "Movie1", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
         TmdbMovieDto emptyTitle = new TmdbMovieDto(2L, "", "NoTitle", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
         given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(validMovie, emptyTitle), 1, 2));
+
+        // when
         reader.beforeStep(createStepExecution("1", "1"));
 
-        // when, then
+        // then
         assertThat(reader.read()).isEqualTo(validMovie);
         assertThat(reader.read()).isNull();
     }
@@ -87,11 +100,11 @@ class TmdbMovieItemReaderTest {
     void beforeStep_endPageExceedsMax_clampsTo500() throws Exception {
         // given
         // startPage를 501로 시작시켜, 클램핑된 endPage(500)를 즉시 넘어서는지로 검증한다.
-        // 클램핑이 없다면(endPage=9999 그대로) fetchMovies(501)이 호출되어 스텁되지 않은 응답으로 NPE가 발생한다.
 
-        // when, then
+        // when
         reader.beforeStep(createStepExecution("501", "9999"));
 
+        // then
         assertThat(reader.read()).isNull();
         verify(tmdbApiClient, never()).fetchMovies(anyInt());
     }
@@ -103,10 +116,43 @@ class TmdbMovieItemReaderTest {
         // totalPages를 크게 줘서, endPage 도달이 아니라 빈 results 자체 때문에 멈추는지 검증한다.
         given(tmdbApiClient.fetchMovies(1)).willReturn(new TmdbMovieListResponse(1, List.of(), 500, 0));
 
-        // when, then
+        // when
         reader.beforeStep(createStepExecution("1", "500"));
 
+        // then
         assertThat(reader.read()).isNull();
         verify(tmdbApiClient, never()).fetchMovies(2);
+    }
+
+    @Test
+    @DisplayName("페이지 조회가 첫 시도에 실패해도 재시도로 성공하면 데이터가 포함된다")
+    void beforeStep_pageFetchFailsOnce_retriesAndSucceeds() throws Exception {
+        // given
+        TmdbMovieDto movie = new TmdbMovieDto(1L, "영화", "Movie", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
+        given(tmdbApiClient.fetchMovies(1))
+                .willThrow(new RuntimeException("일시적 오류"))
+                .willReturn(new TmdbMovieListResponse(1, List.of(movie), 1, 1));
+
+        // when
+        reader.beforeStep(createStepExecution("1", "1"));
+
+        // then
+        assertThat(reader.read()).isEqualTo(movie);
+    }
+
+    @Test
+    @DisplayName("한 페이지가 재시도까지 모두 실패해도 다른 페이지 데이터는 유지된다")
+    void beforeStep_pageFetchFailsAfterRetries_otherPagesPreserved() throws Exception {
+        // given
+        TmdbMovieDto movie = new TmdbMovieDto(2L, "영화2", "Movie2", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
+        given(tmdbApiClient.fetchMovies(1)).willThrow(new RuntimeException("지속 오류"));
+        given(tmdbApiClient.fetchMovies(2)).willReturn(new TmdbMovieListResponse(2, List.of(movie), 2, 1));
+
+        // when
+        reader.beforeStep(createStepExecution("1", "2"));
+
+        // then
+        assertThat(reader.read()).isEqualTo(movie);
+        assertThat(reader.read()).isNull();
     }
 }
