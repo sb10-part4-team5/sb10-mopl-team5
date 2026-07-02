@@ -648,7 +648,7 @@ class UserControllerIntegrationTest {
 
     @Test
     @DisplayName("잠긴 사용자는 로그인할 수 없다")
-    void login_lockedUser_returnsUnauthorized() throws Exception {
+    void login_lockedUser_returnsForbidden() throws Exception {
         // Given
         SignInRequest request = saveLoginUser("locked-login@example.com", "password1", UserRole.USER, true);
 
@@ -658,9 +658,9 @@ class UserControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("username", request.username())
                         .param("password", request.password()))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.exceptionType").value("AccountLockedException"))
-                .andExpect(jsonPath("$.message").value("잠긴 계정입니다"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.exceptionType").value("ACCOUNT_LOCKED"))
+                .andExpect(jsonPath("$.message").value("잠긴 계정입니다."))
                 .andExpect(jsonPath("$.details").doesNotExist());
     }
 

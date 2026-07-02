@@ -21,6 +21,9 @@ import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
+import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
+import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
+import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
@@ -69,6 +72,15 @@ class NotificationControllerSliceTest {
 
     @MockitoBean
     private MoplAuthenticationProvider moplAuthenticationProvider;
+
+    @MockitoBean
+    private SignInSuccessHandler signInSuccessHandler;
+
+    @MockitoBean
+    private SignInFailureHandler signInFailureHandler;
+
+    @MockitoBean
+    private SignOutHandler signOutHandler;
 
     @MockitoBean
     private UserRepository userRepository;
