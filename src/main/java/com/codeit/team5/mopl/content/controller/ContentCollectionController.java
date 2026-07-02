@@ -108,7 +108,7 @@ public class ContentCollectionController implements ContentCollectionApi {
         } catch (JobExecutionAlreadyRunningException | JobRestartException |
                  JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
             log.error("[Controller] Job 실행 실패 - job={}, error={}", job.getName(), e.getMessage(), e);
-            throw new BatchJobLaunchException(job.getName());
+            throw new BatchJobLaunchException(job.getName(), e);
         }
     }
 }
