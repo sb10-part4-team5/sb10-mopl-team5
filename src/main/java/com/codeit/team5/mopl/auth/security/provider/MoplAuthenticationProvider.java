@@ -11,7 +11,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -45,10 +44,17 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
         boolean matchesPassword =
                 passwordEncoder.matches(rawPassword, userDetails.getPassword());
 
-        // 비밀번호가 틀렸는데 임시비밀번호도 아닌 경우
-        if (!matchesPassword
-                && !temporaryPasswordService.matches(userDetails.getId(), rawPassword)) {
+        boolean matchesTemporaryPassword =
+                !matchesPassword
+                        && temporaryPasswordService.matches(userDetails.getId(), rawPassword);
+
+        if (!matchesPassword && !matchesTemporaryPassword) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+
+        // 임시 비밀번호 인증 성공 시 재사용 방지를 위해 즉시 폐기
+        if (matchesTemporaryPassword) {
+            temporaryPasswordService.deleteByUserId(userDetails.getId());
         }
 
         return new UsernamePasswordAuthenticationToken(
