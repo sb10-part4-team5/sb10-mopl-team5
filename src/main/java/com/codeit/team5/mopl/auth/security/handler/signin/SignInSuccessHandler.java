@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.security.handler.signin;
 
+import com.codeit.team5.mopl.auth.support.ErrorResponder;
 import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
@@ -51,10 +52,13 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
 
-        MoplPrincipal userDetails = (MoplPrincipal) authentication.getPrincipal();
+        MoplPrincipal principal = (MoplPrincipal) authentication.getPrincipal();
 
-        User user = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UserNotFoundException(userDetails.getId()));
+        User user = findUserOrSendError(response, principal);
+        if (user == null) {
+            return;
+        }
+
         UserResponse userDto = userMapper.toDto(user);
 
         String accessToken = jwtTokenizer.generateAccessToken(
@@ -77,6 +81,18 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
         objectMapper.writeValue(response.getWriter(), jwtResponse);
+    }
+
+    private User findUserOrSendError(HttpServletResponse response, MoplPrincipal principal)
+            throws IOException {
+        try {
+            return userRepository.findById(principal.getId())
+                    .orElseThrow(() -> new UserNotFoundException(principal.getId()));
+        } catch (UserNotFoundException e) {
+            log.warn("Login success handler failed. userId={}", principal.getId(), e);
+            ErrorResponder.sendErrorResponse(response, e);
+            return null;
+        }
     }
 
     private Instant calculateExpiresAt() {
