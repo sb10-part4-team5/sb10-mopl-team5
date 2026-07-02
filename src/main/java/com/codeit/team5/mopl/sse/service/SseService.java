@@ -67,31 +67,46 @@ public class SseService {
         return emitter;
     }
 
+    // 미수신 이벤트 전달
     private void sendMissedEvents(SseEmitter emitter, UUID userId, String lastEventId) {
-        List<NotificationPayload> notifications = notificationService.findMissedNotifications(userId,UUID.fromString(lastEventId));
-        List<DirectMessagePayload> dms = notificationService.findMissedDirectMessages(userId, UUID.fromString(lastEventId));
+        UUID lastEventIdUuid;
+        // 마지막으로 수신 받았던 이벤트 ID가 형식에 어긋나면 예외 던짐
+        try {
+            lastEventIdUuid = UUID.fromString(lastEventId);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidLastEventIdException(lastEventId);
+        }
 
-        Stream.concat(notifications.stream(), dms.stream())
-            .sorted()
-            .forEach(payload -> {
-                SseEmitter.SseEventBuilder event;
+        List<NotificationPayload> notifications = notificationService.findMissedNotifications(userId, lastEventIdUuid);
+        List<DirectMessagePayload> dms = notificationService.findMissedDirectMessages(userId, lastEventIdUuid);
 
-                if(payload instanceof NotificationPayload notification) {
-                    event = SseEmitter.event()
-                        .id(notification.eventId().toString())
-                        .name("notification")
-                        .data(notification);
-                } else if (payload instanceof DirectMessagePayload dm){
-                    event = SseEmitter.event()
-                        .id(dm.eventId().toString())
-                        .name("direct-message")
-                        .data(dm);
-                } else {
-                    return;
-                }
+        // 알림/dm 페이로드를 concat한 뒤 payload가 순회
+        for (var payload : Stream.concat(notifications.stream(), dms.stream()).sorted().toList()) {
+            SseEmitter.SseEventBuilder event;
 
-                sseSender.send(userId, emitter, event);
-            });
+            // item이 알림 페이로드라면 알림 이벤트
+            if (payload instanceof NotificationPayload notification) {
+                event = SseEmitter.event()
+                    .id(notification.eventId().toString())
+                    .name("notifications")
+                    .data(notification);
+            }
+            // item이 dm 페이로드라면 direct-message 이벤트
+            else if (payload instanceof DirectMessagePayload dm) {
+                event = SseEmitter.event()
+                    .id(dm.eventId().toString())
+                    .name("direct-message")
+                    .data(dm);
+            } else {
+                continue;
+            }
+
+            // send가 실패하면 emitter 정리
+            if (!sseSender.send(userId, emitter, event)) {
+                emitter.complete();
+                return;
+            }
+        }
 
         log.debug("SSE 미수신 이벤트 전달: userId={}, notifications={}, dms={}",
                 userId, notifications.size(), dms.size());
