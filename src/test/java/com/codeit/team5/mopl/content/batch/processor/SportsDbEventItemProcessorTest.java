@@ -32,26 +32,32 @@ class SportsDbEventItemProcessorTest {
     @Test
     @DisplayName("이미 존재하는 경기면 null을 반환한다")
     void process_duplicate_returnsNull() throws Exception {
+        // given
         SportsDbEventDto dto = new SportsDbEventDto("123", "Arsenal vs Chelsea",
                 "https://thumb.jpg", "2024-12-26", "English Premier League",
                 "Soccer", "Arsenal", "Chelsea", "2", "1");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, "123")).willReturn(true);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNull();
     }
 
     @Test
     @DisplayName("새로운 경기면 ContentWithMetaData를 반환한다")
     void process_newEvent_returnsContentWithMetaData() throws Exception {
+        // given
         SportsDbEventDto dto = new SportsDbEventDto("123", "Arsenal vs Chelsea",
                 "https://thumb.jpg", "2024-12-26", "English Premier League",
                 "Soccer", "Arsenal", "Chelsea", "2", "1");
         given(contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, "123")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.content().getTitle()).isEqualTo("Arsenal vs Chelsea");
         assertThat(result.content().getType()).isEqualTo(ContentType.SPORT);
@@ -62,13 +68,16 @@ class SportsDbEventItemProcessorTest {
     @Test
     @DisplayName("리그명이 소문자로 정규화되어 tagNames에 포함된다")
     void process_leagueName_normalizedToLowerCase() throws Exception {
+        // given
         SportsDbEventDto dto = new SportsDbEventDto("456", "Arsenal vs Chelsea",
                 null, "2024-12-26", "English Premier League",
                 "Soccer", "Arsenal", "Chelsea", null, null);
         given(contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, "456")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.tagNames()).containsExactly("english premier league");
     }
@@ -76,13 +85,16 @@ class SportsDbEventItemProcessorTest {
     @Test
     @DisplayName("스코어가 없으면 description에 vs가 포함된다")
     void process_noScore_descriptionContainsVs() throws Exception {
+        // given
         SportsDbEventDto dto = new SportsDbEventDto("789", "Arsenal vs Chelsea",
                 null, "2024-12-26", "English Premier League",
                 "Soccer", "Arsenal", "Chelsea", null, null);
         given(contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, "789")).willReturn(false);
 
+        // when
         ContentWithMetaData result = processor.process(dto);
 
+        // then
         assertThat(result).isNotNull();
         assertThat(result.content().getDescription()).contains("vs");
     }
