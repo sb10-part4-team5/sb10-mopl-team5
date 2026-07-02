@@ -17,7 +17,8 @@ import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
 import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.exception.SelfConversationException;
-import com.codeit.team5.mopl.dm.mapper.DmMapper;
+import com.codeit.team5.mopl.dm.mapper.ConversationMapper;
+import com.codeit.team5.mopl.dm.mapper.DirectMessageMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -56,7 +57,10 @@ class ConversationServiceTest {
     private UserMapper userMapper;
 
     @Mock
-    private DmMapper dmMapper;
+    private DirectMessageMapper directMessageMapper;
+
+    @Mock
+    private ConversationMapper conversationMapper;
 
     @InjectMocks
     private ConversationService conversationService;
@@ -93,7 +97,7 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findLatestMessagesByConversationIds(any())).thenReturn(List.of());
         when(directMessageRepository.findConversationIdsWithUnread(any(), any())).thenReturn(List.of());
-        when(dmMapper.toConversationCursor(anyList(), eq(c2), eq(true), eq(Direction.DESC)))
+        when(conversationMapper.toCursor(anyList(), eq(c2), eq(true), eq(Direction.DESC)))
                 .thenReturn(expected);
 
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
@@ -104,7 +108,7 @@ class ConversationServiceTest {
         // then: 페이지(2건)와 마지막 커서(c2)를 mapper에 위임
         assertThat(result).isSameAs(expected);
         ArgumentCaptor<List<ConversationResponse>> dataCaptor = ArgumentCaptor.forClass(List.class);
-        verify(dmMapper).toConversationCursor(dataCaptor.capture(), eq(c2), eq(true), eq(Direction.DESC));
+        verify(conversationMapper).toCursor(dataCaptor.capture(), eq(c2), eq(true), eq(Direction.DESC));
         assertThat(dataCaptor.getValue()).hasSize(2);
     }
 
@@ -125,7 +129,7 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findLatestMessagesByConversationIds(any())).thenReturn(List.of());
         when(directMessageRepository.findConversationIdsWithUnread(any(), any())).thenReturn(List.of());
-        when(dmMapper.toConversationCursor(anyList(), eq(c1), eq(false), eq(Direction.DESC)))
+        when(conversationMapper.toCursor(anyList(), eq(c1), eq(false), eq(Direction.DESC)))
                 .thenReturn(expected);
 
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
@@ -135,7 +139,7 @@ class ConversationServiceTest {
 
         // then: 마지막 페이지 → hasNext=false, last=c1 로 mapper 위임
         assertThat(result).isSameAs(expected);
-        verify(dmMapper).toConversationCursor(anyList(), eq(c1), eq(false), eq(Direction.DESC));
+        verify(conversationMapper).toCursor(anyList(), eq(c1), eq(false), eq(Direction.DESC));
     }
 
     @Test

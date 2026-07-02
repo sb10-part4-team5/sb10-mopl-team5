@@ -7,7 +7,7 @@ import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
 import com.codeit.team5.mopl.dm.exception.DirectMessageNotFoundException;
-import com.codeit.team5.mopl.dm.mapper.DmMapper;
+import com.codeit.team5.mopl.dm.mapper.DirectMessageMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -39,7 +39,7 @@ public class DirectMessageService {
     private final DirectMessageRepository directMessageRepository;
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
-    private final DmMapper dmMapper;
+    private final DirectMessageMapper directMessageMapper;
     private final WebSocketSessionStore webSocketSessionStore;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -54,7 +54,7 @@ public class DirectMessageService {
 
         DirectMessage directMessage = DirectMessage.create(conversation, sender, content);
         DirectMessage message = directMessageRepository.save(directMessage);
-        DirectMessageResponse response = dmMapper.toResponse(message);
+        DirectMessageResponse response = directMessageMapper.toResponse(message);
 
         eventPublisher.publishEvent(new DirectMessageBroadcastEvent(response));
 
@@ -88,7 +88,7 @@ public class DirectMessageService {
                 cursorSort(isAsc)
         );
 
-        return dmMapper.toDirectMessageCursor(window, request.sortDirection());
+        return directMessageMapper.toCursor(window, request.sortDirection());
     }
 
     private ScrollPosition toScrollPosition(DirectMessageCursorRequest request) {

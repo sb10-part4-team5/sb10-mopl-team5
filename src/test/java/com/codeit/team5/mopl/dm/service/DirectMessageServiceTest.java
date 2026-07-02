@@ -19,7 +19,7 @@ import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
 import com.codeit.team5.mopl.dm.exception.DirectMessageNotFoundException;
 import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
-import com.codeit.team5.mopl.dm.mapper.DmMapper;
+import com.codeit.team5.mopl.dm.mapper.DirectMessageMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -58,7 +58,7 @@ class DirectMessageServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private DmMapper dmMapper;
+    private DirectMessageMapper directMessageMapper;
 
     @Mock
     private WebSocketSessionStore webSocketSessionStore;
@@ -89,7 +89,7 @@ class DirectMessageServiceTest {
         when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(sender));
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.save(any(DirectMessage.class))).then(returnsFirstArg());
-        when(dmMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
+        when(directMessageMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
         when(webSocketSessionStore.isSubscribed(any(), any())).thenReturn(false);
 
         // when
@@ -116,7 +116,7 @@ class DirectMessageServiceTest {
         when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(sender));
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.save(any(DirectMessage.class))).then(returnsFirstArg());
-        when(dmMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
+        when(directMessageMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
         when(webSocketSessionStore.isSubscribed(any(), any())).thenReturn(true);
 
         // when
@@ -180,7 +180,7 @@ class DirectMessageServiceTest {
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.findByConversationId(eq(conversationId), any(ScrollPosition.class),
                 any(Limit.class), any(Sort.class))).thenReturn(window);
-        when(dmMapper.toDirectMessageCursor(eq(window), eq(Direction.DESC)))
+        when(directMessageMapper.toCursor(eq(window), eq(Direction.DESC)))
                 .thenReturn(cursorResponse);
 
         DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);

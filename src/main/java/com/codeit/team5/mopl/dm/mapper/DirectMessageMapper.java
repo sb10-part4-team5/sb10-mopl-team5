@@ -1,8 +1,6 @@
 package com.codeit.team5.mopl.dm.mapper;
 
-import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
@@ -18,12 +16,12 @@ import org.springframework.data.domain.Window;
         unmappedTargetPolicy = ReportingPolicy.ERROR,
         uses = UserMapper.class
 )
-public interface DmMapper {
+public interface DirectMessageMapper {
 
     @Mapping(target = "conversationId", source = "conversation.id")
     DirectMessageResponse toResponse(DirectMessage message);
 
-    default CursorResponse<DirectMessageResponse> toDirectMessageCursor(
+    default CursorResponse<DirectMessageResponse> toCursor(
             Window<DirectMessage> window,
             Direction sortDirection
     ) {
@@ -31,26 +29,6 @@ public interface DmMapper {
         List<DirectMessageResponse> data = content.stream().map(this::toResponse).toList();
         DirectMessage last = content.isEmpty() ? null : content.get(content.size() - 1);
         boolean hasNext = window.hasNext();
-        String nextCursor = null;
-        String nextIdAfter = null;
-        if (hasNext && last != null) {
-            nextCursor = last.getCreatedAt().toString();
-            nextIdAfter = last.getId().toString();
-        }
-        String direction = sortDirection == Direction.ASC ? "ASCENDING" : "DESCENDING";
-        return new CursorResponse<>(
-                data,
-                nextCursor,
-                nextIdAfter,
-                hasNext,
-                0L,
-                "createdAt",
-                direction
-        );
-    }
-
-    default CursorResponse<ConversationResponse> toConversationCursor(List<ConversationResponse> data,
-            Conversation last, boolean hasNext, Direction sortDirection) {
         String nextCursor = null;
         String nextIdAfter = null;
         if (hasNext && last != null) {

@@ -5,7 +5,8 @@ import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
-import com.codeit.team5.mopl.dm.mapper.DmMapper;
+import com.codeit.team5.mopl.dm.mapper.ConversationMapper;
+import com.codeit.team5.mopl.dm.mapper.DirectMessageMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -35,7 +36,8 @@ public class ConversationService {
     private final DirectMessageRepository directMessageRepository;
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-    private final DmMapper dmMapper;
+    private final DirectMessageMapper directMessageMapper;
+    private final ConversationMapper conversationMapper;
 
     @Transactional
     public ConversationResponse getOrCreateConversation(UUID currentUserId, UUID otherParticipantId) {
@@ -68,7 +70,7 @@ public class ConversationService {
         List<ConversationResponse> data = toConversationResponses(page, currentUser);
         Conversation last = page.isEmpty() ? null : page.get(page.size() - 1);
 
-        return dmMapper.toConversationCursor(data, last, hasNext, request.sortDirection());
+        return conversationMapper.toCursor(data, last, hasNext, request.sortDirection());
     }
 
     public ConversationResponse getConversationWith(UUID currentUserId, UUID withUserId) {
@@ -110,7 +112,7 @@ public class ConversationService {
         UserSummaryResponse with = userMapper.toSummaryResponse(conversation.getOtherParticipant(currentUser));
         DirectMessageResponse latestMessage = directMessageRepository
                 .findTopByConversationIdOrderByCreatedAtDescIdDesc(conversation.getId())
-                .map(dmMapper::toResponse)
+                .map(directMessageMapper::toResponse)
                 .orElse(null);
         boolean hasUnread = directMessageRepository
                 .existsByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), currentUser.getId());
@@ -127,7 +129,7 @@ public class ConversationService {
         return directMessageRepository.findLatestMessagesByConversationIds(conversationIds).stream()
                 .collect(Collectors.toMap(
                         message -> message.getConversation().getId(),
-                        dmMapper::toResponse,
+                        directMessageMapper::toResponse,
                         (existing, ignored) -> existing
                 ));
     }
