@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.playlist.service;
 
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.playlist.constant.PlaylistSortBy;
+import com.codeit.team5.mopl.playlist.dto.PlaylistContentsDto;
 import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
@@ -15,12 +15,8 @@ import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.ScrollPosition;
-import org.springframework.data.domain.ScrollPosition.Direction;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,7 +38,9 @@ public class PlaylistService {
     }
 
     public PlaylistResponse find(UUID id) {
-        return mapper.toDto(findById(id));
+        PlaylistContentsDto dto = repository.findByIdWithContents(id)
+                .orElseThrow(() -> new PlaylistNotFoundException(id));
+        return mapper.toDto(dto);
     }
 
     @Transactional
@@ -61,15 +59,15 @@ public class PlaylistService {
     }
 
     public CursorResponse<PlaylistResponse> findByCursor(PlaylistCursorCommand dto) {
-        List<Playlist> playlists = repository.findByCursor(dto);
+        List<PlaylistContentsDto> playlists = repository.findByCursor(dto);
         boolean hasNext = playlists.size() > dto.limit();
-        List<Playlist> data = hasNext ? playlists.subList(0, dto.limit()) : playlists;
+        List<PlaylistContentsDto> data = hasNext ? playlists.subList(0, dto.limit()) : playlists;
         long totalCount = repository.countByCommand(dto);
         return mapper.toCursorResponse(data, dto, hasNext, totalCount);
     }
 
     private Playlist findById(UUID id) {
-        return repository.findOwnerById(id).orElseThrow(() -> new PlaylistNotFoundException(id));
+        return repository.findById(id).orElseThrow(() -> new PlaylistNotFoundException(id));
     }
 
     private void validateOwner(UUID id, String email) {

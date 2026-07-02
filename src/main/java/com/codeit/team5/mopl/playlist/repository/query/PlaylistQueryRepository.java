@@ -1,12 +1,16 @@
 package com.codeit.team5.mopl.playlist.repository.query;
 
-import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
-import com.codeit.team5.mopl.playlist.entity.Playlist;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import com.codeit.team5.mopl.playlist.dto.PlaylistContentsDto;
+import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
 
 public interface PlaylistQueryRepository {
 
-    List<Playlist> findByCursor(PlaylistCursorCommand request);
+    Optional<PlaylistContentsDto> findByIdWithContents(UUID id);
+
+    List<PlaylistContentsDto> findByCursor(PlaylistCursorCommand request);
 
     long countByCommand(PlaylistCursorCommand request);
 }

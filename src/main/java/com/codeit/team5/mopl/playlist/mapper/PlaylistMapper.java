@@ -15,13 +15,19 @@ import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
 import com.codeit.team5.mopl.playlist.entity.Playlist;
 import com.codeit.team5.mopl.user.mapper.UserSummaryMapper;
 
-@Mapper(config = GlobalMapperConfig.class, uses = {UserSummaryMapper.class})
+import com.codeit.team5.mopl.content.mapper.ContentMapper;
+import com.codeit.team5.mopl.playlist.dto.PlaylistContentsDto;
+
+@Mapper(config = GlobalMapperConfig.class, uses = {UserSummaryMapper.class, ContentMapper.class})
 public interface PlaylistMapper {
+
+    @Mapping(target = ".", source = "playlist")
+    PlaylistResponse toDto(PlaylistContentsDto dto);
 
     PlaylistResponse toDto(Playlist playlist);
 
     @IterableMapping(nullValueMappingStrategy = NullValueMappingStrategy.RETURN_DEFAULT)
-    List<PlaylistResponse> toDto(List<Playlist> playlists);
+    List<PlaylistResponse> toDto(List<PlaylistContentsDto> playlists);
 
     @Mapping(target = "sortBy", source = "sortBy", qualifiedByName = "toSortBy")
     @Mapping(target = "cursor", source = "request", qualifiedByName = "toCursor")
@@ -40,12 +46,12 @@ public interface PlaylistMapper {
         return PlaylistSortBy.from(sortBy);
     }
 
-    default CursorResponse<PlaylistResponse> toCursorResponse(List<Playlist> data,
+    default CursorResponse<PlaylistResponse> toCursorResponse(List<PlaylistContentsDto> data,
             PlaylistCursorCommand dto, boolean hasNext, long totalCount) {
         String nextCursor = null;
         String nextIdAfter = null;
         if (!data.isEmpty()) {
-            Playlist last = data.get(data.size() - 1);
+            Playlist last = data.get(data.size() - 1).playlist();
             nextIdAfter = last.getId().toString();
             nextCursor = switch (dto.sortBy()) {
                 case UPDATED_AT -> last.getUpdatedAt().toString();
