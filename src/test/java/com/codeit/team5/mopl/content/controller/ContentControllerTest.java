@@ -76,7 +76,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("정상적인 콘텐츠 생성 요청이면 생성된 콘텐츠와 201 응답을 반환한다")
     void postContent_success() throws Exception {
-        // Given
+        // given
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.MOVIE,
                 "테스트 영화",
@@ -108,7 +108,7 @@ class ContentControllerTest {
                 new byte[]{1, 2, 3}
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart("/api/contents")
                         .file(requestPart)
                         .file(thumbnailPart))
@@ -138,7 +138,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("thumbnail 없이 콘텐츠 생성 요청이면 201 응답을 반환한다")
     void postContent_withoutThumbnail_success() throws Exception {
-        // Given
+        // given
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.TV_SERIES,
                 "테스트 드라마",
@@ -162,7 +162,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart("/api/contents")
                         .file(requestPart))
                 .andExpect(status().isCreated())
@@ -185,7 +185,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("콘텐츠 타입이 누락되면 400 검증 실패 응답을 반환한다")
     void postContent_missingType_returnsBadRequest() throws Exception {
-        // Given
+        // given
         String requestJson = """
                 {
                   "title": "테스트 영화",
@@ -196,7 +196,7 @@ class ContentControllerTest {
                 "request", "", MediaType.APPLICATION_JSON_VALUE, requestJson.getBytes(StandardCharsets.UTF_8)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart("/api/contents")
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
@@ -210,7 +210,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("제목이 공백이면 400 검증 실패 응답을 반환한다")
     void postContent_blankTitle_returnsBadRequest() throws Exception {
-        // Given
+        // given
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.MOVIE,
                 "   ",
@@ -222,7 +222,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart("/api/contents")
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
@@ -236,7 +236,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("태그 목록이 비어있으면 400 검증 실패 응답을 반환한다")
     void postContent_emptyTags_returnsBadRequest() throws Exception {
-        // Given
+        // given
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.MOVIE,
                 "테스트 영화",
@@ -248,7 +248,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart("/api/contents")
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
@@ -262,7 +262,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("예상하지 못한 서비스 예외가 발생하면 500 오류 응답을 반환한다")
     void postContent_unexpectedException_returnsInternalServerError() throws Exception {
-        // Given
+        // given
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.MOVIE,
                 "테스트 영화",
@@ -277,7 +277,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart("/api/contents")
                         .file(requestPart))
                 .andExpect(status().isInternalServerError())
@@ -289,7 +289,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("정상적인 콘텐츠 수정 요청이면 수정된 콘텐츠와 200 응답을 반환한다")
     void patchContent_success() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         ContentUpdateRequest request = new ContentUpdateRequest(
                 "수정된 영화",
@@ -318,7 +318,7 @@ class ContentControllerTest {
                 new byte[]{4, 5, 6}
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart)
                         .file(thumbnailPart))
@@ -345,7 +345,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("thumbnail 없이 콘텐츠 수정 요청이면 200 응답을 반환한다")
     void patchContent_withoutThumbnail_success() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         ContentUpdateRequest request = new ContentUpdateRequest(
                 "수정된 드라마",
@@ -370,7 +370,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart))
                 .andExpect(status().isOk())
@@ -384,7 +384,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("제목이 공백이면 400 검증 실패 응답을 반환한다")
     void patchContent_blankTitle_returnsBadRequest() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         ContentUpdateRequest request = new ContentUpdateRequest("   ", null, List.of("액션"));
         MockMultipartFile requestPart = new MockMultipartFile(
@@ -392,7 +392,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
@@ -406,7 +406,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("태그가 null이면 400 검증 실패 응답을 반환한다")
     void patchContent_nullTags_returnsBadRequest() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         String requestJson = """
                 {
@@ -417,7 +417,7 @@ class ContentControllerTest {
                 "request", "", MediaType.APPLICATION_JSON_VALUE, requestJson.getBytes(StandardCharsets.UTF_8)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
@@ -431,7 +431,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("태그 목록이 비어있으면 400 검증 실패 응답을 반환한다")
     void patchContent_emptyTags_returnsBadRequest() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of());
         MockMultipartFile requestPart = new MockMultipartFile(
@@ -439,7 +439,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
@@ -453,7 +453,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("태그 항목이 공백이면 400 검증 실패 응답을 반환한다")
     void patchContent_blankTagItem_returnsBadRequest() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("  "));
         MockMultipartFile requestPart = new MockMultipartFile(
@@ -461,7 +461,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart))
                 .andExpect(status().isBadRequest())
@@ -475,7 +475,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("존재하지 않는 콘텐츠 수정 요청이면 404 응답을 반환한다")
     void patchContent_notFound_returnsNotFound() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("액션"));
         given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
@@ -486,7 +486,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart))
                 .andExpect(status().isNotFound())
@@ -499,7 +499,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("예상하지 못한 서비스 예외가 발생하면 500 오류 응답을 반환한다")
     void patchContent_unexpectedException_returnsInternalServerError() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("액션"));
         given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
@@ -510,7 +510,7 @@ class ContentControllerTest {
                 objectMapper.writeValueAsBytes(request)
         );
 
-        // When & Then
+        // when, then
         mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{contentId}", contentId)
                         .file(requestPart))
                 .andExpect(status().isInternalServerError())
@@ -522,7 +522,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("존재하는 콘텐츠 ID로 조회하면 콘텐츠와 200 응답을 반환한다")
     void getContent_success() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         ContentResponse response = new ContentResponse(
                 contentId,
@@ -536,7 +536,7 @@ class ContentControllerTest {
 
         given(contentService.findById(contentId)).willReturn(response);
 
-        // When & Then
+        // when, then
         mockMvc.perform(get("/api/contents/{contentId}", contentId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(contentId.toString()))
@@ -556,11 +556,11 @@ class ContentControllerTest {
     @Test
     @DisplayName("존재하지 않는 콘텐츠 ID로 조회하면 404 응답을 반환한다")
     void getContent_notFound_returnsNotFound() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         given(contentService.findById(contentId)).willThrow(new ContentNotFoundException(contentId));
 
-        // When & Then
+        // when, then
         mockMvc.perform(get("/api/contents/{contentId}", contentId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.exceptionType").value("ContentNotFoundException"))
@@ -572,11 +572,11 @@ class ContentControllerTest {
     @Test
     @DisplayName("단건 조회 중 예상하지 못한 예외가 발생하면 500 응답을 반환한다")
     void getContent_unexpectedException_returnsInternalServerError() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         given(contentService.findById(contentId)).willThrow(new IllegalStateException("unexpected"));
 
-        // When & Then
+        // when, then
         mockMvc.perform(get("/api/contents/{contentId}", contentId))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))
@@ -587,7 +587,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("필수 파라미터만으로 콘텐츠 목록을 조회하면 200 응답을 반환한다")
     void getContents_success() throws Exception {
-        // Given
+        // given
         ContentResponse item = new ContentResponse(
                 UUID.randomUUID(),
                 ContentType.MOVIE,
@@ -605,7 +605,7 @@ class ContentControllerTest {
 
         given(contentService.findContents(any(ContentCursorRequest.class))).willReturn(response);
 
-        // When & Then
+        // when, then
         mockMvc.perform(get("/api/contents")
                         .param("limit", "20")
                         .param("sortDirection", "DESCENDING")
@@ -624,7 +624,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("모든 필터 파라미터를 포함한 콘텐츠 목록 조회 시 200 응답을 반환한다")
     void getContents_withAllFilters_success() throws Exception {
-        // Given
+        // given
         CursorResponse<ContentResponse> response = new CursorResponse<>(
                 List.of(), null, null, false, 0L, "createdAt", "DESCENDING"
         );
@@ -634,7 +634,7 @@ class ContentControllerTest {
         ArgumentCaptor<ContentCursorRequest> requestCaptor =
                 ArgumentCaptor.forClass(ContentCursorRequest.class);
 
-        // When & Then
+        // when, then
         mockMvc.perform(get("/api/contents")
                         .param("typeEqual", "movie")
                         .param("keywordLike", "어벤져스")
@@ -655,7 +655,7 @@ class ContentControllerTest {
     @Test
     @DisplayName("limit이 누락되면 400 응답을 반환한다")
     void getContents_missingLimit_returnsBadRequest() throws Exception {
-        // When & Then
+        // when, then
         mockMvc.perform(get("/api/contents")
                         .param("sortDirection", "DESCENDING")
                         .param("sortBy", "createdAt"))
@@ -667,11 +667,11 @@ class ContentControllerTest {
     @Test
     @DisplayName("목록 조회 중 예상하지 못한 예외가 발생하면 500 응답을 반환한다")
     void getContents_unexpectedException_returnsInternalServerError() throws Exception {
-        // Given
+        // given
         given(contentService.findContents(any(ContentCursorRequest.class)))
                 .willThrow(new IllegalStateException("unexpected"));
 
-        // When & Then
+        // when, then
         mockMvc.perform(get("/api/contents")
                         .param("limit", "20")
                         .param("sortDirection", "DESCENDING")
@@ -685,11 +685,11 @@ class ContentControllerTest {
     @Test
     @DisplayName("정상적인 콘텐츠 삭제 요청이면 204 응답을 반환한다")
     void deleteContent_success() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         doNothing().when(contentService).delete(contentId);
 
-        // When & Then
+        // when, then
         mockMvc.perform(delete("/api/contents/{contentId}", contentId))
                 .andExpect(status().isNoContent());
 
@@ -699,11 +699,11 @@ class ContentControllerTest {
     @Test
     @DisplayName("존재하지 않는 콘텐츠 삭제 요청이면 404 응답을 반환한다")
     void deleteContent_notFound_returnsNotFound() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         doThrow(new ContentNotFoundException(contentId)).when(contentService).delete(contentId);
 
-        // When & Then
+        // when, then
         mockMvc.perform(delete("/api/contents/{contentId}", contentId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.exceptionType").value("ContentNotFoundException"))
@@ -715,11 +715,11 @@ class ContentControllerTest {
     @Test
     @DisplayName("삭제 중 예상하지 못한 예외가 발생하면 500 오류 응답을 반환한다")
     void deleteContent_unexpectedException_returnsInternalServerError() throws Exception {
-        // Given
+        // given
         UUID contentId = UUID.randomUUID();
         doThrow(new IllegalStateException("unexpected")).when(contentService).delete(contentId);
 
-        // When & Then
+        // when, then
         mockMvc.perform(delete("/api/contents/{contentId}", contentId))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.exceptionType").value("INTERNAL_SERVER_ERROR"))

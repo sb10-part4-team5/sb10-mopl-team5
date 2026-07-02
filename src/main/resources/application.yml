@@ -3,6 +3,9 @@ spring:
     name: mopl
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  batch:
+    job:
+      enabled: false
   jpa:
     open-in-view: false
     hibernate:
@@ -51,6 +54,8 @@ mopl:
 tmdb:
   access-token: ${TMDB_ACCESS_TOKEN}
   base-url: https://api.themoviedb.org/3
+  batch:
+    daily-end-page: 5
 
 sports-db:
   api-key: ${SPORTS_DB_API_KEY}
