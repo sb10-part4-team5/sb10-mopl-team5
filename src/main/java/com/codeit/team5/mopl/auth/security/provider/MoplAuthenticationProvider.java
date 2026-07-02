@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.security.provider;
 
+import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
@@ -33,12 +34,12 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
         }
         String rawPassword = credentials.toString();
 
-        MoplUserDetails userDetails =
-                (MoplUserDetails) userDetailsService.loadUserByUsername(email);
+        MoplUserDetails userDetails;
 
-        if (!userDetails.isAccountNonLocked()) {
-            log.warn("Login failed - Account is locked: id={}", userDetails.getId());
-            throw new LockedException("잠긴 계정입니다.");
+        try {
+            userDetails = (MoplUserDetails) userDetailsService.loadUserByUsername(email);
+        } catch (InvalidCredentialsException e) {
+            throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.", e);
         }
 
         boolean matchesPassword =
