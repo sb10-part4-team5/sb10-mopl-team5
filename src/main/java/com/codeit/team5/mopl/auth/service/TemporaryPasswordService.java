@@ -25,8 +25,6 @@ public class TemporaryPasswordService {
 
     @Transactional
     public String issue(User user) {
-        temporaryPasswordRepository.deleteByUserId(user.getId());
-
         String rawPassword = temporaryPasswordGenerator.generate();
         String passwordHash = passwordEncoder.encode(rawPassword);
 
