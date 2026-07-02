@@ -49,6 +49,9 @@ dependencies {
     runtimeOnly	'io.jsonwebtoken:jjwt-jackson:0.11.5'
     // Email 전송을 위한 라이브러리
     implementation "org.springframework.boot:spring-boot-starter-mail"
+    // Spring Retry
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework:spring-aspects'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
     runtimeOnly 'org.postgresql:postgresql'

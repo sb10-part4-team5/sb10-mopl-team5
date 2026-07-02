@@ -49,17 +49,13 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
         boolean matchesPassword =
                 passwordEncoder.matches(rawPassword, userDetails.getPassword());
 
+        // 임시 비밀번호 일치시 인증 후 바로 폐기
         boolean matchesTemporaryPassword =
                 !matchesPassword
-                        && temporaryPasswordService.matches(userDetails.getId(), rawPassword);
+                        && temporaryPasswordService.matchesAndDelete(userDetails.getId(), rawPassword);
 
         if (!matchesPassword && !matchesTemporaryPassword) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
-        }
-
-        // 임시 비밀번호 인증 성공 시 재사용 방지를 위해 즉시 폐기
-        if (matchesTemporaryPassword) {
-            temporaryPasswordService.deleteByUserId(userDetails.getId());
         }
 
         return new UsernamePasswordAuthenticationToken(

@@ -43,16 +43,21 @@ public class TemporaryPasswordService {
         return rawPassword;
     }
 
-    public boolean matches(UUID userId, String rawPassword) {
+    @Transactional
+    public boolean matchesAndDelete(UUID userId, String rawPassword) {
         if (rawPassword == null || rawPassword.isBlank()) {
             return false;
         }
 
-        return temporaryPasswordRepository.findByUserId(userId)
+        return temporaryPasswordRepository.findByUserIdForUpdate(userId)
                 .filter(temporaryPassword -> temporaryPassword.isValidAt(Instant.now()))
-                .map(temporaryPassword ->
+                .filter(temporaryPassword ->
                         passwordEncoder.matches(rawPassword, temporaryPassword.getPasswordHash())
                 )
+                .map(temporaryPassword -> {
+                    temporaryPasswordRepository.delete(temporaryPassword);
+                    return true;
+                })
                 .orElse(false);
     }
 

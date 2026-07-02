@@ -16,19 +16,14 @@ public class MailService {
     private final JavaMailSender mailSender;
 
     public void send(MailMessage request) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(request.emailAddr());
-            message.setSubject(request.subject());
-            message.setText(request.content());
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(request.emailAddr());
+        message.setSubject(request.subject());
+        message.setText(request.content());
 
-            mailSender.send(message);
+        mailSender.send(message);
 
-            log.info("Email sent successfully");
-        } catch (MailException e) {
-            log.warn("Email send failed", e);
-            throw e;
-        }
+        log.info("Email sent successfully");
     }
 
     public void sendTemporaryPassword(String email, String temporaryPassword) {
