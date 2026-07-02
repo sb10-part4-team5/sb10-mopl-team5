@@ -19,6 +19,7 @@ public class PasswordResetService {
 
     private final UserRepository userRepository;
     private final TemporaryPasswordService temporaryPasswordService;
+    private final MailService mailService;
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
@@ -28,7 +29,7 @@ public class PasswordResetService {
 
         String tempPassword = temporaryPasswordService.issue(user);
 
-        // mailService.sendTemporaryPassword(user.getEmail(), tempPassword);
+         mailService.sendTemporaryPassword(user.getEmail(), tempPassword);
     }
 
     private String normalizeEmail(String email) {
