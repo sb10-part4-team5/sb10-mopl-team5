@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.content.batch.reader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -79,15 +80,14 @@ class TmdbTvSeriesItemReaderTest {
     }
 
     @Test
-    @DisplayName("endPage가 MAX_PAGE(500)를 초과하면 500으로 클램핑된다")
+    @DisplayName("endPage가 MAX_PAGE(500)를 초과하면 500으로 클램핑되어 501페이지부터는 API를 호출하지 않는다")
     void beforeStep_endPageExceedsMax_clampsTo500() throws Exception {
-        TmdbTvDto tv = new TmdbTvDto(1L, "시리즈", "Series", "desc", null, List.of(), "2024-01-01", 7.0, "ko");
-        given(tmdbApiClient.fetchTvSeries(1)).willReturn(new TmdbTvListResponse(1, List.of(tv), 1, 1));
-
-        reader.beforeStep(createStepExecution("1", "9999"));
-        reader.read();
+        // startPage를 501로 시작시켜, 클램핑된 endPage(500)를 즉시 넘어서는지로 검증한다.
+        // 클램핑이 없다면(endPage=9999 그대로) fetchTvSeries(501)이 호출되어 스텁되지 않은 응답으로 NPE가 발생한다.
+        reader.beforeStep(createStepExecution("501", "9999"));
 
         assertThat(reader.read()).isNull();
+        verify(tmdbApiClient, never()).fetchTvSeries(anyInt());
     }
 
     @Test
