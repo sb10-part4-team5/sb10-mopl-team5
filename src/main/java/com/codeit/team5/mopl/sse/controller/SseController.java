@@ -46,8 +46,11 @@ public class SseController implements SseApi {
         // SseEmitter 객체 생성
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
-        // 이전 SseEmitter
+        // 이전 SseEmitter가 존재한다면 해당 emitter 정리
         SseEmitter previous = emitterStore.save(userId, emitter);
+        // store 내부적으로 put 메소드 사용.
+        // 이전값이 존재하면 previous != null
+        // 이전값이 존재하지 않으면 previous == null
         if(previous != null){
             previous.complete();
         }
@@ -68,17 +71,21 @@ public class SseController implements SseApi {
             emitterStore.remove(userId, emitter);
         });
 
+        // 발행된 emitter에 연결 이벤트를 송신함
         try {
             emitter.send(SseEmitter.event()
                     .name("connect")
                     .data("connected"));
+            // 송신 중 예외 발생 시 해당 emitter 정리 및 반환
         } catch (Exception e) {
             log.warn("SSE connect event send failed: userId={}", userId);
             emitterStore.remove(userId, emitter);
             return emitter;
         }
 
+        // 마지막으로 받았던 이벤트 ID가 존재한다면
         if (lastEventId != null) {
+            // 놓쳤던 알림을 전송하는 메서드 호출
             try {
                 sendMissedNotifications(emitter, userId, lastEventId);
             } catch (BusinessException e) {
@@ -94,6 +101,8 @@ public class SseController implements SseApi {
     }
 
     // 미수신된 이벤트를 다시 전송하는 private 메소드
+    // TODO: 임시적으로 for문을 돌려서 하나하나 비교해가면서 순서를 지키고 있는중
+    // TODO: 추후 Refactor 할 여지가 남아있다고 봄.
     private void sendMissedNotifications(SseEmitter emitter, UUID userId, String lastEventId) {
         UUID lastNotificationId;
         try {
