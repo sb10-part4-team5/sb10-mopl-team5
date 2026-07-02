@@ -25,9 +25,7 @@ public class SignInFailureHandler implements AuthenticationFailureHandler {
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException exception) throws IOException, ServletException {
-        int status = exception instanceof LockedException
-                ? HttpServletResponse.SC_FORBIDDEN
-                : HttpServletResponse.SC_UNAUTHORIZED;
+        int status = HttpServletResponse.SC_UNAUTHORIZED;
 
         ErrorResponseSuggestion body = new ErrorResponseSuggestion(
                 exception instanceof LockedException ? "ACCOUNT_LOCKED" : "INVALID_CREDENTIALS",
