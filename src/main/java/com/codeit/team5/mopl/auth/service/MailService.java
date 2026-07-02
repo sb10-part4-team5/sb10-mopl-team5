@@ -24,9 +24,9 @@ public class MailService {
 
             mailSender.send(message);
 
-            log.info("Email sent: to={}", request.emailAddr());
+            log.info("Email sent successfully");
         } catch (MailException e) {
-            log.warn("Email send failed: to={}", request.emailAddr(), e);
+            log.warn("Email send failed", e);
             throw e;
         }
     }
