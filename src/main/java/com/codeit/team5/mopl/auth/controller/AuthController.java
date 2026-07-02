@@ -1,7 +1,9 @@
 package com.codeit.team5.mopl.auth.controller;
 
 import com.codeit.team5.mopl.auth.controller.api.AuthApi;
-import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
+import com.codeit.team5.mopl.auth.service.PasswordResetService;
+import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.service.AuthService;
@@ -27,8 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController implements AuthApi {
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
     private final RefreshTokenCookieManager cookieManager;
 
+    // 실제 로그인 처리는 Spring Security UsernamePasswordAuthenticationFilter가 담당
+    // 이 메서드는 Swagger 문서 노출을 위한 선언
     @PostMapping(
             value = "/sign-in",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
@@ -38,26 +43,18 @@ public class AuthController implements AuthApi {
     ) {
         log.info("Login request: POST /api/auth/sign-in");
 
-        AuthPayload authPayload = authService.login(request);
-        ResponseCookie refreshTokenCookie = cookieManager.createCookie(authPayload.refreshToken());
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                .body(authPayload.jwtResponse());
+        throw new UnsupportedOperationException("Handled by Spring Security filter");
     }
 
+    // 실제 로그아웃 처리는 Spring Security에서 담당
+    // 이 메서드는 Swagger 문서 노출을 위한 선언
     @PostMapping("/sign-out")
     public ResponseEntity<Void> logout(
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
     ) {
         log.info("Logout request: POST /api/auth/sign-out");
 
-        authService.logout(refreshToken);
-        ResponseCookie deleteCookie = cookieManager.deleteCookie();
-
-        return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
-                .build();
+        throw new UnsupportedOperationException("Handled by Spring Security filter");
     }
 
     @Override
@@ -82,6 +79,16 @@ public class AuthController implements AuthApi {
         log.info("CSRF token request: GET /api/auth/csrf-token");
 
         csrfToken.getToken();
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(ResetPasswordRequest request) {
+        log.info("Password reset request: POST /api/auth/reset-password");
+
+        passwordResetService.resetPassword(request);
 
         return ResponseEntity.noContent().build();
     }

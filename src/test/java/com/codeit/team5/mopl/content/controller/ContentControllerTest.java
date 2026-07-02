@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
-import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;

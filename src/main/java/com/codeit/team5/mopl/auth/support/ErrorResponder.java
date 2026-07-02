@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.utils;
+package com.codeit.team5.mopl.auth.support;
 
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.global.exception.BusinessException;

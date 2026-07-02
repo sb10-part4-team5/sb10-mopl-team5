@@ -2,7 +2,7 @@ package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.entity.RefreshToken;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
-import com.codeit.team5.mopl.auth.token.RefreshTokenHasher;
+import com.codeit.team5.mopl.auth.support.RefreshTokenHasher;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;

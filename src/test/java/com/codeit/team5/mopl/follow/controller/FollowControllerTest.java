@@ -15,13 +15,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
-import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
-import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
-import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
+import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
+import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
+import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
+import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.follow.dto.request.FollowCreateRequest;
@@ -76,6 +79,15 @@ class FollowControllerTest {
 
     @MockitoBean
     private MoplAuthenticationProvider moplAuthenticationProvider;
+
+    @MockitoBean
+    private SignInSuccessHandler signInSuccessHandler;
+
+    @MockitoBean
+    private SignInFailureHandler signInFailureHandler;
+
+    @MockitoBean
+    private SignOutHandler signOutHandler;
 
     @MockitoBean
     private UserRepository userRepository;

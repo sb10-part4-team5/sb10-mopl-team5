@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.cookie;
+package com.codeit.team5.mopl.auth.support;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

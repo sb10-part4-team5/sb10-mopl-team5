@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.cookie;
+package com.codeit.team5.mopl.auth.support;
 
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import java.time.Duration;

@@ -16,6 +16,12 @@ spring:
     baseline-on-migrate: true
     clean-disabled: false
 
+  mail:
+    host: localhost
+    port: 2525
+    username: test
+    password: test
+
   kafka:
     consumer:
       group-id: mopl-test
