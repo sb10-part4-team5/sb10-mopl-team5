@@ -124,7 +124,7 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(binaryContentRepository, org.mockito.Mockito.never()).saveAll(anyList());
+        verify(binaryContentRepository, never()).saveAll(anyList());
     }
 
     @Test

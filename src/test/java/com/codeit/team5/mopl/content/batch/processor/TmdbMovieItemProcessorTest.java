@@ -93,7 +93,7 @@ class TmdbMovieItemProcessorTest {
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.tagNames()).isNotEmpty();
+        assertThat(result.tagNames()).containsExactly("드라마");
     }
 
     @Test
