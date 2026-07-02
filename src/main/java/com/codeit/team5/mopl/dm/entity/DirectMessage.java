@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -60,7 +61,16 @@ public class DirectMessage extends BaseEntity {
             throw new InvalidDirectMessageContentException();
         }
         User receiver = conversation.getOtherParticipant(sender);
-        return new DirectMessage(conversation, sender, receiver, content);
+        return new DirectMessage(
+                conversation,
+                sender,
+                receiver,
+                content
+        );
+    }
+
+    public boolean isInConversation(UUID conversationId) {
+        return conversation.getId().equals(conversationId);
     }
 
     public void markAsRead() {

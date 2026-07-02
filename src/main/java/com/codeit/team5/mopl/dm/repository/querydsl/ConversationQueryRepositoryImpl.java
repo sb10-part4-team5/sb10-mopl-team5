@@ -67,8 +67,12 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
         boolean isAsc = request.sortDirection() == Direction.ASC;
         try {
             BooleanExpression predicate = CursorQueryDslSupport.cursorPredicateFrom(
-                    conversation.createdAt, conversation.id,
-                    request.cursor(), request.idAfter(), isAsc);
+                    conversation.createdAt,
+                    conversation.id,
+                    request.cursor(),
+                    request.idAfter(),
+                    isAsc
+            );
             if (predicate != null) {
                 where.and(predicate);
             }
@@ -79,6 +83,10 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
 
     private OrderSpecifier<?>[] buildOrder(ConversationCursorRequest request) {
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        return CursorQueryDslSupport.cursorOrder(conversation.createdAt, conversation.id, isAsc);
+        return CursorQueryDslSupport.cursorOrder(
+                conversation.createdAt,
+                conversation.id,
+                isAsc
+        );
     }
 }

@@ -40,13 +40,16 @@ public class DirectMessageService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public DirectMessageResponse sendMessage(String senderEmail, UUID conversationId, String content) {
+    public DirectMessageResponse sendMessage(
+            String senderEmail,
+            UUID conversationId,
+            String content
+    ) {
         User sender = getUserByEmail(senderEmail);
-        Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        Conversation conversation = getConversationById(conversationId);
 
-        DirectMessage message = directMessageRepository.save(
-                DirectMessage.create(conversation, sender, content));
+        DirectMessage directMessage = DirectMessage.create(conversation, sender, content);
+        DirectMessage message = directMessageRepository.save(directMessage);
         DirectMessageResponse response = dmMapper.toResponse(message);
 
         eventPublisher.publishEvent(new DirectMessageBroadcastEvent(conversationId, response));
@@ -56,18 +59,22 @@ public class DirectMessageService {
         String destination = StompConstants.conversationDmDestination(conversationId);
         if (!webSocketSessionStore.isSubscribed(receiver.getEmail(), destination)) {
             eventPublisher.publishEvent(new DirectMessageSentEvent(
-                    receiver.getId(), sender.getName(), content));
+                    receiver.getId(),
+                    sender.getName(),
+                    content
+            ));
         }
 
         log.info("DM sent: conversationId={}, senderId={}", conversationId, sender.getId());
         return response;
     }
 
-    public CursorResponse<DirectMessageResponse> getMessages(UUID currentUserId, UUID conversationId,
-            DirectMessageCursorRequest request) {
-        Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
-        conversation.validateParticipant(currentUserId);
+    public CursorResponse<DirectMessageResponse> getMessages(
+            UUID currentUserId,
+            UUID conversationId,
+            DirectMessageCursorRequest request
+    ) {
+        validateParticipation(conversationId, currentUserId);
 
         List<DirectMessage> fetched = directMessageRepository.findMessages(conversationId, request);
         boolean hasNext = fetched.size() > request.limit();
@@ -77,19 +84,41 @@ public class DirectMessageService {
     }
 
     @Transactional
-    public void markMessagesAsRead(UUID currentUserId, UUID conversationId, UUID directMessageId) {
-        Conversation conversation = conversationRepository.findById(conversationId)
+    public void markMessagesAsRead(
+            UUID currentUserId,
+            UUID conversationId,
+            UUID directMessageId
+    ) {
+        validateParticipation(conversationId, currentUserId);
+        DirectMessage message = findMessageInConversation(conversationId, directMessageId);
+        directMessageRepository.markAsReadUntil(
+                conversationId,
+                currentUserId,
+                message.getCreatedAt(),
+                message.getId(),
+                Instant.now()
+        );
+
+        log.info("DM marked as read: conversationId={}, userId={}, untilMessageId={}", conversationId, currentUserId, directMessageId);
+    }
+
+    private Conversation getConversationById(UUID conversationId) {
+        return conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
-        conversation.validateParticipant(currentUserId);
+    }
+
+    private void validateParticipation(UUID conversationId, UUID userId) {
+        getConversationById(conversationId).validateParticipant(userId);
+    }
+
+    private DirectMessage findMessageInConversation(UUID conversationId, UUID directMessageId) {
         DirectMessage message = directMessageRepository.findById(directMessageId)
                 .orElseThrow(() -> new DirectMessageNotFoundException(directMessageId));
-        if (!message.getConversation().getId().equals(conversationId)) {
+
+        if (!message.isInConversation(conversationId)) {
             throw new DirectMessageNotFoundException(directMessageId);
         }
-        directMessageRepository.markAsReadUntil(
-                conversationId, currentUserId, message.getCreatedAt(), message.getId(), Instant.now());
-        log.info("DM marked as read: conversationId={}, userId={}, untilMessageId={}",
-                conversationId, currentUserId, directMessageId);
+        return message;
     }
 
     private User getUserByEmail(String email) {

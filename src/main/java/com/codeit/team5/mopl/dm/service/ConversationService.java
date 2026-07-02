@@ -55,8 +55,7 @@ public class ConversationService {
 
     public ConversationResponse getConversation(UUID currentUserId, UUID conversationId) {
         User currentUser = getUser(currentUserId);
-        Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        Conversation conversation = getConversationById(conversationId);
         conversation.validateParticipant(currentUserId);
         return toConversationResponse(conversation, currentUser);
     }
@@ -77,7 +76,15 @@ public class ConversationService {
             nextIdAfter = last.getId().toString();
         }
         String direction = request.sortDirection() == Direction.ASC ? "ASCENDING" : "DESCENDING";
-        return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, 0L, "createdAt", direction);
+        return new CursorResponse<>(
+                data,
+                nextCursor,
+                nextIdAfter,
+                hasNext,
+                0L,
+                "createdAt",
+                direction
+        );
     }
 
     public ConversationResponse getConversationWith(UUID currentUserId, UUID withUserId) {
@@ -90,8 +97,7 @@ public class ConversationService {
     }
 
     public void validateParticipant(UUID conversationId, String email) {
-        Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        Conversation conversation = getConversationById(conversationId);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException(email));
         conversation.validateParticipant(user.getId());
@@ -102,16 +108,10 @@ public class ConversationService {
             return List.of();
         }
         List<UUID> conversationIds = conversations.stream().map(Conversation::getId).toList();
+        Map<UUID, DirectMessageResponse> latestByConversation = findLatestMessages(conversationIds);
 
-        Map<UUID, DirectMessageResponse> latestByConversation = directMessageRepository
-                .findLatestMessagesByConversationIds(conversationIds).stream()
-                .collect(Collectors.toMap(
-                        message -> message.getConversation().getId(),
-                        dmMapper::toResponse,
-                        (existing, ignored) -> existing));
-
-        Set<UUID> unreadConversationIds = Set.copyOf(
-                directMessageRepository.findConversationIdsWithUnread(conversationIds, currentUser.getId()));
+        List<UUID> unreadIds = directMessageRepository.findConversationIdsWithUnread(conversationIds, currentUser.getId());
+        Set<UUID> unreadConversationIds = Set.copyOf(unreadIds);
 
         return conversations.stream()
                 .map(conversation -> new ConversationResponse(
@@ -130,7 +130,27 @@ public class ConversationService {
                 .orElse(null);
         boolean hasUnread = directMessageRepository
                 .existsByConversationIdAndReceiverIdAndReadFalse(conversation.getId(), currentUser.getId());
-        return new ConversationResponse(conversation.getId(), with, latestMessage, hasUnread);
+
+        return new ConversationResponse(
+                conversation.getId(),
+                with,
+                latestMessage,
+                hasUnread
+        );
+    }
+
+    private Map<UUID, DirectMessageResponse> findLatestMessages(List<UUID> conversationIds) {
+        return directMessageRepository.findLatestMessagesByConversationIds(conversationIds).stream()
+                .collect(Collectors.toMap(
+                        message -> message.getConversation().getId(),
+                        dmMapper::toResponse,
+                        (existing, ignored) -> existing
+                ));
+    }
+
+    private Conversation getConversationById(UUID conversationId) {
+        return conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
     }
 
     private User getUser(UUID userId) {

@@ -31,6 +31,14 @@ public interface DmMapper {
             nextIdAfter = last.getId().toString();
         }
         String direction = sortDirection == Direction.ASC ? "ASCENDING" : "DESCENDING";
-        return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, 0L, "createdAt", direction);
+        return new CursorResponse<>(
+                data,
+                nextCursor,
+                nextIdAfter,
+                hasNext,
+                0L,
+                "createdAt",
+                direction
+        );
     }
 }

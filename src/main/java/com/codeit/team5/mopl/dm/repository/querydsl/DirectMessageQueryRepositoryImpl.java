@@ -86,8 +86,12 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
         boolean isAsc = request.sortDirection() == Direction.ASC;
         try {
             BooleanExpression predicate = CursorQueryDslSupport.cursorPredicateFrom(
-                    directMessage.createdAt, directMessage.id,
-                    request.cursor(), request.idAfter(), isAsc);
+                    directMessage.createdAt,
+                    directMessage.id,
+                    request.cursor(),
+                    request.idAfter(),
+                    isAsc
+            );
             if (predicate != null) {
                 where.and(predicate);
             }
@@ -98,6 +102,10 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
 
     private OrderSpecifier<?>[] buildOrder(DirectMessageCursorRequest request) {
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        return CursorQueryDslSupport.cursorOrder(directMessage.createdAt, directMessage.id, isAsc);
+        return CursorQueryDslSupport.cursorOrder(
+                directMessage.createdAt,
+                directMessage.id,
+                isAsc
+        );
     }
 }
