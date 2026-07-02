@@ -654,7 +654,7 @@ class UserControllerIntegrationTest {
 
     @Test
     @DisplayName("잠긴 사용자는 로그인할 수 없다")
-    void login_lockedUser_returnsForbidden() throws Exception {
+    void login_lockedUser_returnsUnauthorized() throws Exception {
         // Given
         SignInRequest request = saveLoginUser("locked-login@example.com", "password1", UserRole.USER, true);
 
