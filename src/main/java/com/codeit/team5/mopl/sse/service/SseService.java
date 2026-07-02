@@ -25,39 +25,47 @@ public class SseService {
     private final NotificationService notificationService;
 
     public SseEmitter subscribe(UUID userId, String lastEventId) {
+        // 구독 시 새로운 emitter를 생성
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
+        // 이전 emitter가 존재하는지 체크
         SseEmitter previous = emitterStore.save(userId, emitter);
         if (previous != null) {
-            previous.complete();
+            previous.complete(); // 있던 previous emitter는 정리
         }
 
+        // emitter가 작업을 마무리하고 나면 정리
         emitter.onCompletion(() -> {
             log.debug("SSE connection completed: userId={}", userId);
             emitterStore.remove(userId, emitter);
         });
+        // emitter가 timeout에 걸리면 정리
         emitter.onTimeout(() -> {
             log.debug("SSE connection timed out: userId={}", userId);
             emitter.complete();
         });
+
+        // emitter가 작업 도중 에러를 발생하면 정리
         emitter.onError(e -> {
             log.debug("SSE connection error: userId={}", userId);
             emitterStore.remove(userId, emitter);
         });
 
+        // emitter에 연결 이벤트를 전송
         try {
             emitter.send(SseEmitter.event()
                     .name("connect")
                     .data("connected"));
-        } catch (Exception e) {
+        } catch (Exception e) { // 예외 발생 시 emitter 정리 및 반환
             log.warn("SSE connect event send failed: userId={}", userId);
             emitterStore.remove(userId, emitter);
             return emitter;
         }
 
+        // lastEventId 파라미터가 존재한다면 미수신 이벤트 존재.
         if (lastEventId != null) {
             try {
-                sendMissedEvents(emitter, userId, lastEventId);
+                sendMissedEvents(emitter, userId, lastEventId); // 미수신 이벤트를 전송하는 메서드 호출
             } catch (BusinessException e) {
                 log.warn("SSE missed event recovery failed: userId={}, reason={}", userId, e.getMessage());
                 emitterStore.remove(userId, emitter);
@@ -68,17 +76,21 @@ public class SseService {
         return emitter;
     }
 
+    // 미수신 이벤트 전송 메서드
     private void sendMissedEvents(SseEmitter emitter, UUID userId, String lastEventId) {
         UUID lastNotificationId;
         try {
+            // 마지막으로 수신받은 알림이벤트 ID를 UUID로 파싱
             lastNotificationId = UUID.fromString(lastEventId);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) { // 예외 발생 -> 커스텀 예외 변환
             log.warn("Invalid Last-Event-ID format: {}", lastEventId);
             throw new InvalidLastEventIdException(lastEventId);
         }
 
+        // 미수신 알림 목록
         List<NotificationPayload> notifications =
                 notificationService.findMissedNotifications(userId, lastNotificationId);
+        // 미수신 DM 목록
         List<DirectMessagePayload> dms =
                 notificationService.findMissedDirectMessages(userId, lastNotificationId);
 
