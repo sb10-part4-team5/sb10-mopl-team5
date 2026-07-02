@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.content.batch.scheduler;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
@@ -39,7 +40,7 @@ public class ContentCollectionScheduler {
         this.sportsDbDayJob = sportsDbDayJob;
     }
 
-    @Scheduled(cron = "0 0 3 * * *")
+    @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Seoul")
     public void runTmdbMovieJob() {
         log.info("[Scheduler] TMDB 영화 수집 시작");
         run(tmdbMovieJob, new JobParametersBuilder()
@@ -49,7 +50,7 @@ public class ContentCollectionScheduler {
                 .toJobParameters());
     }
 
-    @Scheduled(cron = "0 3 3 * * *")
+    @Scheduled(cron = "0 3 3 * * *", zone = "Asia/Seoul")
     public void runTmdbTvSeriesJob() {
         log.info("[Scheduler] TMDB TV 시리즈 수집 시작");
         run(tmdbTvSeriesJob, new JobParametersBuilder()
@@ -59,11 +60,11 @@ public class ContentCollectionScheduler {
                 .toJobParameters());
     }
 
-    @Scheduled(cron = "0 6 3 * * *")
+    @Scheduled(cron = "0 6 3 * * *", zone = "Asia/Seoul")
     public void runSportsDbDayJob() {
         log.info("[Scheduler] SportsDB 일별 경기 수집 시작");
         run(sportsDbDayJob, new JobParametersBuilder()
-                .addString("date", LocalDate.now().toString())
+                .addString("date", LocalDate.now(ZoneId.of("Asia/Seoul")).toString())
                 .addString("run.id", String.valueOf(System.currentTimeMillis()))
                 .toJobParameters());
     }
