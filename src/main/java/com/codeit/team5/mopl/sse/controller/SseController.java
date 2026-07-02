@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.sse.controller;
 
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.sse.controller.api.SseApi;
 import com.codeit.team5.mopl.sse.service.SseService;
@@ -24,9 +25,9 @@ public class SseController implements SseApi {
     @Override
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal moplPrincipal,
             @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
         log.info("SSE subscribe request: GET /api/sse");
-        return sseService.subscribe(userDetails.getId(), lastEventId);
+        return sseService.subscribe(moplPrincipal.getId(), lastEventId);
     }
 }

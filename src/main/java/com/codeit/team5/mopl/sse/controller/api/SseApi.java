@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.sse.controller.api;
 
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +25,7 @@ public interface SseApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     SseEmitter subscribe(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal moplPrincipal,
             @Parameter(description = "마지막으로 수신한 이벤트 ID (재연결 시 사용)")
             @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId);
 }
