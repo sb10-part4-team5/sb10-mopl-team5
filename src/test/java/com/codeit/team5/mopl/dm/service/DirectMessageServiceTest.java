@@ -177,7 +177,7 @@ class DirectMessageServiceTest {
                 List.of(messageResponse), null, null, false, 1L, "createdAt", "DESCENDING");
 
         Window<DirectMessage> window = Window.from(List.of(), i -> ScrollPosition.keyset());
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(true);
         when(directMessageRepository.findByConversationId(eq(conversationId), any(ScrollPosition.class),
                 any(Limit.class), any(Sort.class))).thenReturn(window);
         when(directMessageMapper.toCursor(eq(window), eq(Direction.DESC)))
@@ -203,7 +203,8 @@ class DirectMessageServiceTest {
         User participant2 = userWithId("c@mopl.com", "C", UUID.randomUUID());
         Conversation conversation = Conversation.create(participant1, participant2);
 
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(false);
+        when(conversationRepository.existsById(conversationId)).thenReturn(true);
 
         DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
 
@@ -220,7 +221,8 @@ class DirectMessageServiceTest {
         UUID currentUserId = UUID.randomUUID();
         UUID conversationId = UUID.randomUUID();
 
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(false);
+        when(conversationRepository.existsById(conversationId)).thenReturn(false);
 
         DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
 
@@ -246,7 +248,7 @@ class DirectMessageServiceTest {
         ReflectionTestUtils.setField(message, "createdAt", createdAt);
         ReflectionTestUtils.setField(message, "id", directMessageId);
 
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(true);
         when(directMessageRepository.findById(directMessageId)).thenReturn(Optional.of(message));
 
         // when
@@ -269,7 +271,8 @@ class DirectMessageServiceTest {
         User participant2 = userWithId("c@mopl.com", "C", UUID.randomUUID());
         Conversation conversation = Conversation.create(participant1, participant2);
 
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(false);
+        when(conversationRepository.existsById(conversationId)).thenReturn(true);
 
         // when & then
         assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))
@@ -286,7 +289,8 @@ class DirectMessageServiceTest {
         UUID conversationId = UUID.randomUUID();
         UUID directMessageId = UUID.randomUUID();
 
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(false);
+        when(conversationRepository.existsById(conversationId)).thenReturn(false);
 
         // when & then
         assertThatThrownBy(() -> directMessageService.markMessagesAsRead(currentUserId, conversationId, directMessageId))
@@ -306,7 +310,7 @@ class DirectMessageServiceTest {
         User other = userWithId("b@mopl.com", "B", UUID.randomUUID());
         Conversation conversation = Conversation.create(currentUser, other);
 
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(true);
         when(directMessageRepository.findById(directMessageId)).thenReturn(Optional.empty());
 
         // when & then
@@ -330,7 +334,7 @@ class DirectMessageServiceTest {
         ReflectionTestUtils.setField(otherConversation, "id", UUID.randomUUID());
         DirectMessage message = DirectMessage.create(otherConversation, other, "hello");
 
-        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.existsByIdAndParticipantId(conversationId, currentUserId)).thenReturn(true);
         when(directMessageRepository.findById(directMessageId)).thenReturn(Optional.of(message));
 
         // when & then

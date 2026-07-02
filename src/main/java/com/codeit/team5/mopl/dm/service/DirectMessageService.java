@@ -7,6 +7,7 @@ import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.exception.ConversationNotFoundException;
 import com.codeit.team5.mopl.dm.exception.DirectMessageNotFoundException;
+import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.mapper.DirectMessageMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
@@ -133,7 +134,13 @@ public class DirectMessageService {
     }
 
     private void validateParticipation(UUID conversationId, UUID userId) {
-        getConversationById(conversationId).validateParticipant(userId);
+        if (conversationRepository.existsByIdAndParticipantId(conversationId, userId)) {
+            return;
+        }
+        if (!conversationRepository.existsById(conversationId)) {
+            throw new ConversationNotFoundException(conversationId);
+        }
+        throw new NotConversationParticipantException(userId);
     }
 
     private DirectMessage findMessageInConversation(UUID conversationId, UUID directMessageId) {

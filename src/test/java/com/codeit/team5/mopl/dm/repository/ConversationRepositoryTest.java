@@ -84,6 +84,36 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    @DisplayName("참여자 여부 exists 검증 성공")
+    void existsByIdAndParticipantId_participant_success() {
+        // given
+        User userA = persistUser("a@mopl.com", "A");
+        User userB = persistUser("b@mopl.com", "B");
+        Conversation conversation = persistAndFlush(Conversation.create(userA, userB));
+        flush();
+        clear();
+
+        // when & then
+        assertThat(conversationRepository.existsByIdAndParticipantId(conversation.getId(), userA.getId())).isTrue();
+        assertThat(conversationRepository.existsByIdAndParticipantId(conversation.getId(), userB.getId())).isTrue();
+    }
+
+    @Test
+    @DisplayName("비참여자 exists 검증 실패")
+    void existsByIdAndParticipantId_notParticipant_success() {
+        // given
+        User userA = persistUser("a@mopl.com", "A");
+        User userB = persistUser("b@mopl.com", "B");
+        User stranger = persistUser("c@mopl.com", "C");
+        Conversation conversation = persistAndFlush(Conversation.create(userA, userB));
+        flush();
+        clear();
+
+        // when & then
+        assertThat(conversationRepository.existsByIdAndParticipantId(conversation.getId(), stranger.getId())).isFalse();
+    }
+
+    @Test
     @DisplayName("내 대화 목록만 커서 조회 성공")
     void findMyConversations_onlyMine_success() {
         // given
