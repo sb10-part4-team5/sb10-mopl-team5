@@ -113,4 +113,29 @@ class ContentItemWriterTest {
 
         verify(binaryContentRepository, org.mockito.Mockito.never()).saveAll(anyList());
     }
+
+    @Test
+    @DisplayName("서로 다른 콘텐츠가 같은 thumbnailUrl을 가지면 각각 별도의 BinaryContent가 연결된다")
+    void write_sameThumbnailUrl_attachesSeparateBinaryContentToEach() throws Exception {
+        Content content1 = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        Content content2 = Content.createByExternalSource(ContentType.MOVIE, "영화2", "desc",
+                ContentSource.TMDB, "2", null, "{}");
+        String sharedUrl = "https://img.example.com/default.jpg";
+        ContentWithMetaData item1 = new ContentWithMetaData(content1, sharedUrl, List.of());
+        ContentWithMetaData item2 = new ContentWithMetaData(content2, sharedUrl, List.of());
+
+        BinaryContent savedThumbnail1 = BinaryContent.externalUrl(sharedUrl);
+        BinaryContent savedThumbnail2 = BinaryContent.externalUrl(sharedUrl);
+
+        given(contentRepository.saveAll(anyList())).willReturn(List.of(content1, content2));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+        given(binaryContentRepository.saveAll(anyList())).willReturn(List.of(savedThumbnail1, savedThumbnail2));
+
+        writer.write(new Chunk<>(List.of(item1, item2)));
+
+        assertThat(content1.getThumbnail()).isEqualTo(savedThumbnail1);
+        assertThat(content2.getThumbnail()).isEqualTo(savedThumbnail2);
+        assertThat(content1.getThumbnail()).isNotSameAs(content2.getThumbnail());
+    }
 }

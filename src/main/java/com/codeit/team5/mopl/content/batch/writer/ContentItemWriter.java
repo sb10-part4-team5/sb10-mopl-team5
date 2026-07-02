@@ -58,18 +58,21 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 .toList();
         contentStatsRepository.saveAll(stats);
 
-        // 3. 썸네일 일괄 저장
+        // 3. 썸네일 저장 (아이템별로 별도 BinaryContent를 저장 — thumbnail_id는 1:1 유니크 제약이라
+        // 서로 다른 콘텐츠가 같은 thumbnailUrl을 갖더라도 BinaryContent를 공유할 수 없다.
+        // saveAll은 입력 순서를 보존해 반환하므로 인덱스로 1:1 매칭한다.
         List<ContentWithMetaData> itemsWithThumbnail = deduplicatedItems.stream()
                 .filter(item -> StringUtils.hasText(item.thumbnailUrl()))
                 .toList();
         if (!itemsWithThumbnail.isEmpty()) {
-            Map<String, BinaryContent> savedThumbnailByUrl = binaryContentRepository.saveAll(
+            List<BinaryContent> savedThumbnails = binaryContentRepository.saveAll(
                     itemsWithThumbnail.stream()
                             .map(item -> BinaryContent.externalUrl(item.thumbnailUrl()))
                             .toList()
-            ).stream().collect(Collectors.toMap(BinaryContent::getUrl, Function.identity()));
-            itemsWithThumbnail.forEach(item ->
-                    item.content().attachThumbnail(savedThumbnailByUrl.get(item.thumbnailUrl())));
+            );
+            for (int i = 0; i < itemsWithThumbnail.size(); i++) {
+                itemsWithThumbnail.get(i).content().attachThumbnail(savedThumbnails.get(i));
+            }
         }
 
         // 4. 태그 저장
