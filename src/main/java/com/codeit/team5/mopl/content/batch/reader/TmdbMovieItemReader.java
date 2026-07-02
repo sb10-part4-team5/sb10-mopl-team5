@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.content.client.tmdb.TmdbApiClient;
 import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbMovieDto;
 import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbMovieListResponse;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class TmdbMovieItemReader implements ItemReader<TmdbMovieDto> {
     private int currentPage;
     private int endPage;
     private int totalPages = Integer.MAX_VALUE;
+    private boolean noMoreData = false;
     private final Queue<TmdbMovieDto> buffer = new LinkedList<>();
 
     @BeforeStep
@@ -37,13 +39,14 @@ public class TmdbMovieItemReader implements ItemReader<TmdbMovieDto> {
         endPage = Math.min(Integer.parseInt(endPageParam), MAX_PAGE);
         buffer.clear();
         totalPages = Integer.MAX_VALUE;
+        noMoreData = false;
         log.info("[TMDB] 영화 수집 범위 설정 - {}~{}페이지", currentPage, endPage);
     }
 
     @Override
     public TmdbMovieDto read() throws InterruptedException {
         while (buffer.isEmpty()) {
-            if (currentPage > Math.min(totalPages, endPage)) {
+            if (noMoreData || currentPage > Math.min(totalPages, endPage)) {
                 return null;
             }
             fetchNextPage();
@@ -55,7 +58,14 @@ public class TmdbMovieItemReader implements ItemReader<TmdbMovieDto> {
         TmdbMovieListResponse response = tmdbApiClient.fetchMovies(currentPage);
         totalPages = response.totalPages();
 
-        response.results().stream()
+        List<TmdbMovieDto> results = response.results();
+        if (results.isEmpty()) {
+            log.info("[TMDB] 영화 {}페이지 응답이 비어 있어 수집을 종료합니다 - 전체 {}페이지", currentPage, totalPages);
+            noMoreData = true;
+            return;
+        }
+
+        results.stream()
                 .filter(dto -> StringUtils.hasText(dto.title()))
                 .forEach(buffer::add);
 
