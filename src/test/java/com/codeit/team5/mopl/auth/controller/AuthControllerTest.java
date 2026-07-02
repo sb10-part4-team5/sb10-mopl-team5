@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.auth.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -64,8 +63,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -221,7 +218,6 @@ class AuthControllerTest {
                 ),
                 "access-token"
         );
-        AuthPayload authPayload = new AuthPayload(response, "refresh-token");
         ResponseCookie refreshTokenCookie = ResponseCookie.from("REFRESH_TOKEN", "refresh-token")
                 .httpOnly(true)
                 .secure(false)
@@ -240,49 +236,40 @@ class AuthControllerTest {
                 null,
                 userDetails.getAuthorities()
         );
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
-        given(userMapper.toDto(user)).willReturn(response.userDto());
-        given(jwtTokenizer.generateAccessToken(userId.toString(), request.username(), "USER"))
-                .willReturn("access-token");
-        given(jwtTokenizer.generateRefreshToken(userId.toString())).willReturn("refresh-token");
-        given(jwtProperties.refreshTokenExpirationMinutes()).willReturn(420L);
-        given(cookieManager.createCookie("refresh-token")).willReturn(refreshTokenCookie);
-        given(authMapper.toJwtResponse(response.userDto(), "access-token")).willReturn(response);
-        SignInSuccessHandler handler = new SignInSuccessHandler(
-                objectMapper,
-                cookieManager,
-                refreshTokenStore,
-                authMapper,
-                jwtTokenizer,
-                jwtProperties,
-                userRepository,
-                userMapper
-        );
-        MockHttpServletResponse servletResponse = new MockHttpServletResponse();
+        given(moplAuthenticationProvider.supports(UsernamePasswordAuthenticationToken.class)).willReturn(true);
+        given(moplAuthenticationProvider.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .willReturn(authentication);
+        mockSignInSuccessResponse(response, refreshTokenCookie);
 
-        // When
-        handler.onAuthenticationSuccess(new MockHttpServletRequest(), servletResponse, authentication);
+        // When & Then
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", request.username())
+                        .param("password", request.password()))
+                .andExpect(status().isOk())
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("REFRESH_TOKEN=refresh-token"),
+                                org.hamcrest.Matchers.containsString("Path=/api/auth"),
+                                org.hamcrest.Matchers.containsString("Max-Age=25200"),
+                                org.hamcrest.Matchers.containsString("HttpOnly"),
+                                org.hamcrest.Matchers.containsString("SameSite=Lax")
+                        ))))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(
+                                org.hamcrest.Matchers.containsString("XSRF-TOKEN=")))))
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(jsonPath("$.userDto.id").value(userId.toString()))
+                .andExpect(jsonPath("$.userDto.email").value(request.username()))
+                .andExpect(jsonPath("$.userDto.name").value("사용자"))
+                .andExpect(jsonPath("$.userDto.role").value("USER"))
+                .andExpect(jsonPath("$.userDto.locked").value(false));
 
-        // Then
-        assertThat(servletResponse.getStatus()).isEqualTo(200);
-        assertThat(servletResponse.getHeaderValues(HttpHeaders.SET_COOKIE))
-                .anySatisfy(cookie -> assertThat(String.valueOf(cookie))
-                        .contains("REFRESH_TOKEN=refresh-token")
-                        .contains("Path=/api/auth")
-                        .contains("Max-Age=25200")
-                        .contains("HttpOnly")
-                        .contains("SameSite=Lax"));
-        assertThat(servletResponse.getHeaderValues(HttpHeaders.SET_COOKIE))
-                .noneSatisfy(cookie -> assertThat(String.valueOf(cookie)).contains("XSRF-TOKEN="));
-        assertThat(servletResponse.getContentAsString())
-                .contains("\"accessToken\":\"access-token\"")
-                .contains(userId.toString())
-                .contains("\"email\":\"user@example.com\"")
-                .contains("\"name\":\"사용자\"")
-                .contains("\"role\":\"USER\"")
-                .contains("\"locked\":false");
-        verify(refreshTokenStore).save(eq(userId), eq("refresh-token"), any(Instant.class));
-        verify(cookieManager).createCookie("refresh-token");
+        verify(moplAuthenticationProvider).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(moplAuthenticationProvider).supports(UsernamePasswordAuthenticationToken.class);
+        verify(signInSuccessHandler).onAuthenticationSuccess(any(), any(), eq(authentication));
     }
 
     @Test

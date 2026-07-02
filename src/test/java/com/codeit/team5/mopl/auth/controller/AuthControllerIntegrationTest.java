@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,12 +34,19 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.mockito.ArgumentCaptor;
 
-@SpringBootTest(properties = "management.health.mail.enabled=false")
+@SpringBootTest(properties = {
+        "management.health.mail.enabled=false",
+        "spring.mail.host=localhost",
+        "spring.mail.port=2525",
+        "spring.mail.username=test",
+        "spring.mail.password=test"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
@@ -65,6 +73,13 @@ class AuthControllerIntegrationTest {
 
     @MockitoBean
     private JavaMailSender mailSender;
+
+    @AfterEach
+    void cleanUp() {
+        refreshTokenRepository.deleteAll();
+        temporaryPasswordRepository.deleteAll();
+        userRepository.deleteAll();
+    }
 
     @Test
     @DisplayName("로그인에 성공하면 accessToken을 반환하고 리프레시 토큰 해시를 저장한다")
@@ -193,13 +208,17 @@ class AuthControllerIntegrationTest {
 
         // Then
         ArgumentCaptor<SimpleMailMessage> mailCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        assertThat(temporaryPasswordRepository.findByUserId(user.getId())).isPresent();
+
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
         verify(mailSender).send(mailCaptor.capture());
         SimpleMailMessage mail = mailCaptor.getValue();
         assertThat(mail.getTo()).containsExactly(originalRequest.username());
         assertThat(mail.getSubject()).isEqualTo("[MOPL] 임시 비밀번호 안내");
         String temporaryPassword = extractTemporaryPassword(mail.getText());
         assertThat(temporaryPassword).isNotBlank();
-        assertThat(temporaryPasswordRepository.findByUserId(user.getId())).isPresent();
 
         MvcResult temporaryLoginResult = mockMvc.perform(post("/api/auth/sign-in")
                         .with(csrf())

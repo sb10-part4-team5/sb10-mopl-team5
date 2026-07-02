@@ -481,7 +481,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("비밀번호 변경 성공 시 새 비밀번호를 인코딩하고 임시 비밀번호를 삭제한다")
+    @DisplayName("비밀번호 변경 성공 시 새 비밀번호를 인코딩하고 임시 비밀번호와 리프레시 토큰을 삭제한다")
     void updatePassword_success() {
         // Given
         UUID userId = UUID.randomUUID();
@@ -497,6 +497,7 @@ class UserServiceTest {
         verify(userRepository).findById(userId);
         verify(passwordEncoder).encode("newPassword1");
         verify(temporaryPasswordService).deleteByUserId(userId);
+        verify(refreshTokenStore).deleteByUserId(userId);
     }
 
     @Test
