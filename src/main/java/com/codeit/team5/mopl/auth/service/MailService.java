@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.auth.service;
 
-import com.codeit.team5.mopl.auth.dto.request.EmailSendRequest;
+import com.codeit.team5.mopl.auth.service.model.MailMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.MailException;
@@ -15,7 +15,7 @@ public class MailService {
 
     private final JavaMailSender mailSender;
 
-    public void send(EmailSendRequest request) {
+    public void send(MailMessage request) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(request.emailAddr());
@@ -32,7 +32,7 @@ public class MailService {
     }
 
     public void sendTemporaryPassword(String email, String temporaryPassword) {
-        send(new EmailSendRequest(
+        send(new MailMessage(
                 email,
                 "[MOPL] 임시 비밀번호 안내",
                 """
