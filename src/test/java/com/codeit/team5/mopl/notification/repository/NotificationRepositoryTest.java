@@ -30,6 +30,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.ReflectionUtils;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -333,15 +335,17 @@ class NotificationRepositoryTest {
 
         Notification ref = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "기준", null, NotificationLevel.INFO));
-        setCreatedAt(ref.getId(), t0);
+        ReflectionTestUtils.setField(ref,"createdAt", t0);
+
 
         Notification unread = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "안읽음", null, NotificationLevel.INFO));
-        setCreatedAt(unread.getId(), t1);
+        ReflectionTestUtils.setField(unread,"createdAt", t1);
 
         Notification read = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "읽음", null, NotificationLevel.INFO));
-        setCreatedAt(read.getId(), t1);
+        ReflectionTestUtils.setField(read,"createdAt", t1);
+
         read.markAsRead();
         notificationRepository.save(read);
         entityManager.flush();
@@ -467,6 +471,7 @@ class NotificationRepositoryTest {
         Notification read = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.DIRECT_MESSAGE, "읽음", null, NotificationLevel.INFO));
         setCreatedAt(read.getId(), t1);
+
         read.markAsRead();
         notificationRepository.save(read);
         entityManager.flush();

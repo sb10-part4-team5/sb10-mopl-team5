@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -18,16 +16,15 @@ import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
+import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
+import com.codeit.team5.mopl.sse.sender.SseSender;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -46,6 +43,9 @@ class SseServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private SseSender sseSender;
+
     @InjectMocks
     private SseService sseService;
 
@@ -57,13 +57,15 @@ class SseServiceTest {
         // given
         UUID userId = UUID.randomUUID();
         given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
 
         // when
         SseEmitter result = sseService.subscribe(userId, null);
 
         // then
-        assertThat(result).isNotNull(); // result는 null이 되지 말아야 함
-        verify(emitterStore).save(eq(userId), any(SseEmitter.class)); // emitterStore는 userId 파라미터를 받고 save를 호출해야 함
+        assertThat(result).isNotNull();
+        verify(emitterStore).save(eq(userId), any(SseEmitter.class));
+        verify(sseSender).send(eq(userId), any(SseEmitter.class), any());
     }
 
     @Test
@@ -72,14 +74,30 @@ class SseServiceTest {
         // given
         UUID userId = UUID.randomUUID();
         SseEmitter previousEmitter = mock(SseEmitter.class);
-        // 이전 emitter가 존재 -> 해당 emitter가 반환된다.
         given(emitterStore.save(eq(userId), any())).willReturn(previousEmitter);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
 
         // when
         sseService.subscribe(userId, null);
 
-        // then (이전 emitter가 정리되는 것을 확인한다.)
+        // then
         verify(previousEmitter).complete();
+    }
+
+    @Test
+    @DisplayName("subscribe: connect 이벤트 전송 실패 시 즉시 반환한다")
+    void subscribe_returnsEarly_whenConnectSendFails() {
+        // given
+        UUID userId = UUID.randomUUID();
+        given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(false);
+
+        // when
+        SseEmitter result = sseService.subscribe(userId, null);
+
+        // then
+        assertThat(result).isNotNull();
+        verify(notificationService, never()).findMissedNotifications(any(), any());
     }
 
     // ===== Last-Event-ID — 미수신 이벤트 조회 =====
@@ -90,8 +108,8 @@ class SseServiceTest {
         // given
         UUID userId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
-        given(emitterStore.save(eq(userId), any())).willReturn(null); // 이전 emitter는 없다.
-        // 미수신 알림/DM 목록을 조회하면 빈 목록을 반환한다
+        given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
         given(notificationService.findMissedNotifications(userId, lastEventId)).willReturn(List.of());
         given(notificationService.findMissedDirectMessages(userId, lastEventId)).willReturn(List.of());
 
@@ -109,11 +127,12 @@ class SseServiceTest {
         // given
         UUID userId = UUID.randomUUID();
         given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
 
         // when
         sseService.subscribe(userId, null);
 
-        // then (Last-Event-ID가 없으므로 미수신 조회 호출은 일어나서는 안된다.)
+        // then
         verify(notificationService, never()).findMissedNotifications(any(), any());
         verify(notificationService, never()).findMissedDirectMessages(any(), any());
     }
@@ -133,29 +152,28 @@ class SseServiceTest {
         NotificationPayload second = notifPayload(userId, t2);
 
         given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
         given(notificationService.findMissedNotifications(userId, lastEventId))
                 .willReturn(List.of(first, second));
         given(notificationService.findMissedDirectMessages(userId, lastEventId))
                 .willReturn(List.of());
 
         // when
-        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
-            sseService.subscribe(userId, lastEventId.toString());
+        sseService.subscribe(userId, lastEventId.toString());
 
-            // then: connect(1) + notif(2) = 총 3번 send
-            ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
-                    ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
-            verify(mocked.constructed().get(0), times(3)).send(captor.capture());
+        // then: connect(1) + notif(2) = 총 3번 send
+        ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
+                ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+        verify(sseSender, times(3)).send(eq(userId), any(SseEmitter.class), captor.capture());
 
-            List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
-            // index 0 = connect, 1 = first(t1), 2 = second(t2) 순서여야 한다
-            assertThat(extractPayload(sends.get(1), NotificationPayload.class))
-                    .map(NotificationPayload::notificationId)
-                    .contains(first.notificationId());
-            assertThat(extractPayload(sends.get(2), NotificationPayload.class))
-                    .map(NotificationPayload::notificationId)
-                    .contains(second.notificationId());
-        }
+        List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
+        // index 0 = connect, 1 = first(t1), 2 = second(t2) 순서여야 한다
+        assertThat(extractPayload(sends.get(1), NotificationPayload.class))
+                .map(NotificationPayload::notificationId)
+                .contains(first.notificationId());
+        assertThat(extractPayload(sends.get(2), NotificationPayload.class))
+                .map(NotificationPayload::notificationId)
+                .contains(second.notificationId());
     }
 
     @Test
@@ -173,32 +191,31 @@ class SseServiceTest {
         DirectMessagePayload dm2 = dmPayload(userId, t2);
 
         given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
         given(notificationService.findMissedNotifications(userId, lastEventId))
                 .willReturn(List.of(notif1, notif3));
         given(notificationService.findMissedDirectMessages(userId, lastEventId))
                 .willReturn(List.of(dm2));
 
         // when
-        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
-            sseService.subscribe(userId, lastEventId.toString());
+        sseService.subscribe(userId, lastEventId.toString());
 
-            // then: connect(1) + notif1(t1) + dm2(t2) + notif3(t3) = 총 4번 send
-            ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
-                    ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
-            verify(mocked.constructed().get(0), times(4)).send(captor.capture());
+        // then: connect(1) + notif1(t1) + dm2(t2) + notif3(t3) = 총 4번 send
+        ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
+                ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+        verify(sseSender, times(4)).send(eq(userId), any(SseEmitter.class), captor.capture());
 
-            List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
-            // index 0 = connect, 1 = notif1(t1), 2 = dm2(t2), 3 = notif3(t3) 순서여야 한다
-            assertThat(extractPayload(sends.get(1), NotificationPayload.class))
-                    .map(NotificationPayload::notificationId)
-                    .contains(notif1.notificationId());
-            assertThat(extractPayload(sends.get(2), DirectMessagePayload.class))
-                    .map(DirectMessagePayload::id)
-                    .contains(dm2.id());
-            assertThat(extractPayload(sends.get(3), NotificationPayload.class))
-                    .map(NotificationPayload::notificationId)
-                    .contains(notif3.notificationId());
-        }
+        List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
+        // index 0 = connect, 1 = notif1(t1), 2 = dm2(t2), 3 = notif3(t3) 순서여야 한다
+        assertThat(extractPayload(sends.get(1), NotificationPayload.class))
+                .map(NotificationPayload::notificationId)
+                .contains(notif1.notificationId());
+        assertThat(extractPayload(sends.get(2), DirectMessagePayload.class))
+                .map(DirectMessagePayload::id)
+                .contains(dm2.id());
+        assertThat(extractPayload(sends.get(3), NotificationPayload.class))
+                .map(NotificationPayload::notificationId)
+                .contains(notif3.notificationId());
     }
 
     @Test
@@ -210,23 +227,22 @@ class SseServiceTest {
         DirectMessagePayload dm = dmPayload(userId, Instant.now());
 
         given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
         given(notificationService.findMissedNotifications(userId, lastEventId)).willReturn(List.of());
         given(notificationService.findMissedDirectMessages(userId, lastEventId)).willReturn(List.of(dm));
 
         // when
-        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
-            sseService.subscribe(userId, lastEventId.toString());
+        sseService.subscribe(userId, lastEventId.toString());
 
-            // then: connect(1) + dm(1) = 총 2번 send
-            ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
-                    ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
-            verify(mocked.constructed().get(0), times(2)).send(captor.capture());
+        // then: connect(1) + dm(1) = 총 2번 send
+        ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
+                ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+        verify(sseSender, times(2)).send(eq(userId), any(SseEmitter.class), captor.capture());
 
-            List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
-            assertThat(extractPayload(sends.get(1), DirectMessagePayload.class))
-                    .map(DirectMessagePayload::id)
-                    .contains(dm.id());
-        }
+        List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
+        assertThat(extractPayload(sends.get(1), DirectMessagePayload.class))
+                .map(DirectMessagePayload::id)
+                .contains(dm.id());
     }
 
     // ===== Last-Event-ID — 오류 처리 =====
@@ -234,9 +250,12 @@ class SseServiceTest {
     @Test
     @DisplayName("subscribe: Last-Event-ID가 UUID 형식이 아니면 Emitter를 정리하고 InvalidLastEventIdException을 던진다")
     void subscribe_completesAndThrows_whenInvalidLastEventId() {
+        // given
         UUID userId = UUID.randomUUID();
         given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
 
+        // when + then
         try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
             assertThatThrownBy(() -> sseService.subscribe(userId, "not-a-uuid"))
                     .isInstanceOf(InvalidLastEventIdException.class);
@@ -251,8 +270,9 @@ class SseServiceTest {
     // ===== 미수신 이벤트 전송 실패 (내부 처리) =====
 
     @Test
-    @DisplayName("subscribe: 미수신 알림 전송 중 IOException 발생 시 예외 전파 없이 Emitter를 정리하고 연결을 닫는다")
+    @DisplayName("subscribe: 미수신 알림 전송 중 실패 시 예외 전파 없이 Emitter를 정리하고 연결을 닫는다")
     void subscribe_completesEmitterSilently_whenMissedNotificationSendFails() {
+        // given
         UUID userId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
         NotificationPayload missed = notifPayload(userId, Instant.now());
@@ -262,25 +282,24 @@ class SseServiceTest {
                 .willReturn(List.of(missed));
         given(notificationService.findMissedDirectMessages(userId, lastEventId))
                 .willReturn(List.of());
+        // connect → 성공, 미수신 알림 → 실패
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any()))
+                .willReturn(true, false);
 
-        // 1번째 send() = connect → 성공, 2번째 send() = 미수신 알림 → IOException
-        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class,
-                (mock, ctx) -> doNothing()
-                        .doThrow(new IOException("broken pipe"))
-                        .when(mock).send(any(SseEmitter.SseEventBuilder.class)))) {
-
+        // when
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
             SseEmitter result = sseService.subscribe(userId, lastEventId.toString());
 
-            assertThat(result).isNotNull(); // 예외가 전파되지 않고 emitter 반환
-            verify(mocked.constructed().get(0)).complete(); // 클라이언트 재연결 유도
+            // then
+            assertThat(result).isNotNull();
+            verify(mocked.constructed().get(0)).complete();
         }
-
-        verify(emitterStore).remove(eq(userId), any(SseEmitter.class));
     }
 
     @Test
-    @DisplayName("subscribe: 미수신 DM 전송 중 IOException 발생 시 예외 전파 없이 Emitter를 정리하고 연결을 닫는다")
+    @DisplayName("subscribe: 미수신 DM 전송 중 실패 시 예외 전파 없이 Emitter를 정리하고 연결을 닫는다")
     void subscribe_completesEmitterSilently_whenMissedDmSendFails() {
+        // given
         UUID userId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
         DirectMessagePayload missedDm = dmPayload(userId, Instant.now());
@@ -290,19 +309,18 @@ class SseServiceTest {
                 .willReturn(List.of());
         given(notificationService.findMissedDirectMessages(userId, lastEventId))
                 .willReturn(List.of(missedDm));
+        // connect → 성공, 미수신 DM → 실패
+        given(sseSender.send(eq(userId), any(SseEmitter.class), any()))
+                .willReturn(true, false);
 
-        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class,
-                (mock, ctx) -> doNothing()
-                        .doThrow(new IOException("broken pipe"))
-                        .when(mock).send(any(SseEmitter.SseEventBuilder.class)))) {
-
+        // when
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
             SseEmitter result = sseService.subscribe(userId, lastEventId.toString());
 
+            // then
             assertThat(result).isNotNull();
             verify(mocked.constructed().get(0)).complete();
         }
-
-        verify(emitterStore).remove(eq(userId), any(SseEmitter.class));
     }
 
     // ===== 헬퍼 =====
