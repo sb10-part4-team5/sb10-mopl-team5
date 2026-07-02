@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.sse.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.nio.charset.StandardCharsets;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
@@ -27,6 +29,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -109,18 +112,18 @@ class SseControllerIntegrationTest {
     // ===== Last-Event-ID 오류 처리 =====
 
     @Test
-    @DisplayName("Last-Event-ID가 UUID 형식이 아니면 Emitter가 스토어에서 제거된다")
+    @DisplayName("Last-Event-ID가 UUID 형식이 아니면 400을 반환하고 Emitter가 스토어에서 제거된다")
     void subscribe_removesEmitterFromStore_whenInvalidLastEventId() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
 
-        // when
+        // when + then
+        // throw e로 인해 InvalidLastEventIdException이 GlobalExceptionHandler까지 전파 → 400 동기 응답
         mockMvc.perform(get("/api/sse")
                         .with(authentication(authOf(userId)))
                         .header("Last-Event-ID", "invalid-uuid"))
-                .andExpect(request().asyncStarted());
+                .andExpect(status().isBadRequest());
 
-        // then
         assertThat(emitterStore.get(userId)).isNull();
     }
 
@@ -141,31 +144,35 @@ class SseControllerIntegrationTest {
         notificationRepository.saveAndFlush(
                 Notification.create(userId, NotificationType.FOLLOWED, "미수신 알림", "", NotificationLevel.INFO));
 
-        mockMvc.perform(get("/api/sse")
+        // when
+        MvcResult result = mockMvc.perform(get("/api/sse")
                         .with(authentication(authOf(userId)))
                         .header("Last-Event-ID", ref.getId().toString()))
-                .andExpect(request().asyncStarted());
+                .andExpect(request().asyncStarted())
+                .andReturn();
 
-        // 미수신 이벤트 재전송 성공 → Emitter는 스토어에 유지
+        // then
+        String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(body)
+                .contains("event:connect")
+                .contains("data:connected")
+                .contains("event:notifications")
+                .contains("\"title\":\"미수신 알림\"");
         assertThat(emitterStore.get(userId)).isNotNull();
     }
 
     @Test
-    @DisplayName("Last-Event-ID가 DB에 없는 UUID면 유효하지 않은 것으로 판단해 Emitter를 스토어에서 제거한다")
+    @DisplayName("Last-Event-ID가 DB에 없는 UUID면 400을 반환하고 Emitter가 스토어에서 제거된다")
     void subscribe_withUnknownLastEventId_removesEmitter() throws Exception {
-        // given
         UUID userId = UUID.randomUUID();
         UUID unknownId = UUID.randomUUID();
 
-        // when
+        // NotificationService.validateLastEventId → InvalidLastEventIdException → throw e → 400
         mockMvc.perform(get("/api/sse")
                         .with(authentication(authOf(userId)))
                         .header("Last-Event-ID", unknownId.toString()))
-                .andExpect(request().asyncStarted());
+                .andExpect(status().isBadRequest());
 
-        // then
-        // NotificationService.validateLastEventId → InvalidLastEventIdException(BusinessException)
-        // → SseService catch(BusinessException) → emitterStore.remove()
         assertThat(emitterStore.get(userId)).isNull();
     }
 }

@@ -1,13 +1,15 @@
 package com.codeit.team5.mopl.sse.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
@@ -22,11 +24,17 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @ExtendWith(MockitoExtension.class)
@@ -113,8 +121,8 @@ class SseServiceTest {
     // ===== Last-Event-ID — 인터리빙 순서 =====
 
     @Test
-    @DisplayName("subscribe: 알림만 있으면 notifications 이벤트를 순서대로 전송한다")
-    void subscribe_sendsNotificationsInOrder_whenOnlyNotifications() {
+    @DisplayName("subscribe: 알림만 있으면 notifications 이벤트를 createdAt 오름차순으로 전송한다")
+    void subscribe_sendsNotificationsInOrder_whenOnlyNotifications() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
@@ -131,27 +139,35 @@ class SseServiceTest {
                 .willReturn(List.of());
 
         // when
-        SseEmitter result = sseService.subscribe(userId, lastEventId.toString());
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
+            sseService.subscribe(userId, lastEventId.toString());
 
-        // then
-        // 에러 없이 Emitter가 반환되어야 한다
-        assertThat(result).isNotNull();
-        // 스토어에서 제거되지 않아야 한다 (정상 처리)
-        verify(emitterStore, never()).remove(any(), any());
+            // then: connect(1) + notif(2) = 총 3번 send
+            ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
+                    ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+            verify(mocked.constructed().get(0), times(3)).send(captor.capture());
+
+            List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
+            // index 0 = connect, 1 = first(t1), 2 = second(t2) 순서여야 한다
+            assertThat(extractPayload(sends.get(1), NotificationPayload.class))
+                    .map(NotificationPayload::notificationId)
+                    .contains(first.notificationId());
+            assertThat(extractPayload(sends.get(2), NotificationPayload.class))
+                    .map(NotificationPayload::notificationId)
+                    .contains(second.notificationId());
+        }
     }
 
     @Test
     @DisplayName("subscribe: 알림과 DM이 섞여 있으면 createdAt 오름차순으로 인터리빙하여 전송한다")
-    void subscribe_interleavesMissedEventsInChronologicalOrder() {
+    void subscribe_interleavesMissedEventsInChronologicalOrder() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
-
         Instant t1 = Instant.parse("2026-01-01T00:00:00Z");
         Instant t2 = Instant.parse("2026-01-01T00:01:00Z");
         Instant t3 = Instant.parse("2026-01-01T00:02:00Z");
 
-        // t1: 알림, t3: 알림 → 순서상 t1 → t2(DM) → t3 순으로 전송되어야 한다
         NotificationPayload notif1 = notifPayload(userId, t1);
         NotificationPayload notif3 = notifPayload(userId, t3);
         DirectMessagePayload dm2 = dmPayload(userId, t2);
@@ -163,22 +179,31 @@ class SseServiceTest {
                 .willReturn(List.of(dm2));
 
         // when
-        // Emitter를 캡처해 send 순서를 검증한다
-        ArgumentCaptor<SseEmitter.SseEventBuilder> eventCaptor =
-                ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
-        ArgumentCaptor<SseEmitter> emitterCaptor = ArgumentCaptor.forClass(SseEmitter.class);
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
+            sseService.subscribe(userId, lastEventId.toString());
 
-        sseService.subscribe(userId, lastEventId.toString());
+            // then: connect(1) + notif1(t1) + dm2(t2) + notif3(t3) = 총 4번 send
+            ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
+                    ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+            verify(mocked.constructed().get(0), times(4)).send(captor.capture());
 
-        // then
-        // 인터리빙 결과: notif1(t1) → dm2(t2) → notif3(t3)
-        // send() 호출이 3번 일어나야 하고, 스토어에서 제거되지 않아야 한다
-        verify(emitterStore, never()).remove(any(), any());
+            List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
+            // index 0 = connect, 1 = notif1(t1), 2 = dm2(t2), 3 = notif3(t3) 순서여야 한다
+            assertThat(extractPayload(sends.get(1), NotificationPayload.class))
+                    .map(NotificationPayload::notificationId)
+                    .contains(notif1.notificationId());
+            assertThat(extractPayload(sends.get(2), DirectMessagePayload.class))
+                    .map(DirectMessagePayload::id)
+                    .contains(dm2.id());
+            assertThat(extractPayload(sends.get(3), NotificationPayload.class))
+                    .map(NotificationPayload::notificationId)
+                    .contains(notif3.notificationId());
+        }
     }
 
     @Test
-    @DisplayName("subscribe: DM만 있으면 direct-messages 이벤트를 순서대로 전송한다")
-    void subscribe_sendsDmsInOrder_whenOnlyDms() {
+    @DisplayName("subscribe: DM만 있으면 direct-messages 이벤트를 전송한다")
+    void subscribe_sendsDmsInOrder_whenOnlyDms() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
@@ -189,31 +214,110 @@ class SseServiceTest {
         given(notificationService.findMissedDirectMessages(userId, lastEventId)).willReturn(List.of(dm));
 
         // when
-        SseEmitter result = sseService.subscribe(userId, lastEventId.toString());
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
+            sseService.subscribe(userId, lastEventId.toString());
 
-        // then
-        assertThat(result).isNotNull();
-        verify(emitterStore, never()).remove(any(), any());
+            // then: connect(1) + dm(1) = 총 2번 send
+            ArgumentCaptor<SseEmitter.SseEventBuilder> captor =
+                    ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+            verify(mocked.constructed().get(0), times(2)).send(captor.capture());
+
+            List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
+            assertThat(extractPayload(sends.get(1), DirectMessagePayload.class))
+                    .map(DirectMessagePayload::id)
+                    .contains(dm.id());
+        }
     }
 
     // ===== Last-Event-ID — 오류 처리 =====
 
     @Test
-    @DisplayName("subscribe: Last-Event-ID가 UUID 형식이 아니면 Emitter를 스토어에서 제거한다")
-    void subscribe_removesEmitter_whenInvalidLastEventId() {
-        // given
+    @DisplayName("subscribe: Last-Event-ID가 UUID 형식이 아니면 Emitter를 정리하고 InvalidLastEventIdException을 던진다")
+    void subscribe_completesAndThrows_whenInvalidLastEventId() {
         UUID userId = UUID.randomUUID();
         given(emitterStore.save(eq(userId), any())).willReturn(null);
 
-        // when
-        sseService.subscribe(userId, "not-a-uuid");
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class)) {
+            assertThatThrownBy(() -> sseService.subscribe(userId, "not-a-uuid"))
+                    .isInstanceOf(InvalidLastEventIdException.class);
 
-        // then
+            verify(mocked.constructed().get(0)).complete();
+        }
+
         verify(emitterStore).remove(eq(userId), any(SseEmitter.class));
         verify(notificationService, never()).findMissedNotifications(any(), any());
     }
 
+    // ===== 미수신 이벤트 전송 실패 (내부 처리) =====
+
+    @Test
+    @DisplayName("subscribe: 미수신 알림 전송 중 IOException 발생 시 예외 전파 없이 Emitter를 정리하고 연결을 닫는다")
+    void subscribe_completesEmitterSilently_whenMissedNotificationSendFails() {
+        UUID userId = UUID.randomUUID();
+        UUID lastEventId = UUID.randomUUID();
+        NotificationPayload missed = notifPayload(userId, Instant.now());
+
+        given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(notificationService.findMissedNotifications(userId, lastEventId))
+                .willReturn(List.of(missed));
+        given(notificationService.findMissedDirectMessages(userId, lastEventId))
+                .willReturn(List.of());
+
+        // 1번째 send() = connect → 성공, 2번째 send() = 미수신 알림 → IOException
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class,
+                (mock, ctx) -> doNothing()
+                        .doThrow(new IOException("broken pipe"))
+                        .when(mock).send(any(SseEmitter.SseEventBuilder.class)))) {
+
+            SseEmitter result = sseService.subscribe(userId, lastEventId.toString());
+
+            assertThat(result).isNotNull(); // 예외가 전파되지 않고 emitter 반환
+            verify(mocked.constructed().get(0)).complete(); // 클라이언트 재연결 유도
+        }
+
+        verify(emitterStore).remove(eq(userId), any(SseEmitter.class));
+    }
+
+    @Test
+    @DisplayName("subscribe: 미수신 DM 전송 중 IOException 발생 시 예외 전파 없이 Emitter를 정리하고 연결을 닫는다")
+    void subscribe_completesEmitterSilently_whenMissedDmSendFails() {
+        UUID userId = UUID.randomUUID();
+        UUID lastEventId = UUID.randomUUID();
+        DirectMessagePayload missedDm = dmPayload(userId, Instant.now());
+
+        given(emitterStore.save(eq(userId), any())).willReturn(null);
+        given(notificationService.findMissedNotifications(userId, lastEventId))
+                .willReturn(List.of());
+        given(notificationService.findMissedDirectMessages(userId, lastEventId))
+                .willReturn(List.of(missedDm));
+
+        try (MockedConstruction<SseEmitter> mocked = Mockito.mockConstruction(SseEmitter.class,
+                (mock, ctx) -> doNothing()
+                        .doThrow(new IOException("broken pipe"))
+                        .when(mock).send(any(SseEmitter.SseEventBuilder.class)))) {
+
+            SseEmitter result = sseService.subscribe(userId, lastEventId.toString());
+
+            assertThat(result).isNotNull();
+            verify(mocked.constructed().get(0)).complete();
+        }
+
+        verify(emitterStore).remove(eq(userId), any(SseEmitter.class));
+    }
+
     // ===== 헬퍼 =====
+
+    /**
+     * SseEventBuilder.build()에서 특정 타입의 페이로드를 추출한다.
+     * SSE 메타데이터(event:, id: 등)는 String으로 직렬화되므로 타입 필터로 구분한다.
+     */
+    private <T> Optional<T> extractPayload(SseEmitter.SseEventBuilder builder, Class<T> type) {
+        return builder.build().stream()
+                .map(ResponseBodyEmitter.DataWithMediaType::getData)
+                .filter(type::isInstance)
+                .map(type::cast)
+                .findFirst();
+    }
 
     private NotificationPayload notifPayload(UUID receiverId, Instant createdAt) {
         return new NotificationPayload(

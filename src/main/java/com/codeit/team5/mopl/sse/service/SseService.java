@@ -25,45 +25,50 @@ public class SseService {
     public SseEmitter subscribe(UUID userId, String lastEventId) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
+        // 이전 emitter 여부 확인
         SseEmitter previous = emitterStore.save(userId, emitter);
         if (previous != null) {
-            previous.complete();
+            previous.complete(); // 존재 시 이전 emitter 정리
         }
 
+        // emitter가 끝날 때
         emitter.onCompletion(() -> {
             log.debug("SSE connection completed: userId={}", userId);
-            emitterStore.remove(userId, emitter);
+            emitterStore.remove(userId, emitter); // emitterStore에서 삭제
         });
+        // emitter가 타임아웃에 걸릴 때
         emitter.onTimeout(() -> {
             log.debug("SSE connection timed out: userId={}", userId);
-            emitter.complete();
+            emitter.complete(); // emitter.complete으로 정리
         });
+        // emitter가 에러 터졌을 때
         emitter.onError(e -> {
             log.debug("SSE connection error: userId={}", userId);
-            emitterStore.remove(userId, emitter);
+            emitterStore.remove(userId, emitter); // emitterStore에서 해당 emitter 삭제
         });
 
+        // 연결 이벤트 송신
         try {
             emitter.send(SseEmitter.event()
                     .name("connect")
                     .data("connected"));
         } catch (Exception e) {
             log.warn("SSE connect event send failed: userId={}", userId);
-            emitterStore.remove(userId, emitter);
-            return emitter;
+            emitterStore.remove(userId, emitter); // 예외 발생 시 emitterStore에서 삭제
+            return emitter; // emitter 반환하여 정리
         }
 
+        // 헤더에 lastEventId가 포함되어 있으면 미수신 이벤트 전송 private 메서드 호출
         if (lastEventId != null) {
             try {
                 sendMissedEvents(emitter, userId, lastEventId);
             } catch (InvalidLastEventIdException e) {
-                // 클라이언트가 잘못된 Last-Event-ID를 보낸 경우 → 400으로 전파
                 log.warn("Invalid Last-Event-ID: userId={}, reason={}", userId, e.getMessage());
                 emitterStore.remove(userId, emitter);
+                emitter.complete();
                 throw e;
             }
         }
-
         return emitter;
     }
 
@@ -112,8 +117,8 @@ public class SseService {
                 } catch (Exception e) {
                     // 전송 실패는 연결/IO 문제 → 예외 전파 없이 emitter 정리 후 클라이언트 재연결 유도
                     log.warn("SSE missed notification send failed: userId={}", userId);
-                    emitterStore.remove(userId, emitter); // emitterStore에서 해당 emitter 제거
-                    emitter.complete(); // emitter 정리
+                    emitterStore.remove(userId, emitter);
+                    emitter.complete();
                     return;
                 }
             } else {
