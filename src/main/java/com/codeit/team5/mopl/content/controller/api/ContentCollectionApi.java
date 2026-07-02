@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -85,7 +87,7 @@ public interface ContentCollectionApi {
     })
     ResponseEntity<Void> collectSportsEventsByDay(
             @Parameter(description = "날짜 (예: 2024-12-26)", example = "2024-12-26")
-            @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "날짜 형식은 YYYY-MM-DD이어야 합니다. (예: 2024-12-26)")
-            @RequestParam String date
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            @RequestParam LocalDate date
     );
 }
