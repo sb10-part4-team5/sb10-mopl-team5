@@ -44,11 +44,9 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
         boolean matchesPassword =
                 passwordEncoder.matches(rawPassword, userDetails.getPassword());
 
-        boolean matchesTemporaryPassword =
-                temporaryPasswordService.matches(userDetails.getId(), rawPassword);
-
         // 비밀번호가 틀렸는데 임시비밀번호도 아닌 경우
-        if (!matchesPassword && !matchesTemporaryPassword) {
+        if (!matchesPassword
+                && !temporaryPasswordService.matches(userDetails.getId(), rawPassword)) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
