@@ -17,8 +17,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface DirectMessageRepository extends JpaRepository<DirectMessage, UUID>, DirectMessageQueryRepository {
 
-    // 대화 메시지 커서 페이지네이션 (keyset scroll, sender/receiver fetch)
-    @EntityGraph(attributePaths = {"sender", "receiver"})
+    // 대화 메시지 커서 페이지네이션 (keyset scroll, sender/receiver + profileImage fetch)
+    @EntityGraph(attributePaths = {"sender", "sender.profileImage", "receiver", "receiver.profileImage"})
     Window<DirectMessage> findByConversationId(UUID conversationId, ScrollPosition position, Limit limit, Sort sort);
 
     // 특정 대화에서 내가 받은 안 읽은 메시지 존재 여부

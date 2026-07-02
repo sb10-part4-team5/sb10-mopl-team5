@@ -28,7 +28,9 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
         return queryFactory
                 .selectFrom(conversation)
                 .join(conversation.participant1).fetchJoin()
+                .leftJoin(conversation.participant1.profileImage).fetchJoin()
                 .join(conversation.participant2).fetchJoin()
+                .leftJoin(conversation.participant2.profileImage).fetchJoin()
                 .where(buildWhere(currentUserId, request))
                 .orderBy(buildOrder(request))
                 .limit(fetchLimit)

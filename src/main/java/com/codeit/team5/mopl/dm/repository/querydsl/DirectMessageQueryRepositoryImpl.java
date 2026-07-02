@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.dm.repository.querydsl;
 
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.dm.entity.QDirectMessage;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.Collection;
@@ -23,20 +24,26 @@ public class DirectMessageQueryRepositoryImpl implements DirectMessageQueryRepos
         if (conversationIds.isEmpty()) {
             return List.of();
         }
-        QDirectMessage newer = new QDirectMessage("newer");
         return queryFactory
                 .selectFrom(directMessage)
                 .join(directMessage.sender).fetchJoin()
+                .leftJoin(directMessage.sender.profileImage).fetchJoin()
                 .join(directMessage.receiver).fetchJoin()
+                .leftJoin(directMessage.receiver.profileImage).fetchJoin()
                 .where(directMessage.conversation.id.in(conversationIds)
-                        .and(JPAExpressions.selectOne()
-                                .from(newer)
-                                .where(newer.conversation.id.eq(directMessage.conversation.id)
-                                        .and(newer.createdAt.gt(directMessage.createdAt)
-                                                .or(newer.createdAt.eq(directMessage.createdAt)
-                                                        .and(newer.id.gt(directMessage.id)))))
-                                .notExists()))
+                        .and(isLatestInConversation()))
                 .fetch();
+    }
+
+    private BooleanExpression isLatestInConversation() {
+        QDirectMessage newer = new QDirectMessage("newer");
+        return JPAExpressions.selectOne()
+                .from(newer)
+                .where(newer.conversation.id.eq(directMessage.conversation.id)
+                        .and(newer.createdAt.gt(directMessage.createdAt)
+                                .or(newer.createdAt.eq(directMessage.createdAt)
+                                        .and(newer.id.gt(directMessage.id)))))
+                .notExists();
     }
 
     @Override
