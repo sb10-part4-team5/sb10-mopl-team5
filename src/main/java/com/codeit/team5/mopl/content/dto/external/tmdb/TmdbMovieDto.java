@@ -14,4 +14,7 @@ public record TmdbMovieDto(
         @JsonProperty("vote_average") double voteAverage,
         @JsonProperty("original_language") String originalLanguage
 ) {
+    public TmdbMovieDto {
+        genreIds = genreIds == null ? List.of() : genreIds;
+    }
 }
