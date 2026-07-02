@@ -1,6 +1,6 @@
-package com.codeit.team5.mopl.auth.dto.request;
+package com.codeit.team5.mopl.auth.service.model;
 
-public record EmailSendRequest(
+public record MailMessage(
         // 수신자 이메일
         String emailAddr,
         // 이메일 제목
