@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
@@ -29,8 +30,8 @@ import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.dao.TransientDataAccessException;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.reactive.function.client.WebClientException;
 
@@ -56,10 +57,11 @@ public class BatchConfig {
     // ── 비동기 JobLauncher ───────────────────────────────
 
     @Bean
-    public JobLauncher asyncJobLauncher(JobRepository jobRepository) throws Exception {
+    public JobLauncher asyncJobLauncher(JobRepository jobRepository,
+            ThreadPoolTaskExecutor batchJobTaskExecutor) throws Exception {
         TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
         launcher.setJobRepository(jobRepository);
-        launcher.setTaskExecutor(new SimpleAsyncTaskExecutor("batch-controller-"));
+        launcher.setTaskExecutor(batchJobTaskExecutor);
         launcher.afterPropertiesSet();
         return launcher;
     }
@@ -92,6 +94,7 @@ public class BatchConfig {
     }
 
     @Bean
+    @StepScope
     public TmdbMovieItemReader tmdbMovieItemReader() {
         return new TmdbMovieItemReader(tmdbApiClient);
     }
@@ -129,6 +132,7 @@ public class BatchConfig {
     }
 
     @Bean
+    @StepScope
     public TmdbTvSeriesItemReader tmdbTvSeriesItemReader() {
         return new TmdbTvSeriesItemReader(tmdbApiClient);
     }
@@ -166,6 +170,7 @@ public class BatchConfig {
     }
 
     @Bean
+    @StepScope
     public SportsDbEventItemReader sportsDbEventItemReader() {
         return new SportsDbEventItemReader(sportsDbApiClient);
     }
@@ -203,6 +208,7 @@ public class BatchConfig {
     }
 
     @Bean
+    @StepScope
     public SportsDbDayItemReader sportsDbDayItemReader() {
         return new SportsDbDayItemReader(sportsDbApiClient);
     }
