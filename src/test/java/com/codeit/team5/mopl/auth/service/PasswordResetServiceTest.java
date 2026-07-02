@@ -19,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceTest {
@@ -36,7 +37,7 @@ class PasswordResetServiceTest {
     private PasswordResetService passwordResetService;
 
     @Test
-    @DisplayName("비밀번호 초기화 요청 시 이메일을 정규화하고 임시 비밀번호를 전송한다")
+    @DisplayName("비밀번호 초기화 요청 시 이메일을 정규화하고 커밋 후 임시 비밀번호를 전송한다")
     void resetPassword_success() {
         // Given
         ResetPasswordRequest request = new ResetPasswordRequest("User@Example.COM");
@@ -44,14 +45,23 @@ class PasswordResetServiceTest {
         ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
         when(temporaryPasswordService.issue(user)).thenReturn("Temp1234");
+        TransactionSynchronizationManager.initSynchronization();
 
         // When
-        passwordResetService.resetPassword(request);
+        try {
+            passwordResetService.resetPassword(request);
 
-        // Then
-        verify(userRepository).findByEmail("user@example.com");
-        verify(temporaryPasswordService).issue(user);
-        verify(mailService).sendTemporaryPassword("user@example.com", "Temp1234");
+            // Then
+            verify(userRepository).findByEmail("user@example.com");
+            verify(temporaryPasswordService).issue(user);
+            verifyNoInteractions(mailService);
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(synchronization -> synchronization.afterCommit());
+            verify(mailService).sendTemporaryPassword("user@example.com", "Temp1234");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test
