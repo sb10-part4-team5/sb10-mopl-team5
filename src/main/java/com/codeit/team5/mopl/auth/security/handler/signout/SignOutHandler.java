@@ -60,5 +60,8 @@ public class SignOutHandler implements LogoutHandler {
         } catch (RefreshTokenInvalidException e) {
             log.info("Logout requested with invalid or expired refresh token");
         }
+        catch (RuntimeException e) {
+            log.error("Logout failed while deleting refresh token", e);
+        }
     }
 }
