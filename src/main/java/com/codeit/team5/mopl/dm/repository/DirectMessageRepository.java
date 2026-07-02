@@ -5,12 +5,21 @@ import com.codeit.team5.mopl.dm.repository.querydsl.DirectMessageQueryRepository
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Window;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface DirectMessageRepository extends JpaRepository<DirectMessage, UUID>, DirectMessageQueryRepository {
+
+    // 대화 메시지 커서 페이지네이션 (keyset scroll, sender/receiver fetch)
+    @EntityGraph(attributePaths = {"sender", "receiver"})
+    Window<DirectMessage> findByConversationId(UUID conversationId, ScrollPosition position, Limit limit, Sort sort);
 
     // 특정 대화에서 내가 받은 안 읽은 메시지 존재 여부
     boolean existsByConversationIdAndReceiverIdAndReadFalse(UUID conversationId, UUID receiverId);

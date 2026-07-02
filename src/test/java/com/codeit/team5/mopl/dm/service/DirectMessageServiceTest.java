@@ -31,7 +31,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.domain.Window;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -172,9 +176,11 @@ class DirectMessageServiceTest {
         CursorResponse<DirectMessageResponse> cursorResponse = new CursorResponse<>(
                 List.of(messageResponse), null, null, false, 1L, "createdAt", "DESCENDING");
 
+        Window<DirectMessage> window = Window.from(List.of(), i -> ScrollPosition.keyset());
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
-        when(directMessageRepository.findMessages(eq(conversationId), any())).thenReturn(List.of());
-        when(dmMapper.toDirectMessageCursor(anyList(), eq(false), eq(Direction.DESC)))
+        when(directMessageRepository.findByConversationId(eq(conversationId), any(ScrollPosition.class),
+                any(Limit.class), any(Sort.class))).thenReturn(window);
+        when(dmMapper.toDirectMessageCursor(eq(window), eq(Direction.DESC)))
                 .thenReturn(cursorResponse);
 
         DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
@@ -204,7 +210,7 @@ class DirectMessageServiceTest {
         // when & then
         assertThatThrownBy(() -> directMessageService.getMessages(currentUserId, conversationId, request))
                 .isInstanceOf(NotConversationParticipantException.class);
-        verify(directMessageRepository, never()).findMessages(any(), any());
+        verify(directMessageRepository, never()).findByConversationId(any(), any(), any(), any());
     }
 
     @Test
@@ -221,7 +227,7 @@ class DirectMessageServiceTest {
         // when & then
         assertThatThrownBy(() -> directMessageService.getMessages(currentUserId, conversationId, request))
                 .isInstanceOf(ConversationNotFoundException.class);
-        verify(directMessageRepository, never()).findMessages(any(), any());
+        verify(directMessageRepository, never()).findByConversationId(any(), any(), any(), any());
     }
 
     @Test

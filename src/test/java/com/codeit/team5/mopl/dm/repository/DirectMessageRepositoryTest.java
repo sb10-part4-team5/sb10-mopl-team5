@@ -2,7 +2,6 @@ package com.codeit.team5.mopl.dm.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
@@ -10,13 +9,17 @@ import com.codeit.team5.mopl.global.util.UuidUtils;
 import com.codeit.team5.mopl.user.entity.User;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Window;
 
 class DirectMessageRepositoryTest extends BaseRepositoryTest {
 
@@ -154,20 +157,22 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
         clear();
 
         // when: DESC 최신순 → m5, m4, m3, m2, m1
-        DirectMessageCursorRequest first = new DirectMessageCursorRequest(null, null, 2, Direction.DESC);
-        List<DirectMessage> firstFetched = directMessageRepository.findMessages(conversation.getId(), first);
-        List<DirectMessage> firstPage = firstFetched.subList(0, 2);
-        DirectMessage cursor = firstPage.get(1);
-        DirectMessageCursorRequest second = new DirectMessageCursorRequest(
-                cursor.getCreatedAt().toString(), cursor.getId().toString(), 2, Direction.DESC);
-        List<DirectMessage> secondFetched = directMessageRepository.findMessages(conversation.getId(), second);
+        Sort sort = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+        Window<DirectMessage> first = directMessageRepository.findByConversationId(
+                conversation.getId(), ScrollPosition.keyset(), Limit.of(2), sort);
+
+        DirectMessage cursor = first.getContent().get(1);
+        Window<DirectMessage> second = directMessageRepository.findByConversationId(
+                conversation.getId(),
+                ScrollPosition.forward(Map.of("createdAt", cursor.getCreatedAt(), "id", cursor.getId())),
+                Limit.of(2), sort);
 
         // then
-        assertThat(firstFetched).hasSize(3);
-        assertThat(firstPage).extracting(DirectMessage::getId).containsExactly(m5.getId(), m4.getId());
-        assertThat(secondFetched).extracting(DirectMessage::getId)
-                .doesNotContain(m5.getId(), m4.getId())
-                .contains(m3.getId(), m2.getId(), m1.getId());
+        assertThat(first.getContent()).extracting(DirectMessage::getId).containsExactly(m5.getId(), m4.getId());
+        assertThat(first.hasNext()).isTrue();
+        assertThat(second.getContent()).extracting(DirectMessage::getId)
+                .containsExactly(m3.getId(), m2.getId())
+                .doesNotContain(m5.getId(), m4.getId());
     }
 
     @Test
@@ -180,13 +185,13 @@ class DirectMessageRepositoryTest extends BaseRepositoryTest {
         flush();
         clear();
 
-        DirectMessageCursorRequest request = new DirectMessageCursorRequest(null, null, 10, Direction.ASC);
-
         // when
-        List<DirectMessage> result = directMessageRepository.findMessages(conversation.getId(), request);
+        Sort sort = Sort.by(Sort.Order.asc("createdAt"), Sort.Order.asc("id"));
+        Window<DirectMessage> result = directMessageRepository.findByConversationId(
+                conversation.getId(), ScrollPosition.keyset(), Limit.of(10), sort);
 
         // then
-        assertThat(result).extracting(DirectMessage::getContent).containsExactly("1", "2", "3");
+        assertThat(result.getContent()).extracting(DirectMessage::getContent).containsExactly("1", "2", "3");
     }
 
     @Test

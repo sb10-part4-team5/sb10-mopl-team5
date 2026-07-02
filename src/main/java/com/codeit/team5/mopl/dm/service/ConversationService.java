@@ -22,7 +22,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,24 +66,9 @@ public class ConversationService {
         List<Conversation> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
 
         List<ConversationResponse> data = toConversationResponses(page, currentUser);
-
         Conversation last = page.isEmpty() ? null : page.get(page.size() - 1);
-        String nextCursor = null;
-        String nextIdAfter = null;
-        if (hasNext && last != null) {
-            nextCursor = last.getCreatedAt().toString();
-            nextIdAfter = last.getId().toString();
-        }
-        String direction = request.sortDirection() == Direction.ASC ? "ASCENDING" : "DESCENDING";
-        return new CursorResponse<>(
-                data,
-                nextCursor,
-                nextIdAfter,
-                hasNext,
-                0L,
-                "createdAt",
-                direction
-        );
+
+        return dmMapper.toConversationCursor(data, last, hasNext, request.sortDirection());
     }
 
     public ConversationResponse getConversationWith(UUID currentUserId, UUID withUserId) {

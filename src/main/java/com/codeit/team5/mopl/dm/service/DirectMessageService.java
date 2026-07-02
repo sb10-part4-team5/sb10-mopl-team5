@@ -18,11 +18,15 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Window;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +56,7 @@ public class DirectMessageService {
         DirectMessage message = directMessageRepository.save(directMessage);
         DirectMessageResponse response = dmMapper.toResponse(message);
 
-        eventPublisher.publishEvent(new DirectMessageBroadcastEvent(conversationId, response));
+        eventPublisher.publishEvent(new DirectMessageBroadcastEvent(response));
 
         // 수신자가 대화방을 보고 있지 않을 때(비활성)만 알림
         User receiver = message.getReceiver();
@@ -76,11 +80,32 @@ public class DirectMessageService {
     ) {
         validateParticipation(conversationId, currentUserId);
 
-        List<DirectMessage> fetched = directMessageRepository.findMessages(conversationId, request);
-        boolean hasNext = fetched.size() > request.limit();
-        List<DirectMessage> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
+        boolean isAsc = request.sortDirection() == Sort.Direction.ASC;
+        Window<DirectMessage> window = directMessageRepository.findByConversationId(
+                conversationId,
+                toScrollPosition(request),
+                Limit.of(request.limit()),
+                cursorSort(isAsc)
+        );
 
-        return dmMapper.toDirectMessageCursor(page, hasNext, request.sortDirection());
+        return dmMapper.toDirectMessageCursor(window, request.sortDirection());
+    }
+
+    private ScrollPosition toScrollPosition(DirectMessageCursorRequest request) {
+        if (request.cursor() == null || request.idAfter() == null) {
+            return ScrollPosition.keyset();
+        }
+        return ScrollPosition.forward(Map.of(
+                "createdAt", request.cursor(),
+                "id", request.idAfter()
+        ));
+    }
+
+    private Sort cursorSort(boolean isAsc) {
+        return Sort.by(
+                isAsc ? Sort.Order.asc("createdAt") : Sort.Order.desc("createdAt"),
+                isAsc ? Sort.Order.asc("id") : Sort.Order.desc("id")
+        );
     }
 
     @Transactional

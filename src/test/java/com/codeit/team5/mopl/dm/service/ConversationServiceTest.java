@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -83,6 +84,8 @@ class ConversationServiceTest {
         Conversation c2 = conversationOf(currentUser, userWithId("o2@mopl.com", "O2", UUID.randomUUID()));
         Conversation c3 = conversationOf(currentUser, userWithId("o3@mopl.com", "O3", UUID.randomUUID()));
         UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
+        CursorResponse<ConversationResponse> expected = new CursorResponse<>(
+                List.of(), null, null, true, 0L, "createdAt", "DESCENDING");
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(conversationRepository.findMyConversations(eq(currentUserId), any()))
@@ -90,19 +93,19 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findLatestMessagesByConversationIds(any())).thenReturn(List.of());
         when(directMessageRepository.findConversationIdsWithUnread(any(), any())).thenReturn(List.of());
+        when(dmMapper.toConversationCursor(anyList(), eq(c2), eq(true), eq(Direction.DESC)))
+                .thenReturn(expected);
 
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
 
         // when
         CursorResponse<ConversationResponse> result = conversationService.findMyConversations(currentUserId, request);
 
-        // then
-        assertThat(result.data()).hasSize(2);
-        assertThat(result.hasNext()).isTrue();
-        assertThat(result.sortBy()).isEqualTo("createdAt");
-        assertThat(result.sortDirection()).isEqualTo("DESCENDING");
-        assertThat(result.nextCursor()).isEqualTo(c2.getCreatedAt().toString());
-        assertThat(result.nextIdAfter()).isEqualTo(c2.getId().toString());
+        // then: 페이지(2건)와 마지막 커서(c2)를 mapper에 위임
+        assertThat(result).isSameAs(expected);
+        ArgumentCaptor<List<ConversationResponse>> dataCaptor = ArgumentCaptor.forClass(List.class);
+        verify(dmMapper).toConversationCursor(dataCaptor.capture(), eq(c2), eq(true), eq(Direction.DESC));
+        assertThat(dataCaptor.getValue()).hasSize(2);
     }
 
     @Test
@@ -113,6 +116,8 @@ class ConversationServiceTest {
         User currentUser = userWithId("me@mopl.com", "ME", currentUserId);
         Conversation c1 = conversationOf(currentUser, userWithId("o1@mopl.com", "O1", UUID.randomUUID()));
         UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
+        CursorResponse<ConversationResponse> expected = new CursorResponse<>(
+                List.of(), null, null, false, 0L, "createdAt", "DESCENDING");
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(conversationRepository.findMyConversations(eq(currentUserId), any()))
@@ -120,17 +125,17 @@ class ConversationServiceTest {
         when(userMapper.toSummaryResponse(any(User.class))).thenReturn(summary);
         when(directMessageRepository.findLatestMessagesByConversationIds(any())).thenReturn(List.of());
         when(directMessageRepository.findConversationIdsWithUnread(any(), any())).thenReturn(List.of());
+        when(dmMapper.toConversationCursor(anyList(), eq(c1), eq(false), eq(Direction.DESC)))
+                .thenReturn(expected);
 
         ConversationCursorRequest request = new ConversationCursorRequest(null, null, null, 2, Direction.DESC);
 
         // when
         CursorResponse<ConversationResponse> result = conversationService.findMyConversations(currentUserId, request);
 
-        // then
-        assertThat(result.data()).hasSize(1);
-        assertThat(result.hasNext()).isFalse();
-        assertThat(result.nextCursor()).isNull();
-        assertThat(result.nextIdAfter()).isNull();
+        // then: 마지막 페이지 → hasNext=false, last=c1 로 mapper 위임
+        assertThat(result).isSameAs(expected);
+        verify(dmMapper).toConversationCursor(anyList(), eq(c1), eq(false), eq(Direction.DESC));
     }
 
     @Test

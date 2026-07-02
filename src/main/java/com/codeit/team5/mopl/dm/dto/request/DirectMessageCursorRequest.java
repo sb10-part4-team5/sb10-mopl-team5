@@ -4,12 +4,14 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import java.time.Instant;
+import java.util.UUID;
 import org.springframework.data.domain.Sort;
 
 public record DirectMessageCursorRequest(
-        String cursor,
+        Instant cursor,
 
-        String idAfter,
+        UUID idAfter,
 
         @NotNull
         @Positive

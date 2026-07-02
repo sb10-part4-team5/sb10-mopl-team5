@@ -3,13 +3,11 @@ package com.codeit.team5.mopl.dm.repository.querydsl;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.QConversation;
-import com.codeit.team5.mopl.dm.exception.InvalidCursorException;
 import com.codeit.team5.mopl.global.querydsl.CursorQueryDslSupport;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -64,21 +62,17 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
     }
 
     private void applyCursor(BooleanBuilder where, ConversationCursorRequest request) {
-        boolean isAsc = request.sortDirection() == Direction.ASC;
-        try {
-            BooleanExpression predicate = CursorQueryDslSupport.cursorPredicateFrom(
-                    conversation.createdAt,
-                    conversation.id,
-                    request.cursor(),
-                    request.idAfter(),
-                    isAsc
-            );
-            if (predicate != null) {
-                where.and(predicate);
-            }
-        } catch (DateTimeParseException | IllegalArgumentException e) {
-            throw new InvalidCursorException(request.cursor(), request.idAfter(), e);
+        if (request.cursor() == null || request.idAfter() == null) {
+            return;
         }
+        boolean isAsc = request.sortDirection() == Direction.ASC;
+        where.and(CursorQueryDslSupport.cursorPredicate(
+                conversation.createdAt,
+                conversation.id,
+                request.cursor(),
+                request.idAfter(),
+                isAsc
+        ));
     }
 
     private OrderSpecifier<?>[] buildOrder(ConversationCursorRequest request) {

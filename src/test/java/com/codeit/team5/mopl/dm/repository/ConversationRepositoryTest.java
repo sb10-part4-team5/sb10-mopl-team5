@@ -141,7 +141,7 @@ class ConversationRepositoryTest extends BaseRepositoryTest {
         List<Conversation> firstPage = firstFetched.subList(0, 2);
         Conversation cursor = firstPage.get(1);
         ConversationCursorRequest second = new ConversationCursorRequest(
-                null, cursor.getCreatedAt().toString(), cursor.getId().toString(), 2, Direction.DESC);
+                null, cursor.getCreatedAt(), cursor.getId(), 2, Direction.DESC);
         List<Conversation> secondFetched = conversationRepository.findMyConversations(me.getId(), second);
 
         // then
