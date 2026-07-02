@@ -15,19 +15,26 @@ jobs:
 
     steps:
       - name: 코드 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: JDK 설정
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Gradle 캐시
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@6cfc8b8e8bb586cc164bef1c478c1eea3a4d6a19 # v3
 
       - name: Gradle 실행 권한 부여
         run: chmod +x gradlew
 
       - name: 테스트 및 커버리지 검증
         run: ./gradlew clean test jacocoTestReport jacocoTestCoverageVerification
+
+      - name: 커버리지 리포트를 CodeCov에 업로드
+        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/reports/jacoco/test/jacocoTestReport.xml
+          fail_ci_if_error: true
