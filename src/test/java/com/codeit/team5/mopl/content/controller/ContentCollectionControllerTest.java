@@ -175,6 +175,16 @@ class ContentCollectionControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    @DisplayName("SportsDB league 값이 유효하지 않으면 400 응답을 반환한다")
+    void collectSportsEvents_invalidLeague_returnsBadRequest() throws Exception {
+        // when, then
+        mockMvc.perform(post("/api/admin/contents/collect/sports")
+                        .param("league", "INVALID_LEAGUE")
+                        .param("season", "2023-2024"))
+                .andExpect(status().isBadRequest());
+    }
+
     // --- SportsDB 일별 경기 수집 ---
 
     @Test

@@ -74,7 +74,7 @@ private void run(Job job, JobParameters params) {
             asyncJobLauncher.run(job, params);
         } catch (JobExecutionAlreadyRunningException | JobRestartException |
                  JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
-            log.error("[Scheduler] Job 실행 실패 - job={}, error={}", job.getName(), e.getMessage());
+            log.error("[Scheduler] Job 실행 실패 - job={}, error={}", job.getName(), e.getMessage(), e);
         }
     }
 }
