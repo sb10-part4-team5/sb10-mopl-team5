@@ -48,7 +48,7 @@ public class TemporaryPasswordService {
             return false;
         }
 
-        return temporaryPasswordRepository.findTopByUserIdOrderByCreatedAtDesc(userId)
+        return temporaryPasswordRepository.findByUserId(userId)
                 .filter(temporaryPassword -> temporaryPassword.isValidAt(Instant.now()))
                 .map(temporaryPassword ->
                         passwordEncoder.matches(rawPassword, temporaryPassword.getPasswordHash())

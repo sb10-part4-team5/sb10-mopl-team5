@@ -7,8 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TemporaryPasswordRepository extends JpaRepository<TemporaryPassword, UUID> {
 
-    Optional<TemporaryPassword> findTopByUserIdOrderByCreatedAtDesc(UUID userId);
-
     Optional<TemporaryPassword> findByUserId(UUID userId);
 
     void deleteByUserId(UUID userId);
