@@ -1,5 +1,8 @@
 package com.codeit.team5.mopl.playlist.service;
 
+import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.playlist.constant.PlaylistSortBy;
+import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
 import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
@@ -11,8 +14,13 @@ import com.codeit.team5.mopl.playlist.mapper.PlaylistMapper;
 import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.ScrollPosition.Direction;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +58,14 @@ public class PlaylistService {
     public void delete(UUID id, String email) {
         validateOwner(id, email);
         repository.deleteByIdDirectly(id);
+    }
+
+    public CursorResponse<PlaylistResponse> findByCursor(PlaylistCursorCommand dto) {
+        List<Playlist> playlists = repository.findByCursor(dto);
+        boolean hasNext = playlists.size() > dto.limit();
+        List<Playlist> data = hasNext ? playlists.subList(0, dto.limit()) : playlists;
+        long totalCount = repository.countByCommand(dto);
+        return mapper.toCursorResponse(data, dto, hasNext, totalCount);
     }
 
     private Playlist findById(UUID id) {

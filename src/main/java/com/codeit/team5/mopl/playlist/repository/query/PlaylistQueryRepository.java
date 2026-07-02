@@ -7,4 +7,6 @@ import java.util.List;
 public interface PlaylistQueryRepository {
 
     List<Playlist> findByCursor(PlaylistCursorCommand request);
+
+    long countByCommand(PlaylistCursorCommand request);
 }
