@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.exception.SelfConversationException;
-import com.codeit.team5.mopl.global.util.UuidUtils;
+import com.codeit.team5.mopl.dm.util.UuidUtils;
 import com.codeit.team5.mopl.user.entity.User;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;

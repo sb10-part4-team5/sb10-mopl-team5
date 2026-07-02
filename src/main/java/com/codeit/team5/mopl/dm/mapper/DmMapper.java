@@ -23,8 +23,10 @@ public interface DmMapper {
     @Mapping(target = "conversationId", source = "conversation.id")
     DirectMessageResponse toResponse(DirectMessage message);
 
-    default CursorResponse<DirectMessageResponse> toDirectMessageCursor(Window<DirectMessage> window,
-            Direction sortDirection) {
+    default CursorResponse<DirectMessageResponse> toDirectMessageCursor(
+            Window<DirectMessage> window,
+            Direction sortDirection
+    ) {
         List<DirectMessage> content = window.getContent();
         List<DirectMessageResponse> data = content.stream().map(this::toResponse).toList();
         DirectMessage last = content.isEmpty() ? null : content.get(content.size() - 1);

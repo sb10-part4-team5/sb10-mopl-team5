@@ -24,6 +24,7 @@ public interface UserMapper {
     @Mapping(target = "userId", source = "id")
     @Mapping(target = "profileImageUrl", source = "profileImage.url")
     UserSummaryResponse toSummaryResponse(User user);
+
     default CursorResponse<UserResponse> toCursor(
             List<User> page, boolean hasNext, long totalCount, UserSortBy sortBy, Direction sortDirection
     ) {

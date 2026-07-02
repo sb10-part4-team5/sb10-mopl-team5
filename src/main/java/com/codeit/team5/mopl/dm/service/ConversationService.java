@@ -9,7 +9,7 @@ import com.codeit.team5.mopl.dm.mapper.DmMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.util.UuidUtils;
+import com.codeit.team5.mopl.dm.util.UuidUtils;
 import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;

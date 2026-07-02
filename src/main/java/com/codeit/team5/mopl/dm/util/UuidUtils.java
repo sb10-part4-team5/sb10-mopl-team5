@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.global.util;
+package com.codeit.team5.mopl.dm.util;
 
 import java.util.UUID;
 

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.codeit.team5.mopl.dm.entity.Conversation;
 import com.codeit.team5.mopl.dm.entity.DirectMessage;
 import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
-import com.codeit.team5.mopl.global.util.UuidUtils;
+import com.codeit.team5.mopl.dm.util.UuidUtils;
 import com.codeit.team5.mopl.user.entity.User;
 import java.time.Instant;
 import java.util.List;
