@@ -41,7 +41,6 @@ public class SseSender {
         } catch (Exception e) {
             log.warn("SSE send failed: userId={}", userId);
             emitterStore.remove(userId, emitter); // 전송 실패 시 emitter를 store에서 제거
-            emitter.complete();
             return false;
         }
     }
