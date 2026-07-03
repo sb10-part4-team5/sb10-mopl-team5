@@ -49,7 +49,7 @@ public class JwtAuthenticationService {
         try {
             return UUID.fromString(subject);
         } catch (IllegalArgumentException e) {
-            throw new JwtInvalidException("Invalid token subject");
+            throw new JwtInvalidException("Invalid token subject", e.getMessage());
         }
     }
 }

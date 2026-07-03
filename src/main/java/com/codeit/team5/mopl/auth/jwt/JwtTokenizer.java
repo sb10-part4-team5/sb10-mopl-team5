@@ -1,8 +1,6 @@
 package com.codeit.team5.mopl.auth.jwt;
 
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
-import com.codeit.team5.mopl.auth.security.details.AuthUser;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -14,9 +12,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 @Component
