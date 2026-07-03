@@ -137,6 +137,7 @@ public class NotificationService {
                 .toList();
     }
 
+    // Last-Event-ID 유효성 검증
     private void validateLastEventId(UUID receiverId, UUID lastEventId) {
         notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
                 .orElseThrow(() -> new InvalidLastEventIdException(lastEventId.toString()));

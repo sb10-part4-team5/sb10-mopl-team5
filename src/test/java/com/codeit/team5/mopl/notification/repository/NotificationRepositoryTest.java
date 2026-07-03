@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
@@ -27,6 +30,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.ReflectionUtils;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -322,12 +327,25 @@ class NotificationRepositoryTest {
     void findMissedNotifications_excludesRead() {
         // Given
         UUID receiverId = persistReceiver("missed-noti@example.com");
+
+        // ref, unread, read가 같은 createdAt을 가지면 UUID 정렬 tie-break으로 unread가 제외될 수 있음
+        // setCreatedAt으로 ref를 명시적으로 이전 시각으로 고정해 항상 afterCursor 조건을 만족시킴
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+
         Notification ref = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "기준", null, NotificationLevel.INFO));
+        ReflectionTestUtils.setField(ref,"createdAt", t0);
+
+
         Notification unread = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "안읽음", null, NotificationLevel.INFO));
+        ReflectionTestUtils.setField(unread,"createdAt", t1);
+
         Notification read = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "읽음", null, NotificationLevel.INFO));
+        ReflectionTestUtils.setField(read,"createdAt", t1);
+
         read.markAsRead();
         notificationRepository.save(read);
         entityManager.flush();
@@ -337,9 +355,100 @@ class NotificationRepositoryTest {
         List<Notification> result =
                 notificationRepository.findMissedNotifications(receiverId, ref.getId());
 
-        // Then
+        // Then: read는 제외, unread만 반환
         assertThat(result).extracting(Notification::getId)
                 .containsExactly(unread.getId());
+    }
+
+    @Test
+    @DisplayName("findMissedNotifications: 결과가 createdAt 오름차순으로 정렬된다 (인터리빙 전제 조건)")
+    void findMissedNotifications_returnsSortedByCreatedAtAsc() {
+        // Given
+        UUID receiverId = persistReceiver("missed-noti-sort@example.com");
+
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+        Instant t2 = Instant.parse("2026-01-01T00:02:00Z");
+        Instant t3 = Instant.parse("2026-01-01T00:03:00Z");
+
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "기준", null, NotificationLevel.INFO));
+        setCreatedAt(ref.getId(), t0);
+
+        // 역순(t3 → t1 → t2)으로 저장 — 정렬이 실제로 동작하지 않으면 순서가 틀어짐
+        Notification n3 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "알림3", null, NotificationLevel.INFO));
+        setCreatedAt(n3.getId(), t3);
+
+        Notification n1 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "알림1", null, NotificationLevel.INFO));
+        setCreatedAt(n1.getId(), t1);
+
+        Notification n2 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "알림2", null, NotificationLevel.INFO));
+        setCreatedAt(n2.getId(), t2);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedNotifications(receiverId, ref.getId());
+
+        // Then: createdAt 오름차순(t1 → t2 → t3)이어야 한다
+        assertThat(result).hasSize(3);
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(n1.getId(), n2.getId(), n3.getId());
+    }
+
+    @Test
+    @DisplayName("findMissedDirectMessages: 결과가 createdAt 오름차순으로 정렬된다 (인터리빙 전제 조건)")
+    void findMissedDirectMessages_returnsSortedByCreatedAtAsc() {
+        // Given
+        UUID receiverId = persistReceiver("missed-dm-sort@example.com");
+
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+        Instant t2 = Instant.parse("2026-01-01T00:02:00Z");
+        Instant t3 = Instant.parse("2026-01-01T00:03:00Z");
+
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "기준DM", null, NotificationLevel.INFO));
+        setCreatedAt(ref.getId(), t0);
+
+        // 역순(t3 → t1 → t2)으로 저장
+        Notification dm3 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "DM3", null, NotificationLevel.INFO));
+        setCreatedAt(dm3.getId(), t3);
+
+        Notification dm1 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "DM1", null, NotificationLevel.INFO));
+        setCreatedAt(dm1.getId(), t1);
+
+        Notification dm2 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "DM2", null, NotificationLevel.INFO));
+        setCreatedAt(dm2.getId(), t2);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedDirectMessages(receiverId, ref.getId());
+
+        // Then: createdAt 오름차순(t1 → t2 → t3)이어야 한다
+        assertThat(result).hasSize(3);
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(dm1.getId(), dm2.getId(), dm3.getId());
+    }
+
+    // created_at을 직접 지정 (@CreatedDate는 덮어쓸 수 없어 native query 사용)
+    private void setCreatedAt(UUID id, Instant createdAt) {
+        entityManager.createNativeQuery(
+                        "UPDATE notifications SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", OffsetDateTime.ofInstant(createdAt, ZoneOffset.UTC))
+                .setParameter("id", id)
+                .executeUpdate();
     }
 
     @Test
@@ -347,12 +456,22 @@ class NotificationRepositoryTest {
     void findMissedDirectMessages_excludesRead() {
         // Given
         UUID receiverId = persistReceiver("missed-dm@example.com");
+
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+
         Notification ref = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.DIRECT_MESSAGE, "기준", null, NotificationLevel.INFO));
+        setCreatedAt(ref.getId(), t0);
+
         Notification unread = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.DIRECT_MESSAGE, "안읽음", null, NotificationLevel.INFO));
+        setCreatedAt(unread.getId(), t1);
+
         Notification read = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.DIRECT_MESSAGE, "읽음", null, NotificationLevel.INFO));
+        setCreatedAt(read.getId(), t1);
+
         read.markAsRead();
         notificationRepository.save(read);
         entityManager.flush();
@@ -362,7 +481,7 @@ class NotificationRepositoryTest {
         List<Notification> result =
                 notificationRepository.findMissedDirectMessages(receiverId, ref.getId());
 
-        // Then
+        // Then: read는 제외, unread만 반환
         assertThat(result).extracting(Notification::getId)
                 .containsExactly(unread.getId());
     }
