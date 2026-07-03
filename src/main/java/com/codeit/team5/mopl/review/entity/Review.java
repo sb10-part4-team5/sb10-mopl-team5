@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "reviews",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"content_id", "author_id"}))
+    uniqueConstraints = @UniqueConstraint(columnNames = {"content_id", "user_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Review extends BaseUpdatableEntity {
@@ -21,7 +21,7 @@ public class Review extends BaseUpdatableEntity {
     @Column(name = "content_id", nullable = false, columnDefinition = "uuid")
     private UUID contentId;
 
-    @Column(name = "author_id", nullable = false, columnDefinition = "uuid")
+    @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
     private UUID authorId;
 
     @Column(columnDefinition = "TEXT", nullable = false)
