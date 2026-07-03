@@ -36,12 +36,14 @@ public class SubscriptionService {
         }
         Playlist playlist = playlistRepository.getReferenceById(playlistId);
         repository.save(Subscription.of(playlist, user));
+        playlistRepository.increaseSubscribeCount(playlistId);
     }
 
     @Transactional
     public void delete(UUID playlistId, String email) {
         if (repository.existsBySubscriberEmailAndPlaylistId(email, playlistId)) {
             repository.deleteBySubscriberEmailAndPlaylistIdDirectly(email, playlistId);
+            playlistRepository.decreaseSubscribeCount(playlistId);
             return;
         }
         throw new SubscriptionNotFoundException(playlistId, email);
