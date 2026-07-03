@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.review.repository.querydsl;
 
 import com.codeit.team5.mopl.notification.exception.CursorIdAfterNotTogetherException;
+import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
 import com.codeit.team5.mopl.review.entity.QReview;
 import com.codeit.team5.mopl.review.entity.Review;
 import com.querydsl.core.types.OrderSpecifier;
@@ -58,7 +59,7 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
             try {
                 cursorRating = Double.parseDouble(cursor); // string 커서를 double 형식으로 파싱
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("잘못된 커서 형식입니다: " + cursor);
+                throw new InvalidCursorException();
             }
             return ascending
                 // 커서 평점보다 평점이 큰 리뷰, 두개가 같으면 보조 커서를 기준으로 정렬
@@ -70,7 +71,7 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
         try {
             cursorInstant = Instant.parse(cursor); // string 커서 -> Instant 파싱
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("잘못된 커서 형식입니다: " + cursor);
+            throw new InvalidCursorException();
         }
         return ascending
             ? r.createdAt.gt(cursorInstant).or(r.createdAt.eq(cursorInstant).and(r.id.gt(idAfter)))
