@@ -7,6 +7,7 @@ import com.codeit.team5.mopl.global.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
 import com.codeit.team5.mopl.review.dto.request.ReviewUpdateRequest;
 import com.codeit.team5.mopl.review.dto.response.ReviewResponse;
+import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.review.entity.Review;
 import com.codeit.team5.mopl.review.exception.InvalidReviewSortByException;
 import com.codeit.team5.mopl.review.exception.ReviewAlreadyExistsException;
@@ -92,17 +93,14 @@ public class ReviewService {
     // 리뷰 생성
     @Transactional
     public ReviewResponse createReview(UUID authorId, ReviewCreateRequest request) {
-        // 콘텐츠가 존재하는 지 검증
-        if(!contentRepository.existsById(request.contentId()))
-        {
-            throw new ContentNotFoundException(request.contentId());
-        }
+        Content content = contentRepository.findById(request.contentId())
+            .orElseThrow(() -> new ContentNotFoundException(request.contentId()));
 
         // 해당 유저의 리뷰가 이미 존재하면 예외 던지기
         if (reviewRepository.existsByContentIdAndAuthorId(request.contentId(), authorId)) {
             throw new ReviewAlreadyExistsException();
         }
-        Review review = Review.create(request.contentId(), authorId, request.text(), request.rating());
+        Review review = Review.create(content, authorId, request.text(), request.rating());
         Review saved;
         try {
             saved = reviewRepository.saveAndFlush(review);

@@ -34,7 +34,7 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
         OrderSpecifier<?>[] orderSpecifiers = buildOrderSpecifiers(r, sortBy, ascending);
 
         return queryFactory.selectFrom(r)
-            .where(r.contentId.eq(contentId), cursorCondition)
+            .where(r.content.id.eq(contentId), cursorCondition)
             .orderBy(orderSpecifiers)
             .limit(limit.max())
             .fetch();

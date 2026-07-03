@@ -1,10 +1,12 @@
 package com.codeit.team5.mopl.review.entity;
 
-import com.codeit.team5.mopl.global.entity.BaseEntity;
+import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
-import com.codeit.team5.mopl.review.exception.InvalidRatingException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
@@ -19,8 +21,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Review extends BaseUpdatableEntity {
 
-    @Column(name = "content_id", nullable = false, columnDefinition = "uuid")
-    private UUID contentId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "content_id", nullable = false)
+    private Content content;
 
     @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
     private UUID authorId;
@@ -31,15 +34,19 @@ public class Review extends BaseUpdatableEntity {
     @Column(nullable = false)
     private Double rating;
 
-    public static Review create(UUID contentId, UUID authorId, String text, Double rating) {
-        return new Review(contentId, authorId, text, rating);
+    public static Review create(Content content, UUID authorId, String text, Double rating) {
+        return new Review(content, authorId, text, rating);
     }
 
-    private Review(UUID contentId, UUID authorId, String text, Double rating) {
-        this.contentId = contentId;
+    private Review(Content content, UUID authorId, String text, Double rating) {
+        this.content = content;
         this.authorId = authorId;
         this.text = text;
         this.rating = rating;
+    }
+
+    public UUID getContentId() {
+        return content.getId();
     }
 
     public void update(String text, Double rating) {
