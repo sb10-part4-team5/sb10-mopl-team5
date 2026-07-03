@@ -36,7 +36,7 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
 
     private final JPAQueryFactory queryFactory;
 
-    private final Map<PlaylistSortBy, CursorConditionBuilder> SORT_PATH_MAP =
+    private final Map<PlaylistSortBy, CursorConditionBuilder> cursorBuilder =
             Map.of(PlaylistSortBy.UPDATED_AT, cursorBuilder(playlist.updatedAt),
                     PlaylistSortBy.SUBSCRIBE_COUNT, cursorBuilder(playlist.subscriberCount));
 
@@ -120,7 +120,7 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
         }
 
         boolean isAsc = request.sortDirection().isAscending();
-        return SORT_PATH_MAP.get(request.sortBy()).build(cursor, idAfter, isAsc);
+        return cursorBuilder.get(request.sortBy()).build(cursor, idAfter, isAsc);
     }
 
     private BooleanExpression subscriberQuery(PlaylistCursorCommand request) {

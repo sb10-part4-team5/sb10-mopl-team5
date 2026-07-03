@@ -8,7 +8,7 @@ import org.springframework.http.HttpStatus;
 public class PlaylistNotFoundException extends BusinessException {
 
     public PlaylistNotFoundException(UUID id) {
-        super(HttpStatus.BAD_REQUEST, "플레이리스트를 찾을 수 없습니다.",
+        super(HttpStatus.NOT_FOUND, "플레이리스트를 찾을 수 없습니다.",
                 Map.of("playlistId", id));
     }
 }

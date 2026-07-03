@@ -42,6 +42,7 @@ public class PlaylistService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new PlaylistUserNotFoundException(email));
         Playlist playlist = Playlist.of(user, request.title(), request.description());
+        repository.save(playlist);
         return mapper.toDto(playlist);
     }
 

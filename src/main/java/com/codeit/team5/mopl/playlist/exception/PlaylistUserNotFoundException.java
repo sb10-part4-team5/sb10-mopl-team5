@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 public class PlaylistUserNotFoundException extends BusinessException {
 
     public PlaylistUserNotFoundException(String email) {
-        super(HttpStatus.BAD_REQUEST, "유저를 찾을 수 없습니다.",
+        super(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다.",
                 Map.of("email", email));
     }
 }

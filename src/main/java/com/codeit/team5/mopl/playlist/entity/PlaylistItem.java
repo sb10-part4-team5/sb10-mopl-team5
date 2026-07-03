@@ -25,12 +25,12 @@ import org.hibernate.annotations.Immutable;
 public class PlaylistItem extends BaseEntity {
 
     @NotNull
-    @Column(name = "playlist_id")
+    @Column(name = "playlist_id", nullable = false)
     private UUID playlistId;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "content_id")
+    @JoinColumn(name = "content_id", nullable = false)
     private Content content;
 
     private PlaylistItem(UUID playlistId, Content content) {

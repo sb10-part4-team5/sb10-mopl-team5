@@ -2,7 +2,6 @@ package com.codeit.team5.mopl.playlist.entity;
 
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
 import com.codeit.team5.mopl.user.entity.User;
-import io.jsonwebtoken.lang.Assert;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -37,8 +36,6 @@ public class Playlist extends BaseUpdatableEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private Playlist(User owner, String title, String description, Integer subscriberCount) {
-        Assert.hasText(title, "제목을 입력해주세요.");
-        Assert.hasText(description, "상세 설명을 입력해주세요.");
         this.owner = owner;
         this.title = title;
         this.description = description;

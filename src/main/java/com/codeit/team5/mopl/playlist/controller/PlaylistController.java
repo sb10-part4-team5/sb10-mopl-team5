@@ -50,7 +50,7 @@ public class PlaylistController implements PlaylistControllerApi {
     @Override
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PlaylistResponse> create(Principal principal,
-            @RequestBody PlaylistCreateRequest request) {
+            @RequestBody @Valid PlaylistCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(service.create(principal.getName(), request));
     }
