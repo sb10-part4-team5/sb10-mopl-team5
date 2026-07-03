@@ -26,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public static final String AUTH_EXCEPTION_ATTRIBUTE = "authException";
 
     private final JwtTokenizer jwtTokenizer;
+    private final JwtAuthenticationService jwtAuthenticationService;
 
     @Override
     protected void doFilterInternal(
@@ -44,7 +45,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String accessToken = authorizationHeader.substring(BEARER_PREFIX.length());
 
         try {
-            Authentication authentication = jwtTokenizer.getAuthentication(accessToken);
+            Authentication authentication =
+                    jwtAuthenticationService.getAuthentication(accessToken);
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (JwtException | IllegalArgumentException | AuthException e) {
             SecurityContextHolder.clearContext();

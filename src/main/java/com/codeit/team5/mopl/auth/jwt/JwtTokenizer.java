@@ -11,15 +11,11 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.UUID;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -52,6 +48,7 @@ public class JwtTokenizer {
                 .compact();
     }
 
+    // accessToken 서명과 만료 검증
     public Jws<Claims> getAccessClaims(String jws) {
         return Jwts.parserBuilder()
                 .setSigningKey(getAccessKey())
@@ -87,19 +84,18 @@ public class JwtTokenizer {
         }
     }
 
+    // TODO 추후 삭제 예정 (JwtAuthenticationService의 메서드로 추가될 예정)
     public Authentication getAuthentication(String accessToken) {
         Jws<Claims> claimsJws = getAccessClaims(accessToken);
         Claims claims = claimsJws.getBody();
         UUID userId = UUID.fromString(claims.getSubject());
         String email = claims.get("email", String.class);
         String role = claims.get("role", String.class);
-        List<SimpleGrantedAuthority> authorities =
-                Collections.singletonList(new SimpleGrantedAuthority(role));
         // 로그인에 성공한 인증된 유저이기 때문에 locked=false로 둬도 괜찮음
         AuthUser authUser = new AuthUser(userId, email, role, false);
         // 실제로 인증 객체를 만들어야 하기 때문에 구현 클래스 사용
         UserDetails principal = new MoplUserDetails(authUser, "");
-        return new UsernamePasswordAuthenticationToken(principal, accessToken, authorities);
+        return new UsernamePasswordAuthenticationToken(principal, accessToken, principal.getAuthorities());
     }
 
     private Key getAccessKey() {
