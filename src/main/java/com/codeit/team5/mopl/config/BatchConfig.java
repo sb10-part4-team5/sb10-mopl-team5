@@ -102,7 +102,7 @@ public class BatchConfig {
 
     @Bean
     public TmdbMovieItemProcessor tmdbMovieItemProcessor() {
-        return new TmdbMovieItemProcessor(contentRepository, objectMapper);
+        return new TmdbMovieItemProcessor(objectMapper);
     }
 
     // ── TMDB TV 시리즈 Job ─────────────────────────────────────────
@@ -136,7 +136,7 @@ public class BatchConfig {
 
     @Bean
     public TmdbTvSeriesItemProcessor tmdbTvSeriesItemProcessor() {
-        return new TmdbTvSeriesItemProcessor(contentRepository, objectMapper);
+        return new TmdbTvSeriesItemProcessor(objectMapper);
     }
 
     // ── SportsDB 리그-시즌 Job ───────────────────────────────────────────────
@@ -170,7 +170,7 @@ public class BatchConfig {
 
     @Bean
     public SportsDbEventItemProcessor sportsDbEventItemProcessor() {
-        return new SportsDbEventItemProcessor(contentRepository, objectMapper);
+        return new SportsDbEventItemProcessor(objectMapper);
     }
 
     // ── SportsDB 일별 Job ──────────────────────────────────────────
