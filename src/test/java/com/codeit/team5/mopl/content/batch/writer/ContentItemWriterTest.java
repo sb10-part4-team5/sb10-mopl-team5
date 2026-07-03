@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.content.batch.writer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -18,6 +19,7 @@ import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,6 +61,7 @@ class ContentItemWriterTest {
                 ContentSource.TMDB, "2", null, "{}");
         ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of());
         ContentWithMetaData item2 = new ContentWithMetaData(content2, null, List.of());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content1, content2));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
 
@@ -71,15 +74,17 @@ class ContentItemWriterTest {
     }
 
     @Test
-    @DisplayName("청크 내 externalId 중복이 있으면 첫 번째 항목만 저장한다")
-    void write_deduplicatesChunkByExternalId() throws Exception {
+    @DisplayName("DB에 이미 존재하는 externalId는 저장하지 않는다")
+    void write_deduplicatesAgainstDb() throws Exception {
         // given
         Content content1 = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
                 ContentSource.TMDB, "1", null, "{}");
-        Content content2 = Content.createByExternalSource(ContentType.MOVIE, "영화1-중복", "desc",
-                ContentSource.TMDB, "1", null, "{}");
+        Content content2 = Content.createByExternalSource(ContentType.MOVIE, "영화2", "desc",
+                ContentSource.TMDB, "2", null, "{}");
         ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of());
         ContentWithMetaData item2 = new ContentWithMetaData(content2, null, List.of());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList()))
+                .willReturn(Set.of("1")); // content1은 이미 존재
         given(contentRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
 
@@ -87,7 +92,29 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item1, item2)));
 
         // then
-        verify(contentRepository).saveAll(List.of(content1));
+        verify(contentRepository).saveAll(List.of(content2));
+    }
+
+    @Test
+    @DisplayName("청크 내 모든 항목이 DB에 이미 존재하면 저장을 생략한다")
+    void write_allExistingInDb_skipsAllSaves() throws Exception {
+        // given
+        Content content1 = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        Content content2 = Content.createByExternalSource(ContentType.MOVIE, "영화2", "desc",
+                ContentSource.TMDB, "2", null, "{}");
+        ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of());
+        ContentWithMetaData item2 = new ContentWithMetaData(content2, null, List.of());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList()))
+                .willReturn(Set.of("1", "2"));
+
+        // when
+        writer.write(new Chunk<>(List.of(item1, item2)));
+
+        // then
+        verify(contentRepository, never()).saveAll(anyList());
+        verify(contentStatsRepository, never()).saveAll(anyList());
+        verify(binaryContentRepository, never()).saveAll(anyList());
     }
 
     @Test
@@ -98,6 +125,7 @@ class ContentItemWriterTest {
                 ContentSource.TMDB, "1", null, "{}");
         ContentWithMetaData item = new ContentWithMetaData(content, "https://img.example.com/poster.jpg", List.of());
         BinaryContent savedThumbnail = BinaryContent.externalUrl("https://img.example.com/poster.jpg");
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
         given(binaryContentRepository.saveAll(anyList())).willReturn(List.of(savedThumbnail));
@@ -117,6 +145,7 @@ class ContentItemWriterTest {
         Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
                 ContentSource.TMDB, "1", null, "{}");
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
 
@@ -140,6 +169,7 @@ class ContentItemWriterTest {
         ContentWithMetaData item2 = new ContentWithMetaData(content2, sharedUrl, List.of());
         BinaryContent savedThumbnail1 = BinaryContent.externalUrl(sharedUrl);
         BinaryContent savedThumbnail2 = BinaryContent.externalUrl(sharedUrl);
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content1, content2));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
         given(binaryContentRepository.saveAll(anyList())).willReturn(List.of(savedThumbnail1, savedThumbnail2));
@@ -163,6 +193,7 @@ class ContentItemWriterTest {
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("액션"));
         Tag existingTag = Tag.create("액션");
         ReflectionTestUtils.setField(existingTag, "id", UUID.randomUUID());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
         given(tagRepository.findByNameIn(List.of("액션"))).willReturn(List.of(existingTag));
@@ -185,6 +216,7 @@ class ContentItemWriterTest {
                 ContentSource.TMDB, "1", null, "{}");
         ReflectionTestUtils.setField(content, "id", UUID.randomUUID());
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("드라마"));
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
         given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of());
@@ -216,6 +248,7 @@ class ContentItemWriterTest {
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("액션", "드라마"));
         Tag existingTag = Tag.create("액션");
         ReflectionTestUtils.setField(existingTag, "id", UUID.randomUUID());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
         given(tagRepository.findByNameIn(List.of("액션", "드라마"))).willReturn(List.of(existingTag));
