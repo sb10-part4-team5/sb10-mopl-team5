@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.subscription.service;
 import com.codeit.team5.mopl.playlist.entity.Playlist;
 import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.subscription.entity.Subscription;
+import com.codeit.team5.mopl.subscription.exception.SubscriptionAlreadyExistsException;
 import com.codeit.team5.mopl.subscription.exception.SubscriptionNotFoundException;
 import com.codeit.team5.mopl.subscription.exception.SubscriptionPlaylistNotFoundException;
 import com.codeit.team5.mopl.subscription.exception.SubscriptionUserNotFoundException;
@@ -30,6 +31,9 @@ public class SubscriptionService {
         }
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new SubscriptionUserNotFoundException(email));
+        if (repository.existsBySubscriberEmailAndPlaylistId(email, playlistId)) {
+            throw new SubscriptionAlreadyExistsException(email, playlistId);
+        }
         Playlist playlist = playlistRepository.getReferenceById(playlistId);
         repository.save(Subscription.of(playlist, user));
     }
