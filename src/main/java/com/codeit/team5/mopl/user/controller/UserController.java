@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.binarycontent.support.MultipartFiles;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.controller.api.UserApi;
 import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
@@ -12,6 +13,7 @@ import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRoleUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
+import com.codeit.team5.mopl.user.facade.UserProfileFacade;
 import com.codeit.team5.mopl.user.service.UserService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -37,11 +39,13 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 public class UserController implements UserApi {
     private final UserService userService;
+    private final UserProfileFacade userProfileFacade;
 
     @Override
     @PostMapping
     public ResponseEntity<UserResponse> registerUser(
-            @Valid @RequestBody UserRegisterRequest userRegisterRequest) {
+            @Valid @RequestBody UserRegisterRequest userRegisterRequest
+    ) {
         log.info("User register request: POST /api/users");
 
         UserResponse response = userService.create(userRegisterRequest);
@@ -65,11 +69,18 @@ public class UserController implements UserApi {
             @AuthenticationPrincipal MoplUserDetails userDetails,
             @PathVariable UUID userId,
             @Valid @RequestPart("request") UserUpdateRequest request,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
+            @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
         log.info("User update request: PATCH /api/users/{}", userId);
 
-        UserResponse response = userService.update(
-                userDetails.getId(), userId, request, MultipartFiles.toImageResource(image));
+        FileRequest imageRequest = MultipartFiles.toImageResource(image);
+
+        UserResponse response = userProfileFacade.updateProfile(
+                userDetails.getId(),
+                userId,
+                request,
+                imageRequest
+        );
 
         return ResponseEntity.ok(response);
     }
@@ -78,7 +89,8 @@ public class UserController implements UserApi {
     @PatchMapping(value = "/{userId}/role")
     public ResponseEntity<Void> updateRole(
             @PathVariable UUID userId,
-            @Valid @RequestBody UserRoleUpdateRequest request) {
+            @Valid @RequestBody UserRoleUpdateRequest request
+    ) {
         log.info("User role update request: PATCH /api/users/{}/role", userId);
 
         userService.updateRole(userId, request);
@@ -90,7 +102,8 @@ public class UserController implements UserApi {
     @PatchMapping(value = "/{userId}/locked")
     public ResponseEntity<Void> updateLockStatus(
             @PathVariable UUID userId,
-            @Valid @RequestBody UserLockedUpdateRequest request) {
+            @Valid @RequestBody UserLockedUpdateRequest request
+    ) {
         log.info("User lock status update request: PATCH /api/users/{}/locked", userId);
 
         userService.updateLock(userId, request);
@@ -114,7 +127,8 @@ public class UserController implements UserApi {
     @Override
     @GetMapping
     public ResponseEntity<CursorResponse<UserResponse>> getUsers(
-            @Valid UserCursorRequest request) {
+            @Valid UserCursorRequest request
+    ) {
         log.info("User list request: GET /api/users");
 
         CursorResponse<UserResponse> response = userService.findUsers(request);

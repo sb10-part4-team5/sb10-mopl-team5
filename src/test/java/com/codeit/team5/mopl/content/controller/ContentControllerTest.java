@@ -25,6 +25,7 @@ import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
+import com.codeit.team5.mopl.content.facade.ContentFacade;
 import com.codeit.team5.mopl.content.service.ContentService;
 import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
@@ -68,6 +69,9 @@ class ContentControllerTest {
     @MockitoBean
     private ContentService contentService;
 
+    @MockitoBean
+    private ContentFacade contentFacade;
+
     @Captor
     private ArgumentCaptor<ContentCreateRequest> requestCaptor;
 
@@ -93,7 +97,7 @@ class ContentControllerTest {
                 0.0, 0, 0
         );
 
-        given(contentService.create(any(ContentCreateRequest.class), any())).willReturn(response);
+        given(contentFacade.create(any(ContentCreateRequest.class), any())).willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
                 "request",
@@ -125,7 +129,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.watcherCount").value(0));
 
         ArgumentCaptor<FileRequest> thumbnailCaptor = ArgumentCaptor.forClass(FileRequest.class);
-        verify(contentService).create(requestCaptor.capture(), thumbnailCaptor.capture());
+        verify(contentFacade).create(requestCaptor.capture(), thumbnailCaptor.capture());
         assertThat(thumbnailCaptor.getValue().filename()).isEqualTo("test.jpg");
         assertThat(thumbnailCaptor.getValue().bytes()).containsExactly(1, 2, 3);
         ContentCreateRequest captured = requestCaptor.getValue();
@@ -155,7 +159,7 @@ class ContentControllerTest {
                 0.0, 0, 0
         );
 
-        given(contentService.create(any(ContentCreateRequest.class), isNull())).willReturn(response);
+        given(contentFacade.create(any(ContentCreateRequest.class), isNull())).willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
                 "request", "", MediaType.APPLICATION_JSON_VALUE,
@@ -174,7 +178,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.averageRating").value(0.0))
                 .andExpect(jsonPath("$.reviewCount").value(0))
                 .andExpect(jsonPath("$.watcherCount").value(0));
-        verify(contentService).create(requestCaptor.capture(), isNull());
+        verify(contentFacade).create(requestCaptor.capture(), isNull());
         ContentCreateRequest captured = requestCaptor.getValue();
         assertThat(captured.type()).isEqualTo(ContentType.TV_SERIES);
         assertThat(captured.title()).isEqualTo("테스트 드라마");
@@ -204,7 +208,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.type[0]").value("콘텐츠 타입은 필수입니다."));
 
-        verify(contentService, never()).create(any(), any());
+        verify(contentFacade, never()).create(any(), any());
     }
 
     @Test
@@ -230,7 +234,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.title[0]").value("제목은 필수입니다."));
 
-        verify(contentService, never()).create(any(), any());
+        verify(contentFacade, never()).create(any(), any());
     }
 
     @Test
@@ -256,7 +260,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.tags[0]").value("콘텐츠 태그 목록은 비어있을 수 없습니다."));
 
-        verify(contentService, never()).create(any(), any());
+        verify(contentFacade, never()).create(any(), any());
     }
 
     @Test
@@ -269,7 +273,7 @@ class ContentControllerTest {
                 null,
                 List.of("액션")
         );
-        given(contentService.create(any(ContentCreateRequest.class), any()))
+        given(contentFacade.create(any(ContentCreateRequest.class), any()))
                 .willThrow(new IllegalStateException("unexpected"));
 
         MockMultipartFile requestPart = new MockMultipartFile(
@@ -306,7 +310,7 @@ class ContentControllerTest {
                 0.0, 0, 0
         );
 
-        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
+        given(contentFacade.update(eq(contentId), any(ContentUpdateRequest.class), any()))
                 .willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
@@ -334,7 +338,7 @@ class ContentControllerTest {
 
         ArgumentCaptor<ContentUpdateRequest> requestCaptor = ArgumentCaptor.forClass(ContentUpdateRequest.class);
         ArgumentCaptor<FileRequest> thumbnailCaptor = ArgumentCaptor.forClass(FileRequest.class);
-        verify(contentService).update(eq(contentId), requestCaptor.capture(), thumbnailCaptor.capture());
+        verify(contentFacade).update(eq(contentId), requestCaptor.capture(), thumbnailCaptor.capture());
         assertThat(requestCaptor.getValue().title()).isEqualTo("수정된 영화");
         assertThat(requestCaptor.getValue().description()).isEqualTo("수정된 설명");
         assertThat(requestCaptor.getValue().tags()).containsExactly("액션", "SF");
@@ -362,7 +366,7 @@ class ContentControllerTest {
                 0.0, 0, 0
         );
 
-        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), isNull()))
+        given(contentFacade.update(eq(contentId), any(ContentUpdateRequest.class), isNull()))
                 .willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
@@ -378,7 +382,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.title").value("수정된 드라마"))
                 .andExpect(jsonPath("$.tags[0]").value("로맨스"));
 
-        verify(contentService).update(eq(contentId), any(ContentUpdateRequest.class), isNull());
+        verify(contentFacade).update(eq(contentId), any(ContentUpdateRequest.class), isNull());
     }
 
     @Test
@@ -400,7 +404,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.title[0]").value("제목은 필수입니다."));
 
-        verify(contentService, never()).update(any(), any(), any());
+        verify(contentFacade, never()).update(any(), any(), any());
     }
 
     @Test
@@ -425,7 +429,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.tags", hasItem("콘텐츠 태그는 필수입니다.")));
 
-        verify(contentService, never()).update(any(), any(), any());
+        verify(contentFacade, never()).update(any(), any(), any());
     }
 
     @Test
@@ -447,7 +451,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details.tags[0]").value("콘텐츠 태그 목록은 비어있을 수 없습니다."));
 
-        verify(contentService, never()).update(any(), any(), any());
+        verify(contentFacade, never()).update(any(), any(), any());
     }
 
     @Test
@@ -469,7 +473,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
                 .andExpect(jsonPath("$.details['tags[0]'][0]").value("태그는 공백일 수 없습니다."));
 
-        verify(contentService, never()).update(any(), any(), any());
+        verify(contentFacade, never()).update(any(), any(), any());
     }
 
     @Test
@@ -478,7 +482,7 @@ class ContentControllerTest {
         // given
         UUID contentId = UUID.randomUUID();
         ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("액션"));
-        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
+        given(contentFacade.update(eq(contentId), any(ContentUpdateRequest.class), any()))
                 .willThrow(new ContentNotFoundException(contentId));
 
         MockMultipartFile requestPart = new MockMultipartFile(
@@ -493,7 +497,7 @@ class ContentControllerTest {
                 .andExpect(jsonPath("$.exceptionType").value("ContentNotFoundException"))
                 .andExpect(jsonPath("$.message").value("콘텐츠를 찾을 수 없습니다."));
 
-        verify(contentService).update(eq(contentId), any(ContentUpdateRequest.class), any());
+        verify(contentFacade).update(eq(contentId), any(ContentUpdateRequest.class), any());
     }
 
     @Test
@@ -502,7 +506,7 @@ class ContentControllerTest {
         // given
         UUID contentId = UUID.randomUUID();
         ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("액션"));
-        given(contentService.update(eq(contentId), any(ContentUpdateRequest.class), any()))
+        given(contentFacade.update(eq(contentId), any(ContentUpdateRequest.class), any()))
                 .willThrow(new IllegalStateException("unexpected"));
 
         MockMultipartFile requestPart = new MockMultipartFile(

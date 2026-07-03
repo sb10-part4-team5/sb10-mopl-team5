@@ -42,6 +42,7 @@ import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.exception.SameLockStatusException;
 import com.codeit.team5.mopl.user.exception.SameRoleAssignmentException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.user.facade.UserProfileFacade;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.user.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -103,6 +104,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private UserProfileFacade userProfileFacade;
 
     @Test
     @DisplayName("정상적인 회원가입 요청이면 생성된 사용자와 201 응답을 반환한다")
@@ -360,7 +364,7 @@ class UserControllerTest {
                 "user@example.com", "새이름",
                 "http://localhost/profiles/key.jpg", "USER", false
         );
-        given(userService.update(eq(userId), eq(userId), any(), any())).willReturn(response);
+        given(userProfileFacade.updateProfile(eq(userId), eq(userId), any(), any())).willReturn(response);
 
         MockMultipartFile requestPart = new MockMultipartFile(
                 "request", "", MediaType.APPLICATION_JSON_VALUE,
@@ -378,7 +382,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.name").value("새이름"))
                 .andExpect(jsonPath("$.profileImageUrl").value("http://localhost/profiles/key.jpg"));
 
-        verify(userService).update(eq(userId), eq(userId), any(), any());
+        verify(userProfileFacade).updateProfile(eq(userId), eq(userId), any(), any());
     }
 
     @Test
@@ -398,7 +402,7 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"));
 
-        verify(userService, never()).update(any(), any(), any(), any());
+        verify(userProfileFacade, never()).updateProfile(any(), any(), any(), any());
     }
 
     private Authentication authOf(UUID userId) {

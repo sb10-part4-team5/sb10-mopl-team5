@@ -8,6 +8,7 @@ import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.facade.ContentFacade;
 import com.codeit.team5.mopl.content.service.ContentService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import jakarta.validation.Valid;
@@ -38,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ContentController implements ContentApi {
 
     private final ContentService contentService;
+    private final ContentFacade contentFacade;
 
     @InitBinder
     public void initBinder(WebDataBinder binder) {
@@ -63,7 +65,7 @@ public class ContentController implements ContentApi {
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
         log.info("Content Create request: POST /api/contents");
-        ContentResponse response = contentService.create(request, MultipartFiles.toImageResource(thumbnail));
+        ContentResponse response = contentFacade.create(request, MultipartFiles.toImageResource(thumbnail));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -76,7 +78,7 @@ public class ContentController implements ContentApi {
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
         log.info("Content Update request: PATCH /api/contents/{}", contentId);
-        ContentResponse response = contentService.update(contentId, request, MultipartFiles.toImageResource(thumbnail));
+        ContentResponse response = contentFacade.update(contentId, request, MultipartFiles.toImageResource(thumbnail));
         return ResponseEntity.ok(response);
     }
 

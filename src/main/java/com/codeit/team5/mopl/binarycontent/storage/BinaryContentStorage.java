@@ -5,4 +5,6 @@ public interface BinaryContentStorage {
     String toUrl(String key);
 
     void store(String key, byte[] bytes, String contentType);
+
+    void delete(String key);
 }
