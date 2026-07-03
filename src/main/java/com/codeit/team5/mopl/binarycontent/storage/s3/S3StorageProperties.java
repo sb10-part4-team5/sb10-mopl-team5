@@ -20,5 +20,10 @@ public record S3StorageProperties(
         if (apiCallAttemptTimeout == null) {
             apiCallAttemptTimeout = Duration.ofSeconds(5);
         }
+        if (apiCallAttemptTimeout.compareTo(apiCallTimeout) > 0) {
+            throw new IllegalArgumentException(
+                    "apiCallAttemptTimeout(" + apiCallAttemptTimeout
+                            + ")은 apiCallTimeout(" + apiCallTimeout + ")보다 클 수 없습니다.");
+        }
     }
 }
