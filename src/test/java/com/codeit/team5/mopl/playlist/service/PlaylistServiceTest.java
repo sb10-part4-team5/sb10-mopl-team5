@@ -3,10 +3,10 @@ package com.codeit.team5.mopl.playlist.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -122,6 +122,25 @@ class PlaylistServiceTest {
         // then
         assertThat(response).isNotNull();
         assertThat(response.title()).isEqualTo(playlist.getTitle());
+    }
+
+    @Test
+    @DisplayName("플레이리스트 단건 조회 성공 - 콘텐츠 목록 포함")
+    void find_success_with_contents() {
+        // given
+        Content content = Content.createByAdmin(com.codeit.team5.mopl.content.entity.ContentType.MOVIE, "Movie Title", "Desc");
+        PlaylistContentsDto dto = new PlaylistContentsDto(playlist, List.of(content), false);
+        given(playlistRepository.findByIdWithContents(playlist.getId(), user.getId()))
+                .willReturn(Optional.of(dto));
+
+        // when
+        PlaylistResponse response = playlistService.find(playlist.getId(), user.getId());
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.title()).isEqualTo(playlist.getTitle());
+        assertThat(response.contents()).hasSize(1);
+        assertThat(response.contents().get(0).title()).isEqualTo("Movie Title");
     }
 
     @Test
