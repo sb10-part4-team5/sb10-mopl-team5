@@ -9,9 +9,17 @@ import com.codeit.team5.mopl.playlist.repository.query.PlaylistQueryRepository;
 
 public interface PlaylistRepository extends JpaRepository<Playlist, UUID>, PlaylistQueryRepository {
 
-    boolean existsByIdAndOwnerEmail(UUID id, String email);
+    boolean existsByIdAndOwnerId(UUID id, UUID ownerId);
 
     @Modifying
     @Query("DELETE FROM Playlist p WHERE p.id = :id")
     void deleteByIdDirectly(UUID id);
+
+    @Modifying
+    @Query("UPDATE Playlist p SET p.subscriberCount = p.subscriberCount + 1 WHERE p.id = :id")
+    void increaseSubscribeCount(UUID id);
+
+    @Modifying
+    @Query("UPDATE Playlist p SET p.subscriberCount = p.subscriberCount - 1 WHERE p.id = :id AND p.subscriberCount > 0")
+    void decreaseSubscribeCount(UUID id);
 }

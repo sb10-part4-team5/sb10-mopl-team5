@@ -7,8 +7,8 @@ import org.springframework.http.HttpStatus;
 
 public class PlaylistAccessDeniedException extends BusinessException {
 
-    public PlaylistAccessDeniedException(UUID id, String email) {
+    public PlaylistAccessDeniedException(UUID id, UUID userId) {
         super(HttpStatus.FORBIDDEN, "플레이리스트 접근 권한이 없습니다.",
-                Map.of("playlistId", id, "email", email));
+                Map.of("playlistId", id, "userId", userId));
     }
 }

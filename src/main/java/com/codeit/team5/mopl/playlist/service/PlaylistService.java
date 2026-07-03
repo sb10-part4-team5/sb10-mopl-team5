@@ -1,5 +1,9 @@
 package com.codeit.team5.mopl.playlist.service;
 
+import java.util.List;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -20,11 +24,7 @@ import com.codeit.team5.mopl.playlist.repository.PlaylistItemRepository;
 import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
-import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
@@ -38,37 +38,36 @@ public class PlaylistService {
     private final ContentRepository contentRepository;
 
     @Transactional
-    public PlaylistResponse create(String email, PlaylistCreateRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new PlaylistUserNotFoundException(email));
+    public PlaylistResponse create(UUID userId, PlaylistCreateRequest request) {
+        User user = userRepository.findWithProfileImageById(userId)
+                .orElseThrow(() -> new PlaylistUserNotFoundException(userId));
         Playlist playlist = Playlist.of(user, request.title(), request.description());
         repository.save(playlist);
         return mapper.toDto(playlist);
     }
 
-    public PlaylistResponse find(UUID id) {
-        PlaylistContentsDto dto = repository.findByIdWithContents(id)
-                .orElseThrow(() -> new PlaylistNotFoundException(id));
+    public PlaylistResponse find(UUID id, UUID userId) {
+        return mapper.toDto(findById(id, userId));
+    }
+
+    @Transactional
+    public PlaylistResponse update(UUID id, UUID userId, PlaylistUpdateRequest request) {
+        validateOwner(id, userId);
+        PlaylistContentsDto dto = findById(id, userId);
+        Playlist playlist = dto.playlist();
+        playlist.updateTitle(request.title());
+        playlist.updateDescription(request.description());
         return mapper.toDto(dto);
     }
 
     @Transactional
-    public PlaylistResponse update(UUID id, String email, PlaylistUpdateRequest request) {
-        validateOwner(id, email);
-        Playlist playlist = findById(id);
-        playlist.updateTitle(request.title());
-        playlist.updateDescription(request.description());
-        return mapper.toDto(playlist);
-    }
-
-    @Transactional
-    public void delete(UUID id, String email) {
-        validateOwner(id, email);
+    public void delete(UUID id, UUID userId) {
+        validateOwner(id, userId);
         repository.deleteByIdDirectly(id);
     }
 
-    public CursorResponse<PlaylistResponse> findByCursor(PlaylistCursorCommand dto) {
-        List<PlaylistContentsDto> playlists = repository.findByCursor(dto);
+    public CursorResponse<PlaylistResponse> findByCursor(PlaylistCursorCommand dto, UUID userId) {
+        List<PlaylistContentsDto> playlists = repository.findByCursor(dto, userId);
         boolean hasNext = playlists.size() > dto.limit();
         List<PlaylistContentsDto> data = hasNext ? playlists.subList(0, dto.limit()) : playlists;
         long totalCount = repository.countByCommand(dto);
@@ -76,8 +75,8 @@ public class PlaylistService {
     }
 
     @Transactional
-    public void addContent(String email, UUID playlistId, UUID contentId) {
-        validateOwner(playlistId, email);
+    public void addContent(UUID userId, UUID playlistId, UUID contentId) {
+        validateOwner(playlistId, userId);
         if (!contentRepository.existsById(contentId)) {
             throw new PlaylistContentNotFoundException(contentId);
         }
@@ -87,8 +86,8 @@ public class PlaylistService {
     }
 
     @Transactional
-    public void removeContent(String email, UUID playlistId, UUID contentId) {
-        validateOwner(playlistId, email);
+    public void removeContent(UUID userId, UUID playlistId, UUID contentId) {
+        validateOwner(playlistId, userId);
         if (!contentRepository.existsById(contentId)) {
             throw new PlaylistContentNotFoundException(contentId);
         }
@@ -98,14 +97,16 @@ public class PlaylistService {
         playlistItemRepository.deleteByPlaylistIdAndContentIdDirectly(playlistId, contentId);
     }
 
-    private Playlist findById(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new PlaylistNotFoundException(id));
-    }
-
-    private void validateOwner(UUID id, String email) {
-        if (repository.existsByIdAndOwnerEmail(id, email)) {
+    private void validateOwner(UUID id, UUID userId) {
+        if (repository.existsByIdAndOwnerId(id, userId)) {
             return;
         }
-        throw new PlaylistAccessDeniedException(id, email);
+        throw new PlaylistAccessDeniedException(id, userId);
+    }
+
+    private PlaylistContentsDto findById(UUID id, UUID userId) {
+        PlaylistContentsDto dto = repository.findByIdWithContents(id, userId)
+                .orElseThrow(() -> new PlaylistNotFoundException(id));
+        return dto;
     }
 }

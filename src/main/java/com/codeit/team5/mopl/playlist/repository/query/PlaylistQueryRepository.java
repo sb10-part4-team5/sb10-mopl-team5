@@ -8,9 +8,9 @@ import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
 
 public interface PlaylistQueryRepository {
 
-    Optional<PlaylistContentsDto> findByIdWithContents(UUID id);
+    Optional<PlaylistContentsDto> findByIdWithContents(UUID id, UUID userId);
 
-    List<PlaylistContentsDto> findByCursor(PlaylistCursorCommand request);
+    List<PlaylistContentsDto> findByCursor(PlaylistCursorCommand request, UUID userId);
 
     long countByCommand(PlaylistCursorCommand request);
 }
