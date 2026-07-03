@@ -96,6 +96,28 @@ class ContentItemWriterTest {
     }
 
     @Test
+    @DisplayName("같은 청크에 동일 externalId가 두 건 있으면 먼저 온 항목만 저장한다")
+    void write_deduplicatesWithinChunkByExternalId() throws Exception {
+        // given
+        Content content1 = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        Content content1Dup = Content.createByExternalSource(ContentType.MOVIE, "영화1-중복", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of());
+        ContentWithMetaData item1Dup = new ContentWithMetaData(content1Dup, null, List.of());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList()))
+                .willReturn(Set.of()); // DB에는 없음
+        given(contentRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+
+        // when
+        writer.write(new Chunk<>(List.of(item1, item1Dup)));
+
+        // then — 먼저 온 content1만 저장 (유니크 제약 위반 방지)
+        verify(contentRepository).saveAll(List.of(content1));
+    }
+
+    @Test
     @DisplayName("빈 청크가 전달되면 예외 없이 즉시 반환한다")
     void write_emptyChunk_doesNothing() throws Exception {
         // when

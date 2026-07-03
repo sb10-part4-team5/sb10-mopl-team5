@@ -11,6 +11,8 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,14 +42,26 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
             return;
         }
 
-        // 1. DB에 이미 존재하는 externalId 조회 후 신규 항목만 필터 (SELECT 1번)
-        List<String> externalIds = items.stream()
-                .map(item -> item.content().getExternalId())
-                .toList();
-        ContentSource source = items.get(0).content().getSource();
+        // 1. 청크 내부 externalId 중복 제거
+        // TMDB는 인기순 정렬 특성상 페이지 경계에서 같은 항목이 다음 페이지에 다시 나올 수 있어,
+        // 한 청크 안에 동일 externalId가 들어올 수 있다. contents(source, external_id) 유니크 제약에
+        // 걸려 청크 전체가 롤백되는 것을 막기 위해 저장 전에 externalId 기준으로 먼저 걸러낸다.
+        // LinkedHashMap 병합 함수로 "먼저 온 항목 유지" 기준을 명시하고 원본 순서를 보존한다.
+        Map<String, ContentWithMetaData> uniqueByExternalId = items.stream()
+                .collect(Collectors.toMap(
+                        item -> item.content().getExternalId(),
+                        item -> (ContentWithMetaData) item,
+                        (first, second) -> first,
+                        LinkedHashMap::new
+                ));
+        Collection<ContentWithMetaData> uniqueItems = uniqueByExternalId.values();
+
+        // 2. DB에 이미 존재하는 externalId 조회 후 신규 항목만 필터 (SELECT 1번)
+        List<String> externalIds = uniqueByExternalId.keySet().stream().toList();
+        ContentSource source = uniqueItems.iterator().next().content().getSource();
         Set<String> existingIds = contentRepository.findExternalIdsBySourceAndExternalIdIn(source, externalIds);
 
-        List<? extends ContentWithMetaData> deduplicatedItems = items.stream()
+        List<ContentWithMetaData> deduplicatedItems = uniqueItems.stream()
                 .filter(item -> !existingIds.contains(item.content().getExternalId()))
                 .toList();
 
