@@ -36,10 +36,6 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
 
     private final JPAQueryFactory queryFactory;
 
-    private final Map<PlaylistSortBy, CursorConditionBuilder> cursorBuilder =
-            Map.of(PlaylistSortBy.UPDATED_AT, cursorBuilder(playlist.updatedAt),
-                    PlaylistSortBy.SUBSCRIBE_COUNT, cursorBuilder(playlist.subscriberCount));
-
     @Override
     public Optional<PlaylistContentsDto> findByIdWithContents(UUID id) {
         Playlist foundPlaylist = queryFactory.selectFrom(playlist).leftJoin(playlist.owner, user)
@@ -91,12 +87,10 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
     }
 
     private List<PlaylistItem> fetchPlaylistItemsWithContents(List<UUID> playlistIds) {
-        return queryFactory.selectFrom(playlistItem).distinct()
+        return queryFactory.selectFrom(playlistItem)
                 .leftJoin(playlistItem.content, content).fetchJoin()
                 .leftJoin(content.thumbnail, binaryContent).fetchJoin()
                 .leftJoin(content.stats, contentStats).fetchJoin()
-                .leftJoin(content.contentTags, contentTag).fetchJoin()
-                .leftJoin(contentTag.tag, tag).fetchJoin()
                 .where(playlistItem.playlistId.in(playlistIds))
                 .orderBy(playlistItem.createdAt.asc()).fetch();
     }
@@ -120,7 +114,13 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
         }
 
         boolean isAsc = request.sortDirection().isAscending();
-        return cursorBuilder.get(request.sortBy()).build(cursor, idAfter, isAsc);
+
+        CursorConditionBuilder builder = switch (request.sortBy()) {
+            case UPDATED_AT -> cursorBuilder(playlist.updatedAt);
+            case SUBSCRIBE_COUNT -> cursorBuilder(playlist.subscriberCount);
+        };
+
+        return builder.build(cursor, idAfter, isAsc);
     }
 
     private BooleanExpression subscriberQuery(PlaylistCursorCommand request) {
