@@ -2,10 +2,12 @@ package com.codeit.team5.mopl.playlist.repository.query;
 
 import static com.codeit.team5.mopl.binarycontent.entity.QBinaryContent.binaryContent;
 import static com.codeit.team5.mopl.content.entity.QContent.content;
+import static com.codeit.team5.mopl.content.entity.QContentStats.contentStats;
+import static com.codeit.team5.mopl.content.entity.QContentTag.contentTag;
 import static com.codeit.team5.mopl.playlist.entity.QPlaylist.playlist;
 import static com.codeit.team5.mopl.playlist.entity.QPlaylistItem.playlistItem;
+import static com.codeit.team5.mopl.tag.entity.QTag.tag;
 import static com.codeit.team5.mopl.user.entity.QUser.user;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
+import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.playlist.constant.PlaylistSortBy;
 import com.codeit.team5.mopl.playlist.dto.PlaylistContentsDto;
 import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
@@ -39,21 +42,15 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
 
     @Override
     public Optional<PlaylistContentsDto> findByIdWithContents(UUID id) {
-        Playlist foundPlaylist = queryFactory.selectFrom(playlist)
-                .leftJoin(playlist.owner, user).fetchJoin()
-                .leftJoin(user.profileImage, binaryContent).fetchJoin()
-                .where(playlist.id.eq(id))
-                .fetchOne();
+        Playlist foundPlaylist = queryFactory.selectFrom(playlist).leftJoin(playlist.owner, user)
+                .fetchJoin().leftJoin(user.profileImage, binaryContent).fetchJoin()
+                .where(playlist.id.eq(id)).fetchOne();
 
         if (foundPlaylist == null) {
             return Optional.empty();
         }
 
-        List<PlaylistItem> items = queryFactory.selectFrom(playlistItem)
-                .leftJoin(playlistItem.content, content).fetchJoin()
-                .where(playlistItem.playlistId.eq(id))
-                .orderBy(playlistItem.createdAt.asc())
-                .fetch();
+        List<PlaylistItem> items = fetchPlaylistItemsWithContents(List.of(id));
 
         return Optional.of(new PlaylistContentsDto(foundPlaylist,
                 items.stream().map(PlaylistItem::getContent).toList()));
@@ -61,9 +58,8 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
 
     @Override
     public List<PlaylistContentsDto> findByCursor(PlaylistCursorCommand request) {
-        List<Playlist> playlists = queryFactory.selectFrom(playlist)
-                .leftJoin(playlist.owner, user).fetchJoin()
-                .leftJoin(user.profileImage, binaryContent).fetchJoin()
+        List<Playlist> playlists = queryFactory.selectFrom(playlist).leftJoin(playlist.owner, user)
+                .fetchJoin().leftJoin(user.profileImage, binaryContent).fetchJoin()
                 .where(keywordLikeQuery(request), ownerQuery(request), subscriberQuery(request),
                         cursorQuery(request))
                 .orderBy(orderSpecifiers(request)).limit(request.limit() + 1).fetch();
@@ -74,13 +70,9 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
 
         List<UUID> playlistIds = playlists.stream().map(Playlist::getId).toList();
 
-        List<PlaylistItem> items = queryFactory.selectFrom(playlistItem)
-                .leftJoin(playlistItem.content, content).fetchJoin()
-                .where(playlistItem.playlistId.in(playlistIds))
-                .orderBy(playlistItem.createdAt.asc())
-                .fetch();
+        List<PlaylistItem> items = fetchPlaylistItemsWithContents(playlistIds);
 
-        Map<UUID, List<com.codeit.team5.mopl.content.entity.Content>> contentsByPlaylistId =
+        Map<UUID, List<Content>> contentsByPlaylistId =
                 items.stream().collect(Collectors.groupingBy(PlaylistItem::getPlaylistId,
                         Collectors.mapping(PlaylistItem::getContent, Collectors.toList())));
 
@@ -92,11 +84,21 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
 
     @Override
     public long countByCommand(PlaylistCursorCommand request) {
-        Long count = queryFactory.select(playlist.count())
-                .from(playlist)
+        Long count = queryFactory.select(playlist.count()).from(playlist)
                 .where(keywordLikeQuery(request), ownerQuery(request), subscriberQuery(request))
                 .fetchOne();
         return count != null ? count : 0L;
+    }
+
+    private List<PlaylistItem> fetchPlaylistItemsWithContents(List<UUID> playlistIds) {
+        return queryFactory.selectFrom(playlistItem).distinct()
+                .leftJoin(playlistItem.content, content).fetchJoin()
+                .leftJoin(content.thumbnail, binaryContent).fetchJoin()
+                .leftJoin(content.stats, contentStats).fetchJoin()
+                .leftJoin(content.contentTags, contentTag).fetchJoin()
+                .leftJoin(contentTag.tag, tag).fetchJoin()
+                .where(playlistItem.playlistId.in(playlistIds))
+                .orderBy(playlistItem.createdAt.asc()).fetch();
     }
 
     private OrderSpecifier<?>[] orderSpecifiers(PlaylistCursorCommand request) {
