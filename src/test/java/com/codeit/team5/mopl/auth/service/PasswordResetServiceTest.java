@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.auth.service;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -9,7 +8,6 @@ import static org.mockito.Mockito.when;
 import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.event.TemporaryPasswordIssuedEvent;
 import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,16 +60,16 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 이메일로 비밀번호 초기화 요청하면 실패한다")
-    void resetPassword_userNotFound_throwsException() {
+    @DisplayName("존재하지 않는 이메일로 비밀번호 초기화 요청하면 추가 작업 없이 완료한다")
+    void resetPassword_userNotFound_success() {
         // Given
         ResetPasswordRequest request = new ResetPasswordRequest("Unknown@Example.COM");
         when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
 
-        // When & Then
-        assertThatThrownBy(() -> passwordResetService.resetPassword(request))
-                .isInstanceOf(UserNotFoundException.class);
+        // When
+        passwordResetService.resetPassword(request);
 
+        // Then
         verify(userRepository).findByEmail("unknown@example.com");
         verify(temporaryPasswordService, never()).issue(org.mockito.ArgumentMatchers.any());
         verify(eventPublisher, never()).publishEvent(org.mockito.ArgumentMatchers.any());

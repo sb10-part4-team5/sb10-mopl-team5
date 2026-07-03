@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
+import com.codeit.team5.mopl.auth.entity.TemporaryPassword;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
 import com.codeit.team5.mopl.auth.repository.TemporaryPasswordRepository;
 import com.codeit.team5.mopl.user.entity.User;
@@ -195,6 +196,11 @@ class AuthControllerIntegrationTest {
         // Given
         SignInRequest originalRequest = saveLoginUser("reset-flow@example.com", "password1");
         User user = userRepository.findByEmail(originalRequest.username()).orElseThrow();
+        temporaryPasswordRepository.save(TemporaryPassword.create(
+                user,
+                passwordEncoder.encode("oldTemp1234"),
+                Instant.now().minusSeconds(600)
+        ));
 
         // When
         mockMvc.perform(post("/api/auth/reset-password")

@@ -43,7 +43,6 @@ import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -141,23 +140,17 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 이메일로 비밀번호 초기화를 요청하면 404 응답을 반환한다")
-    void resetPassword_userNotFound_returnsNotFound() throws Exception {
+    @DisplayName("존재하지 않는 이메일로 비밀번호 초기화를 요청해도 204 응답을 반환한다")
+    void resetPassword_userNotFound_returnsNoContent() throws Exception {
         // Given
         ResetPasswordRequest request = new ResetPasswordRequest("unknown@example.com");
-        org.mockito.BDDMockito.willThrow(new UserNotFoundException(request.email()))
-                .given(passwordResetService)
-                .resetPassword(request);
 
         // When & Then
         mockMvc.perform(post("/api/auth/reset-password")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.exceptionType").value("UserNotFoundException"))
-                .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."))
-                .andExpect(jsonPath("$.details").doesNotExist());
+                .andExpect(status().isNoContent());
 
         verify(passwordResetService).resetPassword(request);
     }
