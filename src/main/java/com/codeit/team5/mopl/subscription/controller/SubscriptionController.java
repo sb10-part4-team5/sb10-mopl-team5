@@ -9,13 +9,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.codeit.team5.mopl.subscription.controller.api.SubscriptionControllerApi;
 import com.codeit.team5.mopl.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class SubscriptionController {
+public class SubscriptionController implements SubscriptionControllerApi {
 
     private final SubscriptionService service;
 
