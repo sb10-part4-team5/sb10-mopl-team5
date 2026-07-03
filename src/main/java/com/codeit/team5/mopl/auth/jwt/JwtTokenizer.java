@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.auth.jwt;
 
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
+import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -88,11 +90,15 @@ public class JwtTokenizer {
     public Authentication getAuthentication(String accessToken) {
         Jws<Claims> claimsJws = getAccessClaims(accessToken);
         Claims claims = claimsJws.getBody();
+        UUID userId = UUID.fromString(claims.getSubject());
         String email = claims.get("email", String.class);
         String role = claims.get("role", String.class);
         List<SimpleGrantedAuthority> authorities =
                 Collections.singletonList(new SimpleGrantedAuthority(role));
-        UserDetails principal = new User(email, "", authorities);
+        // 로그인에 성공한 인증된 유저이기 때문에 locked=false로 둬도 괜찮음
+        AuthUser authUser = new AuthUser(userId, email, role, false);
+        // 실제로 인증 객체를 만들어야 하기 때문에 구현 클래스 사용
+        UserDetails principal = new MoplUserDetails(authUser, "");
         return new UsernamePasswordAuthenticationToken(principal, accessToken, authorities);
     }
 
