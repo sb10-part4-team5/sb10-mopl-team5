@@ -1,9 +1,9 @@
 package com.codeit.team5.mopl.content.service;
 
+import com.codeit.team5.mopl.binarycontent.dto.UploadedBinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
-import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
@@ -18,7 +18,6 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.HashSet;
@@ -61,7 +60,7 @@ public class ContentService {
      * @return 생성된 콘텐츠 응답 DTO
      */
     @Transactional
-    public ContentResponse create(ContentCreateRequest request, FileRequest image) {
+    public ContentResponse create(ContentCreateRequest request, UploadedBinaryContent thumbnail) {
         Content content = contentRepository.save(Content.createByAdmin(
                 request.type(),
                 request.title(),
@@ -73,8 +72,8 @@ public class ContentService {
         ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
         content.attachStats(stats);
 
-        if (image != null) {
-            content.attachThumbnail(binaryContentService.upload(StorageDirectory.THUMBNAIL, content.getId(), image));
+        if (thumbnail != null) {
+            content.attachThumbnail(binaryContentService.saveCompleted(thumbnail));
         }
 
         return contentMapper.toDto(content);
@@ -90,7 +89,7 @@ public class ContentService {
      * @throws ContentNotFoundException 콘텐츠가 존재하지 않을 때
      */
     @Transactional
-    public ContentResponse update(UUID contentId, ContentUpdateRequest request, FileRequest image) {
+    public ContentResponse update(UUID contentId, ContentUpdateRequest request, UploadedBinaryContent thumbnail) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
 
@@ -99,8 +98,8 @@ public class ContentService {
         content.update(request.title(), request.description());
         updateTags(content, tagNames);
 
-        if (image != null) {
-            content.attachThumbnail(binaryContentService.upload(StorageDirectory.THUMBNAIL, content.getId(), image));
+        if (thumbnail != null) {
+            content.attachThumbnail(binaryContentService.saveCompleted(thumbnail));
         }
 
         return contentMapper.toDto(content);

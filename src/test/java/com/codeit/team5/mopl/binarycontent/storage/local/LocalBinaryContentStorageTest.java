@@ -105,4 +105,32 @@ class LocalBinaryContentStorageTest {
         assertThatThrownBy(() -> storage.store(key, bytes, "image/jpeg"))
                 .isInstanceOf(FileStorageException.class);
     }
+
+    @Test
+    @DisplayName("delete는 저장된 파일 삭제 성공")
+    void delete_removesFile() {
+        // given
+        String key = "thumbnails/" + UUID.randomUUID() + "/test.jpg";
+        storage.store(key, new byte[]{1, 2, 3}, "image/jpeg");
+        assertThat(Files.exists(tempDir.resolve(key))).isTrue();
+
+        // when
+        storage.delete(key);
+
+        // then
+        assertThat(Files.exists(tempDir.resolve(key))).isFalse();
+    }
+
+    @Test
+    @DisplayName("delete는 파일이 없어도 예외 없이 성공")
+    void delete_missingFile_noException() {
+        // given
+        String key = "thumbnails/none/none.jpg";
+
+        // when
+        storage.delete(key);
+
+        // then
+        assertThat(Files.exists(tempDir.resolve(key))).isFalse();
+    }
 }

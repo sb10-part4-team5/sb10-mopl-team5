@@ -42,6 +42,17 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
         log.debug("파일 저장 완료: {}", destination);
     }
 
+    @Override
+    public void delete(String key) {
+        Path destination = uploadDir.resolve(key);
+        try {
+            Files.deleteIfExists(destination);
+        } catch (IOException e) {
+            throw new FileStorageException(key, e);
+        }
+        log.debug("파일 삭제 완료: {}", destination);
+    }
+
     private void init() {
         try {
             Files.createDirectories(uploadDir);
