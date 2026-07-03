@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistCursorRequest;
@@ -61,6 +63,20 @@ public class PlaylistController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(Principal principal, @PathVariable UUID id) {
         service.delete(id, principal.getName());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PostMapping("/{playlistId}/contents/{contentId}")
+    public ResponseEntity<Void> addContent(Principal principal,
+            @PathVariable UUID playlistId, @PathVariable UUID contentId) {
+        service.addContent(principal.getName(), playlistId, contentId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @DeleteMapping("/{playlistId}/contents/{contentId}")
+    public ResponseEntity<Void> removeContent(Principal principal,
+            @PathVariable UUID playlistId, @PathVariable UUID contentId) {
+        service.removeContent(principal.getName(), playlistId, contentId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

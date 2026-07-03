@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.playlist.service;
 
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.playlist.dto.PlaylistContentsDto;
 import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
@@ -7,10 +9,13 @@ import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
 import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
 import com.codeit.team5.mopl.playlist.entity.Playlist;
+import com.codeit.team5.mopl.playlist.entity.PlaylistItem;
 import com.codeit.team5.mopl.playlist.exception.PlaylistAccessDeniedException;
+import com.codeit.team5.mopl.playlist.exception.PlaylistContentNotFoundException;
 import com.codeit.team5.mopl.playlist.exception.PlaylistNotFoundException;
 import com.codeit.team5.mopl.playlist.exception.PlaylistUserNotFoundException;
 import com.codeit.team5.mopl.playlist.mapper.PlaylistMapper;
+import com.codeit.team5.mopl.playlist.repository.PlaylistItemRepository;
 import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -28,6 +33,8 @@ public class PlaylistService {
     private final PlaylistMapper mapper;
     private final PlaylistRepository repository;
     private final UserRepository userRepository;
+    private final PlaylistItemRepository playlistItemRepository;
+    private final ContentRepository contentRepository;
 
     @Transactional
     public PlaylistResponse create(String email, PlaylistCreateRequest request) {
@@ -64,6 +71,29 @@ public class PlaylistService {
         List<PlaylistContentsDto> data = hasNext ? playlists.subList(0, dto.limit()) : playlists;
         long totalCount = repository.countByCommand(dto);
         return mapper.toCursorResponse(data, dto, hasNext, totalCount);
+    }
+
+    @Transactional
+    public void addContent(String email, UUID playlistId, UUID contentId) {
+        validateOwner(playlistId, email);
+        if (!contentRepository.existsById(contentId)) {
+            throw new PlaylistContentNotFoundException(contentId);
+        }
+        Content content = contentRepository.getReferenceById(contentId);
+        PlaylistItem playlistItem = PlaylistItem.of(playlistId, content);
+        playlistItemRepository.save(playlistItem);
+    }
+
+    @Transactional
+    public void removeContent(String email, UUID playlistId, UUID contentId) {
+        validateOwner(playlistId, email);
+        if (!contentRepository.existsById(contentId)) {
+            throw new PlaylistContentNotFoundException(contentId);
+        }
+        if (!playlistItemRepository.existsByPlaylistIdAndContentId(playlistId, contentId)) {
+            throw new PlaylistItemNotFoundException(playlistId, contentId);
+        }
+        playlistItemRepository.deleteByPlaylistIdAndContentIdDirectly(playlistId, contentId);
     }
 
     private Playlist findById(UUID id) {
