@@ -15,7 +15,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -30,16 +29,22 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
@@ -65,11 +70,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Import({GlobalExceptionHandler.class, TestGlobalExceptionHandlerConfig.class, PlaylistControllerTest.TestSecurityConfig.class})
 class PlaylistControllerTest {
 
-    @org.springframework.boot.test.context.TestConfiguration
-    static class TestSecurityConfig implements org.springframework.web.servlet.config.annotation.WebMvcConfigurer {
+    @TestConfiguration
+    static class TestSecurityConfig implements WebMvcConfigurer {
         @Override
-        public void addArgumentResolvers(java.util.List<org.springframework.web.method.support.HandlerMethodArgumentResolver> resolvers) {
-            resolvers.add(new org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver());
+        public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+            resolvers.add(new AuthenticationPrincipalArgumentResolver());
         }
     }
 
@@ -97,7 +102,7 @@ class PlaylistControllerTest {
         private ArgumentCaptor<PlaylistCursorRequest> cursorRequestCaptor;
 
         private MoplPrincipal principal;
-        private org.springframework.security.core.Authentication auth;
+        private Authentication auth;
         private UUID playlistId;
         private UUID contentId;
         private PlaylistResponse playlistResponse;
@@ -106,8 +111,8 @@ class PlaylistControllerTest {
         void setUp() {
                 principal = Mockito.mock(MoplPrincipal.class);
         auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER")));
-        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
-                given(principal.getId()).willReturn(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+                given(principal.getId()).willReturn(UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
                 playlistId = UUID.randomUUID();
                 contentId = UUID.randomUUID();
@@ -122,7 +127,7 @@ class PlaylistControllerTest {
         @DisplayName("단건 조회")
         void find() throws Exception {
                 // given
-                given(playlistService.find(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(playlistResponse);
+                given(playlistService.find(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(playlistResponse);
 
                 // when & then
                 mockMvc.perform(get("/api/playlists/{id}", playlistId)).andDo(print())
@@ -135,7 +140,7 @@ class PlaylistControllerTest {
         @DisplayName("단건 조회 - 실패 (플레이리스트 없음)")
         void find_fail_PlaylistNotFoundException() throws Exception {
                 // given
-                given(playlistService.find(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")))
+                given(playlistService.find(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111")))
                                 .willThrow(new PlaylistNotFoundException(playlistId));
 
                 // when & then
@@ -157,7 +162,7 @@ class PlaylistControllerTest {
 
                 given(playlistMapper.toCommand(any(PlaylistCursorRequest.class)))
                                 .willReturn(command);
-                given(playlistService.findByCursor(command, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(cursorResponse);
+                given(playlistService.findByCursor(command, UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(cursorResponse);
 
                 // when & then
                 mockMvc.perform(get("/api/playlists").param("limit", "10")
@@ -255,7 +260,7 @@ class PlaylistControllerTest {
         void create() throws Exception {
                 // given
                 PlaylistCreateRequest request = new PlaylistCreateRequest("New Playlist", "Desc");
-                given(playlistService.create(eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")), any(PlaylistCreateRequest.class)))
+                given(playlistService.create(eq(UUID.fromString("11111111-1111-1111-1111-111111111111")), any(PlaylistCreateRequest.class)))
                                 .willReturn(playlistResponse);
 
                 // when & then
@@ -265,7 +270,7 @@ class PlaylistControllerTest {
                                 .andExpect(status().isCreated())
                                 .andExpect(jsonPath("$.id").value(playlistId.toString()));
 
-                verify(playlistService).create(eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")), createRequestCaptor.capture());
+                verify(playlistService).create(eq(UUID.fromString("11111111-1111-1111-1111-111111111111")), createRequestCaptor.capture());
                 PlaylistCreateRequest captured = createRequestCaptor.getValue();
                 assertThat(captured.title()).isEqualTo("New Playlist");
                 assertThat(captured.description()).isEqualTo("Desc");
@@ -277,7 +282,7 @@ class PlaylistControllerTest {
                 // given
                 PlaylistUpdateRequest request =
                                 new PlaylistUpdateRequest("Updated Playlist", "Updated Desc");
-                given(playlistService.update(eq(playlistId), eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")),
+                given(playlistService.update(eq(playlistId), eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
                                 any(PlaylistUpdateRequest.class))).willReturn(playlistResponse);
 
                 // when & then
@@ -287,7 +292,7 @@ class PlaylistControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.id").value(playlistId.toString()));
 
-                verify(playlistService).update(eq(playlistId), eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")),
+                verify(playlistService).update(eq(playlistId), eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
                                 updateRequestCaptor.capture());
                 PlaylistUpdateRequest captured = updateRequestCaptor.getValue();
                 assertThat(captured.title()).isEqualTo("Updated Playlist");
@@ -298,7 +303,7 @@ class PlaylistControllerTest {
         @DisplayName("플레이리스트 삭제")
         void deletePlaylist() throws Exception {
                 // given
-                willDoNothing().given(playlistService).delete(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"));
+                willDoNothing().given(playlistService).delete(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
                 // when & then
                 mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())
@@ -310,8 +315,8 @@ class PlaylistControllerTest {
         @DisplayName("플레이리스트 삭제 - 실패 (권한 없음)")
         void deletePlaylist_fail_PlaylistAccessDeniedException() throws Exception {
                 // given
-                willThrow(new PlaylistAccessDeniedException(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")))
-                                .given(playlistService).delete(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"));
+                willThrow(new PlaylistAccessDeniedException(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111")))
+                                .given(playlistService).delete(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
                 // when & then
                 mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())
@@ -326,7 +331,7 @@ class PlaylistControllerTest {
         @DisplayName("플레이리스트 아이템 추가")
         void addContent() throws Exception {
                 // given
-                willDoNothing().given(playlistService).addContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
+                willDoNothing().given(playlistService).addContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
                                 contentId);
 
                 // when & then
@@ -340,7 +345,7 @@ class PlaylistControllerTest {
         void addContent_fail_PlaylistContentNotFoundException() throws Exception {
                 // given
                 willThrow(new PlaylistContentNotFoundException(contentId)).given(playlistService)
-                                .addContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
+                                .addContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
 
                 // when & then
                 mockMvc.perform(post("/api/playlists/{playlistId}/contents/{contentId}", playlistId,
@@ -355,7 +360,7 @@ class PlaylistControllerTest {
         @DisplayName("플레이리스트 아이템 삭제")
         void removeContent() throws Exception {
                 // given
-                willDoNothing().given(playlistService).removeContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
+                willDoNothing().given(playlistService).removeContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
                                 contentId);
 
                 // when & then
@@ -370,7 +375,7 @@ class PlaylistControllerTest {
                 // given
                 willThrow(new PlaylistItemNotFoundException(playlistId, contentId))
                                 .given(playlistService)
-                                .removeContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
+                                .removeContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
 
                 // when & then
                 mockMvc.perform(delete("/api/playlists/{playlistId}/contents/{contentId}",
