@@ -335,16 +335,15 @@ class NotificationRepositoryTest {
 
         Notification ref = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "기준", null, NotificationLevel.INFO));
-        ReflectionTestUtils.setField(ref,"createdAt", t0);
-
+        setCreatedAt(ref.getId(), t0);
 
         Notification unread = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "안읽음", null, NotificationLevel.INFO));
-        ReflectionTestUtils.setField(unread,"createdAt", t1);
+        setCreatedAt(unread.getId(), t1);
 
         Notification read = notificationRepository.save(Notification.create(
                 receiverId, NotificationType.FOLLOWED, "읽음", null, NotificationLevel.INFO));
-        ReflectionTestUtils.setField(read,"createdAt", t1);
+        setCreatedAt(read.getId(), t1);
 
         read.markAsRead();
         notificationRepository.save(read);
