@@ -123,7 +123,25 @@ class ContentFacadeTest {
 
         // then
         assertThat(result).isSameAs(expected);
+        verify(binaryContentService).uploadToStorage(eq(StorageDirectory.THUMBNAIL), any());
         verify(eventPublisher, never()).publishEvent(any(BinaryContentDeleteEvent.class));
+    }
+
+    @Test
+    @DisplayName("이미지가 없으면 업로드 없이 수정 성공")
+    void update_noImage_success() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        ContentResponse expected = response();
+        when(contentService.update(eq(contentId), eq(updateRequest), isNull())).thenReturn(expected);
+
+        // when
+        ContentResponse result = contentFacade.update(contentId, updateRequest, null);
+
+        // then
+        assertThat(result).isSameAs(expected);
+        verify(contentService).update(eq(contentId), eq(updateRequest), isNull());
+        verify(binaryContentService, never()).uploadToStorage(any(), any());
     }
 
     @Test
