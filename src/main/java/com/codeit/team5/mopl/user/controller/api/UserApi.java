@@ -1,8 +1,10 @@
 package com.codeit.team5.mopl.user.controller.api;
 
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
@@ -141,6 +143,33 @@ public interface UserApi {
 
             @Parameter(description = "변경할 사용자 잠금 상태", required = true)
             @Valid @RequestBody UserLockedUpdateRequest request
+    );
+
+    @Operation(
+            summary = "비밀번호 변경",
+            description = "비밀번호를 변경합니다. 본인의 비밀번호만 변경할 수 있습니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "비밀번호 변경 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류(본인만 변경 가능)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<Void> updatePassword(
+            @Parameter(hidden = true) MoplPrincipal userDetails,
+
+            @Parameter(description = "비밀번호를 변경할 사용자 Id", required = true)
+            @PathVariable UUID userId,
+
+            @Parameter(description = "변경할 비밀번호", required = true)
+            @Valid @RequestBody ChangePasswordRequest request
     );
 
     @Operation(

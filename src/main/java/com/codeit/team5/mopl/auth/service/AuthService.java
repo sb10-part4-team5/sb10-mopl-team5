@@ -1,28 +1,20 @@
 package com.codeit.team5.mopl.auth.service;
 
-import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.mapper.AuthMapper;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class AuthService {
-    private final AuthenticationManager authenticationManager;
     private final RefreshTokenStore refreshTokenStore;
     private final AuthMapper authMapper;
 
@@ -39,55 +30,6 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-
-    @Transactional
-    public AuthPayload login(SignInRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        normalizeEmail(request.username()),
-                        request.password()
-                )
-        );
-
-        MoplUserDetails principals = (MoplUserDetails) authentication.getPrincipal();
-
-        User user = userRepository.findById(principals.getId())
-                .orElseThrow(() -> new UserNotFoundException(principals.getId()));
-        UserResponse userDto = userMapper.toDto(user);
-
-        String accessToken = jwtTokenizer.generateAccessToken(
-                user.getId().toString(),
-                user.getEmail(),
-                user.getRole().name()
-        );
-        String refreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
-        refreshTokenStore.save(user.getId(), refreshToken, calculateExpiresAt());
-
-        log.info("Login success");
-
-        JwtResponse response = authMapper.toJwtResponse(userDto, accessToken);
-
-        return authMapper.toAuthPayload(response, refreshToken);
-    }
-
-    @Transactional
-    public void logout(String refreshToken) {
-        SecurityContextHolder.clearContext();
-
-        if (refreshToken == null || refreshToken.isBlank()) {
-            log.info("Logout requested without refresh token");
-            // 리프레시 토큰이 없을 시에도 쿠키 삭제 응답은 정상 반환
-            return;
-        }
-
-        try {
-            UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
-            refreshTokenStore.deleteByUserId(userId);
-            log.info("Logout success");
-        } catch (RefreshTokenInvalidException e) {
-            log.info("Logout requested with invalid or expired refresh token");
-        }
-    }
 
     @Transactional
     public AuthPayload refresh(String refreshToken) {
@@ -124,10 +66,6 @@ public class AuthService {
         JwtResponse jwtResponse = authMapper.toJwtResponse(userDto, newAccessToken);
 
         return authMapper.toAuthPayload(jwtResponse, newRefreshToken);
-    }
-
-    private String normalizeEmail(String email) {
-        return email.toLowerCase(Locale.ROOT);
     }
 
     private Instant calculateExpiresAt() {

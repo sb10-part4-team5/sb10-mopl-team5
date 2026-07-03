@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
-import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

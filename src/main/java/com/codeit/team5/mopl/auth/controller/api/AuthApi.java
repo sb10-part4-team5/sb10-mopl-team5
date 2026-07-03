@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.auth.controller.api;
 
+import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
@@ -11,11 +12,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "인증 관리")
 public interface AuthApi {
@@ -55,9 +59,15 @@ public interface AuthApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))
             )
     })
-    ResponseEntity<JwtResponse> login(
+    @PostMapping(
+            path = "/api/auth/sign-in",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
+    )
+    default ResponseEntity<JwtResponse> login(
             @Valid @ModelAttribute SignInRequest request
-    );
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
 
     @Operation(
             summary = "로그아웃",
@@ -77,10 +87,13 @@ public interface AuthApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))
             )
     })
-    ResponseEntity<Void> logout(
+    @PostMapping("/api/auth/sign-out")
+    default ResponseEntity<Void> logout(
             @Parameter(description = "Refresh Token Cookie", required = false)
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
-    );
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
 
     @Operation(
             summary = "Access Token 재발급",
@@ -125,5 +138,21 @@ public interface AuthApi {
     })
     ResponseEntity<Void> csrfToken(
             @Parameter(hidden = true) CsrfToken csrfToken
+    );
+
+    @Operation(
+            summary = "비밀번호 초기화",
+            description = "임시 비밀번호로 초기화 후 이메일로 전송합니다.",
+            security = {}
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "비밀번호 초기화 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<Void> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request
     );
 }

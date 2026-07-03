@@ -41,7 +41,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "management.health.mail.enabled=false",
+        "spring.mail.host=localhost",
+        "spring.mail.port=2525",
+        "spring.mail.username=test",
+        "spring.mail.password=test"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
@@ -659,8 +665,8 @@ class UserControllerIntegrationTest {
                         .param("username", request.username())
                         .param("password", request.password()))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.exceptionType").value("AccountLockedException"))
-                .andExpect(jsonPath("$.message").value("잠긴 계정입니다"))
+                .andExpect(jsonPath("$.exceptionType").value("ACCOUNT_LOCKED"))
+                .andExpect(jsonPath("$.message").value("잠긴 계정입니다."))
                 .andExpect(jsonPath("$.details").doesNotExist());
     }
 

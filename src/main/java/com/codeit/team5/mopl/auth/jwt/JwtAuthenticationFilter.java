@@ -1,9 +1,8 @@
-package com.codeit.team5.mopl.auth.filter;
+package com.codeit.team5.mopl.auth.jwt;
 
 import com.codeit.team5.mopl.auth.exception.AccountLockedException;
 import com.codeit.team5.mopl.auth.exception.AuthException;
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
-import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import io.jsonwebtoken.Claims;

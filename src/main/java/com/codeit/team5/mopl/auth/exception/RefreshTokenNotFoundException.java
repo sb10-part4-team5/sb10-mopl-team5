@@ -1,10 +1,8 @@
 package com.codeit.team5.mopl.auth.exception;
 
-import org.springframework.http.HttpStatus;
-
-public class RefreshTokenNotFoundException extends AuthException {
+public class RefreshTokenNotFoundException extends RefreshTokenException {
 
     public RefreshTokenNotFoundException() {
-        super(HttpStatus.UNAUTHORIZED, "refreshToken이 존재하지 않습니다.");
+        super("refreshToken이 존재하지 않습니다.");
     }
 }

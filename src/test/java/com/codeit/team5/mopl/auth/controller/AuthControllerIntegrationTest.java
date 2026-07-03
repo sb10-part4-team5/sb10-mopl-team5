@@ -1,7 +1,10 @@
 package com.codeit.team5.mopl.auth.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -10,13 +13,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
+import com.codeit.team5.mopl.auth.entity.TemporaryPassword;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
+import com.codeit.team5.mopl.auth.repository.TemporaryPasswordRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,13 +31,24 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+import org.mockito.ArgumentCaptor;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "management.health.mail.enabled=false",
+        "spring.mail.host=localhost",
+        "spring.mail.port=2525",
+        "spring.mail.username=test",
+        "spring.mail.password=test"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
@@ -51,7 +68,20 @@ class AuthControllerIntegrationTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Autowired
+    private TemporaryPasswordRepository temporaryPasswordRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @MockitoBean
+    private JavaMailSender mailSender;
+
+    @AfterEach
+    void cleanUp() {
+        refreshTokenRepository.deleteAll();
+        temporaryPasswordRepository.deleteAll();
+        userRepository.deleteAll();
+    }
 
     @Test
     @DisplayName("로그인에 성공하면 accessToken을 반환하고 리프레시 토큰 해시를 저장한다")
@@ -161,6 +191,95 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("비밀번호 초기화 후 임시 비밀번호로 로그인하고 새 비밀번호로 변경할 수 있다")
+    void resetPassword_temporaryPasswordLoginAndChangePassword_success() throws Exception {
+        // Given
+        SignInRequest originalRequest = saveLoginUser("reset-flow@example.com", "password1");
+        User user = userRepository.findByEmail(originalRequest.username()).orElseThrow();
+        temporaryPasswordRepository.save(TemporaryPassword.create(
+                user,
+                passwordEncoder.encode("oldTemp1234"),
+                Instant.now().minusSeconds(600)
+        ));
+
+        // When
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "Reset-Flow@Example.COM"
+                                }
+                                """))
+                .andExpect(status().isNoContent());
+
+        // Then
+        ArgumentCaptor<SimpleMailMessage> mailCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        assertThat(temporaryPasswordRepository.findByUserId(user.getId())).isPresent();
+
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
+        verify(mailSender, timeout(5000)).send(mailCaptor.capture());
+        SimpleMailMessage mail = mailCaptor.getValue();
+        assertThat(mail.getTo()).containsExactly(originalRequest.username());
+        assertThat(mail.getSubject()).isEqualTo("[MOPL] 임시 비밀번호 안내");
+        String temporaryPassword = extractTemporaryPassword(mail.getText());
+        assertThat(temporaryPassword).isNotBlank();
+
+        MvcResult temporaryLoginResult = mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", originalRequest.username())
+                        .param("password", temporaryPassword))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.userDto.email").value(originalRequest.username()))
+                .andReturn();
+        String temporaryAccessToken = objectMapper
+                .readTree(temporaryLoginResult.getResponse().getContentAsString())
+                .get("accessToken")
+                .asText();
+
+        mockMvc.perform(patch("/api/users/{userId}/password", user.getId())
+                        .with(csrf())
+                        .header("Authorization", "Bearer " + temporaryAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "newPassword1"
+                                }
+                                """))
+                .andExpect(status().isNoContent());
+
+        assertThat(temporaryPasswordRepository.findByUserId(user.getId())).isEmpty();
+
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", originalRequest.username())
+                        .param("password", "newPassword1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty());
+
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", originalRequest.username())
+                        .param("password", originalRequest.password()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_CREDENTIALS"));
+
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", originalRequest.username())
+                        .param("password", temporaryPassword))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_CREDENTIALS"));
+    }
+
+    @Test
     @DisplayName("유효하지 않은 리프레시 토큰이면 인증 실패 응답을 반환한다")
     void refresh_invalidRefreshToken_returnsUnauthorized() throws Exception {
         // Given
@@ -261,6 +380,14 @@ class AuthControllerIntegrationTest {
         User user = User.create(email, passwordEncoder.encode(rawPassword), "사용자");
         userRepository.saveAndFlush(user);
         return new SignInRequest(email, rawPassword);
+    }
+
+    private String extractTemporaryPassword(String mailText) {
+        return mailText.lines()
+                .filter(line -> line.startsWith("임시 비밀번호: "))
+                .map(line -> line.substring("임시 비밀번호: ".length()).trim())
+                .findFirst()
+                .orElseThrow();
     }
 
     private MvcResult login(SignInRequest request) throws Exception {

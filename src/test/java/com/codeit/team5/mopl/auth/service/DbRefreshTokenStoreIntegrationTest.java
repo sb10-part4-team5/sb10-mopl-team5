@@ -5,7 +5,7 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
-import com.codeit.team5.mopl.auth.token.RefreshTokenHasher;
+import com.codeit.team5.mopl.auth.support.RefreshTokenHasher;
 import com.codeit.team5.mopl.config.JpaAuditingConfig;
 import com.codeit.team5.mopl.config.QueryDslConfig;
 import com.codeit.team5.mopl.user.entity.User;
