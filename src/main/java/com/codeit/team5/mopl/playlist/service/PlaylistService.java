@@ -12,6 +12,7 @@ import com.codeit.team5.mopl.playlist.entity.Playlist;
 import com.codeit.team5.mopl.playlist.entity.PlaylistItem;
 import com.codeit.team5.mopl.playlist.exception.PlaylistAccessDeniedException;
 import com.codeit.team5.mopl.playlist.exception.PlaylistContentNotFoundException;
+import com.codeit.team5.mopl.playlist.exception.PlaylistItemNotFoundException;
 import com.codeit.team5.mopl.playlist.exception.PlaylistNotFoundException;
 import com.codeit.team5.mopl.playlist.exception.PlaylistUserNotFoundException;
 import com.codeit.team5.mopl.playlist.mapper.PlaylistMapper;
