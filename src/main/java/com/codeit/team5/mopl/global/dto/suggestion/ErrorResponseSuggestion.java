@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -99,5 +101,19 @@ public record ErrorResponseSuggestion(String exceptionType, String message, Obje
                 List.of("허용되지 않는 값입니다: " + ex.getValue())
         );
         return new ErrorResponseSuggestion("INVALID_INPUT", "잘못된 입력값입니다.", details);
+    }
+
+    public static ErrorResponseSuggestion from(
+            AuthenticationException exception
+    ) {
+        boolean locked = exception instanceof LockedException;
+
+        return new ErrorResponseSuggestion(
+                locked ? "ACCOUNT_LOCKED" : "INVALID_CREDENTIALS",
+                locked ? "잠긴 계정입니다." : "이메일 또는 비밀번호가 올바르지 않습니다.",
+                locked
+                        ? null
+                        : Map.of("loginFailed", List.of("Invalid credentials"))
+        );
     }
 }

@@ -7,7 +7,6 @@ import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Arrays;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +15,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.WebUtils;
 
 @Slf4j
 @Component
@@ -34,13 +34,11 @@ public class SignOutHandler implements LogoutHandler {
             HttpServletResponse response,
             Authentication authentication
     ) {
-        Cookie[] cookies = request.getCookies();
+        Cookie refreshTokenCookie =
+                WebUtils.getCookie(request, REFRESH_TOKEN_COOKIE_NAME);
 
-        if (cookies != null) {
-            Arrays.stream(cookies)
-                    .filter(cookie -> REFRESH_TOKEN_COOKIE_NAME.equals(cookie.getName()))
-                    .findFirst()
-                    .ifPresent(cookie -> signOut(cookie.getValue()));
+        if (refreshTokenCookie != null) {
+            signOut(refreshTokenCookie.getValue());
         }
 
         ResponseCookie deleteCookie = cookieManager.deleteCookie();

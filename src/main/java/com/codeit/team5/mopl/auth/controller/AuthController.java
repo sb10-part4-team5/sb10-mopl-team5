@@ -4,7 +4,6 @@ import com.codeit.team5.mopl.auth.controller.api.AuthApi;
 import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.service.PasswordResetService;
 import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
-import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.service.AuthService;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
@@ -12,13 +11,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,31 +29,6 @@ public class AuthController implements AuthApi {
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
     private final RefreshTokenCookieManager cookieManager;
-
-    // 실제 로그인 처리는 Spring Security UsernamePasswordAuthenticationFilter가 담당
-    // 이 메서드는 Swagger 문서 노출을 위한 선언
-    @PostMapping(
-            value = "/sign-in",
-            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
-    )
-    public ResponseEntity<JwtResponse> login(
-            @Valid @ModelAttribute SignInRequest request
-    ) {
-        log.info("Login request: POST /api/auth/sign-in");
-
-        throw new UnsupportedOperationException("Handled by Spring Security filter");
-    }
-
-    // 실제 로그아웃 처리는 Spring Security에서 담당
-    // 이 메서드는 Swagger 문서 노출을 위한 선언
-    @PostMapping("/sign-out")
-    public ResponseEntity<Void> logout(
-            @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
-    ) {
-        log.info("Logout request: POST /api/auth/sign-out");
-
-        throw new UnsupportedOperationException("Handled by Spring Security filter");
-    }
 
     @Override
     @PostMapping("/refresh")

@@ -36,8 +36,6 @@ public class TemporaryPasswordService {
                         })
                         .orElseGet(() -> TemporaryPassword.create(user, passwordHash, Instant.now()));
 
-        temporaryPasswordRepository.save(temporaryPassword);
-
         log.info("TemporaryPassword saved: userId={}", user.getId());
 
         return rawPassword;
