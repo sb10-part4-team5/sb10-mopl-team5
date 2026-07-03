@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReviewRepository extends JpaRepository<Review, UUID>, ReviewQueryRepository {
 
-    boolean existsByContentIdAndAuthorId(UUID contentId, UUID authorId);
+    boolean existsByContent_IdAndAuthorId(UUID contentId, UUID authorId);
 
-    long countByContentId(UUID contentId);
+    long countByContent_Id(UUID contentId);
 }

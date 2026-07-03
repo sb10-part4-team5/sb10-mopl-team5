@@ -75,7 +75,7 @@ public class ReviewService {
         }
 
         // 총 개수
-        long totalCount = reviewRepository.countByContentId(contentId);
+        long totalCount = reviewRepository.countByContent_Id(contentId);
 
         // 페이지의 authorId를 한 번에 모아서 배치 조회 (N+1 방지)
         Map<UUID, User> userMap = userRepository.findAllById(
@@ -97,7 +97,7 @@ public class ReviewService {
             .orElseThrow(() -> new ContentNotFoundException(request.contentId()));
 
         // 해당 유저의 리뷰가 이미 존재하면 예외 던지기
-        if (reviewRepository.existsByContentIdAndAuthorId(request.contentId(), authorId)) {
+        if (reviewRepository.existsByContent_IdAndAuthorId(request.contentId(), authorId)) {
             throw new ReviewAlreadyExistsException();
         }
         Review review = Review.create(content, authorId, request.text(), request.rating());
