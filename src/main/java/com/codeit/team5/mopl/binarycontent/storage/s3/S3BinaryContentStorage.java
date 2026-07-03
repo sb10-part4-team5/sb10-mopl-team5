@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Slf4j
@@ -43,6 +44,20 @@ public class S3BinaryContentStorage implements BinaryContentStorage {
         } catch (SdkException e) {
             throw new BinaryContentStorageException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "S3 업로드 실패: key=" + key, e);
+        }
+    }
+
+    @Override
+    public void delete(String key) {
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(properties.bucketName())
+                    .key(key)
+                    .build());
+            log.debug("S3 객체 삭제 완료: key={}", key);
+        } catch (SdkException e) {
+            throw new BinaryContentStorageException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "S3 객체 삭제 실패: key=" + key, e);
         }
     }
 }

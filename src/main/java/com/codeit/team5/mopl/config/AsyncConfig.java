@@ -35,4 +35,17 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean
+    public ThreadPoolTaskExecutor binaryContentTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("bin-delete-");
+        executor.setTaskDecorator(new MdcTaskDecorator());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
 }

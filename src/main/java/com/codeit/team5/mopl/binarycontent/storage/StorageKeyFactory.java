@@ -9,16 +9,16 @@ import org.springframework.util.StringUtils;
 
 /**
  * 저장소 키 생성 책임을 담당한다.
- * 확장자 검증 → 폴더 prefix/소유자/난수 조합 → Content-Type 결정을 한 곳에서 처리한다.
+ * 확장자 검증 → 폴더 prefix/난수 조합 → Content-Type 결정을 한 곳에서 처리한다.
  */
 @Component
 public class StorageKeyFactory {
 
-    public GeneratedKey generate(StorageDirectory directory, UUID ownerId, String originalFilename) {
+    public GeneratedKey generate(StorageDirectory directory, String originalFilename) {
         String extension = StringUtils.getFilenameExtension(originalFilename);
         ImageExtension imageExtension = ImageExtension.from(extension)
                 .orElseThrow(() -> new InvalidImageExtensionException(extension));
-        String key = directory.value() + "/" + ownerId + "/" + UUID.randomUUID()
+        String key = directory.value() + "/" + UUID.randomUUID()
                 + "." + imageExtension.name().toLowerCase(Locale.ROOT);
         return new GeneratedKey(key, imageExtension.contentType());
     }

@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.dto.UploadedBinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
@@ -48,7 +48,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import com.codeit.team5.mopl.global.dto.FileRequest;
 
 @ExtendWith(MockitoExtension.class)
 class ContentServiceTest {
@@ -82,7 +81,8 @@ class ContentServiceTest {
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.MOVIE, "테스트 영화", "테스트 설명", List.of("액션", "드라마")
         );
-        FileRequest thumbnail = new FileRequest(new byte[]{1, 2, 3}, "test.jpg");
+        UploadedBinaryContent thumbnail =
+                new UploadedBinaryContent("thumbnails/test.jpg", "http://localhost:8080/thumbnails/test.jpg");
         Tag actionTag = Tag.create("액션");
         Tag dramaTag = Tag.create("드라마");
         ContentResponse expectedResponse = new ContentResponse(
@@ -94,7 +94,7 @@ class ContentServiceTest {
         when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
         when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(binaryContentService.upload(eq(StorageDirectory.THUMBNAIL), any(), any()))
+        when(binaryContentService.saveCompleted(thumbnail))
                 .thenReturn(BinaryContent.completed("http://localhost:8080/thumbnails/test.jpg"));
         when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);
 
@@ -111,7 +111,7 @@ class ContentServiceTest {
         assertThat(savedContent.getTitle()).isEqualTo("테스트 영화");
         assertThat(savedContent.getThumbnail()).isNotNull();
 
-        verify(binaryContentService).upload(eq(StorageDirectory.THUMBNAIL), any(), any());
+        verify(binaryContentService).saveCompleted(thumbnail);
 
         verify(tagRepository).findByNameIn(List.of("액션", "드라마"));
         verify(contentStatsRepository).save(any(ContentStats.class));
@@ -276,7 +276,8 @@ class ContentServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
-        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "new.jpg");
+        UploadedBinaryContent thumbnail =
+                new UploadedBinaryContent("thumbnails/new.jpg", "http://localhost/thumbnails/new.jpg");
         ContentResponse expectedResponse = new ContentResponse(
                 contentId, ContentType.MOVIE, "수정 제목", null,
                 "http://localhost/thumbnails/new.jpg",
@@ -285,17 +286,17 @@ class ContentServiceTest {
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
-        when(binaryContentService.upload(eq(StorageDirectory.THUMBNAIL), any(), any()))
+        when(binaryContentService.saveCompleted(thumbnail))
                 .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(expectedResponse);
 
         // when
-        ContentResponse result = contentService.update(contentId, new ContentUpdateRequest("수정 제목", null, List.of("액션")), image);
+        ContentResponse result = contentService.update(contentId, new ContentUpdateRequest("수정 제목", null, List.of("액션")), thumbnail);
 
         // then
         assertThat(result).isSameAs(expectedResponse);
         assertThat(content.getThumbnail()).isNotNull();
-        verify(binaryContentService).upload(eq(StorageDirectory.THUMBNAIL), any(), any());
+        verify(binaryContentService).saveCompleted(thumbnail);
     }
 
     @Test
@@ -306,16 +307,17 @@ class ContentServiceTest {
         Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
         BinaryContent oldThumbnail = BinaryContent.completed("http://localhost/thumbnails/old.jpg");
         content.attachThumbnail(oldThumbnail);
-        FileRequest image = new FileRequest(new byte[]{4, 5, 6}, "new.jpg");
+        UploadedBinaryContent thumbnail =
+                new UploadedBinaryContent("thumbnails/new.jpg", "http://localhost/thumbnails/new.jpg");
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
-        when(binaryContentService.upload(eq(StorageDirectory.THUMBNAIL), any(), any()))
+        when(binaryContentService.saveCompleted(thumbnail))
                 .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(null);
 
         // when
-        contentService.update(contentId, new ContentUpdateRequest("수정 제목", null, List.of("액션")), image);
+        contentService.update(contentId, new ContentUpdateRequest("수정 제목", null, List.of("액션")), thumbnail);
 
         // then
         assertThat(oldThumbnail.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.DELETED);

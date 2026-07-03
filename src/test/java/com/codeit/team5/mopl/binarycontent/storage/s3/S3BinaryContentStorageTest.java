@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,7 +31,7 @@ class S3BinaryContentStorageTest {
     @BeforeEach
     void setUp() {
         S3StorageProperties properties =
-                new S3StorageProperties(null, null, "mopl-bucket", "ap-northeast-2");
+                new S3StorageProperties(null, null, "mopl-bucket", "ap-northeast-2", null, null);
         storage = new S3BinaryContentStorage(properties, s3Client);
     }
 
@@ -70,5 +71,31 @@ class S3BinaryContentStorageTest {
         // Then
         assertThat(url)
                 .isEqualTo("https://mopl-bucket.s3.ap-northeast-2.amazonaws.com/profiles/abc.jpg");
+    }
+
+    @Test
+    @DisplayName("S3 객체 삭제 성공")
+    void delete_success() {
+        // When
+        storage.delete("profiles/abc.jpg");
+
+        // Then
+        ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+        verify(s3Client).deleteObject(captor.capture());
+        DeleteObjectRequest request = captor.getValue();
+        assertThat(request.bucket()).isEqualTo("mopl-bucket");
+        assertThat(request.key()).isEqualTo("profiles/abc.jpg");
+    }
+
+    @Test
+    @DisplayName("삭제 중 SDK 예외가 발생하면 BinaryContentStorageException으로 변환하며 S3 삭제 실패")
+    void delete_sdkException_throwsBinaryContentStorageException() {
+        // Given
+        given(s3Client.deleteObject(any(DeleteObjectRequest.class)))
+                .willThrow(SdkClientException.create("S3 연결 실패"));
+
+        // When & Then
+        assertThatThrownBy(() -> storage.delete("profiles/abc.jpg"))
+                .isInstanceOf(BinaryContentStorageException.class);
     }
 }

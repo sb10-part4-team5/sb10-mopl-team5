@@ -3,10 +3,9 @@ package com.codeit.team5.mopl.user.service;
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
 import com.codeit.team5.mopl.auth.support.EmailNormalizer;
+import com.codeit.team5.mopl.binarycontent.dto.UploadedBinaryContent;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
-import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
@@ -75,14 +74,12 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse update(UUID currentUserId, UUID userId, UserUpdateRequest request, FileRequest image) {
-        validateOwner(currentUserId, userId);
-
+    public UserResponse update(UUID userId, UserUpdateRequest request, UploadedBinaryContent uploadedImage) {
         User user = getUserWithProfileImage(userId);
 
         user.updateName(request.name());
-        if (image != null) {
-            user.updateProfileImage(binaryContentService.upload(StorageDirectory.PROFILE, user.getId(), image));
+        if (uploadedImage != null) {
+            user.updateProfileImage(binaryContentService.saveCompleted(uploadedImage));
         }
 
         log.info("User updated: userId={}", userId);
@@ -148,12 +145,6 @@ public class UserService {
         return userMapper.toCursor(page, hasNext, totalCount, request.sortBy(), request.sortDirection());
     }
 
-    private void validateOwner(UUID currentUserId, UUID userId) {
-        if (!currentUserId.equals(userId)) {
-            throw new UserForbiddenException(currentUserId, userId);
-        }
-    }
-
     private User getUserWithProfileImage(UUID userId) {
         return userRepository.findWithProfileImageById(userId)
                 .orElseThrow(() -> {
@@ -168,6 +159,12 @@ public class UserService {
                     log.warn("User not found: userId={}", userId);
                     return new UserNotFoundException(userId);
                 });
+    }
+
+    private void validateOwner(UUID currentUserId, UUID userId) {
+        if (!currentUserId.equals(userId)) {
+            throw new UserForbiddenException(currentUserId, userId);
+        }
     }
 
     private void validateDuplicateEmail(String email) {

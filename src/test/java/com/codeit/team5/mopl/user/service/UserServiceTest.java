@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -12,12 +11,11 @@ import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
-import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
+import com.codeit.team5.mopl.binarycontent.dto.UploadedBinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.dto.FileRequest;
 import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.constant.UserSortBy;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
@@ -30,9 +28,9 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
-import com.codeit.team5.mopl.user.exception.UserForbiddenException;
 import com.codeit.team5.mopl.user.exception.SameLockStatusException;
 import com.codeit.team5.mopl.user.exception.SameRoleAssignmentException;
+import com.codeit.team5.mopl.user.exception.UserForbiddenException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -247,7 +245,7 @@ class UserServiceTest {
         when(userMapper.toDto(user)).thenReturn(expected);
 
         // When
-        UserResponse result = userService.update(userId, userId, new UserUpdateRequest("새이름"), null);
+        UserResponse result = userService.update(userId, new UserUpdateRequest("새이름"), null);
 
         // Then
         assertThat(result).isSameAs(expected);
@@ -262,43 +260,23 @@ class UserServiceTest {
         // Given
         UUID userId = UUID.randomUUID();
         User user = User.create("user@example.com", "encoded-password", "기존이름");
-        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        UploadedBinaryContent uploaded = new UploadedBinaryContent("profiles/key", "http://localhost/profiles/key.jpg");
+        BinaryContent saved = BinaryContent.completed("http://localhost/profiles/key.jpg");
         UserResponse expected = new UserResponse(
                 userId, Instant.parse("2026-06-25T00:00:00Z"),
                 "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
         );
         when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
-        when(binaryContentService.upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any()))
-                .thenReturn(BinaryContent.completed("http://localhost/profiles/key.jpg"));
+        when(binaryContentService.saveCompleted(uploaded)).thenReturn(saved);
         when(userMapper.toDto(user)).thenReturn(expected);
 
         // When
-        UserResponse result = userService.update(userId, userId, new UserUpdateRequest("새이름"), image);
+        UserResponse result = userService.update(userId, new UserUpdateRequest("새이름"), uploaded);
 
         // Then
         assertThat(result).isSameAs(expected);
         assertThat(user.getName()).isEqualTo("새이름");
-        assertThat(user.getProfileImage()).isNotNull();
-        verify(binaryContentService).upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any());
-    }
-
-    @Test
-    @DisplayName("프로필 이미지 업로드 실패 시 변경 실패")
-    void update_imageUploadFails_throwsException() {
-        // Given
-        UUID userId = UUID.randomUUID();
-        User user = User.create("user@example.com", "encoded-password", "기존이름");
-        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
-        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
-        when(binaryContentService.upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any()))
-                .thenThrow(new RuntimeException("S3 연결 실패"));
-
-        // When & Then
-        assertThatThrownBy(() -> userService.update(userId, userId, new UserUpdateRequest("새이름"), image))
-                .isInstanceOf(RuntimeException.class);
-
-        assertThat(user.getProfileImage()).isNull();
-        verifyNoInteractions(userMapper);
+        assertThat(user.getProfileImage()).isSameAs(saved);
     }
 
     @Test
@@ -309,18 +287,18 @@ class UserServiceTest {
         User user = User.create("user@example.com", "encoded-password", "기존이름");
         BinaryContent oldImage = BinaryContent.completed("http://localhost/profiles/old.jpg");
         user.updateProfileImage(oldImage);
-        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
+        UploadedBinaryContent uploaded = new UploadedBinaryContent("profiles/new", "http://localhost/profiles/new.jpg");
+        BinaryContent newSaved = BinaryContent.completed("http://localhost/profiles/new.jpg");
         UserResponse expected = new UserResponse(
                 userId, Instant.parse("2026-06-25T00:00:00Z"),
                 "user@example.com", "새이름", "http://localhost/profiles/new.jpg", "USER", false
         );
         when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
-        when(binaryContentService.upload(eq(StorageDirectory.PROFILE), eq(user.getId()), any()))
-                .thenReturn(BinaryContent.completed("http://localhost/profiles/new.jpg"));
+        when(binaryContentService.saveCompleted(uploaded)).thenReturn(newSaved);
         when(userMapper.toDto(user)).thenReturn(expected);
 
         // When
-        userService.update(userId, userId, new UserUpdateRequest("새이름"), image);
+        userService.update(userId, new UserUpdateRequest("새이름"), uploaded);
 
         // Then
         assertThat(oldImage.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.DELETED);
@@ -335,25 +313,11 @@ class UserServiceTest {
         when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.update(userId, userId, new UserUpdateRequest("새이름"), null))
+        assertThatThrownBy(() -> userService.update(userId, new UserUpdateRequest("새이름"), null))
                 .isInstanceOf(UserNotFoundException.class);
 
         verify(userRepository).findWithProfileImageById(userId);
-        verifyNoInteractions(userMapper, binaryContentService, eventPublisher);
-    }
-
-    @Test
-    @DisplayName("본인이 아닌 사용자의 프로필 변경 실패")
-    void update_notOwner_throwsException() {
-        // Given
-        UUID currentUserId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-
-        // When & Then
-        assertThatThrownBy(() -> userService.update(currentUserId, userId, new UserUpdateRequest("새이름"), null))
-                .isInstanceOf(UserForbiddenException.class);
-
-        verifyNoInteractions(userRepository, userMapper, binaryContentService, eventPublisher);
+        verifyNoInteractions(userMapper, eventPublisher);
     }
 
     @Test
