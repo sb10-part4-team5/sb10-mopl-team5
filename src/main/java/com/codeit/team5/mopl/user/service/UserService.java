@@ -1,10 +1,13 @@
 package com.codeit.team5.mopl.user.service;
 
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
+import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
+import com.codeit.team5.mopl.auth.support.EmailNormalizer;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.FileRequest;
+import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
@@ -39,12 +42,13 @@ public class UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final BinaryContentService binaryContentService;
+    private final TemporaryPasswordService temporaryPasswordService;
     private final ApplicationEventPublisher eventPublisher;
     private final RefreshTokenStore refreshTokenStore;
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedEmail = EmailNormalizer.normalize(request.email());
 
         validateDuplicateEmail(normalizedEmail);
 
@@ -119,6 +123,21 @@ public class UserService {
         log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
     }
 
+    @Transactional
+    public void updatePassword(UUID currentUserId, UUID userId, ChangePasswordRequest request) {
+        validateOwner(currentUserId, userId);
+
+        User requestUser = getUser(userId);
+        String encodedPassword = passwordEncoder.encode(request.password());
+
+        requestUser.updatePassword(encodedPassword);
+
+        temporaryPasswordService.deleteByUserId(userId);
+        refreshTokenStore.deleteByUserId(userId);
+
+        log.info("User password updated: userId={}", userId);
+    }
+
     public CursorResponse<UserResponse> findUsers(UserCursorRequest request) {
         int fetchLimit = request.limit() + 1;
         List<User> fetched = userRepository.findUsers(request, fetchLimit);
@@ -159,9 +178,5 @@ public class UserService {
             );
             throw new DuplicatedEmailException(email);
         }
-    }
-
-    private String normalizeEmail(String email) {
-        return email.toLowerCase(Locale.ROOT);
     }
 }

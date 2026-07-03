@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.auth.entity.RefreshToken;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
-import com.codeit.team5.mopl.auth.token.RefreshTokenHasher;
+import com.codeit.team5.mopl.auth.support.RefreshTokenHasher;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;

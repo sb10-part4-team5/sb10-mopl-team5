@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.handler;
+package com.codeit.team5.mopl.auth.security.handler;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
