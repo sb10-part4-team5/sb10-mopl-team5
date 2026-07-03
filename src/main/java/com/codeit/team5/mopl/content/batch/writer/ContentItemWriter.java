@@ -33,7 +33,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
 
     @Override
     public void write(Chunk<? extends ContentWithMetaData> chunk) {
-        List<ContentWithMetaData> items = List.copyOf(chunk.getItems());
+        List<? extends ContentWithMetaData> items = chunk.getItems();
 
         if (items.isEmpty()) {
             log.debug("[Batch] 빈 청크 수신 — 저장 생략");
@@ -47,7 +47,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         ContentSource source = items.get(0).content().getSource();
         Set<String> existingIds = contentRepository.findExternalIdsBySourceAndExternalIdIn(source, externalIds);
 
-        List<ContentWithMetaData> deduplicatedItems = items.stream()
+        List<? extends ContentWithMetaData> deduplicatedItems = items.stream()
                 .filter(item -> !existingIds.contains(item.content().getExternalId()))
                 .toList();
 
@@ -70,7 +70,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         // 3. 썸네일 저장 (아이템별로 별도 BinaryContent를 저장 — thumbnail_id는 1:1 유니크 제약이라
         // 서로 다른 콘텐츠가 같은 thumbnailUrl을 갖더라도 BinaryContent를 공유할 수 없다.
         // saveAll은 입력 순서를 보존해 반환하므로 인덱스로 1:1 매칭한다.
-        List<ContentWithMetaData> itemsWithThumbnail = deduplicatedItems.stream()
+        List<? extends ContentWithMetaData> itemsWithThumbnail = deduplicatedItems.stream()
                 .filter(item -> StringUtils.hasText(item.thumbnailUrl()))
                 .toList();
         if (!itemsWithThumbnail.isEmpty()) {
