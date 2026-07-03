@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.review.service;
 
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -20,6 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,10 +39,11 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final ContentRepository contentRepository;
     private final ReviewMapper reviewMapper;
 
     // 리뷰 목록 조회
-    @Transactional
+    @Transactional(readOnly = true)
     public CursorResponse<ReviewResponse> getReviews(
         UUID contentId, String cursor, UUID idAfter, int limit,
         String sortDirection, String sortBy) {
@@ -86,12 +90,23 @@ public class ReviewService {
     // 리뷰 생성
     @Transactional
     public ReviewResponse createReview(UUID authorId, ReviewCreateRequest request) {
+        // 콘텐츠가 존재하는 지 검증
+        if(!contentRepository.existsById(request.contentId()))
+        {
+            throw new ContentNotFoundException(request.contentId());
+        }
+
         // 해당 유저의 리뷰가 이미 존재하면 예외 던지기
         if (reviewRepository.existsByContentIdAndAuthorId(request.contentId(), authorId)) {
             throw new ReviewAlreadyExistsException();
         }
         Review review = Review.create(request.contentId(), authorId, request.text(), request.rating());
-        Review saved = reviewRepository.save(review);
+        Review saved;
+        try{
+            saved = reviewRepository.saveAndFlush(review);
+        } catch (DataIntegrityViolationException e){
+            throw new ReviewAlreadyExistsException();
+        }
         User user = userRepository.findById(saved.getAuthorId()).orElseThrow(() -> new UserNotFoundException(authorId));
 
         return reviewMapper.toDto(saved, user);

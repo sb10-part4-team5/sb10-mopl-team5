@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.review.repository.querydsl;
 
+import com.codeit.team5.mopl.notification.exception.CursorIdAfterNotTogetherException;
 import com.codeit.team5.mopl.review.entity.QReview;
 import com.codeit.team5.mopl.review.entity.Review;
 import com.querydsl.core.types.OrderSpecifier;
@@ -41,6 +42,11 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
     // 커서 페이지네이션을 위한 BooleanExpression 생성
     private BooleanExpression buildCursorCondition(QReview r, String cursor, UUID idAfter,
         String sortBy, boolean ascending) {
+
+        // cursor와 idAfter를 한 세트로 받아오기
+        if((cursor != null && idAfter == null) || (cursor == null && idAfter != null)) {
+            throw new CursorIdAfterNotTogetherException();
+        }
 
         // 첫 페이지면 커서가 없으니 조건 없음 (전체 조회)
         if (cursor == null) {

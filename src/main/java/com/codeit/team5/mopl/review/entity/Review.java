@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.review.entity;
 
 import com.codeit.team5.mopl.global.entity.BaseEntity;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
+import com.codeit.team5.mopl.review.exception.InvalidRatingException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -31,6 +32,7 @@ public class Review extends BaseUpdatableEntity {
     private Double rating;
 
     public static Review create(UUID contentId, UUID authorId, String text, Double rating) {
+        validateRating(rating);
         return new Review(contentId, authorId, text, rating);
     }
 
@@ -42,11 +44,16 @@ public class Review extends BaseUpdatableEntity {
     }
 
     public void update(String text, Double rating) {
+        validateRating(rating);
         if (text != null) {
             this.text = text;
         }
-        if (rating != null) {
-            this.rating = rating;
+        this.rating = rating;
+    }
+
+    private static void validateRating(Double rating){
+        if(rating == null || rating < 0.0 || rating > 5.0){
+            throw new InvalidRatingException(rating);
         }
     }
 }

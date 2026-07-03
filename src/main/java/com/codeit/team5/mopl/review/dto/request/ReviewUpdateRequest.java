@@ -3,10 +3,12 @@ package com.codeit.team5.mopl.review.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 
 @Schema(name = "ReviewUpdateRequest", description = "리뷰 수정 요청")
 public record ReviewUpdateRequest(
     @Schema(description = "리뷰 내용")
+    @NotBlank(message = "리뷰 내용은 필수입니다.")
     String text,
 
     @Schema(description = "평점 (0.0 ~ 5.0)")
