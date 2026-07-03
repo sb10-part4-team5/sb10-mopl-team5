@@ -92,6 +92,8 @@ class PlaylistServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.title()).isEqualTo("New Title");
         assertThat(response.description()).isEqualTo("New Description");
+        
+        verify(playlistRepository).save(any(Playlist.class));
     }
 
     @Test
