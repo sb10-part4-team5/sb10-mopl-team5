@@ -1,9 +1,10 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.InactiveDirectMessageEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
@@ -25,14 +26,15 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final FollowRepository followRepository;
 
-    // DM을 수신받으면 알림을 생성
+    // 비활성 대화에 DM이 도착하면 알림을 생성 (SSE 전송과는 독립)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onDirectMessageSent(DirectMessageSentEvent event){
+    public void onInactiveDirectMessage(InactiveDirectMessageEvent event){
+        DirectMessageResponse message = event.message();
         // 알림의 제목
-        String title = "[DM] " + event.senderNickname();
+        String title = "[DM] " + message.sender().name();
         // DM 내용이 길면 50자로 줄여서 보여줌
-        String content = StringUtils.truncate(event.content(), 50);
-        notificationService.create(event.receiverId(), NotificationType.DIRECT_MESSAGE,
+        String content = StringUtils.truncate(message.content(), 50);
+        notificationService.create(message.receiver().userId(), NotificationType.DIRECT_MESSAGE,
             title, content, NotificationLevel.INFO);
     }
 

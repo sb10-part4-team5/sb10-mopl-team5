@@ -10,10 +10,11 @@ import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.InactiveDirectMessageEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
+import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -86,31 +87,29 @@ class SseNotificationListenerIntegrationTest {
     // ===== DirectMessageCreatedEvent =====
 
     @Test
-    @DisplayName("트랜잭션 커밋 후 DirectMessageCreatedEvent → 등록된 Emitter에 이벤트를 전송한다")
-    void onDirectMessageCreated_sendsEvent_afterCommit() throws Exception {
+    @DisplayName("트랜잭션 커밋 후 비활성 DM 이벤트 → 등록된 Emitter에 direct-messages를 전송한다")
+    void onInactiveDirectMessage_sendsEvent_afterCommit() throws Exception {
         UUID receiverId = UUID.randomUUID();
         SseEmitter mockEmitter = mock(SseEmitter.class);
         emitterStore.save(receiverId, mockEmitter);
 
-        DirectMessagePayload payload = new DirectMessagePayload(
-                UUID.randomUUID(), receiverId, "안녕하세요", Instant.now());
+        DirectMessageResponse message = dmMessage(receiverId);
         tx.executeWithoutResult(status ->
-                publisher.publishEvent(new DirectMessageCreatedEvent(payload)));
+                publisher.publishEvent(new InactiveDirectMessageEvent(message)));
 
         verify(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     @Test
-    @DisplayName("트랜잭션 롤백 시 DirectMessageCreatedEvent → Emitter에 이벤트를 전송하지 않는다")
-    void onDirectMessageCreated_doesNotSend_whenRollback() throws Exception {
+    @DisplayName("트랜잭션 롤백 시 비활성 DM 이벤트 → Emitter에 이벤트를 전송하지 않는다")
+    void onInactiveDirectMessage_doesNotSend_whenRollback() throws Exception {
         UUID receiverId = UUID.randomUUID();
         SseEmitter mockEmitter = mock(SseEmitter.class);
         emitterStore.save(receiverId, mockEmitter);
 
-        DirectMessagePayload payload = new DirectMessagePayload(
-                UUID.randomUUID(), receiverId, "안녕하세요", Instant.now());
+        DirectMessageResponse message = dmMessage(receiverId);
         tx.executeWithoutResult(status -> {
-            publisher.publishEvent(new DirectMessageCreatedEvent(payload));
+            publisher.publishEvent(new InactiveDirectMessageEvent(message));
             status.setRollbackOnly();
         });
 
@@ -118,6 +117,13 @@ class SseNotificationListenerIntegrationTest {
     }
 
     // ===== 헬퍼 =====
+
+    private DirectMessageResponse dmMessage(UUID receiverId) {
+        UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), "다린", null);
+        UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "받는이", null);
+        return new DirectMessageResponse(
+                UUID.randomUUID(), UUID.randomUUID(), sender, receiver, "안녕하세요", Instant.now());
+    }
 
     private NotificationPayload notificationPayload(UUID receiverId) {
         return new NotificationPayload(

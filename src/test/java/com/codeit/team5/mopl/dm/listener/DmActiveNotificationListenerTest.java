@@ -8,8 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
+import com.codeit.team5.mopl.dm.event.InactiveDirectMessageEvent;
 import com.codeit.team5.mopl.dm.provider.ActiveConversationChecker;
-import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import java.time.Instant;
 import java.util.UUID;
@@ -42,8 +42,8 @@ class DmActiveNotificationListenerTest {
     }
 
     @Test
-    @DisplayName("수신자가 대화방 비활성이면 알림 발행 성공")
-    void inactiveReceiver_publishesNotification_success() {
+    @DisplayName("수신자가 대화방 비활성이면 비활성 DM 이벤트 발행 성공")
+    void inactiveReceiver_publishesEvent_success() {
         // given
         DirectMessageBroadcastEvent event = event("b@mopl.com");
         when(activeConversationChecker.isViewing(any(UUID.class), eq("b@mopl.com"))).thenReturn(false);
@@ -52,7 +52,7 @@ class DmActiveNotificationListenerTest {
         listener.onDirectMessageBroadcast(event);
 
         // then
-        verify(eventPublisher).publishEvent(any(DirectMessageSentEvent.class));
+        verify(eventPublisher).publishEvent(any(InactiveDirectMessageEvent.class));
     }
 
     @Test

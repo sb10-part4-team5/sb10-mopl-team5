@@ -7,7 +7,6 @@ import com.codeit.team5.mopl.notification.dto.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
@@ -55,12 +54,9 @@ public class NotificationService {
         NotificationResponse response = notificationMapper.toResponse(saved);
         log.info("알림 생성됨: type={}", type);
 
-        if (type == NotificationType.DIRECT_MESSAGE) {
-            // sse 명세에 맞게 DM 전용 direct-message SSE 이벤트를 발행
-            DirectMessagePayload dmPayload = notificationMapper.toDirectMessagePayload(saved);
-            publisher.publishEvent(new DirectMessageCreatedEvent(dmPayload));
-        } else {
-            // 그 이외의 알림 타입들은 notifications SSE 이벤트 발행
+        // DM 알림의 실시간 전송(SSE direct-messages)은 InactiveDirectMessageEvent 경로에서
+        // 독립적으로 처리하므로, 여기서는 저장만 하고 그 외 알림 타입만 notifications SSE를 발행한다.
+        if (type != NotificationType.DIRECT_MESSAGE) {
             publisher.publishEvent(new NotificationCreatedEvent(payload));
         }
 
