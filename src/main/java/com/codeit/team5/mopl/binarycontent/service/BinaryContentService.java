@@ -22,13 +22,6 @@ public class BinaryContentService {
     private final StorageKeyFactory storageKeyFactory;
     private final BinaryContentRepository binaryContentRepository;
 
-    public BinaryContent upload(StorageDirectory directory, FileRequest image) {
-        GeneratedKey generated = storageKeyFactory.generate(directory, image.filename());
-        binaryContentStorage.store(generated.key(), image.bytes(), generated.contentType());
-        return binaryContentRepository.save(
-                BinaryContent.completed(binaryContentStorage.toUrl(generated.key())));
-    }
-
     public UploadedBinaryContent uploadToStorage(StorageDirectory directory, FileRequest image) {
         GeneratedKey generated = storageKeyFactory.generate(directory, image.filename());
         binaryContentStorage.store(generated.key(), image.bytes(), generated.contentType());

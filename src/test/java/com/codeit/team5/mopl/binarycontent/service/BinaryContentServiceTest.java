@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.binarycontent.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -40,43 +39,6 @@ class BinaryContentServiceTest {
 
     @InjectMocks
     private BinaryContentService binaryContentService;
-
-    @Test
-    @DisplayName("이미지 업로드 후 COMPLETED 상태로 저장에 성공한다")
-    void upload_success() {
-        // given
-        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
-        when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq("profile.jpg")))
-                .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
-        when(binaryContentStorage.toUrl("profiles/key.jpg"))
-                .thenReturn("http://localhost/profiles/key.jpg");
-        when(binaryContentRepository.save(any(BinaryContent.class))).then(returnsFirstArg());
-
-        // when
-        BinaryContent result = binaryContentService.upload(StorageDirectory.PROFILE, image);
-
-        // then
-        verify(binaryContentStorage).store("profiles/key.jpg", image.bytes(), "image/jpeg");
-        verify(binaryContentRepository).save(any(BinaryContent.class));
-        assertThat(result.getUrl()).isEqualTo("http://localhost/profiles/key.jpg");
-        assertThat(result.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.COMPLETED);
-    }
-
-    @Test
-    @DisplayName("스토리지 업로드 실패 시 예외를 전파하고 저장하지 않는다")
-    void upload_storeFails_throwsAndDoesNotSave() {
-        // given
-        FileRequest image = new FileRequest(new byte[]{1, 2, 3}, "profile.jpg");
-        when(storageKeyFactory.generate(eq(StorageDirectory.PROFILE), eq("profile.jpg")))
-                .thenReturn(new GeneratedKey("profiles/key.jpg", "image/jpeg"));
-        doThrow(new RuntimeException("S3 연결 실패"))
-                .when(binaryContentStorage).store(any(), any(), any());
-
-        // when & then
-        assertThatThrownBy(() -> binaryContentService.upload(StorageDirectory.PROFILE, image))
-                .isInstanceOf(RuntimeException.class);
-        verify(binaryContentRepository, never()).save(any());
-    }
 
     @Test
     @DisplayName("스토리지에만 업로드하고 DB 미저장 성공")

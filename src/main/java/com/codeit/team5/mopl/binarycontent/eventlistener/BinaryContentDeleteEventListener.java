@@ -13,7 +13,7 @@ public class BinaryContentDeleteEventListener {
 
     private final BinaryContentService binaryContentService;
 
-    @Async
+    @Async("binaryContentTaskExecutor")
     @EventListener
     public void handle(BinaryContentDeleteEvent event) {
         binaryContentService.deleteQuietly(event.uploaded());

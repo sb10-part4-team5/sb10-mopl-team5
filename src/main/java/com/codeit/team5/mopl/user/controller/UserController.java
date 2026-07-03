@@ -73,9 +73,7 @@ public class UserController implements UserApi {
     ) {
         log.info("User update request: PATCH /api/users/{}", userId);
 
-        FileRequest imageRequest = (image != null && !image.isEmpty())
-                ? MultipartFiles.toImageResource(image)
-                : null;
+        FileRequest imageRequest = MultipartFiles.toImageResource(image);
 
         UserResponse response = userProfileFacade.updateProfile(
                 userDetails.getId(),
