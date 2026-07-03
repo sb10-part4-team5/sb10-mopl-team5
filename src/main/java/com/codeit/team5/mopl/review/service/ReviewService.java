@@ -22,11 +22,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -102,11 +104,14 @@ public class ReviewService {
         }
         Review review = Review.create(request.contentId(), authorId, request.text(), request.rating());
         Review saved;
-        try{
+        try {
             saved = reviewRepository.saveAndFlush(review);
-        } catch (DataIntegrityViolationException e){
+        } catch (DataIntegrityViolationException e) {
+            log.warn("리뷰 중복 저장 시도 (race condition): contentId={}, authorId={}", request.contentId(), authorId);
             throw new ReviewAlreadyExistsException();
         }
+        log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
+
         User user = userRepository.findById(saved.getAuthorId()).orElseThrow(() -> new UserNotFoundException(authorId));
 
         return reviewMapper.toDto(saved, user);
@@ -118,9 +123,11 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
             .orElseThrow(() -> new ReviewNotFoundException(reviewId));
         if (!review.getAuthorId().equals(authorId)) {
+            log.warn("리뷰 수정 권한 없음: reviewId={}, requesterId={}", reviewId, authorId);
             throw new ReviewForbiddenException();
         }
         review.update(request.text(), request.rating());
+        log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
         User author = userRepository.findById(authorId)
             .orElseThrow(() -> new UserNotFoundException(authorId));
         return reviewMapper.toDto(review, author);
@@ -132,9 +139,11 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
             .orElseThrow(() -> new ReviewNotFoundException(reviewId));
         if (!review.getAuthorId().equals(authorId)) {
+            log.warn("리뷰 삭제 권한 없음: reviewId={}, requesterId={}", reviewId, authorId);
             throw new ReviewForbiddenException();
         }
         reviewRepository.delete(review);
+        log.info("리뷰 삭제 완료: reviewId={}, authorId={}", reviewId, authorId);
     }
 
     // SortBy, SortDirection을 검증하고 ASC/DESC 여부를 정하는 헬퍼 메서드
