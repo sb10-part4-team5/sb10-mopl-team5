@@ -70,7 +70,7 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
 
         // when
         Optional<PlaylistContentsDto> dtoOpt =
-                playlistQueryRepository.findByIdWithContents(playlist.getId());
+                playlistQueryRepository.findByIdWithContents(playlist.getId(), user.getId());
         ensureQueryCount(2); // 1. playlist fetch, 2. playlistItem + content fetch
 
         // then
@@ -93,7 +93,7 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         queryInspector.clear();
 
         // when
-        List<PlaylistContentsDto> result = playlistQueryRepository.findByCursor(command);
+        List<PlaylistContentsDto> result = playlistQueryRepository.findByCursor(command, user.getId());
         ensureQueryCount(2); // 1. playlist fetch, 2. playlistItem + content fetch
 
         // then

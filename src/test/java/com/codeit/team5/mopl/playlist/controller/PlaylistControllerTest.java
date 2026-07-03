@@ -15,7 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import java.security.Principal;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -62,8 +62,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
                 excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                                 classes = JwtAuthenticationFilter.class))
 @AutoConfigureMockMvc(addFilters = false)
-@Import({GlobalExceptionHandler.class, TestGlobalExceptionHandlerConfig.class})
+@Import({GlobalExceptionHandler.class, TestGlobalExceptionHandlerConfig.class, PlaylistControllerTest.TestSecurityConfig.class})
 class PlaylistControllerTest {
+
+    @org.springframework.boot.test.context.TestConfiguration
+    static class TestSecurityConfig implements org.springframework.web.servlet.config.annotation.WebMvcConfigurer {
+        @Override
+        public void addArgumentResolvers(java.util.List<org.springframework.web.method.support.HandlerMethodArgumentResolver> resolvers) {
+            resolvers.add(new org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver());
+        }
+    }
+
+
 
         @Autowired
         private MockMvc mockMvc;
@@ -86,15 +96,18 @@ class PlaylistControllerTest {
         @Captor
         private ArgumentCaptor<PlaylistCursorRequest> cursorRequestCaptor;
 
-        private Principal principal;
+        private MoplPrincipal principal;
+        private org.springframework.security.core.Authentication auth;
         private UUID playlistId;
         private UUID contentId;
         private PlaylistResponse playlistResponse;
 
         @BeforeEach
         void setUp() {
-                principal = Mockito.mock(Principal.class);
-                given(principal.getName()).willReturn("user@test.com");
+                principal = Mockito.mock(MoplPrincipal.class);
+        auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER")));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+                given(principal.getId()).willReturn(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
                 playlistId = UUID.randomUUID();
                 contentId = UUID.randomUUID();
@@ -107,10 +120,9 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("단건 조회")
-        @WithMockUser
         void find() throws Exception {
                 // given
-                given(playlistService.find(playlistId)).willReturn(playlistResponse);
+                given(playlistService.find(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(playlistResponse);
 
                 // when & then
                 mockMvc.perform(get("/api/playlists/{id}", playlistId)).andDo(print())
@@ -121,10 +133,9 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("단건 조회 - 실패 (플레이리스트 없음)")
-        @WithMockUser
         void find_fail_PlaylistNotFoundException() throws Exception {
                 // given
-                given(playlistService.find(playlistId))
+                given(playlistService.find(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")))
                                 .willThrow(new PlaylistNotFoundException(playlistId));
 
                 // when & then
@@ -137,7 +148,6 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("커서 기반 조회")
-        @WithMockUser
         void findCursor() throws Exception {
                 // given
                 CursorResponse<PlaylistResponse> cursorResponse = CursorResponse
@@ -147,7 +157,7 @@ class PlaylistControllerTest {
 
                 given(playlistMapper.toCommand(any(PlaylistCursorRequest.class)))
                                 .willReturn(command);
-                given(playlistService.findByCursor(command)).willReturn(cursorResponse);
+                given(playlistService.findByCursor(command, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(cursorResponse);
 
                 // when & then
                 mockMvc.perform(get("/api/playlists").param("limit", "10")
@@ -173,7 +183,6 @@ class PlaylistControllerTest {
                         // sortBy 검증
                         "10, DESC, null, sortBy"}, nullValues = {"null"})
         @DisplayName("커서 기반 조회 - 실패 (입력값 유효성 검증)")
-        @WithMockUser
         void findCursor_fail_validation(String limit, String sortDirection, String sortBy,
                         String errorField) throws Exception {
                 var requestBuilder = get("/api/playlists");
@@ -196,7 +205,6 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("커서 기반 조회 - 실패 (선택 파라미터 UUID 포맷 오류)")
-        @WithMockUser
         void findCursor_fail_invalid_uuid_format() throws Exception {
                 mockMvc.perform(get("/api/playlists").param("limit", "10")
                                 .param("sortBy", "UPDATED_AT").param("sortDirection", "DESC")
@@ -209,7 +217,6 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("커서 기반 조회 - 실패 (유효하지 않은 정렬 기준)")
-        @WithMockUser
         void findCursor_fail_PlaylistIncorrectSortByException() throws Exception {
                 // given
                 willThrow(new PlaylistIncorrectSortByException("INVALID_SORT"))
@@ -227,7 +234,6 @@ class PlaylistControllerTest {
         @ParameterizedTest
         @CsvSource({"UPDATED_AT, not_a_date", "SUBSCRIBE_COUNT, not_a_number"})
         @DisplayName("커서 기반 조회 - 실패 (정렬 기준과 커서 타입 불일치)")
-        @WithMockUser
         void findCursor_fail_PlaylistSortByMismatchException(String sortBy, String cursor)
                         throws Exception {
                 // given
@@ -246,21 +252,20 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("플레이리스트 생성")
-        @WithMockUser(username = "user@test.com")
         void create() throws Exception {
                 // given
                 PlaylistCreateRequest request = new PlaylistCreateRequest("New Playlist", "Desc");
-                given(playlistService.create(eq("user@test.com"), any(PlaylistCreateRequest.class)))
+                given(playlistService.create(eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")), any(PlaylistCreateRequest.class)))
                                 .willReturn(playlistResponse);
 
                 // when & then
-                mockMvc.perform(post("/api/playlists").with(csrf()).principal(principal)
+                mockMvc.perform(post("/api/playlists").with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))).andDo(print())
                                 .andExpect(status().isCreated())
                                 .andExpect(jsonPath("$.id").value(playlistId.toString()));
 
-                verify(playlistService).create(eq("user@test.com"), createRequestCaptor.capture());
+                verify(playlistService).create(eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")), createRequestCaptor.capture());
                 PlaylistCreateRequest captured = createRequestCaptor.getValue();
                 assertThat(captured.title()).isEqualTo("New Playlist");
                 assertThat(captured.description()).isEqualTo("Desc");
@@ -268,22 +273,21 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("플레이리스트 수정")
-        @WithMockUser(username = "user@test.com")
         void update() throws Exception {
                 // given
                 PlaylistUpdateRequest request =
                                 new PlaylistUpdateRequest("Updated Playlist", "Updated Desc");
-                given(playlistService.update(eq(playlistId), eq("user@test.com"),
+                given(playlistService.update(eq(playlistId), eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")),
                                 any(PlaylistUpdateRequest.class))).willReturn(playlistResponse);
 
                 // when & then
                 mockMvc.perform(patch("/api/playlists/{id}", playlistId).with(csrf())
-                                .principal(principal).contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))).andDo(print())
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.id").value(playlistId.toString()));
 
-                verify(playlistService).update(eq(playlistId), eq("user@test.com"),
+                verify(playlistService).update(eq(playlistId), eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")),
                                 updateRequestCaptor.capture());
                 PlaylistUpdateRequest captured = updateRequestCaptor.getValue();
                 assertThat(captured.title()).isEqualTo("Updated Playlist");
@@ -292,28 +296,26 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("플레이리스트 삭제")
-        @WithMockUser(username = "user@test.com")
         void deletePlaylist() throws Exception {
                 // given
-                willDoNothing().given(playlistService).delete(playlistId, "user@test.com");
+                willDoNothing().given(playlistService).delete(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
                 // when & then
                 mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())
-                                .principal(principal)).andDo(print())
+                                ).andDo(print())
                                 .andExpect(status().isNoContent());
         }
 
         @Test
         @DisplayName("플레이리스트 삭제 - 실패 (권한 없음)")
-        @WithMockUser(username = "user@test.com")
         void deletePlaylist_fail_PlaylistAccessDeniedException() throws Exception {
                 // given
-                willThrow(new PlaylistAccessDeniedException(playlistId, "user@test.com"))
-                                .given(playlistService).delete(playlistId, "user@test.com");
+                willThrow(new PlaylistAccessDeniedException(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")))
+                                .given(playlistService).delete(playlistId, java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
                 // when & then
                 mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())
-                                .principal(principal)).andDo(print())
+                                ).andDo(print())
                                 .andExpect(status().isForbidden())
                                 .andExpect(jsonPath("$.exceptionType")
                                                 .value("PlaylistAccessDeniedException"))
@@ -322,29 +324,27 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("플레이리스트 아이템 추가")
-        @WithMockUser(username = "user@test.com")
         void addContent() throws Exception {
                 // given
-                willDoNothing().given(playlistService).addContent("user@test.com", playlistId,
+                willDoNothing().given(playlistService).addContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
                                 contentId);
 
                 // when & then
                 mockMvc.perform(post("/api/playlists/{playlistId}/contents/{contentId}", playlistId,
-                                contentId).with(csrf()).principal(principal)).andDo(print())
+                                contentId).with(csrf())).andDo(print())
                                 .andExpect(status().isNoContent());
         }
 
         @Test
         @DisplayName("플레이리스트 아이템 추가 - 실패 (컨텐츠 없음)")
-        @WithMockUser(username = "user@test.com")
         void addContent_fail_PlaylistContentNotFoundException() throws Exception {
                 // given
                 willThrow(new PlaylistContentNotFoundException(contentId)).given(playlistService)
-                                .addContent("user@test.com", playlistId, contentId);
+                                .addContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
 
                 // when & then
                 mockMvc.perform(post("/api/playlists/{playlistId}/contents/{contentId}", playlistId,
-                                contentId).with(csrf()).principal(principal)).andDo(print())
+                                contentId).with(csrf())).andDo(print())
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.exceptionType")
                                                 .value("PlaylistContentNotFoundException"))
@@ -353,30 +353,28 @@ class PlaylistControllerTest {
 
         @Test
         @DisplayName("플레이리스트 아이템 삭제")
-        @WithMockUser(username = "user@test.com")
         void removeContent() throws Exception {
                 // given
-                willDoNothing().given(playlistService).removeContent("user@test.com", playlistId,
+                willDoNothing().given(playlistService).removeContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
                                 contentId);
 
                 // when & then
                 mockMvc.perform(delete("/api/playlists/{playlistId}/contents/{contentId}",
-                                playlistId, contentId).with(csrf()).principal(principal))
+                                playlistId, contentId).with(csrf()))
                                 .andDo(print()).andExpect(status().isNoContent());
         }
 
         @Test
         @DisplayName("플레이리스트 아이템 삭제 - 실패 (아이템 없음)")
-        @WithMockUser(username = "user@test.com")
         void removeContent_fail_PlaylistItemNotFoundException() throws Exception {
                 // given
                 willThrow(new PlaylistItemNotFoundException(playlistId, contentId))
                                 .given(playlistService)
-                                .removeContent("user@test.com", playlistId, contentId);
+                                .removeContent(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
 
                 // when & then
                 mockMvc.perform(delete("/api/playlists/{playlistId}/contents/{contentId}",
-                                playlistId, contentId).with(csrf()).principal(principal))
+                                playlistId, contentId).with(csrf()))
                                 .andDo(print()).andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.exceptionType")
                                                 .value("PlaylistItemNotFoundException"))

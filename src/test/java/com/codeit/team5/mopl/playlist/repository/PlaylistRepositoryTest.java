@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.playlist.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,15 +40,17 @@ class PlaylistRepositoryTest extends BaseRepositoryTest {
     @DisplayName("이메일과 아이디로 플레이리스트 소유 여부 확인")
     void existsByIdAndOwnerEmail() {
         // when
-        boolean exists = playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail());
-        ensureQueryCount(1);
-
-        queryInspector.clear();
-        boolean notExists = playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), "wrong@email.com");
-        ensureQueryCount(1);
+        boolean exists = playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId());
 
         // then
         assertThat(exists).isTrue();
+        ensureQueryCount(1);
+
+        queryInspector.clear();
+        boolean notExists = playlistRepository.existsByIdAndOwnerId(playlist.getId(), UUID.randomUUID());
+        ensureQueryCount(1);
+
+        // then
         assertThat(notExists).isFalse();
     }
 

@@ -83,10 +83,10 @@ class PlaylistServiceTest {
     void create_success() {
         // given
         PlaylistCreateRequest request = new PlaylistCreateRequest("New Title", "New Description");
-        given(userRepository.findByEmail(anyString())).willReturn(Optional.of(user));
+        given(userRepository.findWithProfileImageById(user.getId())).willReturn(Optional.of(user));
 
         // when
-        PlaylistResponse response = playlistService.create(user.getEmail(), request);
+        PlaylistResponse response = playlistService.create(user.getId(), request);
 
         // then
         assertThat(response).isNotNull();
@@ -101,10 +101,10 @@ class PlaylistServiceTest {
     void create_fail_userNotFound() {
         // given
         PlaylistCreateRequest request = new PlaylistCreateRequest("Title", "Desc");
-        given(userRepository.findByEmail(anyString())).willReturn(Optional.empty());
+        given(userRepository.findWithProfileImageById(org.mockito.ArgumentMatchers.any())).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> playlistService.create("wrong@email.com", request))
+        assertThatThrownBy(() -> playlistService.create(UUID.randomUUID(), request))
                 .isInstanceOf(PlaylistUserNotFoundException.class);
     }
 
@@ -112,12 +112,12 @@ class PlaylistServiceTest {
     @DisplayName("플레이리스트 단건 조회 성공")
     void find_success() {
         // given
-        PlaylistContentsDto dto = new PlaylistContentsDto(playlist, Collections.emptyList());
-        given(playlistRepository.findByIdWithContents(playlist.getId()))
+        PlaylistContentsDto dto = new PlaylistContentsDto(playlist, Collections.emptyList(), false);
+        given(playlistRepository.findByIdWithContents(playlist.getId(), user.getId()))
                 .willReturn(Optional.of(dto));
 
         // when
-        PlaylistResponse response = playlistService.find(playlist.getId());
+        PlaylistResponse response = playlistService.find(playlist.getId(), user.getId());
 
         // then
         assertThat(response).isNotNull();
@@ -129,10 +129,10 @@ class PlaylistServiceTest {
     void find_fail_notFound() {
         // given
         UUID id = UUID.randomUUID();
-        given(playlistRepository.findByIdWithContents(id)).willReturn(Optional.empty());
+        given(playlistRepository.findByIdWithContents(id, user.getId())).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> playlistService.find(id))
+        assertThatThrownBy(() -> playlistService.find(id, user.getId()))
                 .isInstanceOf(PlaylistNotFoundException.class);
     }
 
@@ -141,13 +141,13 @@ class PlaylistServiceTest {
     void update_success() {
         // given
         PlaylistUpdateRequest request = new PlaylistUpdateRequest("Updated Title", "Updated Desc");
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail()))
+        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
-        given(playlistRepository.findById(playlist.getId())).willReturn(Optional.of(playlist));
+        given(playlistRepository.findByIdWithContents(playlist.getId(), user.getId())).willReturn(Optional.of(new com.codeit.team5.mopl.playlist.dto.PlaylistContentsDto(playlist, java.util.Collections.emptyList(), false)));
 
         // when
         PlaylistResponse response =
-                playlistService.update(playlist.getId(), user.getEmail(), request);
+                playlistService.update(playlist.getId(), user.getId(), request);
 
         // then
         assertThat(response.title()).isEqualTo("Updated Title");
@@ -159,12 +159,12 @@ class PlaylistServiceTest {
     void update_fail_accessDenied() {
         // given
         PlaylistUpdateRequest request = new PlaylistUpdateRequest("Updated Title", "Updated Desc");
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), "other@email.com"))
+        given(playlistRepository.existsByIdAndOwnerId(org.mockito.ArgumentMatchers.eq(playlist.getId()), org.mockito.ArgumentMatchers.any(UUID.class)))
                 .willReturn(false);
 
         // when & then
         assertThatThrownBy(
-                () -> playlistService.update(playlist.getId(), "other@email.com", request))
+                () -> playlistService.update(playlist.getId(), UUID.randomUUID(), request))
                         .isInstanceOf(PlaylistAccessDeniedException.class);
     }
 
@@ -172,11 +172,11 @@ class PlaylistServiceTest {
     @DisplayName("플레이리스트 삭제 성공")
     void delete_success() {
         // given
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail()))
+        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
 
         // when
-        playlistService.delete(playlist.getId(), user.getEmail());
+        playlistService.delete(playlist.getId(), user.getId());
 
         // then
         verify(playlistRepository).deleteByIdDirectly(playlist.getId());
@@ -186,11 +186,11 @@ class PlaylistServiceTest {
     @DisplayName("플레이리스트 삭제 실패 - 권한 없음")
     void delete_fail_accessDenied() {
         // given
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), "other@email.com"))
+        given(playlistRepository.existsByIdAndOwnerId(org.mockito.ArgumentMatchers.eq(playlist.getId()), org.mockito.ArgumentMatchers.any(UUID.class)))
                 .willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> playlistService.delete(playlist.getId(), "other@email.com"))
+        assertThatThrownBy(() -> playlistService.delete(playlist.getId(), UUID.randomUUID()))
                 .isInstanceOf(PlaylistAccessDeniedException.class);
     }
 
@@ -202,13 +202,13 @@ class PlaylistServiceTest {
         Content content = Content.createByAdmin(ContentType.MOVIE, "Content Title", "Desc");
         ReflectionTestUtils.setField(content, "id", contentId);
 
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail()))
+        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
         given(contentRepository.existsById(contentId)).willReturn(true);
         given(contentRepository.getReferenceById(contentId)).willReturn(content);
 
         // when
-        playlistService.addContent(user.getEmail(), playlist.getId(), contentId);
+        playlistService.addContent(user.getId(), playlist.getId(), contentId);
 
         // then
         verify(playlistItemRepository).save(any(PlaylistItem.class));
@@ -219,14 +219,14 @@ class PlaylistServiceTest {
     void removeContent_success() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail()))
+        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
         given(contentRepository.existsById(contentId)).willReturn(true);
         given(playlistItemRepository.existsByPlaylistIdAndContentId(playlist.getId(), contentId))
                 .willReturn(true);
 
         // when
-        playlistService.removeContent(user.getEmail(), playlist.getId(), contentId);
+        playlistService.removeContent(user.getId(), playlist.getId(), contentId);
 
         // then
         verify(playlistItemRepository).deleteByPlaylistIdAndContentIdDirectly(playlist.getId(),
@@ -238,11 +238,11 @@ class PlaylistServiceTest {
     void addContent_fail_accessDenied() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), "other@email.com"))
+        given(playlistRepository.existsByIdAndOwnerId(org.mockito.ArgumentMatchers.eq(playlist.getId()), org.mockito.ArgumentMatchers.any(UUID.class)))
                 .willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> playlistService.addContent("other@email.com", playlist.getId(), contentId))
+        assertThatThrownBy(() -> playlistService.addContent(UUID.randomUUID(), playlist.getId(), contentId))
                 .isInstanceOf(PlaylistAccessDeniedException.class);
     }
 
@@ -251,12 +251,12 @@ class PlaylistServiceTest {
     void addContent_fail_contentNotFound() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail()))
+        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
         given(contentRepository.existsById(contentId)).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> playlistService.addContent(user.getEmail(), playlist.getId(), contentId))
+        assertThatThrownBy(() -> playlistService.addContent(user.getId(), playlist.getId(), contentId))
                 .isInstanceOf(PlaylistContentNotFoundException.class);
     }
 
@@ -265,11 +265,11 @@ class PlaylistServiceTest {
     void removeContent_fail_accessDenied() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), "other@email.com"))
+        given(playlistRepository.existsByIdAndOwnerId(org.mockito.ArgumentMatchers.eq(playlist.getId()), org.mockito.ArgumentMatchers.any(UUID.class)))
                 .willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> playlistService.removeContent("other@email.com", playlist.getId(), contentId))
+        assertThatThrownBy(() -> playlistService.removeContent(UUID.randomUUID(), playlist.getId(), contentId))
                 .isInstanceOf(PlaylistAccessDeniedException.class);
     }
 
@@ -278,12 +278,12 @@ class PlaylistServiceTest {
     void removeContent_fail_contentNotFound() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail()))
+        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
         given(contentRepository.existsById(contentId)).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> playlistService.removeContent(user.getEmail(), playlist.getId(), contentId))
+        assertThatThrownBy(() -> playlistService.removeContent(user.getId(), playlist.getId(), contentId))
                 .isInstanceOf(PlaylistContentNotFoundException.class);
     }
 
@@ -292,14 +292,14 @@ class PlaylistServiceTest {
     void removeContent_fail_playlistItemNotFound() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerEmail(playlist.getId(), user.getEmail()))
+        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
         given(contentRepository.existsById(contentId)).willReturn(true);
         given(playlistItemRepository.existsByPlaylistIdAndContentId(playlist.getId(), contentId))
                 .willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> playlistService.removeContent(user.getEmail(), playlist.getId(), contentId))
+        assertThatThrownBy(() -> playlistService.removeContent(user.getId(), playlist.getId(), contentId))
                 .isInstanceOf(PlaylistItemNotFoundException.class);
     }
 }
