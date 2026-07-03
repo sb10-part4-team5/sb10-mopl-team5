@@ -32,7 +32,6 @@ public class Review extends BaseUpdatableEntity {
     private Double rating;
 
     public static Review create(UUID contentId, UUID authorId, String text, Double rating) {
-        validateRating(rating);
         return new Review(contentId, authorId, text, rating);
     }
 
@@ -44,16 +43,9 @@ public class Review extends BaseUpdatableEntity {
     }
 
     public void update(String text, Double rating) {
-        validateRating(rating);
         if (text != null) {
             this.text = text;
         }
         this.rating = rating;
-    }
-
-    private static void validateRating(Double rating){
-        if(rating == null || rating < 0.0 || rating > 5.0){
-            throw new InvalidRatingException(rating);
-        }
     }
 }
