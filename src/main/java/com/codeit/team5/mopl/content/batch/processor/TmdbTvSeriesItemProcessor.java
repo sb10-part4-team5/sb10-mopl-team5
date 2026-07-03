@@ -6,7 +6,6 @@ import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbTvGenre;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentType;
-import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.service.util.ContentCollectionUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,16 +22,10 @@ public class TmdbTvSeriesItemProcessor implements ItemProcessor<TmdbTvDto, Conte
 
     private static final String TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
-    private final ContentRepository contentRepository;
     private final ObjectMapper objectMapper;
 
     @Override
     public ContentWithMetaData process(TmdbTvDto dto) {
-        if (contentRepository.existsBySourceAndExternalId(ContentSource.TMDB, String.valueOf(dto.id()))) {
-            log.debug("[TMDB] TV 시리즈 스킵 (이미 존재) - externalId={}, title={}", dto.id(), dto.name());
-            return null;
-        }
-
         Content content = Content.createByExternalSource(
                 ContentType.TV_SERIES,
                 dto.name(),

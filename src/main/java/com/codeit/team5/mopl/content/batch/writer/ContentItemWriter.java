@@ -4,16 +4,16 @@ import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.batch.dto.ContentWithMetaData;
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -33,19 +33,23 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
 
     @Override
     public void write(Chunk<? extends ContentWithMetaData> chunk) {
-        List<ContentWithMetaData> items = new java.util.ArrayList<>(chunk.getItems());
+        List<ContentWithMetaData> items = List.copyOf(chunk.getItems());
 
-        // 1. Content 일괄 저장 (청크 내 externalId 중복 제거 — TMDB가 페이지 간 동일 영화를 중복 반환하는 경우 대비)
-        List<ContentWithMetaData> deduplicatedItems = items.stream()
-                .collect(Collectors.toMap(
-                        item -> item.content().getExternalId(),
-                        Function.identity(),
-                        (a, b) -> a,
-                        LinkedHashMap::new
-                ))
-                .values()
-                .stream()
+        // 1. DB에 이미 존재하는 externalId 조회 후 신규 항목만 필터 (SELECT 1번)
+        List<String> externalIds = items.stream()
+                .map(item -> item.content().getExternalId())
                 .toList();
+        ContentSource source = items.get(0).content().getSource();
+        Set<String> existingIds = contentRepository.findExternalIdsBySourceAndExternalIdIn(source, externalIds);
+
+        List<ContentWithMetaData> deduplicatedItems = items.stream()
+                .filter(item -> !existingIds.contains(item.content().getExternalId()))
+                .toList();
+
+        if (deduplicatedItems.isEmpty()) {
+            log.info("[Batch] 신규 항목 없음 — 저장 생략 (청크 원본: {}건)", items.size());
+            return;
+        }
 
         List<Content> contents = deduplicatedItems.stream()
                 .map(ContentWithMetaData::content)

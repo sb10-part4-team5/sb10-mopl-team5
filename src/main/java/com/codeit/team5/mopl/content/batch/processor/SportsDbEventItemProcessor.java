@@ -5,7 +5,6 @@ import com.codeit.team5.mopl.content.dto.external.sportsdb.SportsDbEventDto;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentType;
-import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.service.util.ContentCollectionUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,16 +20,10 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class SportsDbEventItemProcessor implements ItemProcessor<SportsDbEventDto, ContentWithMetaData> {
 
-    private final ContentRepository contentRepository;
     private final ObjectMapper objectMapper;
 
     @Override
     public ContentWithMetaData process(SportsDbEventDto dto) {
-        if (contentRepository.existsBySourceAndExternalId(ContentSource.SPORTS_DB, dto.idEvent())) {
-            log.debug("[SportsDB] 경기 스킵 (이미 존재) - idEvent={}, event={}", dto.idEvent(), dto.strEvent());
-            return null;
-        }
-
         Content content = Content.createByExternalSource(
                 ContentType.SPORT,
                 dto.strEvent(),
