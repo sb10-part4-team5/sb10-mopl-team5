@@ -35,6 +35,11 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
     public void write(Chunk<? extends ContentWithMetaData> chunk) {
         List<ContentWithMetaData> items = List.copyOf(chunk.getItems());
 
+        if (items.isEmpty()) {
+            log.debug("[Batch] 빈 청크 수신 — 저장 생략");
+            return;
+        }
+
         // 1. DB에 이미 존재하는 externalId 조회 후 신규 항목만 필터 (SELECT 1번)
         List<String> externalIds = items.stream()
                 .map(item -> item.content().getExternalId())

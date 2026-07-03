@@ -17,8 +17,6 @@ public interface ContentRepository extends JpaRepository<Content, UUID>, Content
     @EntityGraph(attributePaths = {"thumbnail", "stats", "contentTags", "contentTags.tag"})
     Optional<Content> findWithStatsAndTagsById(UUID id);
 
-    boolean existsBySourceAndExternalId(ContentSource source, String externalId);
-
     @Query("SELECT c.externalId FROM Content c WHERE c.source = :source AND c.externalId IN :externalIds")
     Set<String> findExternalIdsBySourceAndExternalIdIn(
             @Param("source") ContentSource source,

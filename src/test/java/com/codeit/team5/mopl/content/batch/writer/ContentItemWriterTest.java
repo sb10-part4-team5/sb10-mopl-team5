@@ -96,6 +96,17 @@ class ContentItemWriterTest {
     }
 
     @Test
+    @DisplayName("빈 청크가 전달되면 예외 없이 즉시 반환한다")
+    void write_emptyChunk_doesNothing() throws Exception {
+        // when
+        writer.write(new Chunk<>(List.of()));
+
+        // then
+        verify(contentRepository, never()).findExternalIdsBySourceAndExternalIdIn(any(), anyList());
+        verify(contentRepository, never()).saveAll(anyList());
+    }
+
+    @Test
     @DisplayName("청크 내 모든 항목이 DB에 이미 존재하면 저장을 생략한다")
     void write_allExistingInDb_skipsAllSaves() throws Exception {
         // given
