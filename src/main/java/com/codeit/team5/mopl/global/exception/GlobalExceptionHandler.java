@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.global.exception;
 
-import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.exception.AuthException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenExpiredException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;

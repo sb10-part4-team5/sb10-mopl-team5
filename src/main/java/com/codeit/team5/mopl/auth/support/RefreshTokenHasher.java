@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.token;
+package com.codeit.team5.mopl.auth.support;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

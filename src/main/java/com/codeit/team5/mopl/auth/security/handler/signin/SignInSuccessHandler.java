@@ -1,6 +1,6 @@
-package com.codeit.team5.mopl.auth.handler.signin;
+package com.codeit.team5.mopl.auth.security.handler.signin;
 
-import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;

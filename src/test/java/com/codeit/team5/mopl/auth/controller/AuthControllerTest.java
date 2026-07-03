@@ -12,14 +12,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.codeit.team5.mopl.auth.cookie.RefreshTokenCookieManager;
+import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
-import com.codeit.team5.mopl.auth.filter.JwtAuthenticationFilter;
-import com.codeit.team5.mopl.auth.handler.UserAccessDeniedHandler;
-import com.codeit.team5.mopl.auth.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
+import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;

@@ -1,6 +1,6 @@
-package com.codeit.team5.mopl.auth.handler;
+package com.codeit.team5.mopl.auth.security.handler;
 
-import com.codeit.team5.mopl.auth.utils.ErrorResponder;
+import com.codeit.team5.mopl.auth.support.ErrorResponder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

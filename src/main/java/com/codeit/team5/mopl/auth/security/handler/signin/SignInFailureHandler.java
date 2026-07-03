@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.auth.handler.signin;
+package com.codeit.team5.mopl.auth.security.handler.signin;
 
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.fasterxml.jackson.databind.ObjectMapper;
