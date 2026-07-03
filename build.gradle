@@ -102,6 +102,14 @@ def jacocoExcludePatterns = [
         "**/AuthUser.class",
 ]
 
+tasks.withType(JacocoReportBase) {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExcludePatterns)
+        }))
+    }
+}
+
 def openJacocoReport = false // true 로 설정 시 테스트 완료 후 리포트 자동 열림
 
 jacocoTestReport {
@@ -143,11 +151,6 @@ jacocoTestCoverageVerification {
                 minimum = 0.0
             }
         }
-    }
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: jacocoExcludePatterns)
-        }))
     }
 }
 

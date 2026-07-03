@@ -1,8 +1,8 @@
 package com.codeit.team5.mopl.playlist.dto.request;
 
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotBlank;
 
-public record PlaylistCreateRequest(@NotEmpty String title,
-                                    @NotEmpty String description) {
+public record PlaylistCreateRequest(@NotBlank String title,
+                                    @NotBlank String description) {
 
 }

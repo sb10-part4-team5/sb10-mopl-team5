@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.playlist.service;
 
+import com.codeit.team5.mopl.playlist.exception.PlaylistItemAlreadyExistsException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -79,6 +80,9 @@ public class PlaylistService {
         validateOwner(playlistId, userId);
         if (!contentRepository.existsById(contentId)) {
             throw new PlaylistContentNotFoundException(contentId);
+        }
+        if (playlistItemRepository.existsByPlaylistIdAndContentId(playlistId, contentId)) {
+            throw new PlaylistItemAlreadyExistsException(playlistId, contentId);
         }
         Content content = contentRepository.getReferenceById(contentId);
         PlaylistItem playlistItem = PlaylistItem.of(playlistId, content);
