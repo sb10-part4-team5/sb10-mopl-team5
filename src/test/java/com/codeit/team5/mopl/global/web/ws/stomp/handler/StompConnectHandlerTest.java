@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import io.jsonwebtoken.JwtException;
@@ -25,7 +26,7 @@ import java.util.Collections;
 class StompConnectHandlerTest {
 
     @Mock
-    private JwtTokenizer jwtTokenizer;
+    private JwtAuthenticationService jwtAuthenticationService;
 
     @Mock
     private WebSocketSessionStore sessionStore;
@@ -67,7 +68,7 @@ class StompConnectHandlerTest {
         accessor.setNativeHeader("Authorization", "Bearer valid-token");
 
         Authentication auth = new UsernamePasswordAuthenticationToken("test@test.com", "", Collections.emptyList());
-        when(jwtTokenizer.getAuthentication("valid-token")).thenReturn(auth);
+        when(jwtAuthenticationService.getAuthentication("valid-token")).thenReturn(auth);
 
         // when
         handler.handle(accessor);

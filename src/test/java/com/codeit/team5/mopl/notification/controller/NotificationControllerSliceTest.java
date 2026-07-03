@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
@@ -66,6 +67,9 @@ class NotificationControllerSliceTest {
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
+
+    @MockitoBean
+    private JwtAuthenticationService jwtAuthenticationService;
 
     @MockitoBean
     private MoplUserDetailsService userDetailsService;

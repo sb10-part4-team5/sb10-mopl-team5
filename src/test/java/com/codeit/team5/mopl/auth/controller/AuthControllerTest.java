@@ -21,6 +21,7 @@ import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
@@ -92,6 +93,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
+
+    @MockitoBean
+    private JwtAuthenticationService jwtAuthenticationService;
 
     @MockitoBean
     private JwtProperties jwtProperties;
