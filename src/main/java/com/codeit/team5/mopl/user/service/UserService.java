@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.user.service;
 
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
+import com.codeit.team5.mopl.auth.support.EmailNormalizer;
 import com.codeit.team5.mopl.binarycontent.service.BinaryContentService;
 import com.codeit.team5.mopl.binarycontent.storage.StorageDirectory;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -47,7 +48,7 @@ public class UserService {
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedEmail = EmailNormalizer.normalize(request.email());
 
         validateDuplicateEmail(normalizedEmail);
 
@@ -177,9 +178,5 @@ public class UserService {
             );
             throw new DuplicatedEmailException(email);
         }
-    }
-
-    private String normalizeEmail(String email) {
-        return email.toLowerCase(Locale.ROOT);
     }
 }

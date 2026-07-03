@@ -2,10 +2,8 @@ package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.event.TemporaryPasswordIssuedEvent;
-import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.auth.support.EmailNormalizer;
 import com.codeit.team5.mopl.user.repository.UserRepository;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -25,18 +23,15 @@ public class PasswordResetService {
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        String normalizeEmail = normalizeEmail(request.email());
-        User user = userRepository.findByEmail(normalizeEmail)
-                .orElseThrow(() -> new UserNotFoundException(normalizeEmail));
+        String normalizeEmail = EmailNormalizer.normalize(request.email());
 
-        String tempPassword = temporaryPasswordService.issue(user);
+        userRepository.findByEmail(normalizeEmail)
+                .ifPresent(user -> {
+                    String tempPassword = temporaryPasswordService.issue(user);
 
-        eventPublisher.publishEvent(
-                new TemporaryPasswordIssuedEvent(user.getEmail(), tempPassword)
-        );
-    }
-
-    private String normalizeEmail(String email) {
-        return email.toLowerCase(Locale.ROOT);
+                    eventPublisher.publishEvent(
+                            new TemporaryPasswordIssuedEvent(user.getEmail(), tempPassword)
+                    );
+                });
     }
 }
