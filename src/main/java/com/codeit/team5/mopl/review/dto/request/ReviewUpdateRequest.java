@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Schema(name = "ReviewUpdateRequest", description = "리뷰 수정 요청")
 public record ReviewUpdateRequest(
@@ -12,6 +13,7 @@ public record ReviewUpdateRequest(
     String text,
 
     @Schema(description = "평점 (0.0 ~ 5.0)")
+    @NotNull(message = "rating은 필수입니다.")
     @DecimalMin(value = "0.0", message = "평점은 0.0 이상이어야 합니다.")
     @DecimalMax(value = "5.0", message = "평점은 5.0 이하여야 합니다.")
     Double rating
