@@ -8,7 +8,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +24,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.subscription.exception.SubscriptionAlreadyExistsException;
 import com.codeit.team5.mopl.subscription.exception.SubscriptionNotFoundException;
@@ -41,18 +47,38 @@ class SubscriptionControllerTest {
         private SubscriptionService subscriptionService;
 
         // To mock the Principal for addFilters=false
-        private final String testEmail = "test@example.com";
-        private final java.security.Principal mockPrincipal = () -> testEmail;
+        private final UUID testUserId = UUID.randomUUID();
+        private final MoplPrincipal mockPrincipal = new MoplPrincipal() {
+                @Override
+                public UUID getId() { return testUserId; }
+                @Override
+                public String getEmail() { return "test@example.com"; }
+                @Override
+                public String getRole() { return "ROLE_USER"; }
+                @Override
+                public boolean isLocked() { return false; }
+        };
+
+        @BeforeEach
+        void setUpSecurity() {
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(mockPrincipal, null, List.of());
+                SecurityContextHolder.getContext().setAuthentication(auth);
+        }
+
+        @AfterEach
+        void clearSecurity() {
+                SecurityContextHolder.clearContext();
+        }
 
         @Test
         @DisplayName("플레이리스트 구독 성공")
         void createSubscription_success() throws Exception {
                 UUID playlistId = UUID.randomUUID();
 
-                doNothing().when(subscriptionService).create(eq(playlistId), eq(testEmail));
+                doNothing().when(subscriptionService).create(eq(playlistId), eq(testUserId));
 
-                mockMvc.perform(post("/api/playlists/{playlistId}/subscription", playlistId)
-                                .principal(mockPrincipal)).andDo(print())
+                mockMvc.perform(post("/api/playlists/{playlistId}/subscription", playlistId))
+                                .andDo(print())
                                 .andExpect(status().isCreated());
         }
 
@@ -61,11 +87,11 @@ class SubscriptionControllerTest {
         void createSubscription_fail_alreadyExists() throws Exception {
                 UUID playlistId = UUID.randomUUID();
 
-                doThrow(new SubscriptionAlreadyExistsException(testEmail, playlistId))
-                                .when(subscriptionService).create(eq(playlistId), eq(testEmail));
+                doThrow(new SubscriptionAlreadyExistsException(testUserId, playlistId))
+                                .when(subscriptionService).create(eq(playlistId), eq(testUserId));
 
-                mockMvc.perform(post("/api/playlists/{playlistId}/subscription", playlistId)
-                                .principal(mockPrincipal)).andDo(print())
+                mockMvc.perform(post("/api/playlists/{playlistId}/subscription", playlistId))
+                                .andDo(print())
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.exceptionType")
                                                 .value("SubscriptionAlreadyExistsException"));
@@ -77,10 +103,10 @@ class SubscriptionControllerTest {
                 UUID playlistId = UUID.randomUUID();
 
                 doThrow(new SubscriptionPlaylistNotFoundException(playlistId))
-                                .when(subscriptionService).create(eq(playlistId), eq(testEmail));
+                                .when(subscriptionService).create(eq(playlistId), eq(testUserId));
 
-                mockMvc.perform(post("/api/playlists/{playlistId}/subscription", playlistId)
-                                .principal(mockPrincipal)).andDo(print())
+                mockMvc.perform(post("/api/playlists/{playlistId}/subscription", playlistId))
+                                .andDo(print())
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.exceptionType")
                                                 .value("SubscriptionPlaylistNotFoundException"));
@@ -91,10 +117,10 @@ class SubscriptionControllerTest {
         void deleteSubscription_success() throws Exception {
                 UUID playlistId = UUID.randomUUID();
 
-                doNothing().when(subscriptionService).delete(eq(playlistId), eq(testEmail));
+                doNothing().when(subscriptionService).delete(eq(playlistId), eq(testUserId));
 
-                mockMvc.perform(delete("/api/playlists/{playlistId}/subscription", playlistId)
-                                .principal(mockPrincipal)).andDo(print())
+                mockMvc.perform(delete("/api/playlists/{playlistId}/subscription", playlistId))
+                                .andDo(print())
                                 .andExpect(status().isNoContent());
         }
 
@@ -103,11 +129,11 @@ class SubscriptionControllerTest {
         void deleteSubscription_fail_notFound() throws Exception {
                 UUID playlistId = UUID.randomUUID();
 
-                doThrow(new SubscriptionNotFoundException(playlistId, testEmail))
-                                .when(subscriptionService).delete(eq(playlistId), eq(testEmail));
+                doThrow(new SubscriptionNotFoundException(playlistId, testUserId))
+                                .when(subscriptionService).delete(eq(playlistId), eq(testUserId));
 
-                mockMvc.perform(delete("/api/playlists/{playlistId}/subscription", playlistId)
-                                .principal(mockPrincipal)).andDo(print())
+                mockMvc.perform(delete("/api/playlists/{playlistId}/subscription", playlistId))
+                                .andDo(print())
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.exceptionType")
                                                 .value("SubscriptionNotFoundException"));

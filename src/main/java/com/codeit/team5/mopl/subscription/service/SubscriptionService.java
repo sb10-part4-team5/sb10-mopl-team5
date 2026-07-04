@@ -28,16 +28,18 @@ public class SubscriptionService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public void create(UUID playlistId, String email) {
+    public void create(UUID playlistId, UUID userId) {
         if (!playlistRepository.existsById(playlistId)) {
             throw new SubscriptionPlaylistNotFoundException(playlistId);
         }
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new SubscriptionUserNotFoundException(email));
-        if (repository.existsBySubscriberEmailAndPlaylistId(email, playlistId)) {
-            throw new SubscriptionAlreadyExistsException(email, playlistId);
+        if (!userRepository.existsById(userId)) {
+            throw new SubscriptionUserNotFoundException(userId);
+        }
+        if (repository.existsBySubscriberIdAndPlaylistId(userId, playlistId)) {
+            throw new SubscriptionAlreadyExistsException(userId, playlistId);
         }
         Playlist playlist = playlistRepository.getReferenceById(playlistId);
+        User user = userRepository.getReferenceById(userId);
         repository.save(Subscription.of(playlist, user));
 
         // 세 파라미터가 event를 정의하는데 필요한 최소의 한 쌍이라고 판단해서
@@ -60,12 +62,12 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public void delete(UUID playlistId, String email) {
-        if (repository.existsBySubscriberEmailAndPlaylistId(email, playlistId)) {
-            repository.deleteBySubscriberEmailAndPlaylistIdDirectly(email, playlistId);
+    public void delete(UUID playlistId, UUID userId) {
+        if (repository.existsBySubscriberIdAndPlaylistId(userId, playlistId)) {
+            repository.deleteBySubscriberIdAndPlaylistIdDirectly(userId, playlistId);
             playlistRepository.decreaseSubscribeCount(playlistId);
             return;
         }
-        throw new SubscriptionNotFoundException(playlistId, email);
+        throw new SubscriptionNotFoundException(playlistId, userId);
     }
 }

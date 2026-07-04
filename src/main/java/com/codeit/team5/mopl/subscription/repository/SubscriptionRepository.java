@@ -9,11 +9,11 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, UUID> {
 
-    boolean existsBySubscriberEmailAndPlaylistId(String email, UUID playlistId);
+    boolean existsBySubscriberIdAndPlaylistId(UUID subscriberId, UUID playlistId);
 
     @Modifying
-    @Query("delete from Subscription s where s.subscriber.email = :email and s.playlist.id = :playlistId")
-    void deleteBySubscriberEmailAndPlaylistIdDirectly(String email, UUID playlistId);
+    @Query("delete from Subscription s where s.subscriber.id = :subscriberId and s.playlist.id = :playlistId")
+    void deleteBySubscriberIdAndPlaylistIdDirectly(UUID subscriberId, UUID playlistId);
 
     @Query("select s.subscriber.id from Subscription s where s.playlist.id = :playlistId")
     List<UUID> findSubscriberIdsByPlaylistId(UUID playlistId);
