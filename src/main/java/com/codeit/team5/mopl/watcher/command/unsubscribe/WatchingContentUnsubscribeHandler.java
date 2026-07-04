@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.watcher.command.unsubscribe;
 
+import java.util.UUID;
+import org.springframework.stereotype.Component;
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
 import com.codeit.team5.mopl.global.web.ws.stomp.handler.AbstractStompUnsubscribeHandler;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
@@ -8,8 +10,6 @@ import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
-import java.util.UUID;
-import org.springframework.stereotype.Component;
 
 @Component
 public class WatchingContentUnsubscribeHandler extends AbstractStompUnsubscribeHandler {
@@ -25,10 +25,10 @@ public class WatchingContentUnsubscribeHandler extends AbstractStompUnsubscribeH
     }
 
     @Override
-    protected void doHandle(UUID contentId, String email) {
-        service.ensureWatchingContent(email, contentId);
-        WatchingSessionResponse response = service.findSessionByWatcherEmail(email);
-        service.delete(email);
+    protected void doHandle(UUID contentId, UUID userId) {
+        service.ensureWatchingContent(userId, contentId);
+        WatchingSessionResponse response = service.findSessionByWatchId(userId);
+        service.delete(userId);
         long watcherCount = service.getCurrentWatchingContentView(contentId);
         payloadSender.send(contentId,
                 new WatchingSessionPayload(WatcherStatus.LEAVE, response, watcherCount));

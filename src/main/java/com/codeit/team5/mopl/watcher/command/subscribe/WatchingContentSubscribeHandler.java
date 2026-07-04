@@ -25,8 +25,8 @@ public class WatchingContentSubscribeHandler extends AbstractStompSubscribeHandl
     }
 
     @Override
-    protected void doHandle(UUID contentId, String email) {
-        WatchingSessionResponse response = service.create(contentId, email);
+    protected void doHandle(UUID contentId, UUID userId) {
+        WatchingSessionResponse response = service.create(contentId, userId);
         long watchCount = service.getCurrentWatchingContentView(contentId);
         payloadSender.send(contentId,
                 new WatchingSessionPayload(WatcherStatus.JOIN, response, watchCount));

@@ -19,7 +19,7 @@ public class ContentChatSubscribeHandler extends AbstractStompSubscribeHandler {
     }
 
     @Override
-    protected void doHandle(UUID contentId, String email) {
-        service.ensureWatchingContent(email, contentId);
+    protected void doHandle(UUID contentId, UUID userId) {
+        service.ensureWatchingContent(userId, contentId);
     }
 }
