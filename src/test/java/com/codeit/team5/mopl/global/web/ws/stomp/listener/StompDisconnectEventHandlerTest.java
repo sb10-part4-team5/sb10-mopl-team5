@@ -37,7 +37,7 @@ class StompDisconnectEventHandlerTest {
     private StompDisconnectEventHandler listener;
 
     @Test
-    @DisplayName("WebSocket ?怨뚭퍙????녿선筌왖筌?SessionStore?? DB?癒?퐣 ?紐꾨???????뺣뼄_?源껊궗")
+    @DisplayName("WebSocket 연결이 끊어지면 SessionStore와 DB에서 정보를 삭제한다_성공")
     void handleWebSocketDisconnectListener_Success() {
         // given
         UUID userId = UUID.randomUUID();
@@ -61,7 +61,7 @@ class StompDisconnectEventHandlerTest {
     }
 
     @Test
-    @DisplayName("?醫? ?類ｋ궖揶쎛 ??곸몵筌?鈺곌퀗由??ル굝利??뺣뼄_?源껊궗")
+    @DisplayName("저장된 세션이 없으면 예외가 발생하지 않는다_성공")
     void handleWebSocketDisconnectListener_NoUser() {
         // given
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
@@ -79,7 +79,7 @@ class StompDisconnectEventHandlerTest {
     }
 
     @Test
-    @DisplayName("watchingSessionService.delete?癒?퐣 ??됱뇚揶쎛 獄쏆뮇源??猷??袁る솁??? ??꾪??袁⑥┷??뺣뼄_?源껊궗")
+    @DisplayName("watchingSessionService.delete에서 예외가 발생해도 정상 처리된다_성공")
     void handleWebSocketDisconnectListener_IgnoreDeleteException() {
         // given
         UUID userId = UUID.randomUUID();
@@ -105,5 +105,3 @@ class StompDisconnectEventHandlerTest {
         verify(watchingSessionService).delete(userId);
     }
 }
-
-

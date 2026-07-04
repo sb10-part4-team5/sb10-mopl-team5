@@ -36,7 +36,7 @@ class WatchingContentSubscribeHandlerTest {
     private WatchingContentSubscribeHandler handler;
 
     @Test
-    @DisplayName("doHandle ?몄텧 ???몄뀡???앹꽦?섍퀬 李몄뿬 硫붿떆吏瑜?釉뚮줈?쒖틦?ㅽ듃?쒕떎_?깃났")
+    @DisplayName("doHandle 호출 시 세션을 생성하고 참여 메시지를 브로드캐스트한다_성공")
     void doHandle_Success() {
         // Given
         UUID contentId = UUID.randomUUID();
@@ -57,7 +57,7 @@ class WatchingContentSubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("而ㅻ㎤?쒓? ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
+    @DisplayName("커맨드가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenCommandIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
@@ -72,12 +72,12 @@ class WatchingContentSubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("紐⑹쟻吏媛 ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
+    @DisplayName("목적지가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenDestinationIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
             StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        accessor.setDestination("/sub/contents/123/chat"); // watch媛 ?꾨떂
+        accessor.setDestination("/sub/contents/123/chat"); // watch가 아님
 
         // When
         boolean result = handler.canHandle(accessor);
@@ -87,7 +87,7 @@ class WatchingContentSubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("而ㅻ㎤?쒖? 紐⑹쟻吏媛 紐⑤몢 ?쇱튂?섎㈃ canHandle? true瑜?諛섑솚?쒕떎")
+    @DisplayName("커맨드와 목적지가 모두 일치하면 canHandle은 true를 반환한다")
     void canHandle_True_WhenMatch() {
         // Given
         StompHeaderAccessor accessor =

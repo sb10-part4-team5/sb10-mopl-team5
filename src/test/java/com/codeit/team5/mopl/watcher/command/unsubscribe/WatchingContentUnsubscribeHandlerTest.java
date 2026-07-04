@@ -3,14 +3,6 @@ package com.codeit.team5.mopl.watcher.command.unsubscribe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.verify;
-
-import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
-import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +13,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
+import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 
 @ExtendWith(MockitoExtension.class)
 class WatchingContentUnsubscribeHandlerTest {
@@ -38,7 +36,7 @@ class WatchingContentUnsubscribeHandlerTest {
     private WatchingContentUnsubscribeHandler handler;
 
     @Test
-    @DisplayName("doHandle ?몄텧 ???몄뀡??寃利? ??젣?섍퀬 ?댁옣 硫붿떆吏瑜?釉뚮줈?쒖틦?ㅽ듃?쒕떎_?깃났")
+    @DisplayName("doHandle 호출 시 세션을 검증, 삭제하고 퇴장 메시지를 브로드캐스트한다_성공")
     void doHandle_Success() {
         // Given
         UUID contentId = UUID.randomUUID();
@@ -62,7 +60,7 @@ class WatchingContentUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("而ㅻ㎤?쒓? ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
+    @DisplayName("커맨드가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenCommandIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
@@ -77,12 +75,12 @@ class WatchingContentUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("紐⑹쟻吏媛 ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
+    @DisplayName("목적지가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenDestinationIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
             StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setDestination("/sub/contents/123/chat"); // watch媛 ?꾨떂
+        accessor.setDestination("/sub/contents/123/chat"); // watch가 아님
 
         // When
         boolean result = handler.canHandle(accessor);
@@ -92,7 +90,7 @@ class WatchingContentUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("而ㅻ㎤?쒖? 紐⑹쟻吏媛 紐⑤몢 ?쇱튂?섎㈃ canHandle? true瑜?諛섑솚?쒕떎")
+    @DisplayName("커맨드와 목적지가 모두 일치하면 canHandle은 true를 반환한다")
     void canHandle_True_WhenMatch() {
         // Given
         StompHeaderAccessor accessor =

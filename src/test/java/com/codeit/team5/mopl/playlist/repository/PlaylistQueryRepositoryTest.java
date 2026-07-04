@@ -1,8 +1,10 @@
 package com.codeit.team5.mopl.playlist.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -176,7 +178,7 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         assertThat(result2).hasSize(1);
 
         // Combine results to check all 3 are returned exactly once
-        java.util.List<java.util.UUID> allFetchedIds = new java.util.ArrayList<>();
+        List<UUID> allFetchedIds = new ArrayList<>();
         allFetchedIds.add(result1.get(0).playlist().getId());
         allFetchedIds.add(result1.get(1).playlist().getId());
         allFetchedIds.add(result2.get(0).playlist().getId());
