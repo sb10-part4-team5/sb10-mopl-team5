@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.playlist.entity.exception;
+package com.codeit.team5.mopl.playlist.exception;
 
 import com.codeit.team5.mopl.global.exception.BusinessException;
 import org.springframework.http.HttpStatus;
