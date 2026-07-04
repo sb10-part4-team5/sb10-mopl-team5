@@ -20,7 +20,7 @@ import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
-import com.codeit.team5.mopl.watcher.constant.SortByType;
+import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
@@ -44,9 +44,9 @@ public class WatchingSessionService {
     private static final String SECONDARY_SORT_FIELD = "id";
 
     @Transactional
-    public WatchingSessionResponse create(UUID contentId, String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException(email));
+    public WatchingSessionResponse create(UUID contentId, UUID watcherId) {
+        User user = userRepository.findWithProfileImageById(watcherId)
+                .orElseThrow(() -> new UserNotFoundException(watcherId));
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
         WatchingSession session = WatchingSession.of(user, content);
@@ -59,48 +59,42 @@ public class WatchingSessionService {
     }
 
     public WatchingSessionResponse findSessionByWatchId(UUID watcherId) {
-        return repository.findByWatcherId(watcherId)
-                .map(mapper::toDto)
-                .orElse(null);
+        return repository.findByWatcherId(watcherId).map(mapper::toDto).orElse(null);
     }
 
     public CursorResponse<WatchingSessionResponse> findSessionByContentId(UUID contentId,
             WatchingSessionCursorRequest request) {
         Sort.Direction direction = request.sortDirection();
-        SortByType sortBy = request.sortBy();
-        Sort sort = Sort.by(direction, sortBy.getValue())
-                .and(Sort.by(direction, SECONDARY_SORT_FIELD));
+        WatcherSortByType sortBy = request.sortBy();
+        Sort sort =
+                Sort.by(direction, sortBy.getValue()).and(Sort.by(direction, SECONDARY_SORT_FIELD));
         ScrollPosition scrollPosition = createScrollPosition(request);
-        Window<WatchingSession> result = repository.findByContentId(
-                contentId, scrollPosition, Limit.of(request.limit()), sort);
+        Window<WatchingSession> result = repository.findByContentId(contentId, scrollPosition,
+                Limit.of(request.limit()), sort);
         Long totalCount = getCurrentWatchingContentView(contentId);
         return mapper.toCursor(result, totalCount, sortBy, direction);
     }
 
     @Transactional
-    public void delete(String email) {
-        if (repository.existsByWatcherEmail(email)) {
-            repository.deleteByWatcherEmailDirectly(email);
+    public void delete(UUID watcherId) {
+        if (repository.existsByWatcherId(watcherId)) {
+            repository.deleteByWatcherIdDirectly(watcherId);
             return;
         }
-        throw new WatchingSessionNotFoundException("email", email);
+        throw new WatchingSessionNotFoundException(Map.of("watcherId", watcherId));
     }
 
     public Long getCurrentWatchingContentView(UUID contentId) {
         return repository.countByContentId(contentId);
     }
 
-    public void ensureWatchingContent(String email, UUID contentId) {
-        if (!repository.existsByWatcherEmailAndContentId(email, contentId)) {
+    public void ensureWatchingContent(UUID watcherId, UUID contentId) {
+        if (!repository.existsByWatcherIdAndContentId(watcherId, contentId)) {
             throw new WatchingSessionNotFoundException(
-                    Map.of("email", email, "contentId", contentId));
+                    Map.of("watcherId", watcherId, "contentId", contentId));
         }
     }
 
-    public WatchingSessionResponse findSessionByWatcherEmail(String email) {
-        return mapper.toDto(repository.findByWatcherEmail(email)
-                .orElseThrow(() -> new WatchingSessionNotFoundException("email", email)));
-    }
 
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {
         String cursor = request.cursor();
@@ -108,10 +102,8 @@ public class WatchingSessionService {
         if (cursor == null || idAfter == null) {
             return ScrollPosition.keyset();
         }
-        Map<String, Object> keyset = Map.of(
-                request.sortBy().getValue(), cursor,
-                SECONDARY_SORT_FIELD, UUID.fromString(idAfter)
-        );
+        Map<String, Object> keyset = Map.of(request.sortBy().getValue(), cursor,
+                SECONDARY_SORT_FIELD, UUID.fromString(idAfter));
         return ScrollPosition.of(keyset, Direction.FORWARD);
     }
 }
