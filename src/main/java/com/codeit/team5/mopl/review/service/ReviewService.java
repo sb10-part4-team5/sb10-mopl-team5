@@ -100,7 +100,7 @@ public class ReviewService {
         if (reviewRepository.existsByContent_IdAndAuthorId(request.contentId(), authorId)) {
             throw new ReviewAlreadyExistsException();
         }
-        Review review = Review.create(content, authorId, request.text(), request.rating());
+        Review review = Review.of(content, authorId, request.text(), request.rating());
         Review saved;
         try {
             saved = reviewRepository.saveAndFlush(review);

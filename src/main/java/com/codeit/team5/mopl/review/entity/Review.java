@@ -34,7 +34,7 @@ public class Review extends BaseUpdatableEntity {
     @Column(nullable = false)
     private Double rating;
 
-    public static Review create(Content content, UUID authorId, String text, Double rating) {
+    public static Review of(Content content, UUID authorId, String text, Double rating) {
         return new Review(content, authorId, text, rating);
     }
 
