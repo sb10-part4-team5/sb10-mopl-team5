@@ -1,15 +1,15 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.listener;
 
-import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 import java.security.Principal;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.UUID;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -26,14 +26,16 @@ public class StompDisconnectEventHandler {
         if (user == null) {
             return;
         }
-        String email = user.getName();
+        UUID userId = UUID.fromString(user.getName());
         try {
-            watchingSessionService.delete(email);
-            log.info("WatchingSession cleaned up for disconnected user: {}", email);
-        } catch (WatchingSessionNotFoundException e) {
-            log.debug("No active WatchingSession to delete for user: {}", email);
+            watchingSessionService.delete(userId);
+            log.info("WatchingSession cleaned up for disconnected user: {}", userId);
+        } catch (Exception e) {
+            log.debug("No active WatchingSession to delete for user: {}", userId);
         } finally {
-            sessionStore.disconnect(email);
+            sessionStore.disconnect(userId);
         }
     }
 }
+
+
