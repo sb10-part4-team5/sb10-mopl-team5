@@ -2,25 +2,32 @@ package com.codeit.team5.mopl.global.web.ws.stomp.handler;
 
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import java.util.UUID;
+import java.security.Principal;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 
 public abstract class AbstractStompUnsubscribeHandler extends AbstractStompCommandHandler {
 
-    public AbstractStompUnsubscribeHandler(WebSocketSessionStore sessionStore,
+    protected AbstractStompUnsubscribeHandler(
+            WebSocketSessionStore sessionStore,
             String destinationPattern) {
         super(sessionStore, StompCommand.UNSUBSCRIBE, destinationPattern);
     }
 
     @Override
     public void handle(StompHeaderAccessor accessor) {
-        String email = accessor.getUser().getName();
+        Principal principal = accessor.getUser();
         String subscriptionId = accessor.getSubscriptionId();
-        String destination = getDestination(accessor);
-        UUID targetId = getTargetId(destination);
-        doHandle(targetId, email);
-        unsubscribeSession(email, subscriptionId);
+        UUID userId = UUID.fromString(principal.getName());
+        String destination = getSessionDestination(userId, subscriptionId);
+        if (destination != null) {
+            UUID targetId = getTargetId(destination);
+            doHandle(targetId, userId);
+            unsubscribeSession(userId, subscriptionId);
+        }
     }
 
-    protected abstract void doHandle(UUID targetId, String email);
+    protected abstract void doHandle(UUID targetId, UUID userId);
+
 }
+
