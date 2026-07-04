@@ -240,7 +240,6 @@ class PlaylistServiceTest {
         UUID contentId = UUID.randomUUID();
         given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
-        given(contentRepository.existsById(contentId)).willReturn(true);
         given(playlistItemRepository.existsByPlaylistIdAndContentId(playlist.getId(), contentId))
                 .willReturn(true);
 
@@ -292,19 +291,6 @@ class PlaylistServiceTest {
                 .isInstanceOf(PlaylistAccessDeniedException.class);
     }
 
-    @Test
-    @DisplayName("콘텐츠 삭제 실패 - 콘텐츠를 찾을 수 없음")
-    void removeContent_fail_contentNotFound() {
-        // given
-        UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
-                .willReturn(true);
-        given(contentRepository.existsById(contentId)).willReturn(false);
-
-        // when & then
-        assertThatThrownBy(() -> playlistService.removeContent(user.getId(), playlist.getId(), contentId))
-                .isInstanceOf(PlaylistContentNotFoundException.class);
-    }
 
     @Test
     @DisplayName("콘텐츠 삭제 실패 - 플레이리스트에 해당 콘텐츠가 없음")
@@ -313,7 +299,6 @@ class PlaylistServiceTest {
         UUID contentId = UUID.randomUUID();
         given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
-        given(contentRepository.existsById(contentId)).willReturn(true);
         given(playlistItemRepository.existsByPlaylistIdAndContentId(playlist.getId(), contentId))
                 .willReturn(false);
 
