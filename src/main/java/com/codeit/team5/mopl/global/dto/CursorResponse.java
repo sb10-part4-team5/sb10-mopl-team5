@@ -10,5 +10,19 @@ public record CursorResponse<T>(List<T> data,
                                 boolean hasNext,
                                 long totalCount,
                                 String sortBy,
-                                String sortDirection) {
+    String sortDirection) {
+
+    @Override
+    public String sortDirection() {
+        if (sortDirection == null) {
+            return null;
+        }
+        if (sortDirection.equalsIgnoreCase("ASC") || sortDirection.equalsIgnoreCase("ASCENDING")) {
+            return "ASCENDING";
+        }
+        if (sortDirection.equalsIgnoreCase("DESC") || sortDirection.equalsIgnoreCase("DESCENDING")) {
+            return "DESCENDING";
+        }
+        return sortDirection;
+    }
 }
