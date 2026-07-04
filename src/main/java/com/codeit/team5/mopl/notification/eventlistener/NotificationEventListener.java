@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.dm.event.InactiveDirectMessageEvent;
+import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -27,8 +29,9 @@ public class NotificationEventListener {
     private final FollowRepository followRepository;
 
     // 비활성 대화에 DM이 도착하면 알림을 생성 (SSE 전송과는 독립)
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onInactiveDirectMessage(InactiveDirectMessageEvent event){
+    @Async("dmEventExecutor")
+    @EventListener
+    public void onDirectMessageNotification(DirectMessageNotificationEvent event){
         DirectMessageResponse message = event.message();
         // 알림의 제목
         String title = "[DM] " + message.sender().name();

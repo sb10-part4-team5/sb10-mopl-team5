@@ -9,8 +9,10 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.support.MethodArgumentNotValidException;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -27,5 +29,11 @@ public class DmStompController {
             @Valid @Payload DirectMessageSendRequest request) {
         log.info("DM STOMP send: conversationId={}, sender={}", conversationId, principal.getName());
         directMessageService.sendMessage(principal.getName(), conversationId, request.content());
+    }
+
+    @MessageExceptionHandler(MethodArgumentNotValidException.class)
+    public void handleValidationException(MethodArgumentNotValidException e, Principal principal) {
+        String sender = principal != null ? principal.getName() : "unknown";
+        log.warn("DM STOMP validation failed: sender={}, reason={}", sender, e.getMessage());
     }
 }

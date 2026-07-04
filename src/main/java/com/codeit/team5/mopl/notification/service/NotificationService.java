@@ -54,7 +54,7 @@ public class NotificationService {
         NotificationResponse response = notificationMapper.toResponse(saved);
         log.info("알림 생성됨: type={}", type);
 
-        // DM 알림의 실시간 전송(SSE direct-messages)은 InactiveDirectMessageEvent 경로에서
+        // DM 알림의 실시간 전송(SSE direct-messages)은 DirectMessageSseEvent 경로에서
         // 독립적으로 처리하므로, 여기서는 저장만 하고 그 외 알림 타입만 notifications SSE를 발행한다.
         if (type != NotificationType.DIRECT_MESSAGE) {
             publisher.publishEvent(new NotificationCreatedEvent(payload));

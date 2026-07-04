@@ -13,6 +13,7 @@ import org.springframework.security.messaging.access.intercept.MessageMatcherDel
 @EnableWebSocketSecurity
 public class WebSocketSecurityConfig {
 
+    // JWT 헤더 인증은 CSRF 공격이 성립하지 않으므로, no-op 빈으로 기본 XorCsrfChannelInterceptor를 대체해 WS CSRF 검증을 끈다. (제거 시 CONNECT 전부 거부됨)
     @Bean
     public ChannelInterceptor csrfChannelInterceptor() {
         return new ChannelInterceptor() {

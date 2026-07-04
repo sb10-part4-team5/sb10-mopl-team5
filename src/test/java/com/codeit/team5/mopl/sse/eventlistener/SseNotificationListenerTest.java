@@ -8,7 +8,7 @@ import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.dm.event.InactiveDirectMessageEvent;
+import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
@@ -46,14 +46,14 @@ class SseNotificationListenerTest {
     }
 
     @Test
-    @DisplayName("비활성 DM 이벤트 발생 시 수신자에게 direct-messages 이벤트를 전송한다")
-    void onInactiveDirectMessage_delegatesToSseSender() {
+    @DisplayName("비활성 DM SSE 이벤트 발생 시 수신자에게 direct-messages 이벤트를 전송한다")
+    void onDirectMessageSse_delegatesToSseSender() {
         // given
         UUID receiverId = UUID.randomUUID();
         DirectMessageResponse message = dmMessage(receiverId);
 
         // when
-        listener.onInactiveDirectMessage(new InactiveDirectMessageEvent(message));
+        listener.onDirectMessageSse(new DirectMessageSseEvent(message));
 
         // then
         verify(sseSender).sendToUser(eq(receiverId), any(SseEmitter.SseEventBuilder.class));

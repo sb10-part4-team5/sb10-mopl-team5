@@ -5,7 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.dm.event.InactiveDirectMessageEvent;
+import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
@@ -38,23 +38,23 @@ class NotificationEventListenerTest {
     @InjectMocks
     private NotificationEventListener notificationEventListener;
 
-    private InactiveDirectMessageEvent inactiveDmEvent(UUID receiverId, String senderName, String content) {
+    private DirectMessageNotificationEvent dmNotificationEvent(UUID receiverId, String senderName, String content) {
         UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), senderName, null);
         UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "받는이", null);
         DirectMessageResponse message = new DirectMessageResponse(
                 UUID.randomUUID(), UUID.randomUUID(), sender, receiver, content, Instant.now());
-        return new InactiveDirectMessageEvent(message);
+        return new DirectMessageNotificationEvent(message);
     }
 
     @Test
     @DisplayName("비활성 DM 이벤트로 DIRECT_MESSAGE 알림을 생성한다")
-    void onInactiveDirectMessage_createsNotification() {
+    void onDirectMessageNotification_createsNotification() {
         // given
         UUID receiverId = UUID.randomUUID();
-        InactiveDirectMessageEvent event = inactiveDmEvent(receiverId, "다린", "안녕하세요");
+        DirectMessageNotificationEvent event = dmNotificationEvent(receiverId, "다린", "안녕하세요");
 
         // when
-        notificationEventListener.onInactiveDirectMessage(event);
+        notificationEventListener.onDirectMessageNotification(event);
 
         // then
         verify(notificationService).create(
@@ -64,15 +64,15 @@ class NotificationEventListenerTest {
 
     @Test
     @DisplayName("DM 내용이 50자를 초과하면 잘라서 알림을 생성한다")
-    void onInactiveDirectMessage_truncatesContent() {
+    void onDirectMessageNotification_truncatesContent() {
         // given
         UUID receiverId = UUID.randomUUID();
         String longContent = "가".repeat(60);
         String expectedContent = "가".repeat(50);
-        InactiveDirectMessageEvent event = inactiveDmEvent(receiverId, "다린", longContent);
+        DirectMessageNotificationEvent event = dmNotificationEvent(receiverId, "다린", longContent);
 
         // when
-        notificationEventListener.onInactiveDirectMessage(event);
+        notificationEventListener.onDirectMessageNotification(event);
 
         // then
         verify(notificationService).create(

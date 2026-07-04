@@ -63,6 +63,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(userAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // SSE ASYNC 재디스패치 시 JWT 필터가 건너뛰어 AuthorizationFilter에서 Access Denied가 발생하므로 ASYNC 타입은 전체 허용
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 
                         .requestMatchers("/api/auth/sign-out").permitAll()
