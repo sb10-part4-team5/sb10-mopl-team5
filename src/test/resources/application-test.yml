@@ -22,19 +22,19 @@ spring:
     username: test
     password: test
 
-  kafka:
-    consumer:
-      group-id: mopl-test
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  # kafka:
+  #   consumer:
+  #     group-id: mopl-test
+  #     auto-offset-reset: earliest
+  #     key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  #     value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  #   producer:
+  #     key-serializer: org.apache.kafka.common.serialization.StringSerializer
+  #     value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-  docker:
-    compose:
-      enabled: false
+  # docker:
+  #   compose:
+  #     enabled: false
 
 mopl:
   storage:
