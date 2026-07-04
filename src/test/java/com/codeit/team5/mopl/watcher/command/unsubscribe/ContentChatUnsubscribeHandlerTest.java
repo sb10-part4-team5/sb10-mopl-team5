@@ -25,11 +25,11 @@ class ContentChatUnsubscribeHandlerTest {
     private ContentChatUnsubscribeHandler handler;
 
     @Test
-    @DisplayName("doHandle 호출 시 아무 동작도 하지 않는다_성공")
+    @DisplayName("doHandle ?몄텧 ???꾨Т ?숈옉???섏? ?딅뒗???깃났")
     void doHandle_Success() {
         // Given
         UUID contentId = UUID.randomUUID();
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
 
         // When
         handler.doHandle(contentId, email);
@@ -39,7 +39,7 @@ class ContentChatUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("커맨드가 다르면 canHandle은 false를 반환한다")
+    @DisplayName("而ㅻ㎤?쒓? ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
     void canHandle_False_WhenCommandIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
@@ -54,12 +54,12 @@ class ContentChatUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("목적지가 다르면 canHandle은 false를 반환한다")
+    @DisplayName("紐⑹쟻吏媛 ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
     void canHandle_False_WhenDestinationIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
             StompHeaderAccessor.create(UNSUBSCRIBE);
-        accessor.setDestination("/sub/contents/123/watch"); // chat이 아님
+        accessor.setDestination("/sub/contents/123/watch"); // chat???꾨떂
 
         // When
         boolean result = handler.canHandle(accessor);
@@ -69,7 +69,7 @@ class ContentChatUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("커맨드와 목적지가 모두 일치하면 canHandle은 true를 반환한다")
+    @DisplayName("而ㅻ㎤?쒖? 紐⑹쟻吏媛 紐⑤몢 ?쇱튂?섎㈃ canHandle? true瑜?諛섑솚?쒕떎")
     void canHandle_True_WhenMatch() {
         // Given
         StompHeaderAccessor accessor =
@@ -83,3 +83,4 @@ class ContentChatUnsubscribeHandlerTest {
         assertThat(result).isTrue();
     }
 }
+

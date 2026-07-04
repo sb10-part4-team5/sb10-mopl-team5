@@ -38,15 +38,15 @@ class WatchingContentUnsubscribeHandlerTest {
     private WatchingContentUnsubscribeHandler handler;
 
     @Test
-    @DisplayName("doHandle 호출 시 세션을 검증, 삭제하고 퇴장 메시지를 브로드캐스트한다_성공")
+    @DisplayName("doHandle ?몄텧 ???몄뀡??寃利? ??젣?섍퀬 ?댁옣 硫붿떆吏瑜?釉뚮줈?쒖틦?ㅽ듃?쒕떎_?깃났")
     void doHandle_Success() {
         // Given
         UUID contentId = UUID.randomUUID();
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
         WatchingSessionResponse response = WatchingSessionResponse.builder().build();
         long watchCount = 4L;
 
-        given(service.findSessionByWatcherEmail(email)).willReturn(response);
+        given(service.findSessionByWatchId(email)).willReturn(response);
         given(service.getCurrentWatchingContentView(contentId)).willReturn(watchCount);
 
         // When
@@ -55,14 +55,14 @@ class WatchingContentUnsubscribeHandlerTest {
         // Then
         InOrder inOrder = inOrder(service, payloadSender);
         inOrder.verify(service).ensureWatchingContent(email, contentId);
-        inOrder.verify(service).findSessionByWatcherEmail(email);
+        inOrder.verify(service).findSessionByWatchId(email);
         inOrder.verify(service).delete(email);
         inOrder.verify(service).getCurrentWatchingContentView(contentId);
         inOrder.verify(payloadSender).send(contentId, new WatchingSessionPayload(WatcherStatus.LEAVE, response, watchCount));
     }
 
     @Test
-    @DisplayName("커맨드가 다르면 canHandle은 false를 반환한다")
+    @DisplayName("而ㅻ㎤?쒓? ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
     void canHandle_False_WhenCommandIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
@@ -77,12 +77,12 @@ class WatchingContentUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("목적지가 다르면 canHandle은 false를 반환한다")
+    @DisplayName("紐⑹쟻吏媛 ?ㅻⅤ硫?canHandle? false瑜?諛섑솚?쒕떎")
     void canHandle_False_WhenDestinationIsDifferent() {
         // Given
         StompHeaderAccessor accessor =
             StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setDestination("/sub/contents/123/chat"); // watch가 아님
+        accessor.setDestination("/sub/contents/123/chat"); // watch媛 ?꾨떂
 
         // When
         boolean result = handler.canHandle(accessor);
@@ -92,7 +92,7 @@ class WatchingContentUnsubscribeHandlerTest {
     }
 
     @Test
-    @DisplayName("커맨드와 목적지가 모두 일치하면 canHandle은 true를 반환한다")
+    @DisplayName("而ㅻ㎤?쒖? 紐⑹쟻吏媛 紐⑤몢 ?쇱튂?섎㈃ canHandle? true瑜?諛섑솚?쒕떎")
     void canHandle_True_WhenMatch() {
         // Given
         StompHeaderAccessor accessor =
@@ -106,3 +106,4 @@ class WatchingContentUnsubscribeHandlerTest {
         assertThat(result).isTrue();
     }
 }
+
