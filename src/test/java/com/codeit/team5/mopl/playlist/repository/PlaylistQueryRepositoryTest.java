@@ -18,6 +18,8 @@ import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
 import com.codeit.team5.mopl.playlist.entity.Playlist;
 import com.codeit.team5.mopl.playlist.entity.PlaylistItem;
 import com.codeit.team5.mopl.playlist.repository.query.PlaylistQueryRepositoryImpl;
+import com.codeit.team5.mopl.subscription.entity.Subscription;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 
@@ -37,6 +39,9 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     private ContentRepository contentRepository;
+
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
 
     private User user;
     private Playlist playlist;
@@ -79,6 +84,20 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         assertThat(dto.playlist().getId()).isEqualTo(playlist.getId());
         assertThat(dto.contents()).hasSize(1);
         assertThat(dto.contents().get(0).getTitle()).isEqualTo("Movie Title");
+        assertThat(dto.subscribedByMe()).isFalse();
+
+        // when (subscribe)
+        subscriptionRepository.save(Subscription.of(playlist, user));
+        flush();
+        clear();
+        queryInspector.clear();
+
+        dtoOpt = playlistQueryRepository.findByIdWithContents(playlist.getId(), user.getId());
+        ensureQueryCount(2);
+
+        // then
+        assertThat(dtoOpt).isPresent();
+        assertThat(dtoOpt.get().subscribedByMe()).isTrue();
     }
 
     @Test
@@ -100,6 +119,20 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).playlist().getId()).isEqualTo(playlist.getId());
+        assertThat(result.get(0).subscribedByMe()).isFalse();
+
+        // when (subscribe)
+        subscriptionRepository.save(Subscription.of(playlist, user));
+        flush();
+        clear();
+        queryInspector.clear();
+
+        result = playlistQueryRepository.findByCursor(command, user.getId());
+        ensureQueryCount(2);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).subscribedByMe()).isTrue();
     }
 
     @Test

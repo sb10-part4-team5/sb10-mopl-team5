@@ -92,9 +92,6 @@ public class PlaylistService {
     @Transactional
     public void removeContent(UUID userId, UUID playlistId, UUID contentId) {
         validateOwner(playlistId, userId);
-        if (!contentRepository.existsById(contentId)) {
-            throw new PlaylistContentNotFoundException(contentId);
-        }
         if (!playlistItemRepository.existsByPlaylistIdAndContentId(playlistId, contentId)) {
             throw new PlaylistItemNotFoundException(playlistId, contentId);
         }

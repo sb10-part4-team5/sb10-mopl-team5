@@ -22,9 +22,11 @@ import com.codeit.team5.mopl.playlist.entity.Playlist;
 import com.codeit.team5.mopl.playlist.entity.PlaylistItem;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Ops;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.BooleanPath;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -37,6 +39,8 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
 
     private final JPAQueryFactory queryFactory;
 
+    private final BooleanPath IS_SUBSCRIBED = Expressions.booleanPath("isSubscribed");
+
     @Override
     public Optional<PlaylistContentsDto> findByIdWithContents(UUID id, UUID userId) {
         Tuple result = selectPlaylistWithSubscription(userId).where(playlist.id.eq(id)).fetchOne();
@@ -44,7 +48,7 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
             return Optional.empty();
         }
         Playlist foundPlaylist = result.get(playlist);
-        boolean subscribedByMe = Boolean.TRUE.equals(result.get(subscribedByMeSubquery(userId)));
+        boolean subscribedByMe = Boolean.TRUE.equals(result.get(IS_SUBSCRIBED));
         List<PlaylistItem> items = fetchPlaylistItemsWithContents(List.of(id));
         return Optional.of(new PlaylistContentsDto(foundPlaylist,
                 items.stream().map(PlaylistItem::getContent).toList(), subscribedByMe));
@@ -67,9 +71,7 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
         Map<UUID, List<Content>> contentsByPlaylistId =
                 items.stream().collect(Collectors.groupingBy(PlaylistItem::getPlaylistId,
                         Collectors.mapping(PlaylistItem::getContent, Collectors.toList())));
-        BooleanExpression subscribedByMeExpr = subscribedByMeSubquery(userId);
-
-        return results.stream().map(t -> mapToDto(t, contentsByPlaylistId, subscribedByMeExpr))
+        return results.stream().map(t -> mapToDto(t, contentsByPlaylistId))
                 .toList();
     }
 
@@ -141,12 +143,11 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
                 .or(playlist.title.containsIgnoreCase(request.keywordLike()));
     }
 
-    private PlaylistContentsDto mapToDto(Tuple t, Map<UUID, List<Content>> contentsByPlaylistId,
-            BooleanExpression subscribedByMeExpr) {
+    private PlaylistContentsDto mapToDto(Tuple t, Map<UUID, List<Content>> contentsByPlaylistId) {
         Playlist p = t.get(playlist);
         return new PlaylistContentsDto(p,
                 contentsByPlaylistId.getOrDefault(p.getId(), Collections.emptyList()),
-                Boolean.TRUE.equals(t.get(subscribedByMeExpr)));
+                Boolean.TRUE.equals(t.get(IS_SUBSCRIBED)));
     }
 
     private BooleanExpression subscribedByMeSubquery(UUID userId) {
@@ -156,7 +157,7 @@ public class PlaylistQueryRepositoryImpl implements PlaylistQueryRepository {
     }
 
     private JPAQuery<Tuple> selectPlaylistWithSubscription(UUID userId) {
-        return queryFactory.select(playlist, subscribedByMeSubquery(userId)).from(playlist)
+        return queryFactory.select(playlist, ExpressionUtils.as(subscribedByMeSubquery(userId), IS_SUBSCRIBED)).from(playlist)
                 .leftJoin(playlist.owner, user).fetchJoin()
                 .leftJoin(user.profileImage, binaryContent).fetchJoin();
     }
