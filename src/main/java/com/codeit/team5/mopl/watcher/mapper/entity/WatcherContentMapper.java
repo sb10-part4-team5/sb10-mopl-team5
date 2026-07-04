@@ -1,13 +1,13 @@
 package com.codeit.team5.mopl.watcher.mapper.entity;
 
-import com.codeit.team5.mopl.content.entity.Content;
-import com.codeit.team5.mopl.content.mapper.util.ContentUtilsMapper;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingContentResponse;
-import com.codeit.team5.mopl.watcher.mapper.config.WatcherMapperConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.mapper.util.ContentUtilsMapper;
+import com.codeit.team5.mopl.global.mapper.GlobalMapperConfig;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingContentResponse;
 
-@Mapper(config = WatcherMapperConfig.class, uses = {ContentUtilsMapper.class})
+@Mapper(config = GlobalMapperConfig.class, uses = {ContentUtilsMapper.class})
 public interface WatcherContentMapper {
 
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")

@@ -1,15 +1,13 @@
 package com.codeit.team5.mopl.watcher.dto.request;
 
-import com.codeit.team5.mopl.watcher.constant.SortByType;
+import org.springframework.data.domain.Sort;
+import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import org.springframework.data.domain.Sort;
 
-public record WatchingSessionCursorRequest(String watcherNameLike,
-                                           String cursor,
-                                           String idAfter,
-                                           @NotNull @Positive Integer limit,
-                                           @NotNull Sort.Direction sortDirection,
-                                           @NotNull SortByType sortBy) {
+public record WatchingSessionCursorRequest(String watcherNameLike, String cursor, String idAfter,
+        @NotNull @Positive @Max(50) Integer limit, @NotNull Sort.Direction sortDirection,
+        @NotNull WatcherSortByType sortBy) {
 
 }
