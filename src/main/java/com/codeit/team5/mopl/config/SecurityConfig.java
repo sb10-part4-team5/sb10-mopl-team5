@@ -9,6 +9,7 @@ import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -62,6 +63,8 @@ public class SecurityConfig {
                         .accessDeniedHandler(userAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+
                         .requestMatchers("/api/auth/sign-out").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()

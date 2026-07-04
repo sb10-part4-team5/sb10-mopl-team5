@@ -53,6 +53,7 @@ dependencies {
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springframework:spring-aspects'
     compileOnly 'org.projectlombok:lombok'
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'

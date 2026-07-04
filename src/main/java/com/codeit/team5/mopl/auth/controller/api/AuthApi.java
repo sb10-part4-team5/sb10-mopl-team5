@@ -60,7 +60,7 @@ public interface AuthApi {
             )
     })
     @PostMapping(
-            path = "/api/auth/sign-in",
+            path = "/sign-in",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
     default ResponseEntity<JwtResponse> login(
@@ -87,7 +87,7 @@ public interface AuthApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))
             )
     })
-    @PostMapping("/api/auth/sign-out")
+    @PostMapping("/sign-out")
     default ResponseEntity<Void> logout(
             @Parameter(description = "Refresh Token Cookie", required = false)
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
