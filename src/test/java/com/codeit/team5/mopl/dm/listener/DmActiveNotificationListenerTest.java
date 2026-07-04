@@ -47,7 +47,8 @@ class DmActiveNotificationListenerTest {
     void inactiveReceiver_publishesEvent_success() {
         // given
         DirectMessageBroadcastEvent event = event("b@mopl.com");
-        when(activeConversationChecker.isViewing(any(UUID.class), eq("b@mopl.com"))).thenReturn(false);
+        UUID conversationId = event.message().conversationId();
+        when(activeConversationChecker.isViewing(eq(conversationId), eq("b@mopl.com"))).thenReturn(false);
 
         // when
         listener.onDirectMessageBroadcast(event);
@@ -62,7 +63,8 @@ class DmActiveNotificationListenerTest {
     void activeReceiver_noNotification_success() {
         // given
         DirectMessageBroadcastEvent event = event("b@mopl.com");
-        when(activeConversationChecker.isViewing(any(UUID.class), eq("b@mopl.com"))).thenReturn(true);
+        UUID conversationId = event.message().conversationId();
+        when(activeConversationChecker.isViewing(eq(conversationId), eq("b@mopl.com"))).thenReturn(true);
 
         // when
         listener.onDirectMessageBroadcast(event);

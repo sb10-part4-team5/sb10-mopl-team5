@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.dm.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -25,6 +26,8 @@ import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Sort;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.service.DirectMessageService;
@@ -116,6 +119,29 @@ class DirectMessageControllerTest {
                 .andExpect(jsonPath("$.data[0].content").value("안녕"))
                 .andExpect(jsonPath("$.hasNext").value(false))
                 .andExpect(jsonPath("$.totalCount").value(1));
+    }
+
+    @Test
+    @DisplayName("메시지 목록 조회 시 요청 파라미터가 서비스에 올바르게 전달 성공")
+    void getDirectMessages_requestParamsPassedToService_success() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        CursorResponse<DirectMessageResponse> response = new CursorResponse<>(
+                List.of(), null, null, false, 0L, "createdAt", "ASCENDING");
+        given(directMessageService.getMessages(eq(currentUserId), eq(conversationId), any()))
+                .willReturn(response);
+
+        mockMvc.perform(get("/api/conversations/{conversationId}/direct-messages", conversationId)
+                        .param("limit", "10")
+                        .param("sortDirection", "ASCENDING")
+                        .with(authentication(authOf(currentUserId))))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<DirectMessageCursorRequest> captor =
+                ArgumentCaptor.forClass(DirectMessageCursorRequest.class);
+        verify(directMessageService).getMessages(eq(currentUserId), eq(conversationId), captor.capture());
+        assertThat(captor.getValue().limit()).isEqualTo(10);
+        assertThat(captor.getValue().sortDirection()).isEqualTo(Sort.Direction.ASC);
     }
 
     @Test

@@ -26,6 +26,7 @@ import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.exception.NotConversationParticipantException;
 import com.codeit.team5.mopl.dm.service.ConversationService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -116,6 +117,27 @@ class ConversationControllerTest {
                 .andExpect(jsonPath("$.with.userId").value(withUserId.toString()))
                 .andExpect(jsonPath("$.with.name").value("상대방"))
                 .andExpect(jsonPath("$.hasUnread").value(false));
+    }
+
+    @Test
+    @DisplayName("latestMessage가 있으면 lastestMessage JSON 키로 직렬화 성공")
+    void createConversation_latestMessageSerializedAsLastestMessage_success() throws Exception {
+        UUID currentUserId = UUID.randomUUID();
+        UUID withUserId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
+        DirectMessageResponse latestMsg = new DirectMessageResponse(
+                UUID.randomUUID(), conversationId, with, with, "안녕", Instant.now());
+        ConversationResponse response = new ConversationResponse(conversationId, with, latestMsg, false);
+        given(conversationService.getOrCreateConversation(eq(currentUserId), eq(withUserId))).willReturn(response);
+
+        mockMvc.perform(post("/api/conversations")
+                        .with(authentication(authOf(currentUserId)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConversationCreateRequest(withUserId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastestMessage.content").value("안녕"));
     }
 
     @Test

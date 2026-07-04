@@ -9,15 +9,17 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
-import com.codeit.team5.mopl.notification.dto.NotificationPayload;
-import com.codeit.team5.mopl.notification.entity.NotificationLevel;
-import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
+import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
+import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.notification.dto.NotificationPayload;
+import com.codeit.team5.mopl.notification.entity.NotificationLevel;
+import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +45,9 @@ class SseNotificationListenerIntegrationTest {
 
     @Autowired
     private TransactionTemplate tx;
+
+    @Autowired
+    private WebSocketSessionStore webSocketSessionStore;
 
     // ===== NotificationCreatedEvent =====
 
@@ -116,6 +121,23 @@ class SseNotificationListenerIntegrationTest {
     }
 
     @Test
+    @DisplayName("수신자가 대화방 활성이면 DM SSE 미전송 성공")
+    void directMessageBroadcast_commit_doesNotSend_whenReceiverActive_success() throws Exception {
+        UUID receiverId = UUID.randomUUID();
+        SseEmitter mockEmitter = mock(SseEmitter.class);
+        emitterStore.save(receiverId, mockEmitter);
+
+        DirectMessageResponse message = dmMessage(receiverId);
+        String destination = StompConstants.conversationDmDestination(message.conversationId());
+        webSocketSessionStore.subscribe("active@mopl.com", "sub-1", destination);
+
+        tx.executeWithoutResult(status ->
+                publisher.publishEvent(new DirectMessageBroadcastEvent(message, "active@mopl.com")));
+
+        verify(mockEmitter, after(500).never()).send(any(SseEmitter.SseEventBuilder.class));
+    }
+
+    @Test
     @DisplayName("트랜잭션 롤백 시 비활성 DM 미전송 성공")
     void directMessageBroadcast_rollback_doesNotSend_success() throws Exception {
         UUID receiverId = UUID.randomUUID();
@@ -134,10 +156,7 @@ class SseNotificationListenerIntegrationTest {
     // ===== 헬퍼 =====
 
     private DirectMessageResponse dmMessage(UUID receiverId) {
-        UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), "다린", null);
-        UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "받는이", null);
-        return new DirectMessageResponse(
-                UUID.randomUUID(), UUID.randomUUID(), sender, receiver, "안녕하세요", Instant.now());
+        return DirectMessageTestFixtures.dmMessage(receiverId);
     }
 
     private NotificationPayload notificationPayload(UUID receiverId) {

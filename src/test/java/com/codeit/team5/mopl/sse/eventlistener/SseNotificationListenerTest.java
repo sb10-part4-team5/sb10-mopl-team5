@@ -4,14 +4,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
+import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.sse.sender.SseSender;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -68,9 +68,6 @@ class SseNotificationListenerTest {
     }
 
     private DirectMessageResponse dmMessage(UUID receiverId) {
-        UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), "A", null);
-        UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "B", null);
-        return new DirectMessageResponse(
-                UUID.randomUUID(), UUID.randomUUID(), sender, receiver, "안녕하세요", Instant.now());
+        return DirectMessageTestFixtures.dmMessage(receiverId);
     }
 }

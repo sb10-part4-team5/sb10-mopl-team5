@@ -7,7 +7,8 @@ import java.util.UUID;
 public record ConversationResponse(
         UUID id,
         UserSummaryResponse with,
-        @JsonProperty("lastestMessage") DirectMessageResponse latestMessage,
+        @JsonProperty("lastestMessage") // 프론트 오타(latestMessage → lastestMessage)에 맞춰 JSON 키를 강제 지정
+        DirectMessageResponse latestMessage,
         boolean hasUnread
 ) {
 }

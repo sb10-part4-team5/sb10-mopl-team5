@@ -133,6 +133,60 @@ class ConversationIntegrationTest {
     }
 
     @Test
+    @DisplayName("비참여자가 읽음 처리 시 실패")
+    void readMark_byNonParticipant_forbidden() throws Exception {
+        User me = saveUser("me2@mopl.com", "나");
+        User other = saveUser("other2@mopl.com", "상대");
+        User stranger = saveUser("stranger@mopl.com", "낯선이");
+
+        MvcResult created = mockMvc.perform(post("/api/conversations")
+                        .with(csrf())
+                        .with(authentication(authOf(me.getId(), "me2@mopl.com")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConversationCreateRequest(other.getId()))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID conversationId = UUID.fromString(
+                objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText());
+        Conversation conversation = conversationRepository.findById(conversationId).orElseThrow();
+        DirectMessage message = directMessageRepository.saveAndFlush(
+                DirectMessage.create(conversation, other, "안녕"));
+
+        mockMvc.perform(post("/api/conversations/{conversationId}/direct-messages/{directMessageId}/read",
+                        conversationId, message.getId())
+                        .with(csrf())
+                        .with(authentication(authOf(stranger.getId(), "stranger@mopl.com"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("대화에 DM이 있을 때 lastestMessage JSON 키로 응답 성공")
+    void getConversation_withDm_returnsLastestMessageField_success() throws Exception {
+        User me = saveUser("me3@mopl.com", "나");
+        User other = saveUser("other3@mopl.com", "상대");
+        Authentication auth = authOf(me.getId(), "me3@mopl.com");
+
+        MvcResult created = mockMvc.perform(post("/api/conversations")
+                        .with(csrf())
+                        .with(authentication(auth))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConversationCreateRequest(other.getId()))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID conversationId = UUID.fromString(
+                objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText());
+        Conversation conversation = conversationRepository.findById(conversationId).orElseThrow();
+        directMessageRepository.saveAndFlush(DirectMessage.create(conversation, other, "테스트 메시지"));
+
+        mockMvc.perform(get("/api/conversations/{conversationId}", conversationId)
+                        .with(authentication(auth)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastestMessage.content").value("테스트 메시지"));
+    }
+
+    @Test
     @DisplayName("존재하지 않는 상대와의 대화 조회 실패")
     void getConversationWith_notExists_returnsNotFound() throws Exception {
         User me = saveUser("me@mopl.com", "나");

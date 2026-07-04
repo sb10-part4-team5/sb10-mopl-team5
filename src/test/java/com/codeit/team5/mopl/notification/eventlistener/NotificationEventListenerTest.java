@@ -4,19 +4,17 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
+import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
+import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.follow.repository.FollowRepository;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
-import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
-import com.codeit.team5.mopl.user.event.RoleChangedEvent;
-import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
-import java.time.Instant;
 import com.codeit.team5.mopl.playlist.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.playlist.event.PlaylistUpdatedEvent;
+import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -39,11 +37,8 @@ class NotificationEventListenerTest {
     private NotificationEventListener notificationEventListener;
 
     private DirectMessageNotificationEvent dmNotificationEvent(UUID receiverId, String senderName, String content) {
-        UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), senderName, null);
-        UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "받는이", null);
-        DirectMessageResponse message = new DirectMessageResponse(
-                UUID.randomUUID(), UUID.randomUUID(), sender, receiver, content, Instant.now());
-        return new DirectMessageNotificationEvent(message);
+        return new DirectMessageNotificationEvent(
+                DirectMessageTestFixtures.dmMessage(receiverId, senderName, content));
     }
 
     @Test
