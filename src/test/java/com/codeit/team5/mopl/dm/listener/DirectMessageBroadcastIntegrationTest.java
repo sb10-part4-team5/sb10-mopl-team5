@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.dm.listener;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
@@ -59,7 +60,7 @@ class DirectMessageBroadcastIntegrationTest {
 
         directMessageService.sendMessage(sender.getEmail(), conversationId, "hello");
 
-        verify(messagingTemplate).convertAndSend(
+        verify(messagingTemplate, timeout(2000)).convertAndSend(
                 eq("/sub/conversations/" + conversationId + "/direct-messages"),
                 ArgumentMatchers.<Object>any());
     }
