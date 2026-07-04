@@ -80,6 +80,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/follows/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
                         .requestMatchers("/api/sse/**").authenticated()
+                        .requestMatchers("/api/reviews/**").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/auth/sign-in").permitAll()
