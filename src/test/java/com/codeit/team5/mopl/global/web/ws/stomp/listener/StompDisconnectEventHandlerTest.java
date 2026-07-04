@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.listener;
 
+import java.util.UUID;
+
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -35,12 +37,12 @@ class StompDisconnectEventHandlerTest {
     private StompDisconnectEventHandler listener;
 
     @Test
-    @DisplayName("WebSocket 연결이 끊어지면 SessionStore와 DB에서 세션을 삭제한다_성공")
+    @DisplayName("WebSocket ?怨뚭퍙????녿선筌왖筌?SessionStore?? DB?癒?퐣 ?紐꾨???????뺣뼄_?源껊궗")
     void handleWebSocketDisconnectListener_Success() {
         // given
-        String email = "test@test.com";
+        UUID userId = UUID.randomUUID();
         Principal mockPrincipal = mock(Principal.class);
-        when(mockPrincipal.getName()).thenReturn(email);
+        when(mockPrincipal.getName()).thenReturn(userId.toString());
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
         accessor.setUser(mockPrincipal);
@@ -54,12 +56,12 @@ class StompDisconnectEventHandlerTest {
         listener.handleWebSocketDisconnectListener(event);
 
         // then
-        verify(sessionStore).disconnect(email);
-        verify(watchingSessionService).delete(email);
+        verify(sessionStore).disconnect(userId);
+        verify(watchingSessionService).delete(userId);
     }
 
     @Test
-    @DisplayName("유저 정보가 없으면 조기 종료된다_성공")
+    @DisplayName("?醫? ?類ｋ궖揶쎛 ??곸몵筌?鈺곌퀗由??ル굝利??뺣뼄_?源껊궗")
     void handleWebSocketDisconnectListener_NoUser() {
         // given
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
@@ -77,12 +79,12 @@ class StompDisconnectEventHandlerTest {
     }
 
     @Test
-    @DisplayName("watchingSessionService.delete에서 예외가 발생해도 전파되지 않고 완료된다_성공")
+    @DisplayName("watchingSessionService.delete?癒?퐣 ??됱뇚揶쎛 獄쏆뮇源??猷??袁る솁??? ??꾪??袁⑥┷??뺣뼄_?源껊궗")
     void handleWebSocketDisconnectListener_IgnoreDeleteException() {
         // given
-        String email = "test@test.com";
+        UUID userId = UUID.randomUUID();
         Principal mockPrincipal = mock(Principal.class);
-        when(mockPrincipal.getName()).thenReturn(email);
+        when(mockPrincipal.getName()).thenReturn(userId.toString());
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
         accessor.setUser(mockPrincipal);
@@ -92,14 +94,16 @@ class StompDisconnectEventHandlerTest {
         SessionDisconnectEvent event = new SessionDisconnectEvent(this, message, "session-id",
                 null);
 
-        doThrow(new WatchingSessionNotFoundException("email", email)).when(watchingSessionService)
-                .delete(email);
+        doThrow(new WatchingSessionNotFoundException(java.util.Map.of("userId", userId))).when(watchingSessionService)
+                .delete(userId);
 
         // when
         listener.handleWebSocketDisconnectListener(event);
 
         // then
-        verify(sessionStore).disconnect(email);
-        verify(watchingSessionService).delete(email);
+        verify(sessionStore).disconnect(userId);
+        verify(watchingSessionService).delete(userId);
     }
 }
+
+
