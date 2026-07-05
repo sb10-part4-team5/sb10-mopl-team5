@@ -9,16 +9,16 @@ import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
 @Component
 public class WatchingContentUnsubscribeHandler extends AbstractStompUnsubscribeHandler {
 
-    private final WatchingSessionService service;
+    private final WatchingSessionCommandService service;
     private final WatchingSessionPayloadSender payloadSender;
 
     public WatchingContentUnsubscribeHandler(WebSocketSessionStore sessionStore,
-            WatchingSessionService service, WatchingSessionPayloadSender payloadSender) {
+            WatchingSessionCommandService service, WatchingSessionPayloadSender payloadSender) {
         super(sessionStore, StompConstants.SUB_WATCHING_CONTENT);
         this.service = service;
         this.payloadSender = payloadSender;
@@ -26,11 +26,6 @@ public class WatchingContentUnsubscribeHandler extends AbstractStompUnsubscribeH
 
     @Override
     protected void doHandle(UUID contentId, UUID userId) {
-        service.ensureWatchingContent(userId, contentId);
-        WatchingSessionResponse response = service.findSessionByWatchId(userId);
-        service.delete(userId);
-        long watcherCount = service.getCurrentWatchingContentView(contentId);
-        payloadSender.send(contentId,
-                new WatchingSessionPayload(WatcherStatus.LEAVE, response, watcherCount));
+        payloadSender.send(contentId, service.left(userId));
     }
 }

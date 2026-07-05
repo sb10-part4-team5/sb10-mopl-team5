@@ -7,18 +7,18 @@ import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
 public class WatchingContentSubscribeHandler extends AbstractStompSubscribeHandler {
 
-    private final WatchingSessionService service;
+    private final WatchingSessionCommandService service;
     private final WatchingSessionPayloadSender payloadSender;
 
     public WatchingContentSubscribeHandler(WebSocketSessionStore sessionStore,
-            WatchingSessionService service, WatchingSessionPayloadSender payloadSender) {
+            WatchingSessionCommandService service, WatchingSessionPayloadSender payloadSender) {
         super(sessionStore, StompConstants.SUB_WATCHING_CONTENT);
         this.service = service;
         this.payloadSender = payloadSender;
@@ -26,9 +26,6 @@ public class WatchingContentSubscribeHandler extends AbstractStompSubscribeHandl
 
     @Override
     protected void doHandle(UUID contentId, UUID userId) {
-        WatchingSessionResponse response = service.create(contentId, userId);
-        long watchCount = service.getCurrentWatchingContentView(contentId);
-        payloadSender.send(contentId,
-                new WatchingSessionPayload(WatcherStatus.JOIN, response, watchCount));
+        payloadSender.send(contentId, service.join(contentId, userId));
     }
 }

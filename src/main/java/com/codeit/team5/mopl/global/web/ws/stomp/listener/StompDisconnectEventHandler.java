@@ -7,7 +7,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 public class StompDisconnectEventHandler {
 
     private final WebSocketSessionStore sessionStore;
-    private final WatchingSessionService watchingSessionService;
+    private final WatchingSessionCommandService watchingSessionService;
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
@@ -28,7 +28,7 @@ public class StompDisconnectEventHandler {
         }
         UUID userId = UUID.fromString(user.getName());
         try {
-            watchingSessionService.delete(userId);
+            watchingSessionService.left(userId);
             log.info("WatchingSession cleaned up for disconnected user: {}", userId);
         } catch (Exception e) {
             log.debug("No active WatchingSession to delete for user: {}", userId);
