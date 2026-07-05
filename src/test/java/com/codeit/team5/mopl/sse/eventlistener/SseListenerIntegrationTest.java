@@ -7,7 +7,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-
+import java.time.Instant;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
@@ -20,17 +30,6 @@ import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
-import java.time.Instant;
-import java.util.UUID;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -115,7 +114,7 @@ class SseListenerIntegrationTest {
 
         DirectMessageResponse message = dmMessage(receiverId);
         tx.executeWithoutResult(status ->
-                publisher.publishEvent(new DirectMessageBroadcastEvent(message, "receiver@mopl.com")));
+                publisher.publishEvent(new DirectMessageBroadcastEvent(message, receiverId)));
 
         verify(mockEmitter, timeout(2000)).send(any(SseEmitter.SseEventBuilder.class));
     }
@@ -129,10 +128,10 @@ class SseListenerIntegrationTest {
 
         DirectMessageResponse message = dmMessage(receiverId);
         String destination = StompConstants.SUB_CONVERSATION_DM.replace("{id}", message.conversationId().toString());
-        webSocketSessionStore.subscribe("active@mopl.com", "sub-1", destination);
+        webSocketSessionStore.subscribe(receiverId, "sub-1", destination);
 
         tx.executeWithoutResult(status ->
-                publisher.publishEvent(new DirectMessageBroadcastEvent(message, "active@mopl.com")));
+                publisher.publishEvent(new DirectMessageBroadcastEvent(message, receiverId)));
 
         verify(mockEmitter, after(500).never()).send(any(SseEmitter.SseEventBuilder.class));
     }
@@ -146,7 +145,7 @@ class SseListenerIntegrationTest {
 
         DirectMessageResponse message = dmMessage(receiverId);
         tx.executeWithoutResult(status -> {
-            publisher.publishEvent(new DirectMessageBroadcastEvent(message, "receiver@mopl.com"));
+            publisher.publishEvent(new DirectMessageBroadcastEvent(message, receiverId));
             status.setRollbackOnly();
         });
 

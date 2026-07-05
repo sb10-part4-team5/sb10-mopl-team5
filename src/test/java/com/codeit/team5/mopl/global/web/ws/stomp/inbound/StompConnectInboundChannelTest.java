@@ -32,6 +32,7 @@ class StompConnectInboundChannelTest extends BaseStompInboundChannelTest {
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
         accessor.setNativeHeader("Authorization", "Bearer " + validToken);
+        accessor.setLeaveMutable(true);
 
         Message<byte[]> message =
                 MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
