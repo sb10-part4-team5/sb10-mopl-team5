@@ -8,18 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
-import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
-import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
-import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
-import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
-import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
-import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
-import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +22,17 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
+import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
+import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
+import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionQueryService;
 
 @WebMvcTest(WatchingSessionController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -44,7 +43,7 @@ class WatchingSessionControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private WatchingSessionService service;
+    private WatchingSessionQueryService service;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -66,14 +65,14 @@ class WatchingSessionControllerTest {
         UUID sessionId = UUID.randomUUID();
         WatchingSessionResponse response = WatchingSessionResponse.builder().id(sessionId).build();
 
-        given(service.findSessionByWatchId(watcherId)).willReturn(response);
+        given(service.findByWatcherId(watcherId)).willReturn(response);
 
         // When & Then
         mockMvc.perform(get("/api/users/{watcherId}/watching-sessions", watcherId))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(sessionId.toString()));
 
         ArgumentCaptor<UUID> idCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(service).findSessionByWatchId(idCaptor.capture());
+        verify(service).findByWatcherId(idCaptor.capture());
         assertThat(idCaptor.getValue()).isEqualTo(watcherId);
     }
 
@@ -82,7 +81,7 @@ class WatchingSessionControllerTest {
     void findWatchingSessionsByWatcher_NotFound() throws Exception {
         // Given
         UUID watcherId = UUID.randomUUID();
-        given(service.findSessionByWatchId(watcherId)).willReturn(null);
+        given(service.findByWatcherId(watcherId)).willReturn(null);
 
         // When & Then
         mockMvc.perform(get("/api/users/{watcherId}/watching-sessions", watcherId))
@@ -99,8 +98,8 @@ class WatchingSessionControllerTest {
         CursorResponse<WatchingSessionResponse> response =
                 new CursorResponse<>(List.of(session), null, null, false, 1L, "createdAt", "DESC");
 
-        given(service.findSessionByContentId(eq(contentId),
-                any(WatchingSessionCursorRequest.class))).willReturn(response);
+        given(service.findCursorByContentId(eq(contentId), any(WatchingSessionCursorRequest.class)))
+                .willReturn(response);
 
         // When & Then
         mockMvc.perform(get("/api/contents/{contentId}/watching-sessions", contentId)
@@ -110,7 +109,7 @@ class WatchingSessionControllerTest {
 
         ArgumentCaptor<WatchingSessionCursorRequest> requestCaptor =
                 ArgumentCaptor.forClass(WatchingSessionCursorRequest.class);
-        verify(service).findSessionByContentId(eq(contentId), requestCaptor.capture());
+        verify(service).findCursorByContentId(eq(contentId), requestCaptor.capture());
 
         WatchingSessionCursorRequest captured = requestCaptor.getValue();
         assertThat(captured.limit()).isEqualTo(10);
