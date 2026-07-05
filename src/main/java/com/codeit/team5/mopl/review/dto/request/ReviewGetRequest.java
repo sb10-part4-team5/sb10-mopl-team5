@@ -19,10 +19,8 @@ public record ReviewGetRequest(
     @Max(100)
     Integer limit,
 
-    @NotNull
     Sort.Direction sortDirection,
 
-    @NotNull
     ReviewSortBy sortBy
 ) {
 }
