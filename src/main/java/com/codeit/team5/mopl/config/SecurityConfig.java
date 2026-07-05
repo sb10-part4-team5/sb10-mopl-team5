@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.SpaCsrfTokenRequestHandler;
@@ -31,7 +32,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationService jwtAuthenticationService;
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
     private final UserAccessDeniedHandler userAccessDeniedHandler;
     private final MoplAuthenticationProvider moplAuthenticationProvider;
@@ -95,7 +96,7 @@ public class SecurityConfig {
                         .failureHandler(signInFailureHandler)
                 )
                 .addFilterBefore(
-                        jwtAuthenticationFilter,
+                        jwtAuthenticationFilter(),
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .logout(logout -> logout
@@ -106,6 +107,11 @@ public class SecurityConfig {
                         )
                 )
                 .build();
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtAuthenticationService);
     }
 
     @Bean

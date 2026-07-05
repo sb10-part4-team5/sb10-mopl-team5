@@ -86,7 +86,8 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
     private User findUserOrSendError(HttpServletResponse response, MoplPrincipal principal)
             throws IOException {
         try {
-            return userRepository.findById(principal.getId())
+            // 로그인 응답 생성에 필요한 프로필 이미지를 함께 조회
+            return userRepository.findWithProfileImageById(principal.getId())
                     .orElseThrow(() -> new UserNotFoundException(principal.getId()));
         } catch (UserNotFoundException e) {
             log.warn("Login success handler failed. userId={}", principal.getId(), e);
