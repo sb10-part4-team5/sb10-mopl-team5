@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -116,7 +117,7 @@ class WatchingSessionQueryServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         WatchingSessionCursorRequest request =
-                new WatchingSessionCursorRequest(null, "cursorValue", UUID.randomUUID().toString(),
+                new WatchingSessionCursorRequest(null, Instant.now(), UUID.randomUUID().toString(),
                         10, Sort.Direction.DESC, WatcherSortByType.CREATED_AT);
 
         @SuppressWarnings("unchecked")
@@ -155,7 +156,7 @@ class WatchingSessionQueryServiceTest {
         when(repository.existsByWatcherIdAndContentId(watcherId, contentId)).thenReturn(true);
 
         // when & then (예외가 발생하지 않으면 성공)
-        service.ensureWatchingContent(watcherId, contentId);
+        service.ensureWatchingContent(contentId, watcherId);
         verify(repository).existsByWatcherIdAndContentId(watcherId, contentId);
     }
 
@@ -168,7 +169,7 @@ class WatchingSessionQueryServiceTest {
         when(repository.existsByWatcherIdAndContentId(watcherId, contentId)).thenReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> service.ensureWatchingContent(watcherId, contentId))
+        assertThatThrownBy(() -> service.ensureWatchingContent(contentId, watcherId))
                 .isInstanceOf(WatchingSessionNotFoundException.class);
     }
 }

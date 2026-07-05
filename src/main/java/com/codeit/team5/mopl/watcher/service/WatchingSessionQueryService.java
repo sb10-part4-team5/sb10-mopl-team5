@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.watcher.service;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Limit;
@@ -26,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 @ExecutionTracer
 public class WatchingSessionQueryService {
 
-    private final String SECONDARY_SORT_FIELD = "id";
+    private final String secondarySortBy = "id";
     private final WatchingSessionRepository repository;
     private final WatchingSessionMapper mapper;
 
@@ -39,7 +40,7 @@ public class WatchingSessionQueryService {
         Sort.Direction direction = request.sortDirection();
         WatcherSortByType sortBy = request.sortBy();
         Sort sort =
-                Sort.by(direction, sortBy.getValue()).and(Sort.by(direction, SECONDARY_SORT_FIELD));
+                Sort.by(direction, sortBy.getValue()).and(Sort.by(direction, secondarySortBy));
         ScrollPosition scrollPosition = createScrollPosition(request);
         Window<WatchingSession> result = repository.findByContentId(contentId, scrollPosition,
                 Limit.of(request.limit()), sort);
@@ -47,7 +48,7 @@ public class WatchingSessionQueryService {
         return mapper.toCursor(result, totalCount, sortBy, direction);
     }
 
-    public void ensureWatchingContent(UUID watcherId, UUID contentId) {
+    public void ensureWatchingContent(UUID contentId, UUID watcherId) {
         if (!repository.existsByWatcherIdAndContentId(watcherId, contentId)) {
             throw new WatchingSessionNotFoundException(
                     Map.of("watcherId", watcherId, "contentId", contentId));
@@ -55,13 +56,13 @@ public class WatchingSessionQueryService {
     }
 
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {
-        String cursor = request.cursor();
+        Instant cursor = request.cursor();
         String idAfter = request.idAfter();
         if (cursor == null || idAfter == null) {
             return ScrollPosition.keyset();
         }
         Map<String, Object> keyset = Map.of(request.sortBy().getValue(), cursor,
-                SECONDARY_SORT_FIELD, UUID.fromString(idAfter));
+                secondarySortBy, UUID.fromString(idAfter));
         return ScrollPosition.of(keyset, Direction.FORWARD);
     }
 }

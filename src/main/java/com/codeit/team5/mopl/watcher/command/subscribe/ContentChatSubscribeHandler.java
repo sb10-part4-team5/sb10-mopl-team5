@@ -20,6 +20,6 @@ public class ContentChatSubscribeHandler extends AbstractStompSubscribeHandler {
 
     @Override
     protected void doHandle(UUID contentId, UUID userId) {
-        service.ensureWatchingContent(userId, contentId);
+        service.ensureWatchingContent(contentId, userId);
     }
 }

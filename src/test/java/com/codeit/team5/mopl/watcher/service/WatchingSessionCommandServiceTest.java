@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +29,6 @@ import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
-import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
@@ -83,7 +84,7 @@ class WatchingSessionCommandServiceTest {
         assertThat(result.response()).isEqualTo(dummyResponse);
         assertThat(result.watcherCount()).isEqualTo(5L);
         verify(repository).save(any(WatchingSession.class));
-        verify(eventPublisher).publishEvent(any(WatchingSessionCreatedEvent.class));
+        verify(eventPublisher).publishEvent(any(WatcherJoinedEvent.class));
     }
 
     @Test

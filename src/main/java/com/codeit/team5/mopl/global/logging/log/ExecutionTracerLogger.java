@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.global.logging.log;
 
-import java.util.Arrays;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -14,14 +13,17 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ExecutionTracerLogger {
 
-    @Around("@annotation(ExecutionTracer) || @within(ExecutionTracer)")
-    public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
-        String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
-        String methodName = joinPoint.getSignature().toShortString();
+    @Around("(@annotation(ExecutionTracer) || @within(ExecutionTracer))")
+    public Object logAround(ProceedingJoinPoint joinPoint, ExecutionTracer tracer)
+            throws Throwable {
+        String fullClassName = joinPoint.getSignature().getDeclaringTypeName();
+        String className = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
+        String methodName = joinPoint.getSignature().getName();
         String where = String.join(".", className, methodName);
+        boolean verbose = tracer.verbose();
         Object[] args = joinPoint.getArgs();
-
-        log.info("[start] {} | args: {}", where, Arrays.toString(args));
+        String argsStr = verbose ? String.join(", ", formatArgs(args)) : "(omitted)";
+        log.debug("[start] {} | args: {}", where, argsStr);
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         Object result;
@@ -37,8 +39,22 @@ public class ExecutionTracerLogger {
         } finally {
             stopWatch.stop();
         }
-        log.info("[end] {} | time: {}ms | result: {}", where, stopWatch.getTotalTimeMillis(),
+
+        log.debug("[end] {} | time: {}ms | result: {}", where, stopWatch.getTotalTimeMillis(),
                 result);
         return result;
+    }
+
+    private String[] formatArgs(Object[] args) {
+        if (args == null || args.length == 0) {
+            return new String[0];
+        }
+
+        String[] formatted = new String[args.length];
+        for (int i = 0; i < args.length; i++) {
+            Object arg = args[i];
+            formatted[i] = (arg == null) ? "null" : arg.toString();
+        }
+        return formatted;
     }
 }

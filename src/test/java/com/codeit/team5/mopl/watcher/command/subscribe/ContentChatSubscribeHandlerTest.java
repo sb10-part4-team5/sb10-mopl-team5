@@ -44,7 +44,7 @@ class ContentChatSubscribeHandlerTest {
         handler.handle(accessor);
 
         // Then
-        verify(service).ensureWatchingContent(userId, contentId);
+        verify(service).ensureWatchingContent(contentId, userId);
         verify(sessionStore).subscribe(userId, subscriptionId, destination);
     }
 

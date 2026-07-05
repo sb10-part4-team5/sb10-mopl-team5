@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import java.security.Principal;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,7 @@ class StompDisconnectEventHandlerTest {
     }
 
     @Test
-    @DisplayName("watchingSessionService.delete에서 예외가 발생해도 정상 처리된다_성공")
+    @DisplayName("watchingSessionService.left에서 예외가 발생해도 정상 처리된다_성공")
     void handleWebSocketDisconnectListener_IgnoreDeleteException() {
         // given
         UUID userId = UUID.randomUUID();
@@ -92,7 +93,7 @@ class StompDisconnectEventHandlerTest {
         SessionDisconnectEvent event =
                 new SessionDisconnectEvent(this, message, "session-id", null);
 
-        doThrow(new WatchingSessionNotFoundException(java.util.Map.of("userId", userId)))
+        doThrow(new WatchingSessionNotFoundException(Map.of("userId", userId)))
                 .when(watchingSessionService).left(userId);
 
         // when

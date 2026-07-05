@@ -64,7 +64,7 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
 
         Content content = Content.createByAdmin(ContentType.MOVIE, "Movie Title", "Desc");
 
-        BinaryContent thumbnail = BinaryContent.externalUrl("http://example.com/thumb.jpg");
+        BinaryContent thumbnail = BinaryContent.completed("http://example.com/thumb.jpg");
         binaryContentRepository.save(thumbnail);
         content.attachThumbnail(thumbnail);
 

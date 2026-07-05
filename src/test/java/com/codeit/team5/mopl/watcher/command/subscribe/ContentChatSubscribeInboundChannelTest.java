@@ -61,7 +61,7 @@ class ContentChatSubscribeInboundChannelTest {
         stompInterceptor.preSend(message, messageChannel);
 
         // Then
-        verify(watchingSessionQueryService).ensureWatchingContent(testUserId, contentId);
+        verify(watchingSessionQueryService).ensureWatchingContent(contentId, testUserId);
         verify(sessionStore).subscribe(testUserId, subscriptionId, destination);
     }
 
