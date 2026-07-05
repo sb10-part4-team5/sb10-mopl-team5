@@ -170,7 +170,7 @@ class ReviewControllerTest {
                 .param("idAfter", idAfter.toString())
                 .param("limit", "10")
                 .param("sortDirection", "ASC")
-                .param("sortBy", "RATING"))
+                .param("sortBy", "rating"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.hasNext").value(false))
             .andExpect(jsonPath("$.data").isEmpty());
