@@ -3,7 +3,7 @@ package com.codeit.team5.mopl.auth.controller.api;
 import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -110,9 +110,9 @@ public interface AuthApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "비밀번호 초기화 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request

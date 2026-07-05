@@ -5,8 +5,7 @@ import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
-import com.codeit.team5.mopl.content.entity.ContentSortByType;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -19,7 +18,6 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Sort;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,13 +40,13 @@ public interface ContentApi {
             @ApiResponse(responseCode = "201", description = "성공",
                     content = @Content(schema = @Schema(implementation = ContentResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @RequestBody(content = @Content(
             mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
@@ -75,15 +73,15 @@ public interface ContentApi {
             @ApiResponse(responseCode = "200", description = "성공",
                     content = @Content(schema = @Schema(implementation = ContentResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "콘텐츠 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @RequestBody(content = @Content(
             mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
@@ -100,13 +98,13 @@ public interface ContentApi {
             @ApiResponse(responseCode = "200", description = "성공",
                     content = @Content(schema = @Schema(implementation = ContentResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "콘텐츠 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<ContentResponse> getContent(@Parameter(description = "콘텐츠 ID") UUID contentId);
 
@@ -114,11 +112,11 @@ public interface ContentApi {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @Parameters({
             @Parameter(name = "typeEqual", description = "콘텐츠 타입",
@@ -141,15 +139,15 @@ public interface ContentApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "콘텐츠 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> deleteContent(@Parameter(description = "콘텐츠 ID") UUID contentId);
 }

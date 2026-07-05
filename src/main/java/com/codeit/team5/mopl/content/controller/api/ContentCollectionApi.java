@@ -2,7 +2,7 @@ package com.codeit.team5.mopl.content.controller.api;
 
 import com.codeit.team5.mopl.content.dto.external.sportsdb.SportsDbLeague;
 import com.codeit.team5.mopl.content.dto.request.PageRangeRequest;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,13 +25,13 @@ public interface ContentCollectionApi {
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "수집 요청 수락 (백그라운드 처리)"),
             @ApiResponse(responseCode = "400", description = "잘못된 페이지 범위",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> collectTmdbMovies(
             @Valid @ModelAttribute PageRangeRequest request
@@ -41,13 +41,13 @@ public interface ContentCollectionApi {
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "수집 요청 수락 (백그라운드 처리)"),
             @ApiResponse(responseCode = "400", description = "잘못된 페이지 범위",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> collectTmdbTvSeries(
             @Valid @ModelAttribute PageRangeRequest request
@@ -57,13 +57,13 @@ public interface ContentCollectionApi {
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "수집 요청 수락 (백그라운드 처리)"),
             @ApiResponse(responseCode = "400", description = "잘못된 파라미터",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> collectSportsEvents(
             @Parameter(description = "리그", schema = @Schema(implementation = SportsDbLeague.class))
@@ -77,13 +77,13 @@ public interface ContentCollectionApi {
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "수집 요청 수락 (백그라운드 처리)"),
             @ApiResponse(responseCode = "400", description = "잘못된 날짜 형식",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> collectSportsEventsByDay(
             @Parameter(description = "날짜 (예: 2024-12-26)", example = "2024-12-26")

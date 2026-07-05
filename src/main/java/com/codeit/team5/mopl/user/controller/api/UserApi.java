@@ -3,7 +3,7 @@ package com.codeit.team5.mopl.user.controller.api;
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.codeit.team5.mopl.user.dto.request.ChangePasswordRequest;
 import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
 import com.codeit.team5.mopl.user.dto.request.UserLockedUpdateRequest;
@@ -46,13 +46,13 @@ public interface UserApi {
             @ApiResponse(responseCode = "200", description = "성공",
                     content = @Content(schema = @Schema(implementation = UserResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "해당 리소스 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<UserResponse> getUser(
             @Parameter(description = "사용자 ID", required = true)
@@ -72,13 +72,13 @@ public interface UserApi {
             @ApiResponse(responseCode = "200", description = "성공",
                     content = @Content(schema = @Schema(implementation = UserResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류(본인만 변경 가능)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(
             mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
@@ -98,17 +98,17 @@ public interface UserApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "권한 변경 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 변경 가능)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "사용자 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "이미 동일한 권한입니다.",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> updateRole(
             @Parameter(description = "권한을 변경할 사용자 ID", required = true)
@@ -125,17 +125,17 @@ public interface UserApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "잠금 상태 변경 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 변경 가능)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "사용자 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "이미 동일한 잠금 상태입니다.",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> updateLockStatus(
             @Parameter(description = "권한을 변경할 사용자 ID", required = true)
@@ -152,15 +152,15 @@ public interface UserApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "비밀번호 변경 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류(본인만 변경 가능)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "사용자 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> updatePassword(
             @Parameter(hidden = true) MoplPrincipal userDetails,
@@ -180,13 +180,13 @@ public interface UserApi {
             @ApiResponse(responseCode = "200", description = "목록 조회 성공",
                     content = @Content(schema = @Schema(implementation = CursorResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "권한 오류(관리자만 조회 가능)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<CursorResponse<UserResponse>> getUsers(
             @Parameter(hidden = true)UserCursorRequest request

@@ -1,8 +1,7 @@
 package com.codeit.team5.mopl.sse.controller.api;
 
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,7 +21,7 @@ public interface SseApi {
             @ApiResponse(responseCode = "200", description = "SSE 연결 성공",
                     content = @Content(schema = @Schema(implementation = SseEmitter.class))),
             @ApiResponse(responseCode = "401", description = "인증 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     SseEmitter subscribe(
             @Parameter(hidden = true) MoplPrincipal moplPrincipal,
