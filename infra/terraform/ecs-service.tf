@@ -25,6 +25,7 @@ resource "aws_ecs_task_definition" "mopl" {
       { name = "DB_PASSWORD", value = var.db_password },
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "AWS_REGION", value = var.aws_region },
+      { name = "CDN_BASE_URL", value = "https://cdn.mopl-dev.site" },
       { name = "JAVA_TOOL_OPTIONS", value = "-Xmx512m" }
     ]
 

@@ -22,5 +22,12 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region
-  profile = var.aws_profile # 지정한 CLI 프로파일(mopl)의 자격증명 사용
+  profile = var.aws_profile
+}
+
+# CloudFront ACM 인증서는 반드시 us-east-1에 있어야 함
+provider "aws" {
+  alias   = "us_east_1"
+  region  = "us-east-1"
+  profile = var.aws_profile
 }

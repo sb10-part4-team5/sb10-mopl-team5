@@ -54,8 +54,9 @@ mopl:
   storage:
     type: s3
     s3:
-      bucket-name: ${S3_BUCKET:mopl-bucket-433041915727}
-      region: ${AWS_REGION:ap-northeast-2}
+      bucket-name: ${S3_BUCKET}
+      region: ${AWS_REGION}
+      cdn-base-url: ${CDN_BASE_URL}
   auth:
     cookie:
       secure: true
