@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
@@ -78,6 +79,9 @@ class ReviewControllerTest {
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
+
+    @MockitoBean
+    private JwtAuthenticationService jwtAuthenticationService;
 
     @MockitoBean
     private MoplUserDetailsService userDetailsService;
