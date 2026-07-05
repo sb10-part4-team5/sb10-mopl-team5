@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.review.enums;
+package com.codeit.team5.mopl.review.contant;
 
 import com.codeit.team5.mopl.review.exception.InvalidReviewSortByException;
 import java.util.Arrays;

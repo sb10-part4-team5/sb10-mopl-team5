@@ -23,6 +23,6 @@ public record ReviewGetRequest(
     Sort.Direction sortDirection,
 
     @NotNull
-    String sortBy
+    ReviewSortBy sortBy
 ) {
 }
