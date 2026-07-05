@@ -3,7 +3,6 @@ package com.codeit.team5.mopl.review.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -12,18 +11,19 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.exception.InvalidSortDirectionException;
+import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
+import com.codeit.team5.mopl.review.dto.request.ReviewGetRequest;
 import com.codeit.team5.mopl.review.dto.request.ReviewUpdateRequest;
 import com.codeit.team5.mopl.review.dto.response.ReviewResponse;
 import com.codeit.team5.mopl.review.entity.Review;
-import com.codeit.team5.mopl.review.exception.InvalidReviewSortByException;
 import com.codeit.team5.mopl.review.exception.ReviewAlreadyExistsException;
 import com.codeit.team5.mopl.review.exception.ReviewForbiddenException;
 import com.codeit.team5.mopl.review.exception.ReviewNotFoundException;
 import com.codeit.team5.mopl.review.mapper.ReviewMapper;
 import com.codeit.team5.mopl.review.repository.ReviewRepository;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.time.Instant;
 import java.util.List;
@@ -35,8 +35,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Sort;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
@@ -61,29 +61,23 @@ class ReviewServiceTest {
     void getReviews_hasNext_createdAtCursor() {
         // given
         UUID contentId = UUID.randomUUID();
-        UUID authorId = UUID.randomUUID();
         Instant lastCreatedAt = Instant.parse("2026-01-01T00:00:00Z");
         UUID lastId = UUID.randomUUID();
 
         Review r0 = mock(Review.class);
-        Review r1 = mock(Review.class); // 첫 번쨰 페이지 마지막 리뷰 요소
+        Review r1 = mock(Review.class);
         Review r2 = mock(Review.class);
-        given(r0.getAuthorId()).willReturn(authorId);
-        given(r1.getAuthorId()).willReturn(authorId);
-        given(r1.getCreatedAt()).willReturn(lastCreatedAt); // 해당 리뷰에 cursor&idAfter 삽입
+        given(r1.getCreatedAt()).willReturn(lastCreatedAt);
         given(r1.getId()).willReturn(lastId);
 
-        given(reviewRepository.findPageByContentId(contentId, null, null, Limit.of(3), "createdAt", false))
+        ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.DESC, ReviewSortBy.CREATED_AT);
+        given(reviewRepository.findPageByContentIdSortByCreatedAt(contentId, null, null, Limit.of(3), Sort.Direction.DESC))
             .willReturn(List.of(r0, r1, r2));
         given(reviewRepository.countByContent_Id(contentId)).willReturn(5L);
-        User user = mock(User.class);
-        given(user.getId()).willReturn(authorId);
-        given(userRepository.findAllById(anyList())).willReturn(List.of(user));
-        given(reviewMapper.toDto(any(), any())).willReturn(mock(ReviewResponse.class));
+        given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when
-        CursorResponse<ReviewResponse> result = reviewService.getReviews(
-            contentId, null, null, 2, "DESCENDING", "createdAt");
+        CursorResponse<ReviewResponse> result = reviewService.getReviews(request);
 
         // then
         assertThat(result.hasNext()).isTrue();
@@ -97,29 +91,23 @@ class ReviewServiceTest {
     void getReviews_hasNext_ratingCursor() {
         // given
         UUID contentId = UUID.randomUUID();
-        UUID authorId = UUID.randomUUID();
         double lastRating = 4.5;
         UUID lastId = UUID.randomUUID();
 
         Review r0 = mock(Review.class);
         Review r1 = mock(Review.class);
         Review r2 = mock(Review.class);
-        given(r0.getAuthorId()).willReturn(authorId);
-        given(r1.getAuthorId()).willReturn(authorId);
         given(r1.getRating()).willReturn(lastRating);
         given(r1.getId()).willReturn(lastId);
 
-        given(reviewRepository.findPageByContentId(contentId, null, null, Limit.of(3), "rating", false))
+        ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.DESC, ReviewSortBy.RATING);
+        given(reviewRepository.findPageByContentIdSortByRating(contentId, null, null, Limit.of(3), Sort.Direction.DESC))
             .willReturn(List.of(r0, r1, r2));
         given(reviewRepository.countByContent_Id(contentId)).willReturn(5L);
-        User user = mock(User.class);
-        given(user.getId()).willReturn(authorId);
-        given(userRepository.findAllById(anyList())).willReturn(List.of(user));
-        given(reviewMapper.toDto(any(), any())).willReturn(mock(ReviewResponse.class));
+        given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when
-        CursorResponse<ReviewResponse> result = reviewService.getReviews(
-            contentId, null, null, 2, "DESCENDING", "rating");
+        CursorResponse<ReviewResponse> result = reviewService.getReviews(request);
 
         // then
         assertThat(result.hasNext()).isTrue();
@@ -132,21 +120,16 @@ class ReviewServiceTest {
     void getReviews_lastPage() {
         // given
         UUID contentId = UUID.randomUUID();
-        UUID authorId = UUID.randomUUID();
 
         Review r0 = mock(Review.class);
-        given(r0.getAuthorId()).willReturn(authorId);
-        given(reviewRepository.findPageByContentId(contentId, null, null, Limit.of(3), "createdAt", false))
+        ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.DESC, ReviewSortBy.CREATED_AT);
+        given(reviewRepository.findPageByContentIdSortByCreatedAt(contentId, null, null, Limit.of(3), Sort.Direction.DESC))
             .willReturn(List.of(r0));
         given(reviewRepository.countByContent_Id(contentId)).willReturn(1L);
-        User user = mock(User.class);
-        given(user.getId()).willReturn(authorId);
-        given(userRepository.findAllById(anyList())).willReturn(List.of(user));
-        given(reviewMapper.toDto(any(), any())).willReturn(mock(ReviewResponse.class));
+        given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when
-        CursorResponse<ReviewResponse> result = reviewService.getReviews(
-            contentId, null, null, 2, "DESCENDING", "createdAt");
+        CursorResponse<ReviewResponse> result = reviewService.getReviews(request);
 
         // then
         assertThat(result.hasNext()).isFalse();
@@ -155,52 +138,23 @@ class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("sortDirection이 ASCENDING이면 ascending=true로 리포지토리를 호출한다")
+    @DisplayName("sortDirection이 ASCENDING이면 ASC로 리포지토리를 호출한다")
     void getReviews_ascending() {
         // given
         UUID contentId = UUID.randomUUID();
-        UUID authorId = UUID.randomUUID();
 
         Review r0 = mock(Review.class);
-        given(r0.getAuthorId()).willReturn(authorId);
-        given(reviewRepository.findPageByContentId(contentId, null, null, Limit.of(3), "createdAt", true))
+        ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.ASC, ReviewSortBy.CREATED_AT);
+        given(reviewRepository.findPageByContentIdSortByCreatedAt(contentId, null, null, Limit.of(3), Sort.Direction.ASC))
             .willReturn(List.of(r0));
         given(reviewRepository.countByContent_Id(contentId)).willReturn(1L);
-        User user = mock(User.class);
-        given(user.getId()).willReturn(authorId);
-        given(userRepository.findAllById(anyList())).willReturn(List.of(user));
-        given(reviewMapper.toDto(any(), any())).willReturn(mock(ReviewResponse.class));
+        given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when
-        CursorResponse<ReviewResponse> result = reviewService.getReviews(
-            contentId, null, null, 2, "ASCENDING", "createdAt");
+        CursorResponse<ReviewResponse> result = reviewService.getReviews(request);
 
         // then
         assertThat(result.hasNext()).isFalse();
-    }
-
-    @Test
-    @DisplayName("지원하지 않는 sortBy면 예외가 발생한다")
-    void getReviews_invalidSortBy_exception() {
-        // given
-        UUID contentId = UUID.randomUUID();
-
-        // when & then
-        assertThatThrownBy(() -> reviewService.getReviews(
-            contentId, null, null, 2, "DESCENDING", "title"))
-            .isInstanceOf(InvalidReviewSortByException.class);
-    }
-
-    @Test
-    @DisplayName("지원하지 않는 sortDirection이면 예외가 발생한다")
-    void getReviews_invalidSortDirection_exception() {
-        // given
-        UUID contentId = UUID.randomUUID();
-
-        // when & then
-        assertThatThrownBy(() -> reviewService.getReviews(
-            contentId, null, null, 2, "WHATEVER", "createdAt"))
-            .isInstanceOf(InvalidSortDirectionException.class);
     }
 
     @Test
@@ -212,26 +166,24 @@ class ReviewServiceTest {
         ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋아요", 4.5);
 
         Content content = mock(Content.class);
-        Review saved = mock(Review.class);
         User user = mock(User.class);
+        Review saved = mock(Review.class);
         ReviewResponse response = mock(ReviewResponse.class);
 
-        // reviewService.createReview 내에서 실행되는 타 계층 반환값들 세팅
         given(contentRepository.findById(contentId)).willReturn(Optional.of(content));
-        given(reviewRepository.existsByContent_IdAndAuthorId(contentId, authorId)).willReturn(false); // 리뷰 중복 작성 여부
-        given(reviewRepository.saveAndFlush(any())).willReturn(saved);
-        given(saved.getAuthorId()).willReturn(authorId);
+        given(userRepository.findById(authorId)).willReturn(Optional.of(user));
+        given(reviewRepository.existsByContent_IdAndAuthor_Id(contentId, authorId)).willReturn(false);
+        given(reviewRepository.save(any())).willReturn(saved);
         given(saved.getId()).willReturn(UUID.randomUUID());
         given(saved.getContentId()).willReturn(contentId);
-        given(userRepository.findById(authorId)).willReturn(Optional.of(user));
-        given(reviewMapper.toDto(saved, user)).willReturn(response);
+        given(reviewMapper.toDto(saved)).willReturn(response);
 
         // when
         ReviewResponse result = reviewService.createReview(authorId, request);
 
         // then
         assertThat(result).isEqualTo(response);
-        verify(reviewRepository).saveAndFlush(any());
+        verify(reviewRepository).save(any());
     }
 
     @Test
@@ -258,7 +210,8 @@ class ReviewServiceTest {
         ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋아요", 4.5);
 
         given(contentRepository.findById(contentId)).willReturn(Optional.of(mock(Content.class)));
-        given(reviewRepository.existsByContent_IdAndAuthorId(contentId, authorId)).willReturn(true);
+        given(userRepository.findById(authorId)).willReturn(Optional.of(mock(User.class)));
+        given(reviewRepository.existsByContent_IdAndAuthor_Id(contentId, authorId)).willReturn(true);
 
         // when & then
         assertThatThrownBy(() -> reviewService.createReview(authorId, request))
@@ -266,24 +219,19 @@ class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("race condition으로 DB unique 제약 위반 시 ReviewAlreadyExistsException을 던진다")
-    void ofReview_raceConditionUniqueViolation_exception() {
+    @DisplayName("존재하지 않는 유저가 리뷰 생성 시 예외가 발생한다")
+    void ofReview_userNotFound_exception() {
         // given
         UUID authorId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
         ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋아요", 4.5);
 
-        // createReview 호출 시 호출되는 메서드들 반환 값 세팅
         given(contentRepository.findById(contentId)).willReturn(Optional.of(mock(Content.class)));
-        given(reviewRepository.existsByContent_IdAndAuthorId(contentId, authorId)).willReturn(false);
-
-        DataIntegrityViolationException ex = new DataIntegrityViolationException(
-            "duplicate key value violates unique constraint \"uk_reviews_content_id_user_id\"");
-        given(reviewRepository.saveAndFlush(any())).willThrow(ex);
+        given(userRepository.findById(authorId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> reviewService.createReview(authorId, request))
-            .isInstanceOf(ReviewAlreadyExistsException.class);
+            .isInstanceOf(UserNotFoundException.class);
     }
 
     @Test
@@ -295,13 +243,11 @@ class ReviewServiceTest {
         ReviewUpdateRequest request = new ReviewUpdateRequest("수정된 내용", 3.0);
 
         Review review = mock(Review.class);
-        User author = mock(User.class);
         ReviewResponse response = mock(ReviewResponse.class);
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
         given(review.getAuthorId()).willReturn(authorId);
-        given(userRepository.findById(authorId)).willReturn(Optional.of(author));
-        given(reviewMapper.toDto(review, author)).willReturn(response);
+        given(reviewMapper.toDto(review)).willReturn(response);
 
         // when
         ReviewResponse result = reviewService.updateReview(reviewId, authorId, request);
@@ -318,8 +264,7 @@ class ReviewServiceTest {
         UUID reviewId = UUID.randomUUID();
         UUID authorId = UUID.randomUUID();
 
-        // 존재하지 않는 리뷰 -> Optional<> 반환
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
+        given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> reviewService.updateReview(
@@ -336,7 +281,7 @@ class ReviewServiceTest {
         UUID otherId = UUID.randomUUID();
 
         Review review = mock(Review.class);
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
         given(review.getAuthorId()).willReturn(otherId);
 
         // when & then
@@ -353,7 +298,7 @@ class ReviewServiceTest {
         UUID authorId = UUID.randomUUID();
 
         Review review = mock(Review.class);
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
         given(review.getAuthorId()).willReturn(authorId);
 
         // when
@@ -369,7 +314,7 @@ class ReviewServiceTest {
         // given
         UUID reviewId = UUID.randomUUID();
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
+        given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> reviewService.deleteReview(reviewId, UUID.randomUUID()))
@@ -385,8 +330,8 @@ class ReviewServiceTest {
         UUID otherId = UUID.randomUUID();
 
         Review review = mock(Review.class);
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
-        given(review.getAuthorId()).willReturn(otherId); // review.authorId = other
+        given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
+        given(review.getAuthorId()).willReturn(otherId);
 
         // when & then
         assertThatThrownBy(() -> reviewService.deleteReview(reviewId, authorId))

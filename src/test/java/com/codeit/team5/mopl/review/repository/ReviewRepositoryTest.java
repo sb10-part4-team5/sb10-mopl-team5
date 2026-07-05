@@ -8,7 +8,6 @@ import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
-import com.codeit.team5.mopl.notification.exception.CursorIdAfterNotTogetherException;
 import com.codeit.team5.mopl.review.entity.Review;
 import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.EntityManager;
@@ -17,7 +16,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +24,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
@@ -40,7 +39,6 @@ class ReviewRepositoryTest {
     @Autowired
     private EntityManager entityManager;
 
-    // em으로 테스트용 user 객체 persist 후 flush 하는 내부 메서드
     private User persistUser(String email) {
         User user = User.create(email, "password", "테스터");
         entityManager.persist(user);
@@ -48,7 +46,6 @@ class ReviewRepositoryTest {
         return user;
     }
 
-    // title 받고 content를 생성 및 persist & flush
     private Content persistContent(String title) {
         Content content = Content.createByAdmin(ContentType.MOVIE, title, null);
         entityManager.persist(content);
@@ -56,19 +53,17 @@ class ReviewRepositoryTest {
         return content;
     }
 
-    // 컨텐츠, userId, text, 평점을 토대로 리뷰 객체를 생성 및 persist & flush
-    private Review persistReview(Content content, UUID authorId, String text, double rating) {
-        Review review = Review.of(content, authorId, text, rating);
+    private Review persistReview(Content content, User author, String text, double rating) {
+        Review review = Review.of(content, author, text, rating);
         reviewRepository.save(review);
         entityManager.flush();
         return review;
     }
 
-    // 리뷰의 createdAt을 세팅
-    private void setCreatedAt(UUID reviewId, Instant createdAt) {
+    private void setCreatedAt(java.util.UUID reviewId, Instant createdAt) {
         entityManager.createNativeQuery(
                 "UPDATE reviews SET created_at = :ts WHERE id = :id")
-            .setParameter("ts", OffsetDateTime.ofInstant(createdAt, ZoneOffset.UTC)) // DB에서는 OffsetDataTime으로 다루는 것이 호환성이 좋아 이렇게 변환한다고 합니다.
+            .setParameter("ts", OffsetDateTime.ofInstant(createdAt, ZoneOffset.UTC))
             .setParameter("id", reviewId)
             .executeUpdate();
     }
@@ -81,7 +76,7 @@ class ReviewRepositoryTest {
         Content content = persistContent("영화1");
 
         // when
-        Review saved = persistReview(content, author.getId(), "재밌어요", 4.5);
+        Review saved = persistReview(content, author, "재밌어요", 4.5);
         entityManager.clear();
 
         // then
@@ -99,36 +94,36 @@ class ReviewRepositoryTest {
         // given
         User author = persistUser("dup@example.com");
         Content content = persistContent("영화2");
-        reviewRepository.saveAndFlush(Review.of(content, author.getId(), "첫 리뷰", 4.0));
+        reviewRepository.saveAndFlush(Review.of(content, author, "첫 리뷰", 4.0));
 
         // when & then
         assertThatThrownBy(() ->
-            reviewRepository.saveAndFlush(Review.of(content, author.getId(), "중복 리뷰", 3.0)))
-            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class); // DB 제약으로 인한 DataIntegrity 예외 발생
+            reviewRepository.saveAndFlush(Review.of(content, author, "중복 리뷰", 3.0)))
+            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     @Test
-    @DisplayName("existsByContent_IdAndAuthorId: 리뷰가 존재하면 true를 반환한다")
-    void existsByContent_IdAndAuthorId_exists() {
+    @DisplayName("existsByContent_IdAndAuthor_Id: 리뷰가 존재하면 true를 반환한다")
+    void existsByContent_IdAndAuthor_Id_exists() {
         // given
         User author = persistUser("exists@example.com");
         Content content = persistContent("영화3");
-        persistReview(content, author.getId(), "리뷰", 4.0);
+        persistReview(content, author, "리뷰", 4.0);
         entityManager.clear();
 
         // when & then
-        assertThat(reviewRepository.existsByContent_IdAndAuthorId(content.getId(), author.getId())).isTrue();
+        assertThat(reviewRepository.existsByContent_IdAndAuthor_Id(content.getId(), author.getId())).isTrue();
     }
 
     @Test
-    @DisplayName("existsByContent_IdAndAuthorId: 리뷰가 없으면 false를 반환한다")
-    void existsByContent_IdAndAuthorId_notExists() {
+    @DisplayName("existsByContent_IdAndAuthor_Id: 리뷰가 없으면 false를 반환한다")
+    void existsByContent_IdAndAuthor_Id_notExists() {
         // given
         User author = persistUser("notexists@example.com");
         Content content = persistContent("영화4");
 
         // when & then
-        assertThat(reviewRepository.existsByContent_IdAndAuthorId(content.getId(), author.getId())).isFalse();
+        assertThat(reviewRepository.existsByContent_IdAndAuthor_Id(content.getId(), author.getId())).isFalse();
     }
 
     @Test
@@ -140,9 +135,9 @@ class ReviewRepositoryTest {
         Content content = persistContent("영화5");
         Content otherContent = persistContent("영화6");
 
-        persistReview(content, author1.getId(), "리뷰1", 4.0);
-        persistReview(content, author2.getId(), "리뷰2", 3.5);
-        persistReview(otherContent, author1.getId(), "다른 콘텐츠 리뷰", 5.0);
+        persistReview(content, author1, "리뷰1", 4.0);
+        persistReview(content, author2, "리뷰2", 3.5);
+        persistReview(otherContent, author1, "다른 콘텐츠 리뷰", 5.0);
         entityManager.clear();
 
         // when & then
@@ -151,7 +146,7 @@ class ReviewRepositoryTest {
 
     @Test
     @DisplayName("createdAt 내림차순 커서 페이지네이션: 두 페이지가 겹치지 않고 이어진다")
-    void findPageByContentId_createdAtDesc_pagination() {
+    void findPageByContentIdSortByCreatedAt_desc_pagination() {
         // given
         User author1 = persistUser("page-desc1@example.com");
         User author2 = persistUser("page-desc2@example.com");
@@ -161,58 +156,55 @@ class ReviewRepositoryTest {
         Content content = persistContent("영화7");
         Content otherContent = persistContent("영화8");
 
-        Review r1 = persistReview(content, author1.getId(), "r1", 4.0);
+        Review r1 = persistReview(content, author1, "r1", 4.0);
         setCreatedAt(r1.getId(), Instant.parse("2026-01-01T00:01:00Z"));
-        Review r2 = persistReview(content, author2.getId(), "r2", 3.5);
+        Review r2 = persistReview(content, author2, "r2", 3.5);
         setCreatedAt(r2.getId(), Instant.parse("2026-01-01T00:02:00Z"));
-        Review r3 = persistReview(content, author3.getId(), "r3", 5.0);
+        Review r3 = persistReview(content, author3, "r3", 5.0);
         setCreatedAt(r3.getId(), Instant.parse("2026-01-01T00:03:00Z"));
-        Review r4 = persistReview(content, author4.getId(), "r4", 2.0);
+        Review r4 = persistReview(content, author4, "r4", 2.0);
         setCreatedAt(r4.getId(), Instant.parse("2026-01-01T00:04:00Z"));
-        Review r5 = persistReview(content, author5.getId(), "r5", 1.5);
+        Review r5 = persistReview(content, author5, "r5", 1.5);
         setCreatedAt(r5.getId(), Instant.parse("2026-01-01T00:05:00Z"));
-        persistReview(otherContent, author1.getId(), "other", 4.0);
+        persistReview(otherContent, author1, "other", 4.0);
         entityManager.flush();
         entityManager.clear();
 
         // when
-        // 커서,idAfter가 null이므로 첫페이지 fetch
-        List<Review> firstPage = reviewRepository.findPageByContentId(
-            content.getId(), null, null, Limit.of(2), "createdAt", false);
-        Review cursor = firstPage.get(firstPage.size() - 1); // 마지막 요소가 cursor
-        // 이어서 두번째 페이지 fetch
-        List<Review> secondPage = reviewRepository.findPageByContentId(
-            content.getId(), cursor.getCreatedAt().toString(), cursor.getId(), Limit.of(2), "createdAt", false);
+        List<Review> firstPage = reviewRepository.findPageByContentIdSortByCreatedAt(
+            content.getId(), null, null, Limit.of(2), Sort.Direction.DESC);
+        Review cursor = firstPage.get(firstPage.size() - 1);
+        List<Review> secondPage = reviewRepository.findPageByContentIdSortByCreatedAt(
+            content.getId(), cursor.getCreatedAt(), cursor.getId(), Limit.of(2), Sort.Direction.DESC);
 
         // then
         assertThat(firstPage).hasSize(2);
         assertThat(secondPage).hasSize(2);
-        // 두번째 페이지 id가 첫번째 페이지에 포함 X -> 페이지 겹침 없음
         assertThat(secondPage).extracting(Review::getId)
             .doesNotContainAnyElementsOf(firstPage.stream().map(Review::getId).toList());
     }
 
     @Test
     @DisplayName("createdAt 내림차순 조회는 최신 리뷰가 먼저 반환된다")
-    void findPageByContentId_createdAtDesc_ordering() {
+    void findPageByContentIdSortByCreatedAt_desc_ordering() {
         // given
         User author1 = persistUser("order-desc1@example.com");
         User author2 = persistUser("order-desc2@example.com");
         User author3 = persistUser("order-desc3@example.com");
         Content content = persistContent("영화9");
 
-        Review r1 = persistReview(content, author1.getId(), "r1", 4.0);
+        Review r1 = persistReview(content, author1, "r1", 4.0);
         setCreatedAt(r1.getId(), Instant.parse("2026-01-01T00:01:00Z"));
-        Review r2 = persistReview(content, author2.getId(), "r2", 3.5);
+        Review r2 = persistReview(content, author2, "r2", 3.5);
         setCreatedAt(r2.getId(), Instant.parse("2026-01-01T00:02:00Z"));
-        Review r3 = persistReview(content, author3.getId(), "r3", 5.0);
+        Review r3 = persistReview(content, author3, "r3", 5.0);
         setCreatedAt(r3.getId(), Instant.parse("2026-01-01T00:03:00Z"));
         entityManager.flush();
         entityManager.clear();
 
         // when
-        List<Review> all = reviewRepository.findPageByContentId(
-            content.getId(), null, null, Limit.of(10), "createdAt", false);
+        List<Review> all = reviewRepository.findPageByContentIdSortByCreatedAt(
+            content.getId(), null, null, Limit.of(10), Sort.Direction.DESC);
 
         // then
         assertThat(all).hasSize(3);
@@ -220,26 +212,26 @@ class ReviewRepositoryTest {
     }
 
     @Test
-    @DisplayName("createdAt 올림차순 조회는 오래된 리뷰가 먼저 반환된다")
-    void findPageByContentId_createdAtAsc_ordering() {
+    @DisplayName("createdAt 오름차순 조회는 오래된 리뷰가 먼저 반환된다")
+    void findPageByContentIdSortByCreatedAt_asc_ordering() {
         // given
-        User author1 = persistUser("order-desc1@example.com");
-        User author2 = persistUser("order-desc2@example.com");
-        User author3 = persistUser("order-desc3@example.com");
-        Content content = persistContent("영화9");
+        User author1 = persistUser("order-asc1@example.com");
+        User author2 = persistUser("order-asc2@example.com");
+        User author3 = persistUser("order-asc3@example.com");
+        Content content = persistContent("영화10");
 
-        Review r1 = persistReview(content, author1.getId(), "r1", 4.0);
+        Review r1 = persistReview(content, author1, "r1", 4.0);
         setCreatedAt(r1.getId(), Instant.parse("2026-01-01T00:01:00Z"));
-        Review r2 = persistReview(content, author2.getId(), "r2", 3.5);
+        Review r2 = persistReview(content, author2, "r2", 3.5);
         setCreatedAt(r2.getId(), Instant.parse("2026-01-01T00:02:00Z"));
-        Review r3 = persistReview(content, author3.getId(), "r3", 5.0);
+        Review r3 = persistReview(content, author3, "r3", 5.0);
         setCreatedAt(r3.getId(), Instant.parse("2026-01-01T00:03:00Z"));
         entityManager.flush();
         entityManager.clear();
 
         // when
-        List<Review> all = reviewRepository.findPageByContentId(
-            content.getId(), null, null, Limit.of(10), "createdAt", true);
+        List<Review> all = reviewRepository.findPageByContentIdSortByCreatedAt(
+            content.getId(), null, null, Limit.of(10), Sort.Direction.ASC);
 
         // then
         assertThat(all).hasSize(3);
@@ -248,27 +240,27 @@ class ReviewRepositoryTest {
 
     @Test
     @DisplayName("rating 내림차순 커서 페이지네이션: 두 페이지가 겹치지 않고 이어진다")
-    void findPageByContentId_ratingDesc_pagination() {
+    void findPageByContentIdSortByRating_desc_pagination() {
         // given
         User author1 = persistUser("rating-page1@example.com");
         User author2 = persistUser("rating-page2@example.com");
         User author3 = persistUser("rating-page3@example.com");
         User author4 = persistUser("rating-page4@example.com");
-        Content content = persistContent("영화10");
+        Content content = persistContent("영화11");
 
-        persistReview(content, author1.getId(), "r1", 5.0);
-        persistReview(content, author2.getId(), "r2", 4.0);
-        persistReview(content, author3.getId(), "r3", 3.0);
-        persistReview(content, author4.getId(), "r4", 2.0);
+        persistReview(content, author1, "r1", 5.0);
+        persistReview(content, author2, "r2", 4.0);
+        persistReview(content, author3, "r3", 3.0);
+        persistReview(content, author4, "r4", 2.0);
         entityManager.flush();
         entityManager.clear();
 
         // when
-        List<Review> firstPage = reviewRepository.findPageByContentId(
-            content.getId(), null, null, Limit.of(2), "rating", false);
+        List<Review> firstPage = reviewRepository.findPageByContentIdSortByRating(
+            content.getId(), null, null, Limit.of(2), Sort.Direction.DESC);
         Review cursor = firstPage.get(firstPage.size() - 1);
-        List<Review> secondPage = reviewRepository.findPageByContentId(
-            content.getId(), cursor.getRating().toString(), cursor.getId(), Limit.of(2), "rating", false);
+        List<Review> secondPage = reviewRepository.findPageByContentIdSortByRating(
+            content.getId(), cursor.getRating(), cursor.getId(), Limit.of(2), Sort.Direction.DESC);
 
         // then
         assertThat(firstPage).hasSize(2);
@@ -279,22 +271,22 @@ class ReviewRepositoryTest {
 
     @Test
     @DisplayName("rating 내림차순 조회는 높은 평점이 먼저 반환된다")
-    void findPageByContentId_ratingDesc_ordering() {
+    void findPageByContentIdSortByRating_desc_ordering() {
         // given
         User author1 = persistUser("rating-order1@example.com");
         User author2 = persistUser("rating-order2@example.com");
         User author3 = persistUser("rating-order3@example.com");
-        Content content = persistContent("영화11");
+        Content content = persistContent("영화12");
 
-        persistReview(content, author1.getId(), "r1", 3.0);
-        persistReview(content, author2.getId(), "r2", 5.0); // 먼저 반환될 리뷰
-        persistReview(content, author3.getId(), "r3", 1.0); // 제일 뒤에 반환될 리뷰
+        persistReview(content, author1, "r1", 3.0);
+        persistReview(content, author2, "r2", 5.0);
+        persistReview(content, author3, "r3", 1.0);
         entityManager.flush();
         entityManager.clear();
 
         // when
-        List<Review> all = reviewRepository.findPageByContentId(
-            content.getId(), null, null, Limit.of(10), "rating", false); // 내림차순
+        List<Review> all = reviewRepository.findPageByContentIdSortByRating(
+            content.getId(), null, null, Limit.of(10), Sort.Direction.DESC);
 
         // then
         assertThat(all).hasSize(3);
@@ -302,44 +294,26 @@ class ReviewRepositoryTest {
     }
 
     @Test
-    @DisplayName("rating 올림차순 조회는 낮은 평점이 먼저 반환된다")
-    void findPageByContentId_ratingAsc_ordering() {
+    @DisplayName("rating 오름차순 조회는 낮은 평점이 먼저 반환된다")
+    void findPageByContentIdSortByRating_asc_ordering() {
         // given
-        User author1 = persistUser("rating-order1@example.com");
-        User author2 = persistUser("rating-order2@example.com");
-        User author3 = persistUser("rating-order3@example.com");
-        Content content = persistContent("영화11");
+        User author1 = persistUser("rating-asc1@example.com");
+        User author2 = persistUser("rating-asc2@example.com");
+        User author3 = persistUser("rating-asc3@example.com");
+        Content content = persistContent("영화13");
 
-        persistReview(content, author1.getId(), "r1", 3.0);
-        persistReview(content, author2.getId(), "r2", 5.0); // 제일 뒤에 위치한 리뷰
-        persistReview(content, author3.getId(), "r3", 1.0); // 제일 앞에 위치한 리뷰
+        persistReview(content, author1, "r1", 3.0);
+        persistReview(content, author2, "r2", 5.0);
+        persistReview(content, author3, "r3", 1.0);
         entityManager.flush();
         entityManager.clear();
 
         // when
-        List<Review> all = reviewRepository.findPageByContentId(
-            content.getId(), null, null, Limit.of(10), "rating", true); // 올림차순
+        List<Review> all = reviewRepository.findPageByContentIdSortByRating(
+            content.getId(), null, null, Limit.of(10), Sort.Direction.ASC);
 
         // then
         assertThat(all).hasSize(3);
         assertThat(all).isSortedAccordingTo(Comparator.comparing(Review::getRating));
-    }
-
-    @Test
-    @DisplayName("cursor와 idAfter 중 하나만 주어지면 예외가 발생한다")
-    void findPageByContentId_cursorIdAfterNotTogether_exception() {
-        // given
-        UUID contentId = UUID.randomUUID();
-
-        // when & then
-        // 보조커서(idAfter)가 null이면 예외 발생
-        assertThatThrownBy(() -> reviewRepository.findPageByContentId(
-            contentId, Instant.now().toString(), null, Limit.of(2), "createdAt", false))
-            .isInstanceOf(CursorIdAfterNotTogetherException.class);
-
-        // 주 커서 (cursor)가 null이면 예외 발생
-        assertThatThrownBy(() -> reviewRepository.findPageByContentId(
-            contentId, null, UUID.randomUUID(), Limit.of(2), "createdAt", false))
-            .isInstanceOf(CursorIdAfterNotTogetherException.class);
     }
 }

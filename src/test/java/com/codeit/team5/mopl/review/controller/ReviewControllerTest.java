@@ -33,6 +33,7 @@ import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
+import com.codeit.team5.mopl.review.dto.request.ReviewGetRequest;
 import com.codeit.team5.mopl.review.dto.request.ReviewUpdateRequest;
 import com.codeit.team5.mopl.review.dto.response.ReviewResponse;
 import com.codeit.team5.mopl.review.exception.ReviewAlreadyExistsException;
@@ -128,8 +129,7 @@ class ReviewControllerTest {
         CursorResponse<ReviewResponse> response = new CursorResponse<>(
             List.of(review), null, null, false, 1L, "createdAt", "DESCENDING");
 
-        given(reviewService.getReviews(
-            eq(contentId), eq(null), eq(null), eq(20), eq("DESCENDING"), eq("createdAt")))
+        given(reviewService.getReviews(any(ReviewGetRequest.class)))
             .willReturn(response);
 
         // when & then
@@ -159,8 +159,7 @@ class ReviewControllerTest {
         CursorResponse<ReviewResponse> response = new CursorResponse<>(
             List.of(), null, null, false, 0L, "rating", "ASCENDING");
 
-        given(reviewService.getReviews(
-            eq(contentId), eq(cursor), eq(idAfter), eq(10), eq("ASCENDING"), eq("rating")))
+        given(reviewService.getReviews(any(ReviewGetRequest.class)))
             .willReturn(response);
 
         // when & then
@@ -170,8 +169,8 @@ class ReviewControllerTest {
                 .param("cursor", cursor)
                 .param("idAfter", idAfter.toString())
                 .param("limit", "10")
-                .param("sortDirection", "ASCENDING")
-                .param("sortBy", "rating"))
+                .param("sortDirection", "ASC")
+                .param("sortBy", "RATING"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.hasNext").value(false))
             .andExpect(jsonPath("$.data").isEmpty());
@@ -187,7 +186,7 @@ class ReviewControllerTest {
                 .param("limit", "0"))
             .andExpect(status().isBadRequest());
 
-        verify(reviewService, never()).getReviews(any(), any(), any(), any(int.class), any(), any());
+        verify(reviewService, never()).getReviews(any(ReviewGetRequest.class));
     }
 
     @Test
@@ -200,7 +199,7 @@ class ReviewControllerTest {
                 .param("limit", "101"))
             .andExpect(status().isBadRequest());
 
-        verify(reviewService, never()).getReviews(any(), any(), any(), any(int.class), any(), any());
+        verify(reviewService, never()).getReviews(any(ReviewGetRequest.class));
     }
 
     // ===== POST /api/reviews =====
