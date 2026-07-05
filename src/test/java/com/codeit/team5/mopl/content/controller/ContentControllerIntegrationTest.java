@@ -10,8 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
-import com.codeit.team5.mopl.auth.security.details.AuthUser;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
@@ -23,6 +21,7 @@ import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.global.support.security.IntegrationTestSecuritySupport;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +39,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -85,17 +83,11 @@ class ContentControllerIntegrationTest {
     // --- 인증 헬퍼 ---
 
     private Authentication adminAuth() {
-        return authOf(UUID.randomUUID(), "admin1234@admin.com", "ADMIN");
+        return IntegrationTestSecuritySupport.adminAuthentication();
     }
 
     private Authentication userAuth() {
-        return authOf(UUID.randomUUID(), "user@mopl.com", "USER");
-    }
-
-    private Authentication authOf(UUID userId, String email, String role) {
-        MoplUserDetails details = new MoplUserDetails(
-                new AuthUser(userId, email, role, false), "password");
-        return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+        return IntegrationTestSecuritySupport.userAuthentication();
     }
 
     // --- 데이터 준비 헬퍼 ---
@@ -273,6 +265,19 @@ class ContentControllerIntegrationTest {
             Content unchanged = contentRepository.findWithStatsAndTagsById(content.getId()).orElseThrow();
             assertThat(unchanged.getTitle()).isEqualTo("원본 영화");
         }
+
+        @Test
+        @DisplayName("인증 없이 수정하면 401을 반환한다")
+        void update_unauthenticated_unauthorized() throws Exception {
+            // given
+            ContentUpdateRequest request = new ContentUpdateRequest("수정된 영화", null, List.of("액션"));
+
+            // when & then
+            mockMvc.perform(multipart(HttpMethod.PATCH, "/api/contents/{id}", UUID.randomUUID())
+                            .file(requestPart(request))
+                            .with(csrf()))
+                    .andExpect(status().isUnauthorized());
+        }
     }
 
     @Nested
@@ -441,6 +446,15 @@ class ContentControllerIntegrationTest {
                     .andExpect(status().isForbidden());
 
             assertThat(contentRepository.findById(content.getId())).isPresent();
+        }
+
+        @Test
+        @DisplayName("인증 없이 삭제하면 401을 반환한다")
+        void delete_unauthenticated_unauthorized() throws Exception {
+            // when & then
+            mockMvc.perform(delete("/api/contents/{id}", UUID.randomUUID())
+                            .with(csrf()))
+                    .andExpect(status().isUnauthorized());
         }
     }
 }

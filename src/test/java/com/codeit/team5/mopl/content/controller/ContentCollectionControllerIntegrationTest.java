@@ -1,26 +1,27 @@
 package com.codeit.team5.mopl.content.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
-import com.codeit.team5.mopl.auth.security.details.AuthUser;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
-import java.util.UUID;
+import com.codeit.team5.mopl.global.support.security.IntegrationTestSecuritySupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -58,17 +59,11 @@ class ContentCollectionControllerIntegrationTest {
     // --- 인증 헬퍼 ---
 
     private Authentication adminAuth() {
-        return authOf("admin@mopl.com", "ADMIN");
+        return IntegrationTestSecuritySupport.adminAuthentication();
     }
 
     private Authentication userAuth() {
-        return authOf("user@mopl.com", "USER");
-    }
-
-    private Authentication authOf(String email, String role) {
-        MoplUserDetails details = new MoplUserDetails(
-                new AuthUser(UUID.randomUUID(), email, role, false), "password");
-        return new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+        return IntegrationTestSecuritySupport.userAuthentication();
     }
 
     @Nested
@@ -76,8 +71,11 @@ class ContentCollectionControllerIntegrationTest {
     class CollectTmdbMovies {
 
         @Test
-        @DisplayName("ADMIN이 유효한 페이지 범위로 요청하면 202를 반환한다")
+        @DisplayName("ADMIN이 유효한 페이지 범위로 요청하면 202를 반환하고 JobParameters에 startPage/endPage가 실제로 담겨 전달된다")
         void success_returnsAccepted() throws Exception {
+            // given
+            ArgumentCaptor<JobParameters> paramsCaptor = ArgumentCaptor.forClass(JobParameters.class);
+
             // when & then
             mockMvc.perform(post(MOVIES_URL)
                             .param("startPage", "1")
@@ -85,6 +83,11 @@ class ContentCollectionControllerIntegrationTest {
                             .with(csrf())
                             .with(authentication(adminAuth())))
                     .andExpect(status().isAccepted());
+
+            verify(asyncJobLauncher).run(any(), paramsCaptor.capture());
+            JobParameters params = paramsCaptor.getValue();
+            assertThat(params.getString("startPage")).isEqualTo("1");
+            assertThat(params.getString("endPage")).isEqualTo("5");
         }
 
         @Test
@@ -166,8 +169,11 @@ class ContentCollectionControllerIntegrationTest {
     class CollectTmdbTvSeries {
 
         @Test
-        @DisplayName("ADMIN이 유효한 페이지 범위로 요청하면 202를 반환한다")
+        @DisplayName("ADMIN이 유효한 페이지 범위로 요청하면 202를 반환하고 JobParameters에 startPage/endPage가 실제로 담겨 전달된다")
         void success_returnsAccepted() throws Exception {
+            // given
+            ArgumentCaptor<JobParameters> paramsCaptor = ArgumentCaptor.forClass(JobParameters.class);
+
             // when & then
             mockMvc.perform(post(TV_URL)
                             .param("startPage", "2")
@@ -175,6 +181,11 @@ class ContentCollectionControllerIntegrationTest {
                             .with(csrf())
                             .with(authentication(adminAuth())))
                     .andExpect(status().isAccepted());
+
+            verify(asyncJobLauncher).run(any(), paramsCaptor.capture());
+            JobParameters params = paramsCaptor.getValue();
+            assertThat(params.getString("startPage")).isEqualTo("2");
+            assertThat(params.getString("endPage")).isEqualTo("10");
         }
 
         @Test
@@ -228,8 +239,11 @@ class ContentCollectionControllerIntegrationTest {
     class CollectSportsEvents {
 
         @Test
-        @DisplayName("ADMIN이 유효한 리그·시즌으로 요청하면 202를 반환한다")
+        @DisplayName("ADMIN이 유효한 리그·시즌으로 요청하면 202를 반환하고 JobParameters에 leagueId/season이 실제로 담겨 전달된다")
         void success_returnsAccepted() throws Exception {
+            // given
+            ArgumentCaptor<JobParameters> paramsCaptor = ArgumentCaptor.forClass(JobParameters.class);
+
             // when & then
             mockMvc.perform(post(SPORTS_URL)
                             .param("league", "EPL")
@@ -237,6 +251,11 @@ class ContentCollectionControllerIntegrationTest {
                             .with(csrf())
                             .with(authentication(adminAuth())))
                     .andExpect(status().isAccepted());
+
+            verify(asyncJobLauncher).run(any(), paramsCaptor.capture());
+            JobParameters params = paramsCaptor.getValue();
+            assertThat(params.getString("leagueId")).isEqualTo("4328");
+            assertThat(params.getString("season")).isEqualTo("2023-2024");
         }
 
         @Test
@@ -303,14 +322,21 @@ class ContentCollectionControllerIntegrationTest {
     class CollectSportsEventsByDay {
 
         @Test
-        @DisplayName("ADMIN이 유효한 날짜로 요청하면 202를 반환한다")
+        @DisplayName("ADMIN이 유효한 날짜로 요청하면 202를 반환하고 JobParameters에 date가 실제로 담겨 전달된다")
         void success_returnsAccepted() throws Exception {
+            // given
+            ArgumentCaptor<JobParameters> paramsCaptor = ArgumentCaptor.forClass(JobParameters.class);
+
             // when & then
             mockMvc.perform(post(SPORTS_DAY_URL)
                             .param("date", "2024-12-26")
                             .with(csrf())
                             .with(authentication(adminAuth())))
                     .andExpect(status().isAccepted());
+
+            verify(asyncJobLauncher).run(any(), paramsCaptor.capture());
+            JobParameters params = paramsCaptor.getValue();
+            assertThat(params.getString("date")).isEqualTo("2024-12-26");
         }
 
         @Test

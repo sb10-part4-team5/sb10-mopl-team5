@@ -19,6 +19,7 @@ import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.FileRequest;
@@ -165,7 +166,7 @@ class ContentFacadeIntegrationTest {
 
         // when & then
         assertThatThrownBy(() -> contentFacade.update(UUID.randomUUID(), updateRequest, image("poster.jpg")))
-                .isInstanceOf(RuntimeException.class);
+                .isInstanceOf(ContentNotFoundException.class);
 
         verify(binaryContentStorage).store(anyString(), any(), any());
         verify(binaryContentStorage, timeout(3000)).delete(anyString());

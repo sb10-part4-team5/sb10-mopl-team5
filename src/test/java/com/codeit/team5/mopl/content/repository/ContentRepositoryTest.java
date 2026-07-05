@@ -320,6 +320,35 @@ class ContentRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    @DisplayName("watcherCount가 동률인 경우 id를 2차 정렬 키로 삼아 중복·누락 없이 이어서 조회한다")
+    void findContents_watcherCountDescCursor_withTie() {
+        // given - 두 콘텐츠가 동일한 watcherCount(20)를 가진다
+        persistContentWithWatcher("동률A", 20L);
+        persistContentWithWatcher("동률B", 20L);
+        persistContentWithWatcher("단독", 10L);
+        clear();
+
+        ContentCursorRequest firstRequest =
+                request(null, null, null, null, null, Sort.Direction.DESC, ContentSortByType.WATCHER_COUNT);
+
+        // when - 1페이지 마지막 행이 동률 값(20)을 커서로 넘긴다
+        List<Content> expectedOrder = contentRepository.findContents(firstRequest, 10);
+        List<Content> firstPage = contentRepository.findContents(firstRequest, 1);
+        Content last = firstPage.get(0);
+        ContentCursorRequest secondRequest = request(
+                null, null, null,
+                String.valueOf(last.getStats().getWatcherCount()), last.getId().toString(),
+                Sort.Direction.DESC, ContentSortByType.WATCHER_COUNT);
+        List<Content> secondPage = contentRepository.findContents(secondRequest, 10);
+
+        // then - watcherCount가 같은 나머지 한 행이 누락·중복 없이 다음 페이지에 나와야 한다
+        assertThat(expectedOrder)
+                .extracting(c -> c.getStats().getWatcherCount())
+                .containsExactly(20L, 20L, 10L);
+        assertPagination(expectedOrder, firstPage, secondPage, 3);
+    }
+
+    @Test
     @DisplayName("rate(평균 평점) DESC 커서로 콘텐츠를 중복·누락 없이 이어서 조회한다")
     void findContents_rateDescCursor() {
         // given - 평균 평점: 2.0, 4.5, 3.0
@@ -345,6 +374,36 @@ class ContentRepositoryTest extends BaseRepositoryTest {
         assertThat(expectedOrder)
                 .extracting(c -> c.getStats().getAverageRating())
                 .containsExactly(4.5, 3.0, 2.0);
+        assertPagination(expectedOrder, firstPage, secondPage, 3);
+    }
+
+    @Test
+    @DisplayName("rate가 동률인 경우 id를 2차 정렬 키로 삼아 중복·누락 없이 이어서 조회한다")
+    void findContents_rateDescCursor_withTie() {
+        // given - 최상위 두 콘텐츠가 동일한 평균 평점(4.0)을 가진다 (ratingSum/reviewCount 조합은 다름)
+        // 1페이지(size=1)의 커서가 동률 값이 되어야 tie-break 분기를 실제로 검증할 수 있다
+        persistContentWithRating("동률A", 8.0, 2);
+        persistContentWithRating("동률B", 12.0, 3);
+        persistContentWithRating("단독", 4.0, 2);
+        clear();
+
+        ContentCursorRequest firstRequest =
+                request(null, null, null, null, null, Sort.Direction.DESC, ContentSortByType.RATE);
+
+        // when - 1페이지 마지막 행이 동률 값(4.0)을 커서로 넘긴다
+        List<Content> expectedOrder = contentRepository.findContents(firstRequest, 10);
+        List<Content> firstPage = contentRepository.findContents(firstRequest, 1);
+        Content last = firstPage.get(0);
+        ContentCursorRequest secondRequest = request(
+                null, null, null,
+                String.valueOf(last.getStats().getAverageRating()), last.getId().toString(),
+                Sort.Direction.DESC, ContentSortByType.RATE);
+        List<Content> secondPage = contentRepository.findContents(secondRequest, 10);
+
+        // then - 평균 평점이 같은 나머지 한 행이 누락·중복 없이 다음 페이지에 나와야 한다
+        assertThat(expectedOrder)
+                .extracting(c -> c.getStats().getAverageRating())
+                .containsExactly(4.0, 4.0, 2.0);
         assertPagination(expectedOrder, firstPage, secondPage, 3);
     }
 
