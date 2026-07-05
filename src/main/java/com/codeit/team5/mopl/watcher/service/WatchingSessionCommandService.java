@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
@@ -24,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@ExecutionTracer
 public class WatchingSessionCommandService {
 
     private final WatchingSessionRepository repository;

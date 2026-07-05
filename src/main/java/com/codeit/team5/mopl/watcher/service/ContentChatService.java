@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.watcher.service;
 
+import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
+
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@ExecutionTracer
 public class ContentChatService {
 
     private final UserRepository userRepository;

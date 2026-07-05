@@ -1,5 +1,9 @@
 package com.codeit.team5.mopl.subscription.service;
 
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
 import com.codeit.team5.mopl.playlist.entity.Playlist;
 import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
@@ -20,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@ExecutionTracer
 public class SubscriptionService {
 
     private final SubscriptionRepository repository;

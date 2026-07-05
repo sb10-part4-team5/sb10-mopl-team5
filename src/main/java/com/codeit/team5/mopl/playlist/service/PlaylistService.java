@@ -32,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@ExecutionTracer
 public class PlaylistService {
 
     private final PlaylistMapper mapper;

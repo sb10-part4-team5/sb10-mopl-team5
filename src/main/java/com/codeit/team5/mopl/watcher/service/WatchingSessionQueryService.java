@@ -10,6 +10,7 @@ import org.springframework.data.domain.Window;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
 import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@ExecutionTracer
 public class WatchingSessionQueryService {
 
     private final String SECONDARY_SORT_FIELD = "id";

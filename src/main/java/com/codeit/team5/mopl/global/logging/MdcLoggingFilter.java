@@ -40,4 +40,9 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
             MDC.clear();
         }
     }
+
+    @Override
+    protected boolean shouldNotFilterErrorDispatch() {
+        return false;
+    }
 }
