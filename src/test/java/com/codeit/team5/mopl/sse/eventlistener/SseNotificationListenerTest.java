@@ -4,12 +4,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
+import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import java.time.Instant;
 import java.util.UUID;
@@ -45,14 +46,14 @@ class SseNotificationListenerTest {
     }
 
     @Test
-    @DisplayName("DirectMessageCreatedEvent 발생 시 수신자에게 direct-messages 이벤트를 전송한다")
-    void onDirectMessageCreated_delegatesToSseSender() {
+    @DisplayName("비활성 DM SSE 이벤트 발생 시 수신자에게 direct-messages 이벤트를 전송한다")
+    void onDirectMessageSse_delegatesToSseSender() {
         // given
         UUID receiverId = UUID.randomUUID();
-        DirectMessagePayload payload = dmPayload(receiverId);
+        DirectMessageResponse message = dmMessage(receiverId);
 
         // when
-        listener.onDirectMessageCreated(new DirectMessageCreatedEvent(payload));
+        listener.onDirectMessageSse(new DirectMessageSseEvent(message));
 
         // then
         verify(sseSender).sendToUser(eq(receiverId), any(SseEmitter.SseEventBuilder.class));
@@ -66,7 +67,7 @@ class SseNotificationListenerTest {
                 "팔로우 알림", "내용", NotificationLevel.INFO, Instant.now());
     }
 
-    private DirectMessagePayload dmPayload(UUID receiverId) {
-        return new DirectMessagePayload(UUID.randomUUID(), receiverId, "안녕하세요", Instant.now());
+    private DirectMessageResponse dmMessage(UUID receiverId) {
+        return DirectMessageTestFixtures.dmMessage(receiverId);
     }
 }

@@ -2,19 +2,19 @@ package com.codeit.team5.mopl.auth.controller;
 
 import com.codeit.team5.mopl.auth.controller.api.AuthApi;
 import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
-import com.codeit.team5.mopl.auth.service.PasswordResetService;
-import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
 import com.codeit.team5.mopl.auth.service.AuthService;
+import com.codeit.team5.mopl.auth.service.PasswordResetService;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
+import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 public class AuthController implements AuthApi {
+
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
     private final RefreshTokenCookieManager cookieManager;
