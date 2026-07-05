@@ -30,7 +30,7 @@ public class MoplUserDetails implements UserDetails, MoplPrincipal {
 
     @Override
     public String getUsername() {
-        return authUser.email();
+        return authUser.id().toString();
     }
 
     @Override
