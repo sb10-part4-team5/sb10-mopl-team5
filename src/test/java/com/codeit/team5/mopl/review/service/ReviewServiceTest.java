@@ -66,11 +66,11 @@ class ReviewServiceTest {
         UUID lastId = UUID.randomUUID();
 
         Review r0 = mock(Review.class);
-        Review r1 = mock(Review.class);
+        Review r1 = mock(Review.class); // 첫 번쨰 페이지 마지막 리뷰 요소
         Review r2 = mock(Review.class);
         given(r0.getAuthorId()).willReturn(authorId);
         given(r1.getAuthorId()).willReturn(authorId);
-        given(r1.getCreatedAt()).willReturn(lastCreatedAt);
+        given(r1.getCreatedAt()).willReturn(lastCreatedAt); // 해당 리뷰에 cursor&idAfter 삽입
         given(r1.getId()).willReturn(lastId);
 
         given(reviewRepository.findPageByContentId(contentId, null, null, Limit.of(3), "createdAt", false))
@@ -191,8 +191,9 @@ class ReviewServiceTest {
         User user = mock(User.class);
         ReviewResponse response = mock(ReviewResponse.class);
 
+        // reviewService.createReview 내에서 실행되는 타 계층 반환값들 세팅
         given(contentRepository.findById(contentId)).willReturn(Optional.of(content));
-        given(reviewRepository.existsByContent_IdAndAuthorId(contentId, authorId)).willReturn(false);
+        given(reviewRepository.existsByContent_IdAndAuthorId(contentId, authorId)).willReturn(false); // 리뷰 중복 작성 여부
         given(reviewRepository.saveAndFlush(any())).willReturn(saved);
         given(saved.getAuthorId()).willReturn(authorId);
         given(saved.getId()).willReturn(UUID.randomUUID());
@@ -247,6 +248,7 @@ class ReviewServiceTest {
         UUID contentId = UUID.randomUUID();
         ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋아요", 4.5);
 
+        // createReview 호출 시 호출되는 메서드들 반환 값 세팅
         given(contentRepository.findById(contentId)).willReturn(Optional.of(mock(Content.class)));
         given(reviewRepository.existsByContent_IdAndAuthorId(contentId, authorId)).willReturn(false);
 
@@ -291,6 +293,7 @@ class ReviewServiceTest {
         UUID reviewId = UUID.randomUUID();
         UUID authorId = UUID.randomUUID();
 
+        // 존재하지 않는 리뷰 -> Optional<> 반환
         given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
 
         // when & then
@@ -358,7 +361,7 @@ class ReviewServiceTest {
 
         Review review = mock(Review.class);
         given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
-        given(review.getAuthorId()).willReturn(otherId);
+        given(review.getAuthorId()).willReturn(otherId); // review.authorId = other
 
         // when & then
         assertThatThrownBy(() -> reviewService.deleteReview(reviewId, authorId))
