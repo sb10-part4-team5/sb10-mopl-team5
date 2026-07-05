@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -16,13 +18,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.mapper.ContentMapperImpl;
 import com.codeit.team5.mopl.content.mapper.util.ContentUtilsMapperImpl;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.playlist.constant.PlaylistSortBy;
 import com.codeit.team5.mopl.playlist.dto.PlaylistContentsDto;
+import com.codeit.team5.mopl.playlist.dto.PlaylistCursorCommand;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistCreateRequest;
 import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
 import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
@@ -82,6 +88,7 @@ class PlaylistServiceTest {
 
         playlist = Playlist.of(user, "My Playlist", "Description");
         ReflectionTestUtils.setField(playlist, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(playlist, "updatedAt", Instant.now());
     }
 
     @Test
@@ -107,8 +114,7 @@ class PlaylistServiceTest {
     void create_fail_userNotFound() {
         // given
         PlaylistCreateRequest request = new PlaylistCreateRequest("Title", "Desc");
-        given(userRepository.findWithProfileImageById(any()))
-                .willReturn(Optional.empty());
+        given(userRepository.findWithProfileImageById(any())).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> playlistService.create(UUID.randomUUID(), request))
@@ -172,8 +178,7 @@ class PlaylistServiceTest {
         given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
         given(playlistRepository.findByIdWithContents(playlist.getId(), user.getId())).willReturn(
-                Optional.of(new PlaylistContentsDto(playlist,
-                        Collections.emptyList(), false)));
+                Optional.of(new PlaylistContentsDto(playlist, Collections.emptyList(), false)));
 
         // when
         PlaylistResponse response = playlistService.update(playlist.getId(), user.getId(), request);
@@ -188,9 +193,8 @@ class PlaylistServiceTest {
     void update_fail_accessDenied() {
         // given
         PlaylistUpdateRequest request = new PlaylistUpdateRequest("Updated Title", "Updated Desc");
-        given(playlistRepository.existsByIdAndOwnerId(
-                eq(playlist.getId()),
-                any(UUID.class))).willReturn(false);
+        given(playlistRepository.existsByIdAndOwnerId(eq(playlist.getId()), any(UUID.class)))
+                .willReturn(false);
 
         // when & then
         assertThatThrownBy(
@@ -216,9 +220,8 @@ class PlaylistServiceTest {
     @DisplayName("플레이리스트 삭제 실패 - 권한 없음")
     void delete_fail_accessDenied() {
         // given
-        given(playlistRepository.existsByIdAndOwnerId(
-                eq(playlist.getId()),
-                any(UUID.class))).willReturn(false);
+        given(playlistRepository.existsByIdAndOwnerId(eq(playlist.getId()), any(UUID.class)))
+                .willReturn(false);
 
         // when & then
         assertThatThrownBy(() -> playlistService.delete(playlist.getId(), UUID.randomUUID()))
@@ -270,9 +273,8 @@ class PlaylistServiceTest {
     void addContent_fail_accessDenied() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerId(
-                eq(playlist.getId()),
-                any(UUID.class))).willReturn(false);
+        given(playlistRepository.existsByIdAndOwnerId(eq(playlist.getId()), any(UUID.class)))
+                .willReturn(false);
 
         // when & then
         assertThatThrownBy(
@@ -300,9 +302,8 @@ class PlaylistServiceTest {
     void removeContent_fail_accessDenied() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(playlistRepository.existsByIdAndOwnerId(
-                eq(playlist.getId()),
-                any(UUID.class))).willReturn(false);
+        given(playlistRepository.existsByIdAndOwnerId(eq(playlist.getId()), any(UUID.class)))
+                .willReturn(false);
 
         // when & then
         assertThatThrownBy(
@@ -325,5 +326,56 @@ class PlaylistServiceTest {
         assertThatThrownBy(
                 () -> playlistService.removeContent(user.getId(), playlist.getId(), contentId))
                         .isInstanceOf(PlaylistItemNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("커서 기반 페이징 성공 - 다음 페이지가 있는 경우")
+    void findByCursor_success_hasNext() {
+        PlaylistCursorCommand command =
+                PlaylistCursorCommand.builder().limit(2).sortBy(PlaylistSortBy.UPDATED_AT)
+                        .sortDirection(org.springframework.data.domain.Sort.Direction.DESC).build();
+
+        PlaylistContentsDto dto1 =
+                new PlaylistContentsDto(playlist, Collections.emptyList(), false);
+        PlaylistContentsDto dto2 =
+                new PlaylistContentsDto(playlist, Collections.emptyList(), false);
+        PlaylistContentsDto dto3 =
+                new PlaylistContentsDto(playlist, Collections.emptyList(), false);
+        List<PlaylistContentsDto> mockResult = Arrays.asList(dto1, dto2, dto3); // 3개 (limit 2 + 1)
+
+        given(playlistRepository.findByCursor(command, user.getId())).willReturn(mockResult);
+        given(playlistRepository.countByCommand(command)).willReturn(10L);
+
+        // when
+        CursorResponse<PlaylistResponse> response =
+                playlistService.findByCursor(command, user.getId());
+
+        // then
+        assertThat(response.data()).hasSize(2);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(response.totalCount()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("커서 기반 페이징 성공 - 다음 페이지가 없는 경우")
+    void findByCursor_success_noNext() {
+        PlaylistCursorCommand command = PlaylistCursorCommand.builder().limit(5)
+                .sortBy(PlaylistSortBy.UPDATED_AT).sortDirection(Sort.Direction.DESC).build();
+
+        PlaylistContentsDto dto1 =
+                new PlaylistContentsDto(playlist, Collections.emptyList(), false);
+        List<PlaylistContentsDto> mockResult = List.of(dto1); // 1개 (limit 5)
+
+        given(playlistRepository.findByCursor(command, user.getId())).willReturn(mockResult);
+        given(playlistRepository.countByCommand(command)).willReturn(1L);
+
+        // when
+        CursorResponse<PlaylistResponse> response =
+                playlistService.findByCursor(command, user.getId());
+
+        // then
+        assertThat(response.data()).hasSize(1);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.totalCount()).isEqualTo(1L);
     }
 }
