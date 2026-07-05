@@ -10,13 +10,12 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @Configuration
 class StompAsyncConfig {
 
-  @Bean("stompWorker")
-  public Executor stompWorker(ThreadPoolTaskExecutorBuilder builder) {
-    return builder
-        .corePoolSize(10)
-        .maxPoolSize(30)
-        .queueCapacity(20)
-        .threadNamePrefix("stomp-Async-")
-        .build();
-  }
+    @Bean("stompWorker")
+    public Executor stompWorker(ThreadPoolTaskExecutorBuilder builder) {
+        return builder.corePoolSize(10)
+                .maxPoolSize(30)
+                .queueCapacity(20)
+                .threadNamePrefix("stomp-Async-")
+                .build();
+    }
 }
