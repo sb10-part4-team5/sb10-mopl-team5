@@ -316,7 +316,7 @@ class ReviewServiceTest {
 
         // when & then
         assertThatThrownBy(() -> reviewService.updateReview(
-            reviewId, authorId, new ReviewUpdateRequest(null, null)))
+            reviewId, authorId, new ReviewUpdateRequest("수정내용", 4.0)))
             .isInstanceOf(ReviewForbiddenException.class);
     }
 
