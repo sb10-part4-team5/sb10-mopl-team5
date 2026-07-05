@@ -1,17 +1,12 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.listener;
 
-import java.util.UUID;
-
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-
-import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 import java.security.Principal;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +18,9 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
 @ExtendWith(MockitoExtension.class)
 class StompDisconnectEventHandlerTest {
@@ -31,7 +29,7 @@ class StompDisconnectEventHandlerTest {
     private WebSocketSessionStore sessionStore;
 
     @Mock
-    private WatchingSessionService watchingSessionService;
+    private WatchingSessionCommandService watchingSessionService;
 
     @InjectMocks
     private StompDisconnectEventHandler listener;
@@ -47,17 +45,17 @@ class StompDisconnectEventHandlerTest {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
         accessor.setUser(mockPrincipal);
 
-        Message<byte[]> message = MessageBuilder.createMessage(new byte[0],
-                accessor.getMessageHeaders());
-        SessionDisconnectEvent event = new SessionDisconnectEvent(this, message, "session-id",
-                null);
+        Message<byte[]> message =
+                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+        SessionDisconnectEvent event =
+                new SessionDisconnectEvent(this, message, "session-id", null);
 
         // when
         listener.handleWebSocketDisconnectListener(event);
 
         // then
         verify(sessionStore).disconnect(userId);
-        verify(watchingSessionService).delete(userId);
+        verify(watchingSessionService).left(userId);
     }
 
     @Test
@@ -65,10 +63,10 @@ class StompDisconnectEventHandlerTest {
     void handleWebSocketDisconnectListener_NoUser() {
         // given
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
-        Message<byte[]> message = MessageBuilder.createMessage(new byte[0],
-                accessor.getMessageHeaders());
-        SessionDisconnectEvent event = new SessionDisconnectEvent(this, message, "session-id",
-                null);
+        Message<byte[]> message =
+                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+        SessionDisconnectEvent event =
+                new SessionDisconnectEvent(this, message, "session-id", null);
 
         // when
         listener.handleWebSocketDisconnectListener(event);
@@ -89,19 +87,19 @@ class StompDisconnectEventHandlerTest {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
         accessor.setUser(mockPrincipal);
 
-        Message<byte[]> message = MessageBuilder.createMessage(new byte[0],
-                accessor.getMessageHeaders());
-        SessionDisconnectEvent event = new SessionDisconnectEvent(this, message, "session-id",
-                null);
+        Message<byte[]> message =
+                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+        SessionDisconnectEvent event =
+                new SessionDisconnectEvent(this, message, "session-id", null);
 
-        doThrow(new WatchingSessionNotFoundException(java.util.Map.of("userId", userId))).when(watchingSessionService)
-                .delete(userId);
+        doThrow(new WatchingSessionNotFoundException(java.util.Map.of("userId", userId)))
+                .when(watchingSessionService).left(userId);
 
         // when
         listener.handleWebSocketDisconnectListener(event);
 
         // then
         verify(sessionStore).disconnect(userId);
-        verify(watchingSessionService).delete(userId);
+        verify(watchingSessionService).left(userId);
     }
 }

@@ -11,7 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -32,5 +32,5 @@ public abstract class BaseStompInboundChannelTest {
     protected WebSocketSessionStore sessionStore;
 
     @MockitoBean
-    protected WatchingSessionService watchingSessionService;
+    protected WatchingSessionCommandService watchingSessionService;
 }

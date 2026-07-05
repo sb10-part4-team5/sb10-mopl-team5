@@ -17,7 +17,7 @@ import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
 @ExtendWith(MockitoExtension.class)
 class WatchingContentSubscribeHandlerTest {
@@ -26,7 +26,7 @@ class WatchingContentSubscribeHandlerTest {
     private WebSocketSessionStore sessionStore;
 
     @Mock
-    private WatchingSessionService service;
+    private WatchingSessionCommandService service;
 
     @Mock
     private WatchingSessionPayloadSender payloadSender;
@@ -35,25 +35,33 @@ class WatchingContentSubscribeHandlerTest {
     private WatchingContentSubscribeHandler handler;
 
     @Test
-    @DisplayName("doHandle 호출 시 세션을 생성하고 참여 메시지를 브로드캐스트한다_성공")
-    void doHandle_Success() {
+    @DisplayName("handle 호출 시 세션을 생성하고 참여 메시지 브로드캐스트 및 sessionStore 구독이 발생한다")
+    void handle_Success() {
         // Given
         UUID contentId = UUID.randomUUID();
-        UUID email = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String subscriptionId = "sub-0";
+        String destination = "/sub/contents/" + contentId + "/watch";
+
         WatchingSessionResponse response = WatchingSessionResponse.builder().build();
         long watchCount = 5L;
+        WatchingSessionPayload payload =
+                new WatchingSessionPayload(WatcherStatus.JOIN, response, watchCount);
 
-        given(service.create(contentId, email)).willReturn(response);
-        given(service.getCurrentWatchingContentView(contentId)).willReturn(watchCount);
+        given(service.join(contentId, userId)).willReturn(payload);
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setDestination(destination);
+        accessor.setSubscriptionId(subscriptionId);
+        accessor.setUser(() -> userId.toString());
 
         // When
-        handler.doHandle(contentId, email);
+        handler.handle(accessor);
 
         // Then
-        verify(service).create(contentId, email);
-        verify(service).getCurrentWatchingContentView(contentId);
-        verify(payloadSender).send(contentId,
-                new WatchingSessionPayload(WatcherStatus.JOIN, response, watchCount));
+        verify(service).join(contentId, userId);
+        verify(payloadSender).send(contentId, payload);
+        verify(sessionStore).subscribe(userId, subscriptionId, destination);
     }
 
     @Test

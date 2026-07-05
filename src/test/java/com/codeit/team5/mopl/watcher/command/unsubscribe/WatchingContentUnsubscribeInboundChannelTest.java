@@ -1,139 +1,108 @@
 package com.codeit.team5.mopl.watcher.command.unsubscribe;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import com.codeit.team5.mopl.global.web.ws.stomp.base.BaseStompInboundChannelTest;
+import com.codeit.team5.mopl.global.web.ws.stomp.handler.StompCommandHandler;
+import com.codeit.team5.mopl.global.web.ws.stomp.interceptor.StompInterceptor;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
-class WatchingContentUnsubscribeInboundChannelTest extends BaseStompInboundChannelTest {
+@ExtendWith(MockitoExtension.class)
+class WatchingContentUnsubscribeInboundChannelTest {
 
-    @Autowired
-    private WatchingContentUnsubscribeHandler handler;
+        @Mock
+        private WebSocketSessionStore sessionStore;
 
-    @MockitoBean
-    private WatchingSessionPayloadSender payloadSender;
+        @Mock
+        private WatchingSessionCommandService watchingSessionCommandService;
 
-    @Test
-    @DisplayName("STOMP UNSUBSCRIBE 메시지(watch)가 인입되면 WatchingContentUnsubscribeHandler가 처리한다")
-    void inboundWatchingContentUnsubscribeTest() {
-        // given
-        UUID testUserId = UUID.randomUUID();
-        UUID contentId = UUID.randomUUID();
-        String subscriptionId = "sub-002";
-        String storedDestination = "/sub/contents/" + contentId + "/watch";
+        @Mock
+        private WatchingSessionPayloadSender payloadSender;
 
-        // Unsubscribe 목적지 조회 모킹
-        when(sessionStore.getDestination(testUserId, subscriptionId)).thenReturn(storedDestination);
+        @Mock
+        private MessageChannel messageChannel;
 
-        WatchingSessionResponse fakeResponse =
-                new WatchingSessionResponse(testUserId, null, null, null);
-        when(watchingSessionService.findSessionByWatchId(testUserId)).thenReturn(fakeResponse);
-        when(watchingSessionService.getCurrentWatchingContentView(contentId)).thenReturn(4L);
+        private StompInterceptor stompInterceptor;
 
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setSubscriptionId(subscriptionId);
-        accessor.setUser(new UsernamePasswordAuthenticationToken(testUserId.toString(), null,
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+        @BeforeEach
+        void setUp() {
+                WatchingContentUnsubscribeHandler handler = new WatchingContentUnsubscribeHandler(
+                                sessionStore, watchingSessionCommandService, payloadSender);
+                stompInterceptor = new StompInterceptor(List.of((StompCommandHandler) handler));
+        }
 
-        Message<byte[]> message =
-                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+        @Test
+        @DisplayName("STOMP UNSUBSCRIBE 요청 시 세션 삭제 및 브로드캐스트 수행")
+        void testUnsubscribeWatchingContentFlow() {
+                // Given
+                UUID testUserId = UUID.randomUUID();
+                UUID contentId = UUID.randomUUID();
+                String destination = "/sub/contents/" + contentId + "/watch";
+                String subscriptionId = "sub-0";
 
-        // when
-        clientInboundChannel.send(message);
+                StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
+                accessor.setSubscriptionId(subscriptionId);
+                accessor.setUser(() -> testUserId.toString());
+                Message<byte[]> message = MessageBuilder.createMessage(new byte[0],
+                                accessor.getMessageHeaders());
 
-        // then
-        // 1. SessionStore 구독 해제 확인
-        verify(sessionStore).unsubscribe(testUserId, subscriptionId);
+                when(sessionStore.getDestination(testUserId, subscriptionId))
+                                .thenReturn(destination);
 
-        // 2. Service.delete() 등 내부 로직 호출 확인
-        verify(watchingSessionService).ensureWatchingContent(testUserId, contentId);
-        verify(watchingSessionService).delete(testUserId);
+                WatchingSessionResponse fakeResponse = WatchingSessionResponse.builder().build();
+                WatchingSessionPayload payload =
+                                new WatchingSessionPayload(WatcherStatus.LEAVE, fakeResponse, 4L);
 
-        // 3. PayloadSender 이벤트 발행 확인
-        verify(payloadSender).send(eq(contentId), any(WatchingSessionPayload.class));
-    }
+                when(watchingSessionCommandService.left(testUserId)).thenReturn(payload);
 
-    @Test
-    @DisplayName("STOMP UNSUBSCRIBE 메시지에 연결된 구독 목적지가 유효한 UUID가 아니면 IllegalArgumentException 예외가 발생한다_실패")
-    void inboundUnsubscribeTest_Fail_InvalidDestinationId() {
-        // given
-        UUID testUserId = UUID.randomUUID();
-        String subscriptionId = "sub-invalid";
-        String storedDestination = "/sub/contents/invalid-uuid-string/watch";
+                // When
+                stompInterceptor.preSend(message, messageChannel);
 
-        when(sessionStore.getDestination(testUserId, subscriptionId)).thenReturn(storedDestination);
+                // Then
+                verify(watchingSessionCommandService).left(testUserId);
+                verify(payloadSender).send(eq(contentId), eq(payload));
+                verify(sessionStore).unsubscribe(testUserId, subscriptionId);
+        }
 
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setSubscriptionId(subscriptionId);
-        accessor.setUser(new UsernamePasswordAuthenticationToken(testUserId.toString(), null,
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+        @Test
+        @DisplayName("다른 목적지로 UNSUBSCRIBE 시 핸들러 동작 안 함")
+        void testUnsubscribeOtherDestination() {
+                // Given
+                UUID testUserId = UUID.randomUUID();
+                String subscriptionId = "sub-1";
+                StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
+                accessor.setSubscriptionId(subscriptionId);
+                accessor.setUser(() -> testUserId.toString());
+                Message<byte[]> message = MessageBuilder.createMessage(new byte[0],
+                                accessor.getMessageHeaders());
 
-        Message<byte[]> message =
-                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+                when(sessionStore.getDestination(testUserId, subscriptionId))
+                                .thenReturn("/sub/contents/123/chat");
 
-        // when & then
-        assertThatThrownBy(() -> clientInboundChannel.send(message)).cause()
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid destination id format");
-    }
+                // When
+                stompInterceptor.preSend(message, messageChannel);
 
-    @Test
-    @DisplayName("canHandle은 커맨드와 목적지가 일치할 때 true를 반환한다")
-    void canHandle_True() {
-        // given
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setDestination("/sub/contents/1234/watch");
-
-        // when
-        boolean result = handler.canHandle(accessor);
-
-        // then
-        assertThat(result).isTrue();
-    }
-
-    @Test
-    @DisplayName("canHandle은 목적지가 불일치할 때 false를 반환한다")
-    void canHandle_False_MismatchDestination() {
-        // given
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setDestination("/sub/contents/1234/chat"); // 불일치
-
-        // when
-        boolean result = handler.canHandle(accessor);
-
-        // then
-        assertThat(result).isFalse();
-    }
-
-    @Test
-    @DisplayName("canHandle은 커맨드가 불일치할 때 false를 반환한다")
-    void canHandle_False_MismatchCommand() {
-        // given
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND); // 불일치
-        accessor.setDestination("/sub/contents/1234/watch");
-
-        // when
-        boolean result = handler.canHandle(accessor);
-
-        // then
-        assertThat(result).isFalse();
-    }
+                // Then
+                verifyNoInteractions(watchingSessionCommandService);
+                verifyNoInteractions(payloadSender);
+        }
 }

@@ -2,12 +2,12 @@ package com.codeit.team5.mopl.watcher.command.unsubscribe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,7 +18,7 @@ import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
 @ExtendWith(MockitoExtension.class)
 class WatchingContentUnsubscribeHandlerTest {
@@ -27,7 +27,7 @@ class WatchingContentUnsubscribeHandlerTest {
     private WebSocketSessionStore sessionStore;
 
     @Mock
-    private WatchingSessionService service;
+    private WatchingSessionCommandService service;
 
     @Mock
     private WatchingSessionPayloadSender payloadSender;
@@ -36,35 +36,40 @@ class WatchingContentUnsubscribeHandlerTest {
     private WatchingContentUnsubscribeHandler handler;
 
     @Test
-    @DisplayName("doHandle 호출 시 세션을 검증, 삭제하고 퇴장 메시지를 브로드캐스트한다_성공")
-    void doHandle_Success() {
+    @DisplayName("handle 호출 시 세션을 삭제하고 퇴장 메시지 브로드캐스트 및 sessionStore 구독 해제가 발생한다")
+    void handle_Success() {
         // Given
         UUID contentId = UUID.randomUUID();
-        UUID email = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String subscriptionId = "sub-0";
+        String destination = "/sub/contents/" + contentId + "/watch";
+
         WatchingSessionResponse response = WatchingSessionResponse.builder().build();
         long watchCount = 4L;
+        WatchingSessionPayload payload =
+                new WatchingSessionPayload(WatcherStatus.LEAVE, response, watchCount);
 
-        given(service.findSessionByWatchId(email)).willReturn(response);
-        given(service.getCurrentWatchingContentView(contentId)).willReturn(watchCount);
+        given(service.left(userId)).willReturn(payload);
+        when(sessionStore.getDestination(userId, subscriptionId)).thenReturn(destination);
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
+        accessor.setSubscriptionId(subscriptionId);
+        accessor.setUser(() -> userId.toString());
 
         // When
-        handler.doHandle(contentId, email);
+        handler.handle(accessor);
 
         // Then
-        InOrder inOrder = inOrder(service, payloadSender);
-        inOrder.verify(service).ensureWatchingContent(email, contentId);
-        inOrder.verify(service).findSessionByWatchId(email);
-        inOrder.verify(service).delete(email);
-        inOrder.verify(service).getCurrentWatchingContentView(contentId);
-        inOrder.verify(payloadSender).send(contentId,
-                new WatchingSessionPayload(WatcherStatus.LEAVE, response, watchCount));
+        verify(service).left(userId);
+        verify(payloadSender).send(contentId, payload);
+        verify(sessionStore).unsubscribe(userId, subscriptionId);
     }
 
     @Test
     @DisplayName("커맨드가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenCommandIsDifferent() {
         // Given
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
         accessor.setDestination("/sub/contents/123/watch");
 
         // When
@@ -78,8 +83,14 @@ class WatchingContentUnsubscribeHandlerTest {
     @DisplayName("목적지가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenDestinationIsDifferent() {
         // Given
+        UUID userId = UUID.randomUUID();
+        String subscriptionId = "sub-0";
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setDestination("/sub/contents/123/chat"); // watch가 아님
+        accessor.setSubscriptionId(subscriptionId);
+        accessor.setUser(() -> userId.toString());
+
+        when(sessionStore.getDestination(userId, subscriptionId))
+                .thenReturn("/sub/contents/123/chat");
 
         // When
         boolean result = handler.canHandle(accessor);
@@ -92,8 +103,14 @@ class WatchingContentUnsubscribeHandlerTest {
     @DisplayName("커맨드와 목적지가 모두 일치하면 canHandle은 true를 반환한다")
     void canHandle_True_WhenMatch() {
         // Given
+        UUID userId = UUID.randomUUID();
+        String subscriptionId = "sub-0";
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setDestination("/sub/contents/123/watch");
+        accessor.setSubscriptionId(subscriptionId);
+        accessor.setUser(() -> userId.toString());
+
+        when(sessionStore.getDestination(userId, subscriptionId))
+                .thenReturn("/sub/contents/123/watch");
 
         // When
         boolean result = handler.canHandle(accessor);

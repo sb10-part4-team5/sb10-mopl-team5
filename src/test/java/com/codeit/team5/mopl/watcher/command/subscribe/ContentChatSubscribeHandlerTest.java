@@ -12,7 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionQueryService;
 
 @ExtendWith(MockitoExtension.class)
 class ContentChatSubscribeHandlerTest {
@@ -21,23 +21,31 @@ class ContentChatSubscribeHandlerTest {
     private WebSocketSessionStore sessionStore;
 
     @Mock
-    private WatchingSessionService service;
+    private WatchingSessionQueryService service;
 
     @InjectMocks
     private ContentChatSubscribeHandler handler;
 
     @Test
-    @DisplayName("doHandle 호출 시 service의 ensureWatchingContent를 호출한다_성공")
-    void doHandle_Success() {
+    @DisplayName("handle 호출 시 service의 ensureWatchingContent 및 sessionStore.subscribe가 호출된다")
+    void handle_Success() {
         // Given
         UUID contentId = UUID.randomUUID();
-        UUID email = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String subscriptionId = "sub-0";
+        String destination = "/sub/contents/" + contentId + "/chat";
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setDestination(destination);
+        accessor.setSubscriptionId(subscriptionId);
+        accessor.setUser(() -> userId.toString());
 
         // When
-        handler.doHandle(contentId, email);
+        handler.handle(accessor);
 
         // Then
-        verify(service).ensureWatchingContent(email, contentId);
+        verify(service).ensureWatchingContent(userId, contentId);
+        verify(sessionStore).subscribe(userId, subscriptionId, destination);
     }
 
     @Test
