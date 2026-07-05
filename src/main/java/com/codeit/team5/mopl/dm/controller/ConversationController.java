@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.dm.controller;
 
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.dm.controller.api.ConversationApi;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
@@ -32,38 +32,38 @@ public class ConversationController implements ConversationApi {
     @Override
     @PostMapping
     public ResponseEntity<ConversationResponse> createConversation(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @Valid @RequestBody ConversationCreateRequest request) {
         log.info("Conversation create request: POST /api/conversations, withUser={}", request.withUserId());
         ConversationResponse response = conversationService.getOrCreateConversation(
-                userDetails.getId(), request.withUserId());
+                principal.getId(), request.withUserId());
         return ResponseEntity.ok(response);
     }
 
     @Override
     @GetMapping
     public ResponseEntity<CursorResponse<ConversationResponse>> getMyConversations(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @Valid ConversationCursorRequest request) {
-        log.info("Request API: GET /api/conversations, userId={}", userDetails.getId());
-        return ResponseEntity.ok(conversationService.findMyConversations(userDetails.getId(), request));
+        log.info("Request API: GET /api/conversations, userId={}", principal.getId());
+        return ResponseEntity.ok(conversationService.findMyConversations(principal.getId(), request));
     }
 
     @Override
     @GetMapping("/with")
     public ResponseEntity<ConversationResponse> getConversationWith(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @RequestParam UUID userId) {
-        log.info("Request API: GET /api/conversations/with, userId={}, withUserId={}", userDetails.getId(), userId);
-        return ResponseEntity.ok(conversationService.getConversationWith(userDetails.getId(), userId));
+        log.info("Request API: GET /api/conversations/with, userId={}, withUserId={}", principal.getId(), userId);
+        return ResponseEntity.ok(conversationService.getConversationWith(principal.getId(), userId));
     }
 
     @Override
     @GetMapping("/{conversationId}")
     public ResponseEntity<ConversationResponse> getConversation(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @PathVariable UUID conversationId) {
-        log.info("Request API: GET /api/conversations/{}, userId={}", conversationId, userDetails.getId());
-        return ResponseEntity.ok(conversationService.getConversation(userDetails.getId(), conversationId));
+        log.info("Request API: GET /api/conversations/{}, userId={}", conversationId, principal.getId());
+        return ResponseEntity.ok(conversationService.getConversation(principal.getId(), conversationId));
     }
 }

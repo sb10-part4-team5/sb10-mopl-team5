@@ -128,7 +128,7 @@ class SseNotificationListenerIntegrationTest {
         emitterStore.save(receiverId, mockEmitter);
 
         DirectMessageResponse message = dmMessage(receiverId);
-        String destination = StompConstants.conversationDmDestination(message.conversationId());
+        String destination = StompConstants.SUB_CONVERSATION_DM.replace("{id}", message.conversationId().toString());
         webSocketSessionStore.subscribe("active@mopl.com", "sub-1", destination);
 
         tx.executeWithoutResult(status ->

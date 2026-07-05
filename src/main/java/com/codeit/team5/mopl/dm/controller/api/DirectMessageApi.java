@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.dm.controller.api;
 
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
@@ -46,7 +46,7 @@ public interface DirectMessageApi {
                     schema = @Schema(type = "string", allowableValues = {"createdAt"}, defaultValue = "createdAt"))
     })
     ResponseEntity<CursorResponse<DirectMessageResponse>> getDirectMessages(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "대화 ID", required = true) @PathVariable UUID conversationId,
             @Parameter(hidden = true) DirectMessageCursorRequest request);
 
@@ -64,7 +64,7 @@ public interface DirectMessageApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<Void> markAsRead(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "대화 ID", required = true) @PathVariable UUID conversationId,
             @Parameter(description = "기준 메시지 ID", required = true) @PathVariable UUID directMessageId);
 }

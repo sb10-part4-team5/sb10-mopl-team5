@@ -14,7 +14,7 @@ public class WsActiveConversationChecker implements ActiveConversationChecker {
 
     @Override
     public boolean isViewing(UUID conversationId, String email) {
-        String destination = StompConstants.conversationDmDestination(conversationId);
+        String destination = StompConstants.SUB_CONVERSATION_DM.replace("{id}", conversationId.toString());
         return webSocketSessionStore.isSubscribed(email, destination);
     }
 }

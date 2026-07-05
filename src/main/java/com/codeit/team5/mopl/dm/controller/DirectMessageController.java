@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.dm.controller;
 
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.dm.controller.api.DirectMessageApi;
 import com.codeit.team5.mopl.dm.dto.request.DirectMessageCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
@@ -29,21 +29,21 @@ public class DirectMessageController implements DirectMessageApi {
     @Override
     @GetMapping
     public ResponseEntity<CursorResponse<DirectMessageResponse>> getDirectMessages(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @PathVariable UUID conversationId,
             @Valid DirectMessageCursorRequest request) {
         log.info("Request API: GET /api/conversations/{}/direct-messages", conversationId);
-        return ResponseEntity.ok(directMessageService.getMessages(userDetails.getId(), conversationId, request));
+        return ResponseEntity.ok(directMessageService.getMessages(principal.getId(), conversationId, request));
     }
 
     @Override
     @PostMapping("/{directMessageId}/read")
     public ResponseEntity<Void> markAsRead(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @PathVariable UUID conversationId,
             @PathVariable UUID directMessageId) {
         log.info("Request API: POST /api/conversations/{}/direct-messages/{}/read", conversationId, directMessageId);
-        directMessageService.markMessagesAsRead(userDetails.getId(), conversationId, directMessageId);
+        directMessageService.markMessagesAsRead(principal.getId(), conversationId, directMessageId);
         return ResponseEntity.ok().build();
     }
 }

@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.dm.controller.api;
 
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCreateRequest;
 import com.codeit.team5.mopl.dm.dto.request.ConversationCursorRequest;
 import com.codeit.team5.mopl.dm.dto.response.ConversationResponse;
@@ -39,7 +39,7 @@ public interface ConversationApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<ConversationResponse> createConversation(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "대화 생성 요청 본문", required = true)
             @Valid @RequestBody ConversationCreateRequest request);
 
@@ -66,7 +66,7 @@ public interface ConversationApi {
                     schema = @Schema(type = "string", allowableValues = {"createdAt"}, defaultValue = "createdAt"))
     })
     ResponseEntity<CursorResponse<ConversationResponse>> getMyConversations(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(hidden = true) ConversationCursorRequest request);
 
     @Operation(operationId = "getConversationWith", summary = "특정 사용자와의 대화 조회",
@@ -82,7 +82,7 @@ public interface ConversationApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<ConversationResponse> getConversationWith(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "상대 사용자 ID", required = true) @RequestParam UUID userId);
 
     @Operation(operationId = "getConversation", summary = "대화 단건 조회")
@@ -99,6 +99,6 @@ public interface ConversationApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<ConversationResponse> getConversation(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "대화 ID", required = true) @PathVariable UUID conversationId);
 }

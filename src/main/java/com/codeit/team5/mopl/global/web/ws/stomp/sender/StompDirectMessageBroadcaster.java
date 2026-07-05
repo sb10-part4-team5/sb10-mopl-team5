@@ -18,7 +18,7 @@ public class StompDirectMessageBroadcaster implements DirectMessageBroadcaster {
 
     @Override
     public void broadcast(DirectMessageResponse message) {
-        String destination = StompConstants.conversationDmDestination(message.conversationId());
+        String destination = StompConstants.SUB_CONVERSATION_DM.replace("{id}", message.conversationId().toString());
         messagingTemplate.convertAndSend(destination, message);
     }
 }
