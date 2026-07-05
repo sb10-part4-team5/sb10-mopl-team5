@@ -57,6 +57,13 @@ class ReviewServiceTest {
     private ReviewService reviewService;
 
     @Test
+    @DisplayName("리뷰 조회 시 createdAt 기준 내림차순 Descending 조회를 확인한다.")
+    void getReviews_get_createdAtCursor_descending(){
+
+    }
+
+
+    @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 자르고 createdAt 기준 nextCursor를 채운다")
     void getReviews_hasNext_createdAtCursor() {
         // given
@@ -152,6 +159,31 @@ class ReviewServiceTest {
         assertThat(result.hasNext()).isFalse();
         assertThat(result.nextCursor()).isNull();
         assertThat(result.nextIdAfter()).isNull();
+    }
+
+    @Test
+    @DisplayName("sortDirection이 ASCENDING이면 ascending=true로 리포지토리를 호출한다")
+    void getReviews_ascending() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+
+        Review r0 = mock(Review.class);
+        given(r0.getAuthorId()).willReturn(authorId);
+        given(reviewRepository.findPageByContentId(contentId, null, null, Limit.of(3), "createdAt", true))
+            .willReturn(List.of(r0));
+        given(reviewRepository.countByContent_Id(contentId)).willReturn(1L);
+        User user = mock(User.class);
+        given(user.getId()).willReturn(authorId);
+        given(userRepository.findAllById(anyList())).willReturn(List.of(user));
+        given(reviewMapper.toDto(any(), any())).willReturn(mock(ReviewResponse.class));
+
+        // when
+        CursorResponse<ReviewResponse> result = reviewService.getReviews(
+            contentId, null, null, 2, "ASCENDING", "createdAt");
+
+        // then
+        assertThat(result.hasNext()).isFalse();
     }
 
     @Test
