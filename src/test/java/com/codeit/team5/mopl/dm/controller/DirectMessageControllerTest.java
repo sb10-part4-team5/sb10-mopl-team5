@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
@@ -68,6 +69,9 @@ class DirectMessageControllerTest {
 
     @MockitoBean
     private DirectMessageService directMessageService;
+
+    @MockitoBean
+    private JwtAuthenticationService jwtAuthenticationService;
 
     @MockitoBean
     private JwtTokenizer jwtTokenizer;
