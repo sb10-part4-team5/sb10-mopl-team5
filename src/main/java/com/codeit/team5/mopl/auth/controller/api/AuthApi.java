@@ -40,11 +40,11 @@ public interface AuthApi {
             @ApiResponse(responseCode = "200", description = "로그인 성공",
                     content = @Content(schema = @Schema(implementation = JwtResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청(입력값 검증 실패)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "이메일 또는 비밀번호 불일치",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping(path = "/sign-in", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     default ResponseEntity<JwtResponse> login(
@@ -60,9 +60,9 @@ public interface AuthApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "로그아웃 성공"),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/sign-out")
     default ResponseEntity<Void> logout(
@@ -80,9 +80,9 @@ public interface AuthApi {
             @ApiResponse(responseCode = "200", description = "토큰 재발급 성공",
                     content = @Content(schema = @Schema(implementation = JwtResponse.class))),
             @ApiResponse(responseCode = "401", description = "Refresh Token이 없거나 유효하지 않음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<JwtResponse> refresh(
             @Parameter(description = "Refresh Token Cookie", required = false)
@@ -97,7 +97,7 @@ public interface AuthApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "CSRF Token 발급 성공"),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> csrfToken(
             @Parameter(hidden = true) CsrfToken csrfToken
