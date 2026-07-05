@@ -50,7 +50,7 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public CursorResponse<ReviewResponse> getReviews(ReviewGetRequest request) {
         UUID contentId = request.contentId();
-        String cursor = request.cursor();
+        String cursor = (request.cursor() != null && !request.cursor().isBlank()) ? request.cursor() : null;
         UUID idAfter = request.idAfter();
         int limit = request.limit() != null ? request.limit() : DEFAULT_LIMIT;
         Direction direction = request.sortDirection() != null ? request.sortDirection() : DEFAULT_DIRECTION;
