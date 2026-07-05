@@ -4,5 +4,5 @@ import java.util.UUID;
 
 public interface ActiveConversationChecker {
 
-    boolean isViewing(UUID conversationId, String email);
+    boolean isViewing(UUID conversationId, UUID userId);
 }

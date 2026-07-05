@@ -34,9 +34,4 @@ public class WebSocketSecurityConfig {
                 .authenticated().simpDestMatchers(pubWatchingContentChatPattern).authenticated()
                 .anyMessage().permitAll().build();
     }
-
-    @Bean("csrfChannelInterceptor")
-    public ChannelInterceptor csrfChannelInterceptor() {
-        return new ChannelInterceptor() {};
-    }
 }
