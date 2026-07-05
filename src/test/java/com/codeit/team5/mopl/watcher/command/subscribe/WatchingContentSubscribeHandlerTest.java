@@ -3,13 +3,6 @@ package com.codeit.team5.mopl.watcher.command.subscribe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-
-import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
-import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
-import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
+import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
+import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
+import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionService;
 
 @ExtendWith(MockitoExtension.class)
 class WatchingContentSubscribeHandlerTest {
@@ -53,15 +52,15 @@ class WatchingContentSubscribeHandlerTest {
         // Then
         verify(service).create(contentId, email);
         verify(service).getCurrentWatchingContentView(contentId);
-        verify(payloadSender).send(contentId, new WatchingSessionPayload(WatcherStatus.JOIN, response, watchCount));
+        verify(payloadSender).send(contentId,
+                new WatchingSessionPayload(WatcherStatus.JOIN, response, watchCount));
     }
 
     @Test
     @DisplayName("커맨드가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenCommandIsDifferent() {
         // Given
-        StompHeaderAccessor accessor =
-            StompHeaderAccessor.create(StompCommand.SEND);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
         accessor.setDestination("/sub/contents/123/watch");
 
         // When
@@ -75,8 +74,7 @@ class WatchingContentSubscribeHandlerTest {
     @DisplayName("목적지가 다르면 canHandle은 false를 반환한다")
     void canHandle_False_WhenDestinationIsDifferent() {
         // Given
-        StompHeaderAccessor accessor =
-            StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
         accessor.setDestination("/sub/contents/123/chat"); // watch가 아님
 
         // When
@@ -90,8 +88,7 @@ class WatchingContentSubscribeHandlerTest {
     @DisplayName("커맨드와 목적지가 모두 일치하면 canHandle은 true를 반환한다")
     void canHandle_True_WhenMatch() {
         // Given
-        StompHeaderAccessor accessor =
-            StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
         accessor.setDestination("/sub/contents/123/watch");
 
         // When
@@ -101,4 +98,3 @@ class WatchingContentSubscribeHandlerTest {
         assertThat(result).isTrue();
     }
 }
-
