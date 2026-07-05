@@ -128,7 +128,7 @@ class AuthServiceTest {
                 .maxAge(420 * 60)
                 .build();
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
         when(jwtTokenizer.generateAccessToken(userId.toString(), userResponse.email(), userResponse.role()))
                 .thenReturn(accessToken);

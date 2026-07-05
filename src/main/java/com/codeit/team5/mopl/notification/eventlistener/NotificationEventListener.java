@@ -1,9 +1,10 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
@@ -14,6 +15,8 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -25,14 +28,16 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final FollowRepository followRepository;
 
-    // DM을 수신받으면 알림을 생성
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onDirectMessageSent(DirectMessageSentEvent event){
+    // 비활성 대화에 DM이 도착하면 알림을 생성 (SSE 전송과는 독립)
+    @Async("dmEventExecutor")
+    @EventListener
+    public void onDirectMessageNotification(DirectMessageNotificationEvent event){
+        DirectMessageResponse message = event.message();
         // 알림의 제목
-        String title = "[DM] " + event.senderNickname();
+        String title = "[DM] " + message.sender().name();
         // DM 내용이 길면 50자로 줄여서 보여줌
-        String content = StringUtils.truncate(event.content(), 50);
-        notificationService.create(event.receiverId(), NotificationType.DIRECT_MESSAGE,
+        String content = StringUtils.truncate(message.content(), 50);
+        notificationService.create(message.receiver().userId(), NotificationType.DIRECT_MESSAGE,
             title, content, NotificationLevel.INFO);
     }
 

@@ -48,4 +48,17 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean
+    public ThreadPoolTaskExecutor dmEventExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("dm-event-");
+        executor.setTaskDecorator(new MdcTaskDecorator());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
 }

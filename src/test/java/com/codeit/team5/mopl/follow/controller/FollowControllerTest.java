@@ -15,10 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
-import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
@@ -72,7 +72,7 @@ class FollowControllerTest {
     private FollowService followService;
 
     @MockitoBean
-    private JwtTokenizer jwtTokenizer;
+    private JwtAuthenticationService jwtAuthenticationService;
 
     @MockitoBean
     private MoplUserDetailsService userDetailsService;

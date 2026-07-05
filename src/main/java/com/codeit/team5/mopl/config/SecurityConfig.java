@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.SpaCsrfTokenRequestHandler;
@@ -8,6 +9,7 @@ import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,7 +33,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationService jwtAuthenticationService;
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
     private final UserAccessDeniedHandler userAccessDeniedHandler;
     private final MoplAuthenticationProvider moplAuthenticationProvider;
@@ -61,6 +63,9 @@ public class SecurityConfig {
                         .accessDeniedHandler(userAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // SSE ASYNC 재디스패치 시 JWT 필터가 건너뛰어 AuthorizationFilter에서 Access Denied가 발생하므로 ASYNC 타입은 전체 허용
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+
                         .requestMatchers("/api/auth/sign-out").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
@@ -78,6 +83,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/follows/**").authenticated()
+                        .requestMatchers("/api/conversations/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
                         .requestMatchers("/api/sse/**").authenticated()
                         .requestMatchers("/api/reviews/**").authenticated()
@@ -96,7 +102,7 @@ public class SecurityConfig {
                         .failureHandler(signInFailureHandler)
                 )
                 .addFilterBefore(
-                        jwtAuthenticationFilter,
+                        jwtAuthenticationFilter(),
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .logout(logout -> logout
@@ -107,6 +113,11 @@ public class SecurityConfig {
                         )
                 )
                 .build();
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtAuthenticationService);
     }
 
     @Bean

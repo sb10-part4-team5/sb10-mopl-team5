@@ -4,16 +4,17 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
+import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
+import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.follow.repository.FollowRepository;
-import com.codeit.team5.mopl.notification.event.DirectMessageSentEvent;
-import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
-import com.codeit.team5.mopl.user.event.RoleChangedEvent;
-import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.playlist.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.playlist.event.PlaylistUpdatedEvent;
+import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -35,16 +36,20 @@ class NotificationEventListenerTest {
     @InjectMocks
     private NotificationEventListener notificationEventListener;
 
+    private DirectMessageNotificationEvent dmNotificationEvent(UUID receiverId, String senderName, String content) {
+        return new DirectMessageNotificationEvent(
+                DirectMessageTestFixtures.dmMessage(receiverId, senderName, content));
+    }
+
     @Test
-    @DisplayName("DM 수신 이벤트로 DIRECT_MESSAGE 알림을 생성한다")
-    void onDirectMessageSent_createsNotification() {
+    @DisplayName("비활성 DM 이벤트로 DIRECT_MESSAGE 알림을 생성한다")
+    void onDirectMessageNotification_createsNotification() {
         // given
         UUID receiverId = UUID.randomUUID();
-        DirectMessageSentEvent event =
-                new DirectMessageSentEvent(receiverId, "다린", "안녕하세요");
+        DirectMessageNotificationEvent event = dmNotificationEvent(receiverId, "다린", "안녕하세요");
 
         // when
-        notificationEventListener.onDirectMessageSent(event);
+        notificationEventListener.onDirectMessageNotification(event);
 
         // then
         verify(notificationService).create(
@@ -54,16 +59,15 @@ class NotificationEventListenerTest {
 
     @Test
     @DisplayName("DM 내용이 50자를 초과하면 잘라서 알림을 생성한다")
-    void onDirectMessageSent_truncatesContent() {
+    void onDirectMessageNotification_truncatesContent() {
         // given
         UUID receiverId = UUID.randomUUID();
         String longContent = "가".repeat(60);
         String expectedContent = "가".repeat(50);
-        DirectMessageSentEvent event =
-                new DirectMessageSentEvent(receiverId, "다린", longContent);
+        DirectMessageNotificationEvent event = dmNotificationEvent(receiverId, "다린", longContent);
 
         // when
-        notificationEventListener.onDirectMessageSent(event);
+        notificationEventListener.onDirectMessageNotification(event);
 
         // then
         verify(notificationService).create(

@@ -2,13 +2,15 @@ package com.codeit.team5.mopl.sse.eventlistener;
 
 import static org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT;
 
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
-import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -30,13 +32,15 @@ public class SseNotificationListener {
                         .data(payload));
     }
 
-    @TransactionalEventListener(phase = AFTER_COMMIT)
-    public void onDirectMessageCreated(DirectMessageCreatedEvent event) {
-        DirectMessagePayload payload = event.directMessagePayload();
-        sseSender.sendToUser(payload.receiverId(),
+    // 비활성 대화에 DM이 도착하면 SSE "direct-messages" 이벤트로 전송 (알림 저장과 독립)
+    @Async("dmEventExecutor")
+    @EventListener
+    public void onDirectMessageSse(DirectMessageSseEvent event) {
+        DirectMessageResponse message = event.message();
+        sseSender.sendToUser(message.receiver().userId(),
                 SseEmitter.event()
-                        .id(payload.id().toString())
+                        .id(message.id().toString())
                         .name("direct-messages")
-                        .data(payload));
+                        .data(message));
     }
 }

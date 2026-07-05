@@ -2,17 +2,23 @@ package com.codeit.team5.mopl.sse.eventlistener;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
+import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
+import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
+import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.DirectMessageCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
 import java.time.Instant;
 import java.util.UUID;
@@ -39,6 +45,9 @@ class SseNotificationListenerIntegrationTest {
 
     @Autowired
     private TransactionTemplate tx;
+
+    @Autowired
+    private WebSocketSessionStore webSocketSessionStore;
 
     // ===== NotificationCreatedEvent =====
 
@@ -83,41 +92,72 @@ class SseNotificationListenerIntegrationTest {
                         publisher.publishEvent(new NotificationCreatedEvent(notificationPayload(receiverId)))));
     }
 
-    // ===== DirectMessageCreatedEvent =====
+    // ===== 비활성 DM SSE =====
 
     @Test
-    @DisplayName("트랜잭션 커밋 후 DirectMessageCreatedEvent → 등록된 Emitter에 이벤트를 전송한다")
-    void onDirectMessageCreated_sendsEvent_afterCommit() throws Exception {
+    @DisplayName("비활성 DM SSE 이벤트 수신 시 Emitter 전송 성공")
+    void onDirectMessageSse_sendsEvent_success() throws Exception {
         UUID receiverId = UUID.randomUUID();
         SseEmitter mockEmitter = mock(SseEmitter.class);
         emitterStore.save(receiverId, mockEmitter);
 
-        DirectMessagePayload payload = new DirectMessagePayload(
-                UUID.randomUUID(), receiverId, "안녕하세요", Instant.now());
-        tx.executeWithoutResult(status ->
-                publisher.publishEvent(new DirectMessageCreatedEvent(payload)));
+        publisher.publishEvent(new DirectMessageSseEvent(dmMessage(receiverId)));
 
-        verify(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
+        verify(mockEmitter, timeout(2000)).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     @Test
-    @DisplayName("트랜잭션 롤백 시 DirectMessageCreatedEvent → Emitter에 이벤트를 전송하지 않는다")
-    void onDirectMessageCreated_doesNotSend_whenRollback() throws Exception {
+    @DisplayName("트랜잭션 커밋 후 비활성 수신자에게 DM SSE 전송 성공")
+    void directMessageBroadcast_commit_sendsToInactiveReceiver_success() throws Exception {
         UUID receiverId = UUID.randomUUID();
         SseEmitter mockEmitter = mock(SseEmitter.class);
         emitterStore.save(receiverId, mockEmitter);
 
-        DirectMessagePayload payload = new DirectMessagePayload(
-                UUID.randomUUID(), receiverId, "안녕하세요", Instant.now());
+        DirectMessageResponse message = dmMessage(receiverId);
+        tx.executeWithoutResult(status ->
+                publisher.publishEvent(new DirectMessageBroadcastEvent(message, "receiver@mopl.com")));
+
+        verify(mockEmitter, timeout(2000)).send(any(SseEmitter.SseEventBuilder.class));
+    }
+
+    @Test
+    @DisplayName("수신자가 대화방 활성이면 DM SSE 미전송 성공")
+    void directMessageBroadcast_commit_doesNotSend_whenReceiverActive_success() throws Exception {
+        UUID receiverId = UUID.randomUUID();
+        SseEmitter mockEmitter = mock(SseEmitter.class);
+        emitterStore.save(receiverId, mockEmitter);
+
+        DirectMessageResponse message = dmMessage(receiverId);
+        String destination = StompConstants.SUB_CONVERSATION_DM.replace("{id}", message.conversationId().toString());
+        webSocketSessionStore.subscribe("active@mopl.com", "sub-1", destination);
+
+        tx.executeWithoutResult(status ->
+                publisher.publishEvent(new DirectMessageBroadcastEvent(message, "active@mopl.com")));
+
+        verify(mockEmitter, after(500).never()).send(any(SseEmitter.SseEventBuilder.class));
+    }
+
+    @Test
+    @DisplayName("트랜잭션 롤백 시 비활성 DM 미전송 성공")
+    void directMessageBroadcast_rollback_doesNotSend_success() throws Exception {
+        UUID receiverId = UUID.randomUUID();
+        SseEmitter mockEmitter = mock(SseEmitter.class);
+        emitterStore.save(receiverId, mockEmitter);
+
+        DirectMessageResponse message = dmMessage(receiverId);
         tx.executeWithoutResult(status -> {
-            publisher.publishEvent(new DirectMessageCreatedEvent(payload));
+            publisher.publishEvent(new DirectMessageBroadcastEvent(message, "receiver@mopl.com"));
             status.setRollbackOnly();
         });
 
-        verify(mockEmitter, never()).send(any(SseEmitter.SseEventBuilder.class));
+        verify(mockEmitter, after(500).never()).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     // ===== 헬퍼 =====
+
+    private DirectMessageResponse dmMessage(UUID receiverId) {
+        return DirectMessageTestFixtures.dmMessage(receiverId);
+    }
 
     private NotificationPayload notificationPayload(UUID receiverId) {
         return new NotificationPayload(
