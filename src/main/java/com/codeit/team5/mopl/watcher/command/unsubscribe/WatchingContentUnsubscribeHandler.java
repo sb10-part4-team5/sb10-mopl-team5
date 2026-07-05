@@ -5,9 +5,6 @@ import org.springframework.stereotype.Component;
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
 import com.codeit.team5.mopl.global.web.ws.stomp.handler.AbstractStompUnsubscribeHandler;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
-import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
