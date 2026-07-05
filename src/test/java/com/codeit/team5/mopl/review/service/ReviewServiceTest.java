@@ -57,13 +57,6 @@ class ReviewServiceTest {
     private ReviewService reviewService;
 
     @Test
-    @DisplayName("리뷰 조회 시 createdAt 기준 내림차순 Descending 조회를 확인한다.")
-    void getReviews_get_createdAtCursor_descending(){
-
-    }
-
-
-    @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 자르고 createdAt 기준 nextCursor를 채운다")
     void getReviews_hasNext_createdAtCursor() {
         // given
