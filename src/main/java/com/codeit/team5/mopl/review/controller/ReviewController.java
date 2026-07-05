@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.review.controller;
 
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.review.controller.api.ReviewApi;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -85,12 +84,12 @@ public class ReviewController implements ReviewApi {
     @Override
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<Void> deleteReview(
-        @AuthenticationPrincipal MoplUserDetails userDetails,
+        @AuthenticationPrincipal MoplPrincipal moplPrincipal,
         @PathVariable UUID reviewId) {
 
-        log.info("리뷰 삭제: DELETE /api/reviews/{}, authorId={}", reviewId, userDetails.getId());
+        log.info("리뷰 삭제: DELETE /api/reviews/{}, authorId={}", reviewId, moplPrincipal.getId());
 
-        reviewService.deleteReview(reviewId, userDetails.getId());
+        reviewService.deleteReview(reviewId, moplPrincipal.getId());
 
         return ResponseEntity.noContent().build();
     }

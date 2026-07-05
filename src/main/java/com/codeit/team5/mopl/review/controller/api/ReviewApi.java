@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.review.controller.api;
 
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -100,7 +99,7 @@ public interface ReviewApi {
             content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<Void> deleteReview(
-        @Parameter(hidden = true) MoplUserDetails userDetails,
+        @Parameter(hidden = true) MoplPrincipal moplPrincipal,
         @Parameter(description = "리뷰 ID", required = true)
         @PathVariable UUID reviewId);
 }
