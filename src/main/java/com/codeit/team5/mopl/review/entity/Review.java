@@ -53,6 +53,8 @@ public class Review extends BaseUpdatableEntity {
         if (text != null) {
             this.text = text;
         }
-        this.rating = rating;
+        if(rating != null){
+            this.rating = rating;
+        }
     }
 }
