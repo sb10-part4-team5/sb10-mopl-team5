@@ -28,7 +28,7 @@ class StompConnectInboundChannelTest extends BaseStompInboundChannelTest {
                 new UsernamePasswordAuthenticationToken(testUserId.toString(), null,
                         List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
-        when(jwtTokenizer.getAuthentication(validToken)).thenReturn(authentication);
+        when(jwtAuthenticationService.getAuthentication(validToken)).thenReturn(authentication);
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
         accessor.setNativeHeader("Authorization", "Bearer " + validToken);

@@ -9,6 +9,7 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
@@ -27,6 +28,9 @@ public abstract class BaseStompInboundChannelTest {
 
     @MockitoBean
     protected JwtTokenizer jwtTokenizer;
+
+    @MockitoBean
+    protected JwtAuthenticationService jwtAuthenticationService;
 
     @MockitoBean
     protected WebSocketSessionStore sessionStore;

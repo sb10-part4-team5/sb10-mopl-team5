@@ -66,7 +66,8 @@ class StompConnectHandlerTest {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
         accessor.setNativeHeader("Authorization", "Bearer valid-token");
 
-        Authentication auth = new UsernamePasswordAuthenticationToken("test@test.com", "", Collections.emptyList());
+        UUID testUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        Authentication auth = new UsernamePasswordAuthenticationToken(testUserId.toString(), "", Collections.emptyList());
         when(jwtAuthenticationService.getAuthentication("valid-token")).thenReturn(auth);
 
         // when
