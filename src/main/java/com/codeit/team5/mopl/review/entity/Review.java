@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.review.entity;
 
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.global.entity.BaseUpdatableEntity;
+import com.codeit.team5.mopl.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -25,8 +26,9 @@ public class Review extends BaseUpdatableEntity {
     @JoinColumn(name = "content_id", nullable = false)
     private Content content;
 
-    @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
-    private UUID authorId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User author;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
@@ -34,19 +36,23 @@ public class Review extends BaseUpdatableEntity {
     @Column(nullable = false)
     private Double rating;
 
-    public static Review of(Content content, UUID authorId, String text, Double rating) {
-        return new Review(content, authorId, text, rating);
+    public static Review of(Content content, User author, String text, Double rating) {
+        return new Review(content, author, text, rating);
     }
 
-    private Review(Content content, UUID authorId, String text, Double rating) {
+    private Review(Content content, User author, String text, Double rating) {
         this.content = content;
-        this.authorId = authorId;
+        this.author = author;
         this.text = text;
         this.rating = rating;
     }
 
     public UUID getContentId() {
         return content.getId();
+    }
+
+    public UUID getAuthorId() {
+        return author.getId();
     }
 
     public void update(String text, Double rating) {

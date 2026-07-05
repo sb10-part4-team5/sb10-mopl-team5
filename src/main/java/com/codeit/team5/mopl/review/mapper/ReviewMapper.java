@@ -14,13 +14,8 @@ import org.mapstruct.ReportingPolicy;
 )
 public interface ReviewMapper {
 
-    @Mapping(target = "id", source = "review.id")
-    @Mapping(target = "contentId", source = "review.contentId")
-    @Mapping(target = "text", source = "review.text")
-    @Mapping(target = "rating", source = "review.rating")
-    @Mapping(target = "author", source = "user")
-    ReviewResponse toDto(Review review, User user);
-
+    @Mapping(target = "author", source = "author")
+    ReviewResponse toDto(Review review);
 
     @Mapping(target = "userId", source = "id")
     @Mapping(target = "profileImageUrl", source = "profileImage.url")
