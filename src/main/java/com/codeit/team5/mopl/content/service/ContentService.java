@@ -35,8 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 관리자가 직접 등록하는 콘텐츠의 CRUD를 담당하는 서비스.
  *
- * <p>외부 API 수집 콘텐츠({@link TmdbContentService}, {@link SportsDbContentService})와 달리
- * 썸네일 이미지는 S3에 비동기 업로드(이벤트 기반)되며, 태그는 최대 10개 제한이 적용된다.</p>
+ * <p>TMDB/SportsDB에서 배치로 수집되는 콘텐츠({@link com.codeit.team5.mopl.content.batch.writer.ContentItemWriter})와 달리,
+ * 썸네일 이미지는 {@link com.codeit.team5.mopl.content.facade.ContentFacade}에서 스토리지 업로드를 먼저 수행한 뒤
+ * 그 결과를 전달받아 저장하며, 태그는 최대 10개 제한이 적용된다.</p>
  */
 @Service
 @Transactional(readOnly = true)
@@ -55,9 +56,11 @@ public class ContentService {
     /**
      * 관리자가 콘텐츠를 직접 생성한다.
      *
-     * @param request 제목·설명·타입·태그 정보
-     * @param image   썸네일 이미지 (null 허용)
+     * @param request   제목·설명·타입·태그 정보
+     * @param thumbnail 스토리지에 업로드가 끝난 썸네일 정보 (null 허용)
      * @return 생성된 콘텐츠 응답 DTO
+     * @throws EmptyTagException    정규화 후 유효한 태그가 하나도 없을 때
+     * @throws TooManyTagsException 정규화 후 태그가 10개를 초과할 때
      */
     @Transactional
     public ContentResponse create(ContentCreateRequest request, UploadedBinaryContent thumbnail) {
@@ -80,13 +83,15 @@ public class ContentService {
     }
 
     /**
-     * 콘텐츠 정보를 수정한다. 이미지가 제공되면 기존 썸네일을 DELETED 상태로 변경 후 교체한다.
+     * 콘텐츠 정보를 수정한다. 썸네일이 제공되면 기존 썸네일을 DELETED 상태로 변경 후 교체한다.
      *
      * @param contentId 수정할 콘텐츠 UUID
      * @param request   변경할 제목·설명·태그 정보
-     * @param image     새 썸네일 이미지 (null이면 기존 이미지 유지)
+     * @param thumbnail 스토리지에 업로드가 끝난 새 썸네일 정보 (null이면 기존 썸네일 유지)
      * @return 수정된 콘텐츠 응답 DTO
      * @throws ContentNotFoundException 콘텐츠가 존재하지 않을 때
+     * @throws EmptyTagException        정규화 후 유효한 태그가 하나도 없을 때
+     * @throws TooManyTagsException     정규화 후 태그가 10개를 초과할 때
      */
     @Transactional
     public ContentResponse update(UUID contentId, ContentUpdateRequest request, UploadedBinaryContent thumbnail) {
