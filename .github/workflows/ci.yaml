@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: 코드 체크아웃
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
 
       - name: JDK 설정
         uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
@@ -32,9 +34,17 @@ jobs:
       - name: 테스트 및 커버리지 검증
         run: ./gradlew clean test jacocoTestReport jacocoTestCoverageVerification
 
+      - name: Check report
+        run: |
+          ls -R build/reports/jacoco
+          test -f build/reports/jacoco/test/jacocoTestReport.xml
+          wc -l build/reports/jacoco/test/jacocoTestReport.xml
+          head -30 build/reports/jacoco/test/jacocoTestReport.xml
+
       - name: 커버리지 리포트를 CodeCov에 업로드
         uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/jacoco/test/jacocoTestReport.xml
           fail_ci_if_error: true
+          verbose: true
