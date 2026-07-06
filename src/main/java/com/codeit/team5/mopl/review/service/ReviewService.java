@@ -112,7 +112,6 @@ public class ReviewService {
 
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
-
         return reviewMapper.toDto(saved);
     }
 
@@ -148,18 +147,10 @@ public class ReviewService {
     }
 
     private Instant parseInstantCursor(String cursor) {
-        try {
-            return Instant.parse(cursor);
-        } catch (DateTimeParseException e) {
-            throw new InvalidCursorException();
-        }
+        return (Instant) ReviewSortBy.CREATED_AT.parse(cursor);
     }
 
     private Double parseDoubleCursor(String cursor) {
-        try {
-            return Double.parseDouble(cursor);
-        } catch (NumberFormatException e) {
-            throw new InvalidCursorException();
-        }
+        return (Double) ReviewSortBy.RATING.parse(cursor);
     }
 }

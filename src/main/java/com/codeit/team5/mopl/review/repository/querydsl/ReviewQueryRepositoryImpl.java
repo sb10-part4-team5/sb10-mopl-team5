@@ -19,7 +19,7 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
 
     private final JPAQueryFactory queryFactory;
 
-    QReview r = QReview.review;
+    private static final QReview r = QReview.review;
 
     @Override
     public List<Review> findPageByContentIdSortByRating(UUID contentId, Double cursor, UUID idAfter,
