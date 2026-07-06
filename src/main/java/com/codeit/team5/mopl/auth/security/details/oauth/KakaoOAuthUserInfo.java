@@ -21,14 +21,14 @@ public class KakaoOAuthUserInfo implements OAuthUserInfo {
 
     @Override
     public String getEmail() {
-        Map<String, Object> account =
-                (Map<String, Object>) attributes.get("kakao_account");
-
-        return (String) account.get("email");
+        return null;
     }
 
     @Override
     public String getName() {
-        return String.valueOf(attributes.get("name"));
+        Map<String, Object> properties =
+                (Map<String, Object>) attributes.get("properties");
+
+        return String.valueOf(properties.get("nickname"));
     }
 }
