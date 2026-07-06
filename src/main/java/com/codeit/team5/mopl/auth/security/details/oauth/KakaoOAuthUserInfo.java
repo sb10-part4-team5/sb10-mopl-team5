@@ -11,7 +11,7 @@ public class KakaoOAuthUserInfo implements OAuthUserInfo {
 
     @Override
     public SocialProvider getProvider() {
-        return null;
+        return SocialProvider.KAKAO;
     }
 
     @Override
@@ -29,6 +29,6 @@ public class KakaoOAuthUserInfo implements OAuthUserInfo {
 
     @Override
     public String getName() {
-        return "";
+        return String.valueOf(attributes.get("name"));
     }
 }
