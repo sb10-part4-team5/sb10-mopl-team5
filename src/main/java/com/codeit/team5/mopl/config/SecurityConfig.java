@@ -3,11 +3,13 @@ package com.codeit.team5.mopl.config;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.security.details.oauth.MoplOAuth2UserService;
+import com.codeit.team5.mopl.auth.security.handler.signin.OAuth2SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.SpaCsrfTokenRequestHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.security.handler.signout.OAuth2SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import jakarta.servlet.DispatcherType;
@@ -39,6 +41,8 @@ public class SecurityConfig {
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
     private final UserAccessDeniedHandler userAccessDeniedHandler;
     private final MoplAuthenticationProvider moplAuthenticationProvider;
+    private final OAuth2SignInSuccessHandler oauth2SignInSuccessHandler;
+    private final OAuth2SignInFailureHandler oauth2SignInFailureHandler;
     private final SignInSuccessHandler signInSuccessHandler;
     private final SignInFailureHandler signInFailureHandler;
     private final SignOutHandler signOutHandler;
@@ -112,8 +116,8 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo ->
                                 userInfo.userService(moplOAuth2UserService)
                         )
-                        .successHandler(signInSuccessHandler)
-                        .failureHandler(signInFailureHandler)
+                        .successHandler(oauth2SignInSuccessHandler)
+                        .failureHandler(oauth2SignInFailureHandler)
                 )
                 .addFilterBefore(
                         jwtAuthenticationFilter(),

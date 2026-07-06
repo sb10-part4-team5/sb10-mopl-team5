@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.auth.security.details.oauth;
 
 import com.codeit.team5.mopl.auth.entity.SocialProvider;
+import com.codeit.team5.mopl.auth.exception.AccountLockedException;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipalService;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+// OAuth 객체 생성용 클래스
 @Service
 @RequiredArgsConstructor
 public class MoplOAuth2UserService extends DefaultOAuth2UserService {
@@ -25,10 +27,9 @@ public class MoplOAuth2UserService extends DefaultOAuth2UserService {
                 .getUserInfoEndpoint()
                 .getUserNameAttributeName();
 
-        // 여기서 provider + providerUserId 추출
-        // 지금은 구조만 만들고, Google/Kakao별 파싱은 다음 단계에서 분리 추천
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
+        // 여기서 provider + providerUserId 추출
         SocialProvider provider = SocialProvider.from(registrationId);
 
         // OAuth 제공자가 내려주는 사용자 정보 전체(Map)
@@ -39,6 +40,10 @@ public class MoplOAuth2UserService extends DefaultOAuth2UserService {
 
         AuthUser authUser =
                 moplPrincipalService.getOrCreateAuthUser(oauthUserInfo);
+
+        if (authUser.locked()) {
+            throw new AccountLockedException("잠긴 계정입니다.");
+        }
 
         return new MoplOAuth2User(authUser, attributes, nameAttributeKey);
     }

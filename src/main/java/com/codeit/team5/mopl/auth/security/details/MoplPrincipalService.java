@@ -24,19 +24,7 @@ public class MoplPrincipalService {
     private final AuthUserMapper authUserMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthUser loadAuthUserByEmail(String email) {
-        User user = getUserByEmail(email);
-
-        return authUserMapper.toAuthUser(user);
-    }
-
-    public AuthUser loadAuthUserById(UUID userId) {
-        User user = getUserById(userId);
-
-        return authUserMapper.toAuthUser(user);
-    }
-
-    // form 로그인용 객체(AuthUser + password)
+    // PasswordAuthUser = form 로그인용 객체(AuthUser + password)
     // MoplUserDetails 에서 password 조합을 위해 또다시 userRepository 조회를 피하기 위함
     public PasswordAuthUser loadAuthUserWithPasswordByEmail(String email) {
         User user = getUserByEmail(email);
