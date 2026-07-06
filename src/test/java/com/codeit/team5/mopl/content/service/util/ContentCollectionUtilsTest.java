@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.codeit.team5.mopl.content.batch.util.ContentCollectionUtils;
 import org.mockito.ArgumentCaptor;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;

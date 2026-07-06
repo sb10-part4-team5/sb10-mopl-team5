@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.content.service.util;
+package com.codeit.team5.mopl.content.batch.util;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
