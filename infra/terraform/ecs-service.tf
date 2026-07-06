@@ -43,7 +43,7 @@ resource "aws_ecs_task_definition" "mopl" {
       { name = "GOOGLE_CLIENT_SECRET", value = var.google_client_secret },
       { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
       { name = "KAKAO_CLIENT_SECRET", value = var.kakao_client_secret },
-      { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx400m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC" }
+      { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx350m -XX:MaxMetaspaceSize=192m -XX:+UseG1GC" }
     ]
 
     # logConfiguration 생략 → ECS EC2 기본 json-file (EC2 로컬, CloudWatch 미사용)
@@ -56,7 +56,8 @@ resource "aws_ecs_service" "mopl" {
   name            = var.ecs_service
   cluster         = aws_ecs_cluster.mopl.id
   task_definition = aws_ecs_task_definition.mopl.arn
-  desired_count   = 1 # 나중에 2로 확장 가능
+  desired_count                      = 1 # 나중에 2로 확장 가능
+  health_check_grace_period_seconds  = 120
 
   load_balancer {
     target_group_arn = aws_lb_target_group.mopl.arn
