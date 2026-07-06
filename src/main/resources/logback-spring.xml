@@ -55,11 +55,20 @@
       ============================================================
     -->
 
-    <!-- 콘솔 + 파일 출력 -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-    </root>
+    <!-- prod: 콘솔만 (ECS stdout 캡처, 파일 불필요) -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- prod 외: 콘솔 + 파일 -->
+    <springProfile name="!prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
 
     <!--
       [예정] prod 전용 Kafka 활성화:
