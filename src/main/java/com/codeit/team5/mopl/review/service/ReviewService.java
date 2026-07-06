@@ -112,7 +112,7 @@ public class ReviewService {
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
-        updateContentStat(request.contentId(), request.rating(), true);
+        updateContentStat(request.contentId(), request.rating(), 1);
         return reviewMapper.toDto(saved);
     }
 
@@ -124,8 +124,9 @@ public class ReviewService {
             log.warn("리뷰 수정 권한 없음: reviewId={}, requesterId={}", reviewId, authorId);
             throw new ReviewForbiddenException();
         }
+        double oldRating = review.getRating();
         review.update(request.text(), request.rating());
-        updateContentStat(review.getContentId(), request.rating(), false);
+        updateContentStat(review.getContentId(), request.rating() - oldRating, 0);
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
         return reviewMapper.toDto(review);
     }
@@ -138,6 +139,7 @@ public class ReviewService {
             log.warn("리뷰 삭제 권한 없음: reviewId={}, requesterId={}", reviewId, authorId);
             throw new ReviewForbiddenException();
         }
+        updateContentStat(review.getContentId(), -review.getRating(), -1);
         reviewRepository.delete(review);
         log.info("리뷰 삭제 완료: reviewId={}, authorId={}", reviewId, authorId);
     }
@@ -156,13 +158,14 @@ public class ReviewService {
         return (Double) ReviewSortBy.RATING.parse(cursor);
     }
 
-    private void updateContentStat(UUID contentId, Double rating, boolean isAdded){
+
+    private void updateContentStat(UUID contentId, double ratingDelta, int countDelta) {
         Content content = contentRepository.findById(contentId).orElseThrow(() ->
             new ContentNotFoundException(contentId));
 
         ContentStats stats = content.getStats();
-        double newRatingSum = stats.getRatingSum() + rating;
-        stats.updateRating(newRatingSum, isAdded ? stats.getReviewCount() + 1 : stats.getReviewCount());
-
+        int newCount = stats.getReviewCount() + countDelta;
+        double newRatingSum = stats.getRatingSum() + ratingDelta;
+        stats.updateRating(newCount == 0 ? 0.0 : newRatingSum, newCount);
     }
 }
