@@ -1,8 +1,10 @@
-package com.codeit.team5.mopl.auth.security.handler.signout;
+package com.codeit.team5.mopl.auth.security.handler.signin;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -21,6 +23,7 @@ public class OAuth2SignInFailureHandler implements AuthenticationFailureHandler 
 
         log.warn("OAuth2 login failed", exception);
 
-        response.sendRedirect("/?error=oauth_login_failed");
+        String errorMessage = URLEncoder.encode("잠금된 계정입니다.", StandardCharsets.UTF_8);
+        response.sendRedirect("/#/sign-in?error=oauth_failed&error_message=" + errorMessage);
     }
 }

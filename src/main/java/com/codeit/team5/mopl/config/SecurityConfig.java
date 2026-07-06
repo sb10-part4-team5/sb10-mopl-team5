@@ -9,7 +9,7 @@ import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.SpaCsrfTokenRequestHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
-import com.codeit.team5.mopl.auth.security.handler.signout.OAuth2SignInFailureHandler;
+import com.codeit.team5.mopl.auth.security.handler.signin.OAuth2SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import jakarta.servlet.DispatcherType;

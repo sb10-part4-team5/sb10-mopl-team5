@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.user.constant.UserSortBy;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.FormatterRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -25,5 +26,14 @@ public class WebConfig implements WebMvcConfigurer {
 
         registry.addConverter(String.class, UserSortBy.class, UserSortBy::from);
         registry.addConverter(String.class, ReviewSortBy.class, ReviewSortBy::from);
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/sign-in")
+                .setViewName("forward:/index.html");
+
+        registry.addViewController("/contents")
+                .setViewName("forward:/index.html");
     }
 }

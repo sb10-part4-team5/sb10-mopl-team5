@@ -1,11 +1,11 @@
 package com.codeit.team5.mopl.auth.security.details.oauth;
 
 import com.codeit.team5.mopl.auth.entity.SocialProvider;
-import com.codeit.team5.mopl.auth.exception.AccountLockedException;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipalService;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -42,7 +42,8 @@ public class MoplOAuth2UserService extends DefaultOAuth2UserService {
                 moplPrincipalService.getOrCreateAuthUser(oauthUserInfo);
 
         if (authUser.locked()) {
-            throw new AccountLockedException("잠긴 계정입니다.");
+            // 실패 핸들러로 넘기기 위해 spring security exception 사용
+            throw new LockedException("잠긴 계정입니다.");
         }
 
         return new MoplOAuth2User(authUser, attributes, nameAttributeKey);
