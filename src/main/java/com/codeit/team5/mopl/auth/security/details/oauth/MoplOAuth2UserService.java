@@ -1,0 +1,45 @@
+package com.codeit.team5.mopl.auth.security.details.oauth;
+
+import com.codeit.team5.mopl.auth.entity.SocialProvider;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipalService;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class MoplOAuth2UserService extends DefaultOAuth2UserService {
+
+    private final MoplPrincipalService moplPrincipalService;
+
+    @Override
+    public OAuth2User loadUser(OAuth2UserRequest userRequest) {
+        OAuth2User oAuth2User = super.loadUser(userRequest);
+
+        String nameAttributeKey = userRequest.getClientRegistration()
+                .getProviderDetails()
+                .getUserInfoEndpoint()
+                .getUserNameAttributeName();
+
+        // 여기서 provider + providerUserId 추출
+        // 지금은 구조만 만들고, Google/Kakao별 파싱은 다음 단계에서 분리 추천
+        String registrationId = userRequest.getClientRegistration().getRegistrationId();
+
+        SocialProvider provider = SocialProvider.from(registrationId);
+
+        // OAuth 제공자가 내려주는 사용자 정보 전체(Map)
+        Map<String, Object> attributes = oAuth2User.getAttributes();
+
+        OAuthUserInfo oauthUserInfo =
+                OAuthUserInfoFactory.create(provider, attributes);
+
+        AuthUser authUser =
+                moplPrincipalService.getOrCreateAuthUser(oauthUserInfo);
+
+        return new MoplOAuth2User(authUser, attributes, nameAttributeKey);
+    }
+}
