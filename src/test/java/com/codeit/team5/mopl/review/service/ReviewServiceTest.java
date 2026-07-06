@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.content.service.ContentStatService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -52,6 +53,9 @@ class ReviewServiceTest {
 
     @Mock
     private ReviewMapper reviewMapper;
+
+    @Mock
+    private ContentStatService contentStatService;
 
     @InjectMocks
     private ReviewService reviewService;

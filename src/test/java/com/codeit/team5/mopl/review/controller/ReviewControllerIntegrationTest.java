@@ -14,8 +14,10 @@ import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
 import com.codeit.team5.mopl.review.dto.request.ReviewUpdateRequest;
 import com.codeit.team5.mopl.review.entity.Review;
@@ -57,6 +59,9 @@ class ReviewControllerIntegrationTest {
     private ContentRepository contentRepository;
 
     @Autowired
+    private ContentStatsRepository contentStatsRepository;
+
+    @Autowired
     private ReviewRepository reviewRepository;
 
     private User persistUser(String email) {
@@ -64,8 +69,10 @@ class ReviewControllerIntegrationTest {
     }
 
     private Content persistContent(String title) {
-        return contentRepository.saveAndFlush(
+        Content content = contentRepository.saveAndFlush(
             Content.createByAdmin(ContentType.MOVIE, title, null));
+        contentStatsRepository.saveAndFlush(ContentStats.create(content));
+        return content;
     }
 
     private Review persistReview(Content content, User author, String text, double rating) {
