@@ -21,7 +21,6 @@ repositories {
 
 dependencies {
     // BOM
-    implementation platform('me.paulschwarz:spring-dotenv-bom:5.1.0')
     implementation platform('software.amazon.awssdk:bom:2.46.7')
 
     // Spring Boot
@@ -65,6 +64,7 @@ dependencies {
 
     // Development
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+    developmentOnly platform('me.paulschwarz:spring-dotenv-bom:5.1.0')
     developmentOnly 'me.paulschwarz:springboot3-dotenv'
 
     // Lombok
