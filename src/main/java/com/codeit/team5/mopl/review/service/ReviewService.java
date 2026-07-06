@@ -1,9 +1,9 @@
 package com.codeit.team5.mopl.review.service;
 
 import com.codeit.team5.mopl.content.entity.Content;
-import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.content.service.ContentStatService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
@@ -45,6 +45,7 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final ContentRepository contentRepository;
     private final ReviewMapper reviewMapper;
+    private final ContentStatService contentStatService;
 
     @Transactional(readOnly = true)
     public CursorResponse<ReviewResponse> getReviews(ReviewGetRequest request) {
@@ -112,7 +113,7 @@ public class ReviewService {
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
-        updateContentStat(request.contentId(), request.rating(), 1);
+        contentStatService.updateContentStat(request.contentId(), request.rating(), 1);
         return reviewMapper.toDto(saved);
     }
 
@@ -126,7 +127,7 @@ public class ReviewService {
         }
         double oldRating = review.getRating();
         review.update(request.text(), request.rating());
-        updateContentStat(review.getContentId(), request.rating() - oldRating, 0);
+        contentStatService.updateContentStat(review.getContentId(), request.rating() - oldRating, 0);
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
         return reviewMapper.toDto(review);
     }
@@ -139,7 +140,7 @@ public class ReviewService {
             log.warn("리뷰 삭제 권한 없음: reviewId={}, requesterId={}", reviewId, authorId);
             throw new ReviewForbiddenException();
         }
-        updateContentStat(review.getContentId(), -review.getRating(), -1);
+        contentStatService.updateContentStat(review.getContentId(), -review.getRating(), -1);
         reviewRepository.delete(review);
         log.info("리뷰 삭제 완료: reviewId={}, authorId={}", reviewId, authorId);
     }
@@ -156,16 +157,5 @@ public class ReviewService {
 
     private Double parseDoubleCursor(String cursor) {
         return (Double) ReviewSortBy.RATING.parse(cursor);
-    }
-
-
-    private void updateContentStat(UUID contentId, double ratingDelta, int countDelta) {
-        Content content = contentRepository.findById(contentId).orElseThrow(() ->
-            new ContentNotFoundException(contentId));
-
-        ContentStats stats = content.getStats();
-        int newCount = stats.getReviewCount() + countDelta;
-        double newRatingSum = stats.getRatingSum() + ratingDelta;
-        stats.updateRating(newCount == 0 ? 0.0 : newRatingSum, newCount);
     }
 }
