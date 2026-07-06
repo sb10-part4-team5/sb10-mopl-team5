@@ -5,6 +5,8 @@ import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipalService;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -38,14 +40,19 @@ public class MoplOAuth2UserService extends DefaultOAuth2UserService {
         OAuthUserInfo oauthUserInfo =
                 OAuthUserInfoFactory.create(provider, attributes);
 
-        AuthUser authUser =
-                moplPrincipalService.getOrCreateAuthUser(oauthUserInfo);
+        try {
+            AuthUser authUser =
+                    moplPrincipalService.getOrCreateAuthUser(oauthUserInfo);
 
-        if (authUser.locked()) {
-            // 실패 핸들러로 넘기기 위해 spring security exception 사용
-            throw new LockedException("잠긴 계정입니다.");
+            if (authUser.locked()) {
+                throw new LockedException("잠긴 계정입니다.");
+            }
+
+            return new MoplOAuth2User(authUser, attributes, nameAttributeKey);
+        } catch (AuthenticationException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new InternalAuthenticationServiceException("OAuth 인증 사용자 처리 중 오류가 발생했습니다.", e);
         }
-
-        return new MoplOAuth2User(authUser, attributes, nameAttributeKey);
     }
 }
