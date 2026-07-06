@@ -90,7 +90,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         if (!itemsWithThumbnail.isEmpty()) {
             List<BinaryContent> savedThumbnails = binaryContentRepository.saveAll(
                     itemsWithThumbnail.stream()
-                            .map(item -> BinaryContent.externalUrl(item.thumbnailUrl()))
+                            .map(item -> BinaryContent.of(item.thumbnailUrl()))
                             .toList()
             );
             for (int i = 0; i < itemsWithThumbnail.size(); i++) {

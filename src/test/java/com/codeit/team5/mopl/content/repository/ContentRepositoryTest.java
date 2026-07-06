@@ -73,7 +73,7 @@ class ContentRepositoryTest extends BaseRepositoryTest {
         ContentStats stats = persistAndFlush(ContentStats.create(content));
         content.attachStats(stats);
 
-        BinaryContent thumbnail = persistAndFlush(BinaryContent.completed("https://example.com/thumb.jpg"));
+        BinaryContent thumbnail = persistAndFlush(BinaryContent.of("https://example.com/thumb.jpg"));
         content.attachThumbnail(thumbnail);
         flush();
         clear();

@@ -69,7 +69,7 @@ class ContentCollectionUtilsTest {
     void attachThumbnail_validUrl_savesAndAttaches() {
         // given
         Content content = mockContent();
-        BinaryContent thumbnail = BinaryContent.externalUrl("https://base.url/poster.jpg");
+        BinaryContent thumbnail = BinaryContent.of("https://base.url/poster.jpg");
         ArgumentCaptor<BinaryContent> captor = ArgumentCaptor.forClass(BinaryContent.class);
         given(binaryContentRepository.save(captor.capture())).willReturn(thumbnail);
 
@@ -86,7 +86,7 @@ class ContentCollectionUtilsTest {
     void attachThumbnail_emptyBaseUrl_usesUrlAsIs() {
         // given
         Content content = mockContent();
-        BinaryContent thumbnail = BinaryContent.externalUrl("https://thumb.url/img.jpg");
+        BinaryContent thumbnail = BinaryContent.of("https://thumb.url/img.jpg");
         ArgumentCaptor<BinaryContent> captor = ArgumentCaptor.forClass(BinaryContent.class);
         given(binaryContentRepository.save(captor.capture())).willReturn(thumbnail);
 

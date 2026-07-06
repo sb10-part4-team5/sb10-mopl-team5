@@ -406,7 +406,7 @@ class ContentControllerIntegrationTest {
             Content content = persistContent(ContentType.MOVIE, "삭제 영화", null, "액션");
             // 스토리지 업로드 없이 이미 저장된 썸네일을 붙여 삭제 시 상태 전이만 검증한다
             BinaryContent thumbnail = binaryContentRepository.save(
-                    BinaryContent.completed("http://localhost/thumbnails/old.jpg"));
+                    BinaryContent.of("http://localhost/thumbnails/old.jpg"));
             content.attachThumbnail(thumbnail);
             contentRepository.saveAndFlush(content);
             UUID thumbnailId = thumbnail.getId();

@@ -30,7 +30,7 @@ public class BinaryContentService {
 
     @Transactional
     public BinaryContent saveCompleted(UploadedBinaryContent uploaded) {
-        return binaryContentRepository.save(BinaryContent.completed(uploaded.url()));
+        return binaryContentRepository.save(BinaryContent.of(uploaded.url()));
     }
 
     public void deleteQuietly(UploadedBinaryContent uploaded) {
