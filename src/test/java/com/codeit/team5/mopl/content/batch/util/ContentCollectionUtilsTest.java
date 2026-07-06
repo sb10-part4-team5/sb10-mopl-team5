@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.content.service.util;
+package com.codeit.team5.mopl.content.batch.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

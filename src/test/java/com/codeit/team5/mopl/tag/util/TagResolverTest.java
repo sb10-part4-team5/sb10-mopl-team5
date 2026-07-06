@@ -23,6 +23,22 @@ class TagResolverTest {
     @Mock
     private TagRepository tagRepository;
 
+    // --- normalize ---
+
+    @Test
+    @DisplayName("앞뒤 공백을 제거하고 소문자로 변환한다")
+    void normalize_trimsAndLowercases() {
+        // when & then
+        assertThat(TagResolver.normalize("  Action  ")).isEqualTo("action");
+    }
+
+    @Test
+    @DisplayName("공백만 있는 문자열은 null을 반환한다")
+    void normalize_blank_returnsNull() {
+        // when & then
+        assertThat(TagResolver.normalize("   ")).isNull();
+    }
+
     // --- normalizeNames ---
 
     @Test
@@ -118,6 +134,23 @@ class TagResolverTest {
         assertThat(captor.getValue()).extracting(Tag::getName).containsExactly("드라마");
         assertThat(result).containsKeys("액션", "드라마");
         assertThat(result.get("액션")).isSameAs(existingTag);
+    }
+
+    @Test
+    @DisplayName("동일한 신규 태그 이름이 중복으로 들어와도 한 번만 생성한다")
+    void resolve_duplicateNewName_createsOnlyOnce() {
+        // given
+        given(tagRepository.findByNameIn(List.of("새태그"))).willReturn(List.of());
+        given(tagRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        Map<String, Tag> result = TagResolver.resolve(List.of("새태그", "새태그"), tagRepository);
+
+        // then
+        ArgumentCaptor<List<Tag>> captor = ArgumentCaptor.forClass(List.class);
+        verify(tagRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).extracting(Tag::getName).containsExactly("새태그");
+        assertThat(result).hasSize(1);
     }
 
     @Test

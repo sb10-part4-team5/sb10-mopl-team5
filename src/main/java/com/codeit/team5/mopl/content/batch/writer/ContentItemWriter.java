@@ -106,10 +106,11 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         if (!allTagNames.isEmpty()) {
             Map<String, Tag> existingTags = TagResolver.resolve(allTagNames, tagRepository);
 
-            deduplicatedItems.forEach(item -> item.tagNames().forEach(tagName -> {
-                String normalized = tagName.trim().toLowerCase();
-                if (existingTags.containsKey(normalized)) {
-                    item.content().addTag(ContentTag.create(item.content(), existingTags.get(normalized)));
+            deduplicatedItems.forEach(item -> item.tagNames().forEach(rawTagName -> {
+                String normalized = TagResolver.normalize(rawTagName);
+                Tag tag = normalized == null ? null : existingTags.get(normalized);
+                if (tag != null) {
+                    item.content().addTag(ContentTag.create(item.content(), tag));
                 }
             }));
         }
