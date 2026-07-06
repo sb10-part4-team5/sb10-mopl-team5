@@ -23,7 +23,7 @@ public class OAuth2SignInFailureHandler implements AuthenticationFailureHandler 
 
         log.warn("OAuth2 login failed", exception);
 
-        String errorMessage = URLEncoder.encode("잠금된 계정입니다.", StandardCharsets.UTF_8);
+        String errorMessage = URLEncoder.encode("소셜 로그인으로 로그인에 실패하였습니다.", StandardCharsets.UTF_8);
         response.sendRedirect("/#/sign-in?error=oauth_failed&error_message=" + errorMessage);
     }
 }
