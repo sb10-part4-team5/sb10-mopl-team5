@@ -84,3 +84,26 @@ variable "cdn_domain" {
   default     = "cdn.mopl-dev.site"
 }
 
+variable "mail_host" {
+  description = "SMTP 호스트"
+  type        = string
+  default     = "smtp.gmail.com"
+}
+
+variable "mail_port" {
+  description = "SMTP 포트"
+  type        = string
+  default     = "587"
+}
+
+variable "mail_username" {
+  description = "SMTP 계정 (terraform.tfvars 에 작성)"
+  type        = string
+}
+
+variable "mail_password" {
+  description = "SMTP 앱 비밀번호 (terraform.tfvars 에 작성)"
+  type        = string
+  sensitive   = true
+}
+

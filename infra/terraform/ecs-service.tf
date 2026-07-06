@@ -26,6 +26,10 @@ resource "aws_ecs_task_definition" "mopl" {
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "AWS_REGION", value = var.aws_region },
       { name = "CDN_BASE_URL", value = "https://${var.cdn_domain}" },
+      { name = "MAIL_HOST", value = var.mail_host },
+      { name = "MAIL_PORT", value = var.mail_port },
+      { name = "MAIL_USERNAME", value = var.mail_username },
+      { name = "MAIL_PASSWORD", value = var.mail_password },
       { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx400m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC" }
     ]
 
