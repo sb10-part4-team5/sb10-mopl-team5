@@ -16,6 +16,12 @@ spring:
     baseline-on-migrate: true
     clean-disabled: false
 
+  mail:
+    host: localhost
+    port: 2525
+    username: test
+    password: test
+
   kafka:
     consumer:
       group-id: mopl-test
@@ -29,6 +35,23 @@ spring:
   docker:
     compose:
       enabled: false
+
+mopl:
+  storage:
+    type: local
+    local:
+      base-url: http://localhost:8080
+      upload-dir: ./uploads-test
+  auth:
+    cookie:
+      secure: false
+      same-site: Lax
+
+jwt:
+  access-secret-key: abcdefghijklmnopqrstuvwxyz123456
+  refresh-secret-key: 123456abcdefghijklmnopqrstuvwxyz
+  access-token-expiration-minutes: 30
+  refresh-token-expiration-minutes: 420
 
 logging:
   level:

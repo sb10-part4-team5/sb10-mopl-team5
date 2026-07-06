@@ -1,0 +1,487 @@
+package com.codeit.team5.mopl.notification.repository;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
+
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+
+import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.config.JpaAuditingConfig;
+import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
+import com.codeit.team5.mopl.notification.entity.Notification;
+import com.codeit.team5.mopl.notification.entity.NotificationLevel;
+import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.notification.exception.CursorIdAfterNotTogetherException;
+import com.codeit.team5.mopl.user.entity.User;
+import jakarta.persistence.EntityManager;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Limit;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.ReflectionUtils;
+
+@DataJpaTest
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = NONE)
+@Import({JpaAuditingConfig.class, TestcontainersConfiguration.class, QueryDslTestConfig.class})
+class NotificationRepositoryTest {
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    private UUID persistReceiver(String email) {
+        User user = User.create(email, "password", "수신자");
+        entityManager.persist(user);
+        entityManager.flush();
+        return user.getId();
+    }
+
+    @Test
+    @DisplayName("알림 저장에 성공하고 생성 시각이 자동으로 기록된다")
+    void saveNotification_success() {
+        // Given
+        UUID receiverId = persistReceiver("save@example.com");
+        Notification notification = Notification.create(
+                receiverId, NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO);
+
+        // When
+        Notification saved = notificationRepository.save(notification);
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then
+        Notification found = notificationRepository.findById(saved.getId()).orElseThrow();
+        assertThat(found.getId()).isNotNull();
+        assertThat(found.getReceiverId()).isEqualTo(receiverId);
+        assertThat(found.getType()).isEqualTo(NotificationType.FOLLOWED);
+        assertThat(found.getTitle()).isEqualTo("제목");
+        assertThat(found.getContent()).isEqualTo("내용");
+        assertThat(found.getLevel()).isEqualTo(NotificationLevel.INFO);
+        assertThat(found.isRead()).isFalse();
+        assertThat(found.getReadAt()).isNull();
+        assertThat(found.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("식별자로 알림을 조회한다")
+    void findById_success() {
+        // Given
+        UUID receiverId = persistReceiver("find@example.com");
+        Notification saved = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.PLAYLIST_UPDATED, "조회 제목", "조회 내용",
+                NotificationLevel.WARNING));
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        Optional<Notification> result = notificationRepository.findById(saved.getId());
+
+        // Then
+        assertThat(result)
+                .isPresent()
+                .get()
+                .extracting(Notification::getTitle, Notification::getLevel)
+                .containsExactly("조회 제목", NotificationLevel.WARNING);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 식별자로 조회하면 빈 결과를 반환한다")
+    void findById_notFound() {
+        // Given
+        UUID nonexistentId = UUID.randomUUID();
+
+        // When
+        Optional<Notification> result = notificationRepository.findById(nonexistentId);
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("읽음 처리한 알림의 상태가 영속화된다")
+    void markAsRead_persisted() {
+        // Given
+        UUID receiverId = persistReceiver("read@example.com");
+        Notification saved = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "제목", "내용", NotificationLevel.INFO));
+
+        // When
+        saved.markAsRead();
+        notificationRepository.save(saved);
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then
+        Notification found = notificationRepository.findById(saved.getId()).orElseThrow();
+        assertThat(found.isRead()).isTrue();
+        assertThat(found.getReadAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 수신자로 저장하면 예외가 발생한다")
+    void saveWithInvalidReceiver_throwsException() {
+        // Given
+        Notification notification = Notification.create(
+                UUID.randomUUID(), NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO);
+
+        // When & Then
+        assertThatThrownBy(() -> notificationRepository.saveAndFlush(notification))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    private void saveNotifications(UUID receiverId, int count) {
+        for (int i = 0; i < count; i++) {
+            notificationRepository.save(Notification.create(
+                    receiverId, NotificationType.FOLLOWED, "알림" + i, null, NotificationLevel.INFO));
+        }
+    }
+
+    @Test
+    @DisplayName("커서 페이지네이션으로 다음 페이지가 겹치지 않고 이어진다 (최신순)")
+    void findPageByReceiverDesc_pagination() {
+        // Given
+        UUID receiverId = persistReceiver("page@example.com");
+        saveNotifications(receiverId, 5);
+        // 다른 수신자의 알림 (조회 대상에서 제외되어야 함)
+        UUID otherReceiverId = persistReceiver("page-other@example.com");
+        saveNotifications(otherReceiverId, 3);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When: 첫 페이지 (limit=2)
+        List<Notification> first = notificationRepository
+                .findPageByReceiverDesc(receiverId, null, null, Limit.of(2));
+        // 첫 페이지 마지막을 커서로 다음 페이지 조회
+        Notification cursor = first.get(first.size() - 1);
+        List<Notification> second = notificationRepository
+                .findPageByReceiverDesc(receiverId, cursor.getCreatedAt(), cursor.getId(), Limit.of(2));
+
+        // Then
+        assertThat(first).hasSize(2);
+        assertThat(second).hasSize(2);
+        assertThat(second).extracting(Notification::getId)
+                .doesNotContainAnyElementsOf(first.stream().map(Notification::getId).toList());
+        assertThat(notificationRepository.countByReceiverId(receiverId)).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("커서 페이지네이션으로 다음 페이지가 겹치지 않고 이어진다 (오래된순)")
+    void findPageByReceiverAsc_pagination() {
+        // Given
+        UUID receiverId = persistReceiver("page@example.com");
+        saveNotifications(receiverId, 5);
+        // 다른 수신자의 알림 (조회 대상에서 제외되어야 함)
+        UUID otherReceiverId = persistReceiver("page-other@example.com");
+        saveNotifications(otherReceiverId, 3);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When: 첫 페이지 (limit=2)
+        List<Notification> first = notificationRepository
+            .findPageByReceiverAsc(receiverId, null, null, Limit.of(2));
+        // 첫 페이지 마지막을 커서로 다음 페이지 조회
+        Notification cursor = first.get(first.size() - 1);
+        List<Notification> second = notificationRepository
+            .findPageByReceiverAsc(receiverId, cursor.getCreatedAt(), cursor.getId(), Limit.of(2));
+
+        // Then
+        assertThat(first).hasSize(2);
+        assertThat(second).hasSize(2);
+        assertThat(second).extracting(Notification::getId)
+            .doesNotContainAnyElementsOf(first.stream().map(Notification::getId).toList());
+        assertThat(notificationRepository.countByReceiverId(receiverId)).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("cursor와 idAfter 중 하나만 주어지면 예외가 발생한다")
+    void findPageByReceiverDesc_cursorIdAfterNotTogether_exception() {
+        // Given
+        UUID receiverId = UUID.randomUUID();
+
+        // When & Then
+        assertThatThrownBy(() -> notificationRepository
+                .findPageByReceiverDesc(receiverId, Instant.now(), null, Limit.of(2)))
+                .isInstanceOf(CursorIdAfterNotTogetherException.class);
+
+        assertThatThrownBy(() -> notificationRepository
+                .findPageByReceiverDesc(receiverId, null, UUID.randomUUID(), Limit.of(2)))
+                .isInstanceOf(CursorIdAfterNotTogetherException.class);
+    }
+
+    @Test
+    @DisplayName("최신순 조회는 createdAt, id 내림차순 정렬을 따른다")
+    void findPageByReceiverDesc_ordering() {
+        // Given
+        UUID receiverId = persistReceiver("order-desc@example.com");
+        saveNotifications(receiverId, 4);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> all = notificationRepository
+                .findPageByReceiverDesc(receiverId, null, null, Limit.of(10));
+
+        // Then (주 정렬 기준 createdAt만 검증 - id tie-break은 페이지네이션 테스트가 담당.
+        // Java UUID.compareTo와 Postgres uuid 정렬 순서가 달라 id 비교는 단언하지 않음)
+        assertThat(all).hasSize(4);
+        assertThat(all).isSortedAccordingTo(
+                Comparator.comparing(Notification::getCreatedAt).reversed());
+    }
+
+    @Test
+    @DisplayName("오래된순 조회는 createdAt, id 오름차순 정렬을 따른다")
+    void findPageByReceiverAsc_ordering() {
+        // Given
+        UUID receiverId = persistReceiver("order-asc@example.com");
+        saveNotifications(receiverId, 4);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> all = notificationRepository
+                .findPageByReceiverAsc(receiverId, null, null, Limit.of(10));
+
+        // Then (주 정렬 기준 createdAt만 검증 - 위 DESC 테스트와 동일한 이유)
+        assertThat(all).hasSize(4);
+        assertThat(all).isSortedAccordingTo(
+                Comparator.comparing(Notification::getCreatedAt));
+    }
+
+    @Test
+    @DisplayName("안 읽은 알림 개수를 센다")
+    void countByReceiverIdAndIsReadFalse_success() {
+        // Given
+        UUID receiverId = persistReceiver("count@example.com");
+        notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "안읽음1", null, NotificationLevel.INFO));
+        notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "안읽음2", null, NotificationLevel.INFO));
+        Notification read = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "읽음", null, NotificationLevel.INFO));
+        read.markAsRead();
+        notificationRepository.save(read);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        long count = notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
+
+        // Then
+        assertThat(count).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("식별자와 수신자가 모두 일치하면 알림을 조회한다")
+    void findByIdAndReceiverId_success() {
+        // Given
+        UUID receiverId = persistReceiver("owner@example.com");
+        Notification saved = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO));
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        Optional<Notification> result =
+                notificationRepository.findByIdAndReceiverId(saved.getId(), receiverId);
+
+        // Then
+        assertThat(result).isPresent();
+    }
+
+    @Test
+    @DisplayName("수신자가 다르면 알림을 조회하지 못한다")
+    void findByIdAndReceiverId_otherReceiver_empty() {
+        // Given
+        UUID receiverId = persistReceiver("real-owner@example.com");
+        Notification saved = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO));
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        Optional<Notification> result =
+                notificationRepository.findByIdAndReceiverId(saved.getId(), UUID.randomUUID());
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("미수신 일반 알림 조회 시 읽음 처리된 알림은 제외된다")
+    void findMissedNotifications_excludesRead() {
+        // Given
+        UUID receiverId = persistReceiver("missed-noti@example.com");
+
+        // ref, unread, read가 같은 createdAt을 가지면 UUID 정렬 tie-break으로 unread가 제외될 수 있음
+        // setCreatedAt으로 ref를 명시적으로 이전 시각으로 고정해 항상 afterCursor 조건을 만족시킴
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "기준", null, NotificationLevel.INFO));
+        setCreatedAt(ref.getId(), t0);
+
+        Notification unread = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "안읽음", null, NotificationLevel.INFO));
+        setCreatedAt(unread.getId(), t1);
+
+        Notification read = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "읽음", null, NotificationLevel.INFO));
+        setCreatedAt(read.getId(), t1);
+
+        read.markAsRead();
+        notificationRepository.save(read);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedNotifications(receiverId, ref.getId());
+
+        // Then: read는 제외, unread만 반환
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(unread.getId());
+    }
+
+    @Test
+    @DisplayName("findMissedNotifications: 결과가 createdAt 오름차순으로 정렬된다 (인터리빙 전제 조건)")
+    void findMissedNotifications_returnsSortedByCreatedAtAsc() {
+        // Given
+        UUID receiverId = persistReceiver("missed-noti-sort@example.com");
+
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+        Instant t2 = Instant.parse("2026-01-01T00:02:00Z");
+        Instant t3 = Instant.parse("2026-01-01T00:03:00Z");
+
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "기준", null, NotificationLevel.INFO));
+        setCreatedAt(ref.getId(), t0);
+
+        // 역순(t3 → t1 → t2)으로 저장 — 정렬이 실제로 동작하지 않으면 순서가 틀어짐
+        Notification n3 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "알림3", null, NotificationLevel.INFO));
+        setCreatedAt(n3.getId(), t3);
+
+        Notification n1 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "알림1", null, NotificationLevel.INFO));
+        setCreatedAt(n1.getId(), t1);
+
+        Notification n2 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.FOLLOWED, "알림2", null, NotificationLevel.INFO));
+        setCreatedAt(n2.getId(), t2);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedNotifications(receiverId, ref.getId());
+
+        // Then: createdAt 오름차순(t1 → t2 → t3)이어야 한다
+        assertThat(result).hasSize(3);
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(n1.getId(), n2.getId(), n3.getId());
+    }
+
+    @Test
+    @DisplayName("findMissedDirectMessages: 결과가 createdAt 오름차순으로 정렬된다 (인터리빙 전제 조건)")
+    void findMissedDirectMessages_returnsSortedByCreatedAtAsc() {
+        // Given
+        UUID receiverId = persistReceiver("missed-dm-sort@example.com");
+
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+        Instant t2 = Instant.parse("2026-01-01T00:02:00Z");
+        Instant t3 = Instant.parse("2026-01-01T00:03:00Z");
+
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "기준DM", null, NotificationLevel.INFO));
+        setCreatedAt(ref.getId(), t0);
+
+        // 역순(t3 → t1 → t2)으로 저장
+        Notification dm3 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "DM3", null, NotificationLevel.INFO));
+        setCreatedAt(dm3.getId(), t3);
+
+        Notification dm1 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "DM1", null, NotificationLevel.INFO));
+        setCreatedAt(dm1.getId(), t1);
+
+        Notification dm2 = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "DM2", null, NotificationLevel.INFO));
+        setCreatedAt(dm2.getId(), t2);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedDirectMessages(receiverId, ref.getId());
+
+        // Then: createdAt 오름차순(t1 → t2 → t3)이어야 한다
+        assertThat(result).hasSize(3);
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(dm1.getId(), dm2.getId(), dm3.getId());
+    }
+
+    // created_at을 직접 지정 (@CreatedDate는 덮어쓸 수 없어 native query 사용)
+    private void setCreatedAt(UUID id, Instant createdAt) {
+        entityManager.createNativeQuery(
+                        "UPDATE notifications SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", OffsetDateTime.ofInstant(createdAt, ZoneOffset.UTC))
+                .setParameter("id", id)
+                .executeUpdate();
+    }
+
+    @Test
+    @DisplayName("미수신 DM 조회 시 읽음 처리된 DM은 제외된다")
+    void findMissedDirectMessages_excludesRead() {
+        // Given
+        UUID receiverId = persistReceiver("missed-dm@example.com");
+
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
+
+        Notification ref = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "기준", null, NotificationLevel.INFO));
+        setCreatedAt(ref.getId(), t0);
+
+        Notification unread = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "안읽음", null, NotificationLevel.INFO));
+        setCreatedAt(unread.getId(), t1);
+
+        Notification read = notificationRepository.save(Notification.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "읽음", null, NotificationLevel.INFO));
+        setCreatedAt(read.getId(), t1);
+
+        read.markAsRead();
+        notificationRepository.save(read);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Notification> result =
+                notificationRepository.findMissedDirectMessages(receiverId, ref.getId());
+
+        // Then: read는 제외, unread만 반환
+        assertThat(result).extracting(Notification::getId)
+                .containsExactly(unread.getId());
+    }
+}

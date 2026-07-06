@@ -72,3 +72,15 @@ $RECYCLE.BIN/
 
 ### Gradle Wrapper 예외 ###
 !gradle/wrapper/gradle-wrapper.jar
+
+### 로그 디렉토리 ###
+.logs/
+
+### 로컬 업로드 파일 디렉토리 ###
+uploads/
+uploads-test/
+
+### .vscode ###
+bin/
+.vscode/
+.settings/

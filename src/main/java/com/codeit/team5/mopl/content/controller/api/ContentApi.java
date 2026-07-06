@@ -1,0 +1,155 @@
+package com.codeit.team5.mopl.content.controller.api;
+
+import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
+import com.codeit.team5.mopl.content.dto.response.ContentResponse;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.content.entity.ContentSortByType;
+import com.codeit.team5.mopl.content.entity.ContentType;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.Sort;
+import java.util.UUID;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
+
+@Tag(name = "콘텐츠 관리", description = "콘텐츠 관련 API")
+public interface ContentApi {
+
+    @Schema(name = "ContentCreateMultipartRequest")
+    class ContentCreateMultipartRequest {
+        @Schema(implementation = ContentCreateRequest.class)
+        public ContentCreateRequest request;
+
+        @Schema(type = "string", format = "binary", description = "썸네일 이미지")
+        public MultipartFile thumbnail;
+    }
+
+    @Operation(summary = "[어드민] 콘텐츠 생성", description = "새로운 콘텐츠를 등록합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "성공",
+                    content = @Content(schema = @Schema(implementation = ContentResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    @RequestBody(content = @Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+            schema = @Schema(implementation = ContentCreateMultipartRequest.class),
+            encoding = @Encoding(name = "request", contentType = MediaType.APPLICATION_JSON_VALUE)
+    ))
+    ResponseEntity<ContentResponse> postContent(
+            @Parameter(hidden = true) ContentCreateRequest request,
+            @Parameter(hidden = true) MultipartFile thumbnail
+    );
+
+    @Schema(name = "ContentUpdateMultipartRequest")
+    class ContentUpdateMultipartRequest {
+
+        @Schema(implementation = ContentUpdateRequest.class)
+        public ContentUpdateRequest request;
+
+        @Schema(type = "string", format = "binary", description = "썸네일 이미지")
+        public MultipartFile thumbnail;
+
+    }
+    @Operation(summary = "[어드민] 콘텐츠 수정", description = "콘텐츠의 제목, 설명, 태그를 수정합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "성공",
+                    content = @Content(schema = @Schema(implementation = ContentResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "콘텐츠 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    @RequestBody(content = @Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+            schema = @Schema(implementation = ContentUpdateMultipartRequest.class),
+            encoding = @Encoding(name = "request", contentType = MediaType.APPLICATION_JSON_VALUE)
+    ))
+    ResponseEntity<ContentResponse> patchContent(
+            @Parameter(description = "콘텐츠 ID") UUID contentId,
+            @Parameter(hidden = true) ContentUpdateRequest request,
+            @Parameter(hidden = true) MultipartFile thumbnail
+    );
+    @Operation(summary = "콘텐츠 단건 조회", description = "콘텐츠 ID로 단건 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "성공",
+                    content = @Content(schema = @Schema(implementation = ContentResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "콘텐츠 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<ContentResponse> getContent(@Parameter(description = "콘텐츠 ID") UUID contentId);
+
+    @Operation(summary = "콘텐츠 목록 조회", description = "콘텐츠 목록을 커서 기반 페이지네이션으로 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    @Parameters({
+            @Parameter(name = "typeEqual", description = "콘텐츠 타입",
+                    schema = @Schema(implementation = ContentType.class)),
+            @Parameter(name = "keywordLike", description = "검색 키워드"),
+            @Parameter(name = "tagsIn", description = "태그 목록",
+                    array = @ArraySchema(schema = @Schema(type = "string", example = "string"))),
+            @Parameter(name = "cursor", description = "커서"),
+            @Parameter(name = "idAfter", description = "보조 커서"),
+            @Parameter(name = "limit", description = "한 번에 가져올 개수", example = "20", required = true),
+            @Parameter(name = "sortDirection", description = "정렬 방향", required = true,
+                    schema = @Schema(type = "string", allowableValues = {"ASCENDING", "DESCENDING"}, defaultValue = "DESCENDING")),
+            @Parameter(name = "sortBy", description = "정렬 기준", required = true,
+                    schema = @Schema(type = "string", allowableValues = {"createdAt", "watcherCount", "rate"}, defaultValue = "createdAt"))
+    })
+    ResponseEntity<CursorResponse<ContentResponse>> getContents(
+            @Parameter(hidden = true) ContentCursorRequest request);
+
+    @Operation(summary = "[어드민] 콘텐츠 삭제", description = "콘텐츠를 삭제합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "401", description = "인증 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "403", description = "권한 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "404", description = "콘텐츠 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+    })
+    ResponseEntity<Void> deleteContent(@Parameter(description = "콘텐츠 ID") UUID contentId);
+}

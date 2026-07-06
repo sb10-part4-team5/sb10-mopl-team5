@@ -52,85 +52,23 @@ reviews:
       enabled: true
     unit_tests:
       enabled: true
+  tools:
+    gitleaks:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    sqlfluff:
+      enabled: true
   path_filters:
     - "!build/**"
     - "!target/**"
     - "!.gradle/**"
     - "!**/*.class"
     - "!**/*.jar"
-  path_instructions:
-    - path: "src/main/java/**/controller/api/**"
-      instructions: |
-        - 컨트롤러 인터페이스에 Swagger 문서화(@Tag, @Operation, @ApiResponses)가 되어 있는지 확인
-        - @ApiResponse에 성공/실패 케이스(200, 400, 404 등)가 모두 정의되어 있는지 확인
-        - @Parameter 어노테이션으로 파라미터 설명이 있는지 확인
-        - 인터페이스에 비즈니스 로직이 포함되어 있으면 반드시 지적
 
-    - path: "src/main/java/**/controller/**"
-      instructions: |
-        - 컨트롤러 구현체는 반드시 인터페이스(Api)를 구현해야 함
-        - @RestController, @RequestMapping, @RequiredArgsConstructor 어노테이션 확인
-        - API 호출 시점에 로깅이 되어 있는지 확인 (예: log.info("Request API: ..."))
-        - @RequestBody에 @Valid 어노테이션 누락 시 반드시 지적
-        - REST 네이밍 규칙 준수 (명사 기반 URL, 적절한 HTTP 메서드)
-        - 올바른 HTTP 상태코드 반환 확인 (ResponseEntity 사용)
-        - 비즈니스 로직이 Controller에 있으면 반드시 지적
-
-    - path: "src/main/java/**/service/**"
-      instructions: |
-        - 단일 책임 원칙 위반 시 반드시 지적
-        - @Transactional 누락 또는 잘못된 사용 시 지적
-        - 필드 주입(@Autowired) 사용 시 생성자 주입(@RequiredArgsConstructor)으로 변경 요청
-        - 비즈니스 로직이 Controller 또는 Repository로 누출되면 지적
-        - 예외 처리 누락 시 반드시 지적
-        - 도메인별 exception 패키지의 커스텀 예외 사용 권장
-        - 데이터 영속화(DB 저장/수정/삭제) 성공 시점에 로깅이 되어 있는지 확인
-        - BusinessException 발생 시, 두 번째 파라미터에 식별자 정보를 포함하는지 확인
-
-    - path: "src/main/java/**/repository/**"
-      instructions: |
-        - N+1 쿼리 문제 발생 가능성 반드시 체크
-        - 대용량 데이터 조회 시 페이지네이션 없으면 지적
-        - 복잡한 쿼리는 @Query 사용 권장
-        - 인덱스 누락 가능성 체크
-
-    - path: "src/main/java/**/entity/**"
-      instructions: |
-        - JPA 어노테이션 누락 체크
-        - equals/hashCode 구현 확인
-        - 엔티티에 비즈니스 로직 있으면 지적
-        - 양방향 연관관계 불필요한 경우 지적
-        - @Data 사용 금지, @Getter/@Setter 개별 사용 권장
-
-    - path: "src/main/java/**/dto/**"
-      instructions: |
-        - Request DTO는 반드시 Request 접미사 사용
-        - Response DTO는 반드시 Response 접미사 사용
-        - @Valid 검증 어노테이션 누락 시 지적
-        - DTO에 비즈니스 로직 포함 시 지적
-
-    - path: "src/main/java/**/global/**"
-      instructions: |
-        - 공통 예외 처리(@RestControllerAdvice) 누락 시 지적
-        - GlobalExceptionHandler가 모든 도메인 예외를 일괄 처리하고 있는지 확인
-        - 유틸 클래스는 인스턴스화 방지(private 생성자) 확인
-
-    - path: "src/test/java/**"
-      instructions: |
-        - @DisplayName("어떤 행동 성공") 또는 @DisplayName("어떤 행동 실패") 네이밍 규칙 준수
-        - 테스트 패키지 구조가 메인 패키지 구조와 동일한지 확인
-        - Mockito 적절한 사용 여부 확인
-        - 성공 케이스뿐만 아니라 실패/예외 케이스 테스트 누락 시 반드시 지적
-        - 테스트 커버리지 낮으면 추가 테스트 요청
-        - 들여쓰기는 4 spaces 사용 (tab 사용 금지)
-        - continuation indent는 8 spaces 사용
-        - Google Style 기반 포맷 준수
-        - Push 전 IntelliJ 포맷터 적용 필수 (option + command + L)
-
-    - path: "src/main/resources/**"
-      instructions: |
-        - 하드코딩된 민감정보(비밀번호, API키, DB URL 등) 발견 시 즉시 지적
-        - 환경변수 또는 @ConfigurationProperties 사용 권장
+  # 리뷰 컨벤션은 docs/backend-convention.md(knowledge_base)를 단일 소스(SSOT)로 사용한다.
 
 chat:
   auto_reply: true
@@ -148,20 +86,10 @@ code_generation:
     path_instructions:
       - path: "src/main/java/**"
         instructions: |
-          - Controller는 통합 테스트(Testcontainers + MockMvc) 작성
+          - Controller는 슬라이스 테스트(@WebMvcTest)와 통합 테스트(Testcontainers + MockMvc)를 모두 작성
           - Service, 도메인 로직은 단위 테스트 작성
           - Given-When-Then 패턴을 적용
           - 성공 케이스와 실패/예외 케이스 모두 포함
-
-tools:
-  gitleaks:
-    enabled: true
-  yamllint:
-    enabled: true
-  markdownlint:
-    enabled: true
-  sqlfluff:
-    enabled: true
 
 knowledge_base:
   code_guidelines:

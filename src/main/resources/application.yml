@@ -3,6 +3,9 @@ spring:
     name: mopl
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  batch:
+    job:
+      enabled: false
   jpa:
     open-in-view: false
     hibernate:
@@ -13,6 +16,17 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 3000
+      mail.smtp.writetimeout: 5000
 
 server:
   port: ${SERVER_PORT:8080}
@@ -21,7 +35,45 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: prometheus, health, info
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+springdoc:
+  swagger-ui:
+    csrf:
+      enabled: true
+
+# 이미지 저장소 전략 (구현체는 mopl.storage.type 값으로 선택)
+#   - local: 로컬/테스트용 저장
+#   - s3    : 배포용 S3 저장
+mopl:
+  storage:
+    type: ${MOPL_STORAGE_TYPE:local}   # 기본값: 로컬
+  admin:
+    email: ${ADMIN_EMAIL}
+    password: ${ADMIN_PASSWORD}
+    name: ${ADMIN_NAME}
+
+tmdb:
+  access-token: ${TMDB_ACCESS_TOKEN}
+  base-url: https://api.themoviedb.org/3
+  batch:
+    daily-end-page: 5
+
+sports-db:
+  api-key: ${SPORTS_DB_API_KEY}
+  base-url: https://www.thesportsdb.com/api/v1/json
+
+jwt:
+  access-secret-key: ${JWT_ACCESS_SECRET_KEY}
+  refresh-secret-key: ${JWT_REFRESH_SECRET_KEY}
+  access-token-expiration-minutes: 30
+  refresh-token-expiration-minutes: 420

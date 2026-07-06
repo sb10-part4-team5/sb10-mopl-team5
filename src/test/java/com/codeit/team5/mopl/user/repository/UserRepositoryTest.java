@@ -1,0 +1,530 @@
+package com.codeit.team5.mopl.user.repository;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
+
+import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.config.JpaAuditingConfig;
+import com.codeit.team5.mopl.global.support.config.QueryDslTestConfig;
+import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
+import com.codeit.team5.mopl.user.constant.UserSortBy;
+import com.codeit.team5.mopl.user.dto.request.UserCursorRequest;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.entity.UserRole;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
+import org.springframework.test.context.ActiveProfiles;
+
+@DataJpaTest
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = NONE)
+@Import({JpaAuditingConfig.class, TestcontainersConfiguration.class, QueryDslTestConfig.class})
+class UserRepositoryTest {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Test
+    @DisplayName("사용자 저장에 성공한다")
+    void saveUser_success() {
+        // Given
+        User user = User.create("save@example.com", "password", "저장 사용자");
+
+        // When
+        User savedUser = userRepository.save(user);
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then
+        User foundUser = userRepository.findById(savedUser.getId()).orElseThrow();
+        assertThat(foundUser.getId()).isNotNull();
+        assertThat(foundUser.getEmail()).isEqualTo("save@example.com");
+        assertThat(foundUser.getPassword()).isEqualTo("password");
+        assertThat(foundUser.getName()).isEqualTo("저장 사용자");
+        assertThat(foundUser.getRole()).isEqualTo(user.getRole());
+        assertThat(foundUser.isLocked()).isFalse();
+        assertThat(foundUser.getCreatedAt()).isNotNull();
+        assertThat(foundUser.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("식별자로 사용자를 조회한다")
+    void findById_success() {
+        // Given
+        User user = User.create("find@example.com", "password", "조회 사용자");
+        User savedUser = userRepository.save(user);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        Optional<User> result = userRepository.findById(savedUser.getId());
+
+        // Then
+        assertThat(result)
+                .isPresent()
+                .get()
+                .extracting(User::getEmail, User::getName)
+                .containsExactly("find@example.com", "조회 사용자");
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 식별자로 사용자를 조회하면 빈 결과를 반환한다")
+    void findById_notFound() {
+        // Given
+        UUID nonexistentId = UUID.randomUUID();
+
+        // When
+        Optional<User> result = userRepository.findById(nonexistentId);
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("사용자를 삭제한다")
+    void delete_success() {
+        // Given
+        User user = User.create("delete@example.com", "password", "삭제 사용자");
+        User savedUser = userRepository.save(user);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        userRepository.deleteById(savedUser.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then
+        assertThat(userRepository.findById(savedUser.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("이메일이 존재하면 true를 반환한다")
+    void existsByEmail_returnTrue() {
+        // Given
+        User user = User.create("exists@example.com", "password", "존재 사용자");
+        userRepository.save(user);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        boolean result = userRepository.existsByEmail("exists@example.com");
+
+        // Then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("이메일이 존재하지 않으면 false를 반환한다")
+    void existsByEmail_returnFalse() {
+        // Given
+        String nonexistentEmail = "nonexistent@example.com";
+
+        // When
+        boolean result = userRepository.existsByEmail(nonexistentEmail);
+
+        // Then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("사용자 목록을 조건으로 필터링하고 이름 오름차순 커서로 이어서 조회한다")
+    void findUsers_filterByRoleAndLocked_success() {
+        // Given
+        User first = User.create("list-a@example.com", "password", "목록 A");
+        User sameName = User.create("list-aa@example.com", "password", "목록 A");
+        User second = User.create("list-b@example.com", "password", "목록 B");
+        User locked = User.create("list-c@example.com", "password", "목록 C");
+        locked.updateLocked(true);
+        User admin = User.create("list-admin@example.com", "password", "목록 관리자");
+        admin.updateRole(UserRole.ADMIN);
+
+        userRepository.saveAll(List.of(second, admin, locked, sameName, first));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "list",
+                UserRole.USER,
+                false,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.NAME
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "list",
+                UserRole.USER,
+                false,
+                lastUserOfFirstPage.getName(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.NAME
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+        long count = userRepository.countUsers(firstPageRequest);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::getName)
+                .containsExactly("목록 A", "목록 A", "목록 B");
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).getName()).isEqualTo(lastUserOfFirstPage.getName());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+        assertThat(count).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("생성일 커서로 사용자 목록을 이어서 조회한다")
+    void findUsers_createdAtCursor_success() {
+        // Given
+        User first = User.create("created-cursor-a@example.com", "password", "생성일 A");
+        User second = User.create("created-cursor-b@example.com", "password", "생성일 B");
+        User third = User.create("created-cursor-c@example.com", "password", "생성일 C");
+
+        userRepository.saveAll(List.of(third, first, second));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "created-cursor",
+                UserRole.USER,
+                false,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.CREATED_AT
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "created-cursor",
+                UserRole.USER,
+                false,
+                lastUserOfFirstPage.getCreatedAt().toString(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.CREATED_AT
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder).hasSize(3);
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(lastUserOfFirstPage.getCreatedAt()).isNotNull();
+        assertThat(secondPage.get(0).getCreatedAt())
+                .isAfterOrEqualTo(lastUserOfFirstPage.getCreatedAt());
+    }
+
+    @Test
+    @DisplayName("잠금 상태 커서로 사용자 목록을 이어서 조회한다")
+    void findUsers_lockedCursor_success() {
+        // Given
+        User firstUnlocked = User.create("locked-cursor-a@example.com", "password", "잠금 A");
+        User secondUnlocked = User.create("locked-cursor-b@example.com", "password", "잠금 B");
+        User firstLocked = User.create("locked-cursor-c@example.com", "password", "잠금 C");
+        firstLocked.updateLocked(true);
+        User secondLocked = User.create("locked-cursor-d@example.com", "password", "잠금 D");
+        secondLocked.updateLocked(true);
+
+        userRepository.saveAll(List.of(firstLocked, secondUnlocked, secondLocked, firstUnlocked));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "locked-cursor",
+                UserRole.USER,
+                null,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.LOCKED
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "locked-cursor",
+                UserRole.USER,
+                null,
+                Boolean.toString(lastUserOfFirstPage.isLocked()),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.LOCKED
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::isLocked)
+                .containsExactly(false, false, true, true);
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).isLocked()).isEqualTo(lastUserOfFirstPage.isLocked());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+    }
+
+    @Test
+    @DisplayName("권한 커서로 사용자 목록을 이어서 조회한다")
+    void findUsers_roleCursor_success() {
+        // Given
+        User firstUser = User.create("role-cursor-a@example.com", "password", "권한 A");
+        User secondUser = User.create("role-cursor-b@example.com", "password", "권한 B");
+        User firstAdmin = User.create("role-cursor-c@example.com", "password", "권한 C");
+        firstAdmin.updateRole(UserRole.ADMIN);
+        User secondAdmin = User.create("role-cursor-d@example.com", "password", "권한 D");
+        secondAdmin.updateRole(UserRole.ADMIN);
+
+        userRepository.saveAll(List.of(secondUser, firstAdmin, firstUser, secondAdmin));
+        entityManager.flush();
+        entityManager.clear();
+
+        UserCursorRequest firstPageRequest = new UserCursorRequest(
+                "role-cursor",
+                null,
+                false,
+                null,
+                null,
+                1,
+                Sort.Direction.ASC,
+                UserSortBy.ROLE
+        );
+
+        // When
+        List<User> expectedOrder = userRepository.findUsers(firstPageRequest, 10);
+        List<User> firstPage = userRepository.findUsers(firstPageRequest, 1);
+        User lastUserOfFirstPage = firstPage.get(0);
+        UserCursorRequest secondPageRequest = new UserCursorRequest(
+                "role-cursor",
+                null,
+                false,
+                lastUserOfFirstPage.getRole().name(),
+                lastUserOfFirstPage.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.ROLE
+        );
+        List<User> secondPage = userRepository.findUsers(secondPageRequest, 10);
+
+        // Then
+        List<User> combinedPages = new ArrayList<>(firstPage);
+        combinedPages.addAll(secondPage);
+
+        assertThat(expectedOrder)
+                .extracting(User::getRole)
+                .containsExactly(UserRole.ADMIN, UserRole.ADMIN, UserRole.USER, UserRole.USER);
+        assertThat(combinedPages)
+                .extracting(User::getId)
+                .containsExactlyElementsOf(expectedOrder.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage)
+                .extracting(User::getId)
+                .doesNotContainAnyElementsOf(secondPage.stream()
+                        .map(User::getId)
+                        .toList());
+        assertThat(firstPage).containsExactly(expectedOrder.get(0));
+        assertThat(secondPage.get(0)).isEqualTo(expectedOrder.get(1));
+        assertThat(secondPage.get(0).getRole()).isEqualTo(lastUserOfFirstPage.getRole());
+        assertThat(secondPage.get(0).getId()).isEqualTo(expectedOrder.get(1).getId());
+    }
+
+    @Test
+    @DisplayName("잘못된 커서 값이면 예외가 발생한다")
+    void findUsers_malformedCursor_throwsException() {
+        // Given
+        User user = User.create("malformed-cursor@example.com", "password", "잘못된 커서");
+        User savedUser = userRepository.saveAndFlush(user);
+        entityManager.clear();
+
+        UserCursorRequest invalidCreatedAtCursorRequest = new UserCursorRequest(
+                "malformed-cursor",
+                UserRole.USER,
+                false,
+                "not-an-instant",
+                savedUser.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.CREATED_AT
+        );
+        UserCursorRequest invalidLockedCursorRequest = new UserCursorRequest(
+                "malformed-cursor",
+                UserRole.USER,
+                false,
+                "not-a-boolean",
+                savedUser.getId(),
+                10,
+                Sort.Direction.ASC,
+                UserSortBy.LOCKED
+        );
+
+        // When & Then
+        assertThatThrownBy(() -> userRepository.findUsers(invalidCreatedAtCursorRequest, 10))
+                .isInstanceOf(InvalidCursorException.class)
+                .hasMessage("커서 값이 유효하지 않습니다.");
+        assertThatThrownBy(() -> userRepository.findUsers(invalidLockedCursorRequest, 10))
+                .isInstanceOf(InvalidCursorException.class)
+                .hasMessage("커서 값이 유효하지 않습니다.");
+    }
+
+    @Test
+    @DisplayName("식별자로 사용자를 비관적 쓰기 잠금으로 조회한다")
+    void findByIdForUpdate_success() {
+        // Given
+        User user = User.create("lock@example.com", "password", "잠금 사용자");
+        User savedUser = userRepository.saveAndFlush(user);
+        entityManager.clear();
+
+        // When
+        User foundUser = userRepository.findByIdForUpdate(savedUser.getId()).orElseThrow();
+
+        // Then
+        assertThat(foundUser.getId()).isEqualTo(savedUser.getId());
+        assertThat(foundUser.getEmail()).isEqualTo("lock@example.com");
+        assertThat(entityManager.getLockMode(foundUser)).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 식별자를 비관적 쓰기 잠금으로 조회하면 빈 결과를 반환한다")
+    void findByIdForUpdate_notFound() {
+        // Given
+        UUID nonexistentId = UUID.randomUUID();
+
+        // When
+        Optional<User> result = userRepository.findByIdForUpdate(nonexistentId);
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("중복 이메일로 저장하면 예외가 발생한다")
+    void duplicateEmail_throwsException() {
+        // Given
+        User firstUser = User.create("duplicate@example.com", "password1", "첫 번째 사용자");
+        User secondUser = User.create("duplicate@example.com", "password2", "두 번째 사용자");
+        userRepository.saveAndFlush(firstUser);
+
+        // When & Then
+        assertThatThrownBy(() -> userRepository.saveAndFlush(secondUser))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("이메일이 null인 사용자를 저장하면 예외가 발생한다")
+    void saveWithNullEmail_throwsException() {
+        // Given
+        User user = User.create(null, "password", "이메일 없음");
+
+        // When & Then
+        assertThatThrownBy(() -> userRepository.saveAndFlush(user))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("이름이 null인 사용자를 저장하면 예외가 발생한다")
+    void saveWithNullName_throwsException() {
+        // Given
+        User user = User.create("null-name@example.com", "password", null);
+
+        // When & Then
+        assertThatThrownBy(() -> userRepository.saveAndFlush(user))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("255자를 초과하는 이메일로 저장하면 예외가 발생한다")
+    void tooLongEmail_throwsException() {
+        // Given
+        String tooLongEmail = "a".repeat(244) + "@example.com";
+        User user = User.create(tooLongEmail, "password", "긴 이메일 사용자");
+
+        // When & Then
+        assertThatThrownBy(() -> userRepository.saveAndFlush(user))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("100자를 초과하는 이름으로 저장하면 예외가 발생한다")
+    void tooLongUsername_throwsException() {
+        // Given
+        User user = User.create("long-name@example.com", "password", "가".repeat(101));
+
+        // When & Then
+        assertThatThrownBy(() -> userRepository.saveAndFlush(user))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+}
