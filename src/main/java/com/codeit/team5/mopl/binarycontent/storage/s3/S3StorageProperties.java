@@ -9,6 +9,7 @@ public record S3StorageProperties(
         String secretKey,
         String bucketName,
         String region,
+        String cdnBaseUrl,
         Duration apiCallTimeout,
         Duration apiCallAttemptTimeout
 ) {

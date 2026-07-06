@@ -27,7 +27,11 @@ public class S3BinaryContentStorage implements BinaryContentStorage {
 
     @Override
     public String toUrl(String key) {
-        return "https://" + properties.bucketName() + ".s3." + properties.region() + ".amazonaws.com/" + key;
+        String baseUrl = properties.cdnBaseUrl();
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        return baseUrl + "/" + key;
     }
 
     @Override

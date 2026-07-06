@@ -25,6 +25,7 @@ resource "aws_ecs_task_definition" "mopl" {
       { name = "DB_PASSWORD", value = var.db_password },
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "AWS_REGION", value = var.aws_region },
+      { name = "CDN_BASE_URL", value = "https://${var.cdn_domain}" },
       { name = "JAVA_TOOL_OPTIONS", value = "-Xmx512m" }
     ]
 
@@ -62,7 +63,7 @@ resource "aws_ecs_service" "mopl" {
     rollback = true
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.https]
 
   # CD가 매 배포마다 새 task def revision(:sha)으로 갱신하므로 terraform은 무시
   lifecycle {

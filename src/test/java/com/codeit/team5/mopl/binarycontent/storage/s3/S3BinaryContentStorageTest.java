@@ -31,7 +31,7 @@ class S3BinaryContentStorageTest {
     @BeforeEach
     void setUp() {
         S3StorageProperties properties =
-                new S3StorageProperties(null, null, "mopl-bucket", "ap-northeast-2", null, null);
+                new S3StorageProperties(null, null, "mopl-bucket", "ap-northeast-2", "https://cdn.mopl-dev.site", null, null);
         storage = new S3BinaryContentStorage(properties, s3Client);
     }
 
@@ -69,8 +69,7 @@ class S3BinaryContentStorageTest {
         String url = storage.toUrl("profiles/abc.jpg");
 
         // Then
-        assertThat(url)
-                .isEqualTo("https://mopl-bucket.s3.ap-northeast-2.amazonaws.com/profiles/abc.jpg");
+        assertThat(url).isEqualTo("https://cdn.mopl-dev.site/profiles/abc.jpg");
     }
 
     @Test

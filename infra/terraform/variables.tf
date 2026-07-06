@@ -77,3 +77,10 @@ variable "team_members" {
   type        = list(string)
   default     = []
 }
+
+variable "cdn_domain" {
+  description = "CloudFront CDN 커스텀 도메인"
+  type        = string
+  default     = "cdn.mopl-dev.site"
+}
+
