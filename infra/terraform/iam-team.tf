@@ -48,7 +48,7 @@ resource "aws_iam_group_policy" "developers_ssm" {
         Action = ["ssm:StartSession"]
         Resource = [
           "arn:aws:ssm:${var.aws_region}::document/AWS-StartPortForwardingSessionToRemoteHost",
-          "arn:aws:ssm:${var.aws_region}::document/SSM-SessionManagerRunShell"
+          "arn:aws:ssm:${var.aws_region}:${var.account_id}:document/SSM-SessionManagerRunShell"
         ]
       },
       # 본인이 시작한 세션만 종료/재개

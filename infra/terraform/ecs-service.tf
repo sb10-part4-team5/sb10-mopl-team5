@@ -31,6 +31,18 @@ resource "aws_ecs_task_definition" "mopl" {
       { name = "MAIL_PORT", value = var.mail_port },
       { name = "MAIL_USERNAME", value = var.mail_username },
       { name = "MAIL_PASSWORD", value = var.mail_password },
+      { name = "JWT_ACCESS_SECRET_KEY", value = var.jwt_access_secret_key },
+      { name = "JWT_REFRESH_SECRET_KEY", value = var.jwt_refresh_secret_key },
+      { name = "ADMIN_EMAIL", value = var.admin_email },
+      { name = "ADMIN_PASSWORD", value = var.admin_password },
+      { name = "ADMIN_NAME", value = var.admin_name },
+      { name = "TMDB_ACCESS_TOKEN", value = var.tmdb_access_token },
+      { name = "TMDB_API_KEY", value = var.tmdb_api_key },
+      { name = "SPORTS_DB_API_KEY", value = var.sports_db_api_key },
+      { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
+      { name = "GOOGLE_CLIENT_SECRET", value = var.google_client_secret },
+      { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
+      { name = "KAKAO_CLIENT_SECRET", value = var.kakao_client_secret },
       { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx400m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC" }
     ]
 
