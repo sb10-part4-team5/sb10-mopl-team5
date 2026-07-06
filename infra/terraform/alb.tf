@@ -21,11 +21,11 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # egress는 VPC 내부 8080(앱)으로만 제한 (전체 개방 대신)
+  # bridge dynamic port mapping으로 인해 전체 포트 허용 (대상은 VPC 내부만)
   egress {
-    description = "to app 8080 within VPC"
-    from_port   = 8080
-    to_port     = 8080
+    description = "to app dynamic ports within VPC"
+    from_port   = 0
+    to_port     = 65535
     protocol    = "tcp"
     cidr_blocks = [aws_vpc.mopl.cidr_block]
   }
@@ -33,16 +33,16 @@ resource "aws_security_group" "alb" {
   tags = { Name = "mopl-alb-sg" }
 }
 
-# 앱(ECS task) 방화벽 — ALB에서만 8080 허용
+# 앱(ECS task) 방화벽 — ALB에서만 허용 (bridge 동적 포트 대응)
 resource "aws_security_group" "app" {
   name        = "mopl-app-sg"
   description = "App from ALB"
   vpc_id      = aws_vpc.mopl.id
 
   ingress {
-    description     = "App port from ALB"
-    from_port       = 8080
-    to_port         = 8080
+    description     = "App dynamic ports from ALB"
+    from_port       = 0
+    to_port         = 65535
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
@@ -72,11 +72,11 @@ resource "aws_lb" "mopl" {
 
 # Target Group — 앱 8080, health check는 actuator
 resource "aws_lb_target_group" "mopl" {
-  name        = "mopl-tg"
+  name_prefix = "mopl-"
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = aws_vpc.mopl.id
-  target_type = "ip" # awsvpc 네트워크 모드 (task별 IP)
+  target_type = "instance" # bridge 네트워크 모드 (EC2 인스턴스 단위 등록)
 
   health_check {
     path                = "/actuator/health"
@@ -88,6 +88,10 @@ resource "aws_lb_target_group" "mopl" {
   }
 
   tags = { Name = "mopl-tg" }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Listener — 80 → 443 리다이렉트
