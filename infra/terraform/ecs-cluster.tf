@@ -24,7 +24,10 @@ resource "aws_launch_template" "ecs" {
     name = aws_iam_instance_profile.ecs_instance.name
   }
 
-  vpc_security_group_ids = [aws_security_group.app.id]
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.app.id]
+  }
 
   # IMDSv2 강제 (토큰 필수) — SSRF 등으로 메타데이터/자격증명 탈취 방지
   metadata_options {
