@@ -112,7 +112,7 @@ public class ReviewService {
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
-        updateContentStat(request.contentId(), request.rating());
+        updateContentStat(request.contentId(), request.rating(), true);
         return reviewMapper.toDto(saved);
     }
 
@@ -125,7 +125,7 @@ public class ReviewService {
             throw new ReviewForbiddenException();
         }
         review.update(request.text(), request.rating());
-        updateContentStat(request);
+        updateContentStat(review.getContentId(), request.rating(), false);
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
         return reviewMapper.toDto(review);
     }
@@ -156,13 +156,13 @@ public class ReviewService {
         return (Double) ReviewSortBy.RATING.parse(cursor);
     }
 
-    private void updateContentStat(UUID contentId, Double rating){
+    private void updateContentStat(UUID contentId, Double rating, boolean isAdded){
         Content content = contentRepository.findById(contentId).orElseThrow(() ->
             new ContentNotFoundException(contentId));
 
         ContentStats stats = content.getStats();
         double newRatingSum = stats.getRatingSum() + rating;
-        stats.updateRating(newRatingSum, stats.getReviewCount() + 1);
+        stats.updateRating(newRatingSum, isAdded ? stats.getReviewCount() + 1 : stats.getReviewCount());
 
     }
 }
