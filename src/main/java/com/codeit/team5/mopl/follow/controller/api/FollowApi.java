@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.follow.controller.api;
 
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.follow.dto.request.FollowCreateRequest;
 import com.codeit.team5.mopl.follow.dto.response.FollowResponse;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
@@ -36,7 +36,7 @@ public interface FollowApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<FollowResponse> follow(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "팔로우 요청 본문", required = true)
             @Valid @RequestBody FollowCreateRequest request);
 
@@ -53,7 +53,7 @@ public interface FollowApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<FollowResponse> getFollowedByMe(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "대상 사용자 ID", required = true)
             @RequestParam UUID followeeId);
 
@@ -83,6 +83,6 @@ public interface FollowApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
     })
     ResponseEntity<Void> unfollow(
-            @Parameter(hidden = true) MoplUserDetails userDetails,
+            @Parameter(hidden = true) MoplPrincipal principal,
             @Parameter(description = "팔로우 ID", required = true) UUID followId);
 }
