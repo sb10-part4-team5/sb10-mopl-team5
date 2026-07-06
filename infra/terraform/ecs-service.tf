@@ -63,7 +63,7 @@ resource "aws_ecs_service" "mopl" {
     rollback = true
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.https]
 
   # CD가 매 배포마다 새 task def revision(:sha)으로 갱신하므로 terraform은 무시
   lifecycle {
