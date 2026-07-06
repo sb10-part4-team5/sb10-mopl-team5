@@ -113,7 +113,7 @@ public class ReviewService {
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
-        contentStatService.updateContentStat(request.contentId(), request.rating(), 1);
+        contentStatService.reviewUpdateContentStat(request.contentId(), request.rating(), 1);
         return reviewMapper.toDto(saved);
     }
 
@@ -127,7 +127,9 @@ public class ReviewService {
         }
         double oldRating = review.getRating();
         review.update(request.text(), request.rating());
-        contentStatService.updateContentStat(review.getContentId(), request.rating() - oldRating, 0);
+        if(request.rating() != null){
+            contentStatService.reviewUpdateContentStat(review.getContentId(), request.rating() - oldRating, 0);
+        }
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
         return reviewMapper.toDto(review);
     }
@@ -140,7 +142,7 @@ public class ReviewService {
             log.warn("리뷰 삭제 권한 없음: reviewId={}, requesterId={}", reviewId, authorId);
             throw new ReviewForbiddenException();
         }
-        contentStatService.updateContentStat(review.getContentId(), -review.getRating(), -1);
+        contentStatService.reviewUpdateContentStat(review.getContentId(), -review.getRating(), -1);
         reviewRepository.delete(review);
         log.info("리뷰 삭제 완료: reviewId={}, authorId={}", reviewId, authorId);
     }
