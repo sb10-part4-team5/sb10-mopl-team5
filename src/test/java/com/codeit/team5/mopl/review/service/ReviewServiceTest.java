@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.review.service;
 
+import static com.codeit.team5.mopl.review.entity.QReview.review;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.content.service.ContentStatService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -52,6 +54,9 @@ class ReviewServiceTest {
 
     @Mock
     private ReviewMapper reviewMapper;
+
+    @Mock
+    private ContentStatService contentStatService;
 
     @InjectMocks
     private ReviewService reviewService;
@@ -184,6 +189,7 @@ class ReviewServiceTest {
         // then
         assertThat(result).isEqualTo(response);
         verify(reviewRepository).save(any());
+        verify(contentStatService).reviewUpdateContentStat(contentId, 4.5, 1);
     }
 
     @Test
@@ -240,6 +246,7 @@ class ReviewServiceTest {
         // given
         UUID reviewId = UUID.randomUUID();
         UUID authorId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
         ReviewUpdateRequest request = new ReviewUpdateRequest("수정된 내용", 3.0);
 
         Review review = mock(Review.class);
@@ -247,6 +254,8 @@ class ReviewServiceTest {
 
         given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
         given(review.getAuthorId()).willReturn(authorId);
+        given(review.getRating()).willReturn(2.0);
+        given(review.getContentId()).willReturn(contentId);
         given(reviewMapper.toDto(review)).willReturn(response);
 
         // when
@@ -255,6 +264,7 @@ class ReviewServiceTest {
         // then
         assertThat(result).isEqualTo(response);
         verify(review).update("수정된 내용", 3.0);
+        verify(contentStatService).reviewUpdateContentStat(contentId, 1.0, 0);
     }
 
     @Test
@@ -296,15 +306,19 @@ class ReviewServiceTest {
         // given
         UUID reviewId = UUID.randomUUID();
         UUID authorId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
 
         Review review = mock(Review.class);
         given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
         given(review.getAuthorId()).willReturn(authorId);
+        given(review.getRating()).willReturn(4.0);
+        given(review.getContentId()).willReturn(contentId);
 
         // when
         reviewService.deleteReview(reviewId, authorId);
 
         // then
+        verify(contentStatService).reviewUpdateContentStat(contentId, -4.0, -1);
         verify(reviewRepository).delete(review);
     }
 
