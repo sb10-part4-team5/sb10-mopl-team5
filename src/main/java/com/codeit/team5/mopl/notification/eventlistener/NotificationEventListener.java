@@ -10,7 +10,7 @@ import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.playlist.event.PlaylistSubscribedEvent;
-import com.codeit.team5.mopl.playlist.event.PlaylistUpdatedEvent;
+import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -50,13 +50,15 @@ public class NotificationEventListener {
             title, content, NotificationLevel.INFO);
     }
 
-    // 내가 구독한 플레이리스트가 업데이트 되면 알림 생성
+    // 내가 구독한 플레이리스트에 콘텐츠가 추가되면 구독자 전원에게 알림 생성 (fan-out)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onPlaylistUpdated(PlaylistUpdatedEvent event){
+    public void onPlaylistContentAdd(PlaylistContentAddEvent event){
         String title = "[플레이리스트] " +  event.playlistName();
-        String content =  "플레이리스트가 업데이트 되었습니다.";
-        notificationService.create(event.receiverId(), NotificationType.PLAYLIST_UPDATED,
-            title, content, NotificationLevel.INFO);
+        String content =  event.contentTitle() + " 가 추가되었습니다.";
+        for (UUID receiverId : event.receiverId()) {
+            notificationService.create(receiverId, NotificationType.PLAYLIST_UPDATED,
+                title, content, NotificationLevel.INFO);
+        }
     }
 
     // 다른 유저가 나를 팔로우 했을 때 트리거되는 이벤트를 받고 알림 생성
