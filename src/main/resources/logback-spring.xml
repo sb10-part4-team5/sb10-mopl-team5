@@ -19,18 +19,20 @@
         </encoder>
     </appender>
 
-    <!-- 파일 출력: 일자별 롤링 + gzip 압축 + 로컬 7일 보관 (장기 보관은 S3에서 담당) -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/mopl.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/mopl.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
-            <maxHistory>7</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-        <encoder>
-            <pattern>${FILE_PATTERN}</pattern>
-        </encoder>
-    </appender>
+    <!-- 파일 출력: prod 제외 (ECS 컨테이너에 .logs/ 없음) -->
+    <springProfile name="!prod">
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_PATH}/mopl.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_PATH}/mopl.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>${FILE_PATTERN}</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
 
     <!--
       ============================================================
@@ -55,11 +57,20 @@
       ============================================================
     -->
 
-    <!-- 콘솔 + 파일 출력 -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-    </root>
+    <!-- prod: 콘솔만 (ECS stdout 캡처, 파일 불필요) -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- prod 외: 콘솔 + 파일 -->
+    <springProfile name="!prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
 
     <!--
       [예정] prod 전용 Kafka 활성화:
