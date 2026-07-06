@@ -107,3 +107,72 @@ variable "mail_password" {
   sensitive   = true
 }
 
+variable "jwt_access_secret_key" {
+  description = "JWT 액세스 토큰 서명 키"
+  type        = string
+  sensitive   = true
+}
+
+variable "jwt_refresh_secret_key" {
+  description = "JWT 리프레시 토큰 서명 키"
+  type        = string
+  sensitive   = true
+}
+
+variable "admin_email" {
+  description = "초기 Admin 계정 이메일"
+  type        = string
+}
+
+variable "admin_password" {
+  description = "초기 Admin 계정 비밀번호"
+  type        = string
+  sensitive   = true
+}
+
+variable "admin_name" {
+  description = "초기 Admin 계정 이름"
+  type        = string
+  default     = "Admin"
+}
+
+variable "tmdb_access_token" {
+  description = "TMDB API Bearer 토큰"
+  type        = string
+  sensitive   = true
+}
+
+variable "tmdb_api_key" {
+  description = "TMDB API 키"
+  type        = string
+  sensitive   = true
+}
+
+variable "sports_db_api_key" {
+  description = "SportsDB API 키"
+  type        = string
+  default     = "123"
+}
+
+variable "google_client_id" {
+  description = "Google OAuth 클라이언트 ID"
+  type        = string
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth 클라이언트 시크릿"
+  type        = string
+  sensitive   = true
+}
+
+variable "kakao_client_id" {
+  description = "Kakao OAuth 클라이언트 ID"
+  type        = string
+}
+
+variable "kakao_client_secret" {
+  description = "Kakao OAuth 클라이언트 시크릿"
+  type        = string
+  sensitive   = true
+}
+
