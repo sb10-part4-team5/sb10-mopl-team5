@@ -20,12 +20,12 @@ import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import com.codeit.team5.mopl.tag.util.TagResolver;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -173,28 +173,12 @@ public class ContentService {
     }
 
     private void insertTags(Content content, List<String> tagNames) {
-        Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
-                .collect(Collectors.toMap(Tag::getName, Function.identity()));
-
-        List<Tag> newTags = tagNames.stream()
-                .filter(name -> !existingTags.containsKey(name))
-                .map(Tag::create)
-                .toList();
-
-        if (!newTags.isEmpty()) {
-            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
-        }
-
+        Map<String, Tag> existingTags = TagResolver.resolve(tagNames, tagRepository);
         tagNames.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
     }
 
     private List<String> normalizeTagNames(List<String> rawTagNames) {
-        List<String> tagNames = rawTagNames.stream()
-                .map(String::trim)
-                .filter(name -> !name.isEmpty())
-                .map(String::toLowerCase)
-                .distinct()
-                .toList();
+        List<String> tagNames = TagResolver.normalizeNames(rawTagNames);
 
         if (tagNames.isEmpty()) throw new EmptyTagException();
         if (tagNames.size() > 10) throw new TooManyTagsException();

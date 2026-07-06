@@ -11,12 +11,12 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
+import com.codeit.team5.mopl.tag.util.TagResolver;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,27 +99,19 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         }
 
         // 4. 태그 저장
-        List<String> allTagNames = deduplicatedItems.stream()
+        List<String> allTagNames = TagResolver.normalizeNames(deduplicatedItems.stream()
                 .flatMap(item -> item.tagNames().stream())
-                .distinct()
-                .toList();
+                .toList());
 
         if (!allTagNames.isEmpty()) {
-            Map<String, Tag> existingTags = tagRepository.findByNameIn(allTagNames).stream()
-                    .collect(Collectors.toMap(Tag::getName, Function.identity()));
+            Map<String, Tag> existingTags = TagResolver.resolve(allTagNames, tagRepository);
 
-            List<Tag> newTags = allTagNames.stream()
-                    .filter(name -> !existingTags.containsKey(name))
-                    .map(Tag::create)
-                    .toList();
-
-            if (!newTags.isEmpty()) {
-                tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
-            }
-
-            deduplicatedItems.forEach(item -> item.tagNames().forEach(tagName ->
-                    item.content().addTag(ContentTag.create(item.content(), existingTags.get(tagName)))
-            ));
+            deduplicatedItems.forEach(item -> item.tagNames().forEach(tagName -> {
+                String normalized = tagName.trim().toLowerCase();
+                if (existingTags.containsKey(normalized)) {
+                    item.content().addTag(ContentTag.create(item.content(), existingTags.get(normalized)));
+                }
+            }));
         }
 
         log.info("[Batch] {}건 저장 완료 (청크 원본: {}건)", deduplicatedItems.size(), items.size());
