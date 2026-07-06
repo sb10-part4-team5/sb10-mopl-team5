@@ -23,6 +23,7 @@ import com.codeit.team5.mopl.subscription.exception.SubscriptionUserNotFoundExce
 import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionServiceTest {
@@ -38,13 +39,16 @@ class SubscriptionServiceTest {
     @Mock
     private PlaylistRepository playlistRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private User user;
     private Playlist playlist;
 
     @BeforeEach
     void setUp() {
         subscriptionService =
-                new SubscriptionService(subscriptionRepository, userRepository, playlistRepository);
+                new SubscriptionService(subscriptionRepository, userRepository, playlistRepository, eventPublisher);
 
         user = User.create("test@example.com", "password", "Test User");
         ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
