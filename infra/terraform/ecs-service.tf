@@ -1,7 +1,7 @@
 # Task Definition (레시피) — 컨테이너 실행 설계도
 resource "aws_ecs_task_definition" "mopl" {
   family                   = "mopl"
-  network_mode             = "awsvpc"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
   cpu                      = "512" # 0.5 vCPU
   memory                   = "768" # MB (t3.micro 1GB 중 시스템 여유)
@@ -15,6 +15,7 @@ resource "aws_ecs_task_definition" "mopl" {
 
     portMappings = [{
       containerPort = 8080
+      hostPort      = 0
       protocol      = "tcp"
     }]
 
@@ -44,11 +45,6 @@ resource "aws_ecs_service" "mopl" {
   cluster         = aws_ecs_cluster.mopl.id
   task_definition = aws_ecs_task_definition.mopl.arn
   desired_count   = 1 # 나중에 2로 확장 가능
-
-  network_configuration {
-    subnets         = aws_subnet.public[*].id
-    security_groups = [aws_security_group.app.id]
-  }
 
   load_balancer {
     target_group_arn = aws_lb_target_group.mopl.arn
