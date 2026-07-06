@@ -34,6 +34,39 @@ resource "aws_acm_certificate_validation" "cdn" {
   validation_record_fqdns = [for record in aws_route53_record.cdn_cert_validation : record.fqdn]
 }
 
+# CloudFront 액세스 로그 버킷 (ACL 방식 필요)
+resource "aws_s3_bucket" "cdn_logs" {
+  bucket        = "${var.s3_bucket}-cdn-logs"
+  force_destroy = true
+  tags          = { Name = "mopl-cdn-logs" }
+}
+
+resource "aws_s3_bucket_ownership_controls" "cdn_logs" {
+  bucket = aws_s3_bucket.cdn_logs.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "cdn_logs" {
+  depends_on = [aws_s3_bucket_ownership_controls.cdn_logs]
+  bucket     = aws_s3_bucket.cdn_logs.id
+  acl        = "log-delivery-write"
+}
+
+# 보안 헤더 정책 (HSTS)
+resource "aws_cloudfront_response_headers_policy" "cdn_security" {
+  name = "mopl-cdn-security"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      override                   = true
+    }
+  }
+}
+
 # OAC — CloudFront가 S3에 서명된 요청으로 접근
 resource "aws_cloudfront_origin_access_control" "mopl" {
   name                              = "mopl-s3-oac"
@@ -49,6 +82,12 @@ resource "aws_cloudfront_distribution" "mopl" {
   default_root_object = ""
   price_class         = "PriceClass_200" # 아시아 포함
 
+  logging_config {
+    include_cookies = false
+    bucket          = aws_s3_bucket.cdn_logs.bucket_domain_name
+    prefix          = "cloudfront/"
+  }
+
   origin {
     domain_name              = aws_s3_bucket.mopl.bucket_regional_domain_name
     origin_id                = "s3-mopl"
@@ -62,7 +101,8 @@ resource "aws_cloudfront_distribution" "mopl" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # CachingOptimized (AWS 관리형)
+    cache_policy_id             = "658327ea-f89d-4fab-a63d-7e88639e58f6" # CachingOptimized (AWS 관리형)
+    response_headers_policy_id  = aws_cloudfront_response_headers_policy.cdn_security.id
   }
 
   restrictions {

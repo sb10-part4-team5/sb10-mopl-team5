@@ -22,12 +22,12 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region
-  profile = var.aws_profile
+  profile = var.aws_profile != "" ? var.aws_profile : null
 }
 
 # CloudFront ACM 인증서는 반드시 us-east-1에 있어야 함
 provider "aws" {
   alias   = "us_east_1"
   region  = "us-east-1"
-  profile = var.aws_profile
+  profile = var.aws_profile != "" ? var.aws_profile : null
 }
