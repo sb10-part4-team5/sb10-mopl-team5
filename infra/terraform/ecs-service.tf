@@ -26,7 +26,7 @@ resource "aws_ecs_task_definition" "mopl" {
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "AWS_REGION", value = var.aws_region },
       { name = "CDN_BASE_URL", value = "https://${var.cdn_domain}" },
-      { name = "JAVA_TOOL_OPTIONS", value = "-Xms256m -Xmx400m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC" }
+      { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx400m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC" }
     ]
 
     # logConfiguration 생략 → ECS EC2 기본 json-file (EC2 로컬, CloudWatch 미사용)
