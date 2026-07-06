@@ -27,13 +27,4 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(String.class, UserSortBy.class, UserSortBy::from);
         registry.addConverter(String.class, ReviewSortBy.class, ReviewSortBy::from);
     }
-
-    @Override
-    public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/sign-in")
-                .setViewName("forward:/index.html");
-
-        registry.addViewController("/contents")
-                .setViewName("forward:/index.html");
-    }
 }
