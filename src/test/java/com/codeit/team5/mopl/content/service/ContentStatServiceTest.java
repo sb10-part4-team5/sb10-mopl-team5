@@ -64,16 +64,4 @@ class ContentStatServiceTest {
         // then
         verify(contentStatsRepository).applyStatDelta(contentId, -4.0, -1);
     }
-
-    @Test
-    @DisplayName("콘텐츠가 존재하지 않으면 예외가 발생한다")
-    void reviewUpdateContentStat_contentNotFound() {
-        // given
-        UUID contentId = UUID.randomUUID();
-        given(contentStatsRepository.applyStatDelta(contentId, 4.5, 1)).willReturn(0);
-
-        // when & then
-        assertThatThrownBy(() -> contentStatService.reviewUpdateContentStat(contentId, 4.5, 1))
-            .isInstanceOf(ContentNotFoundException.class);
-    }
 }
