@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
+import com.codeit.team5.mopl.auth.security.details.oauth.MoplOAuth2UserService;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.SpaCsrfTokenRequestHandler;
@@ -34,6 +35,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 public class SecurityConfig {
 
     private final JwtAuthenticationService jwtAuthenticationService;
+    private final MoplOAuth2UserService moplOAuth2UserService;
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
     private final UserAccessDeniedHandler userAccessDeniedHandler;
     private final MoplAuthenticationProvider moplAuthenticationProvider;
@@ -68,6 +70,11 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/auth/sign-out").permitAll()
 
+                        .requestMatchers(
+                                "/oauth2/**",
+                                "/login/oauth2/**"
+                        ).permitAll()
+
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/users/*/role").hasRole("ADMIN")
@@ -98,6 +105,13 @@ public class SecurityConfig {
                 )
                 .formLogin(login -> login
                         .loginProcessingUrl("/api/auth/sign-in")
+                        .successHandler(signInSuccessHandler)
+                        .failureHandler(signInFailureHandler)
+                )
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.userService(moplOAuth2UserService)
+                        )
                         .successHandler(signInSuccessHandler)
                         .failureHandler(signInFailureHandler)
                 )

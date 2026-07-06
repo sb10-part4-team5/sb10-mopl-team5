@@ -11,7 +11,7 @@ public class GoogleOAuthUserInfo implements OAuthUserInfo {
 
     @Override
     public SocialProvider getProvider() {
-        return null;
+        return SocialProvider.GOOGLE;
     }
 
     @Override
@@ -26,6 +26,6 @@ public class GoogleOAuthUserInfo implements OAuthUserInfo {
 
     @Override
     public String getName() {
-        return "";
+        return (String) attributes.get("name");
     }
 }
