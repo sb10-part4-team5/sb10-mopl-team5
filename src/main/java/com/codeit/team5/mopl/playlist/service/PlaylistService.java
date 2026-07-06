@@ -1,8 +1,11 @@
 package com.codeit.team5.mopl.playlist.service;
 
+import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import com.codeit.team5.mopl.playlist.exception.PlaylistItemAlreadyExistsException;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.codeit.team5.mopl.content.entity.Content;
@@ -37,6 +40,8 @@ public class PlaylistService {
     private final UserRepository userRepository;
     private final PlaylistItemRepository playlistItemRepository;
     private final ContentRepository contentRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PlaylistResponse create(UUID userId, PlaylistCreateRequest request) {
@@ -87,6 +92,12 @@ public class PlaylistService {
         Content content = contentRepository.getReferenceById(contentId);
         PlaylistItem playlistItem = PlaylistItem.of(playlistId, content);
         playlistItemRepository.save(playlistItem);
+
+        Playlist playlist = repository.getReferenceById(playlistId);
+        List<UUID> subscriberIds = subscriptionRepository.findSubscriberIdsByPlaylistId(playlistId);
+        eventPublisher.publishEvent(new PlaylistContentAddEvent(
+                subscriberIds, playlist.getTitle(), content.getTitle()
+        ));
     }
 
     @Transactional

@@ -12,7 +12,7 @@ import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.playlist.event.PlaylistSubscribedEvent;
-import com.codeit.team5.mopl.playlist.event.PlaylistUpdatedEvent;
+import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.List;
@@ -94,21 +94,44 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("플레이리스트 수정 이벤트로 PLAYLIST_UPDATED 알림을 생성한다")
-    void onPlaylistUpdated_createsNotification() {
+    @DisplayName("플레이리스트 콘텐츠 추가 이벤트로 구독자에게 PLAYLIST_UPDATED 알림을 생성한다")
+    void onPlaylistContentAdd_createsNotification() {
         // given
         UUID receiverId = UUID.randomUUID();
-        PlaylistUpdatedEvent event =
-                new PlaylistUpdatedEvent(receiverId, "내 플레이리스트");
+        PlaylistContentAddEvent event =
+                new PlaylistContentAddEvent(List.of(receiverId), "내 플레이리스트", "콘텐츠 제목");
 
         // when
-        notificationEventListener.onPlaylistUpdated(event);
+        notificationEventListener.onPlaylistContentAdd(event);
 
         // then
         verify(notificationService).create(
                 eq(receiverId), eq(NotificationType.PLAYLIST_UPDATED),
                 eq("[플레이리스트] 내 플레이리스트"),
-                eq("플레이리스트가 업데이트 되었습니다."), eq(NotificationLevel.INFO));
+                eq("콘텐츠 제목 가 추가되었습니다."), eq(NotificationLevel.INFO));
+    }
+
+    @Test
+    @DisplayName("플레이리스트 콘텐츠 추가 이벤트로 구독자 전원에게 각각 PLAYLIST_UPDATED 알림을 생성한다")
+    void onPlaylistContentAdd_createsNotificationForAllSubscribers() {
+        // given
+        UUID subscriber1 = UUID.randomUUID();
+        UUID subscriber2 = UUID.randomUUID();
+        PlaylistContentAddEvent event =
+                new PlaylistContentAddEvent(List.of(subscriber1, subscriber2), "내 플레이리스트", "콘텐츠 제목");
+
+        // when
+        notificationEventListener.onPlaylistContentAdd(event);
+
+        // then
+        verify(notificationService).create(
+                eq(subscriber1), eq(NotificationType.PLAYLIST_UPDATED),
+                eq("[플레이리스트] 내 플레이리스트"),
+                eq("콘텐츠 제목 가 추가되었습니다."), eq(NotificationLevel.INFO));
+        verify(notificationService).create(
+                eq(subscriber2), eq(NotificationType.PLAYLIST_UPDATED),
+                eq("[플레이리스트] 내 플레이리스트"),
+                eq("콘텐츠 제목 가 추가되었습니다."), eq(NotificationLevel.INFO));
     }
 
     @Test
