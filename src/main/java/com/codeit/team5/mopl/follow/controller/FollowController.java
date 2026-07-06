@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.follow.controller;
 
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.follow.controller.api.FollowApi;
 import com.codeit.team5.mopl.follow.dto.request.FollowCreateRequest;
 import com.codeit.team5.mopl.follow.dto.response.FollowResponse;
@@ -32,11 +32,11 @@ public class FollowController implements FollowApi {
     @Override
     @PostMapping
     public ResponseEntity<FollowResponse> follow(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @Valid @RequestBody FollowCreateRequest request) {
         log.info("Follow request: POST /api/follows, followee={}", request.followeeId());
 
-        FollowResponse response = followService.follow(userDetails.getId(), request.followeeId());
+        FollowResponse response = followService.follow(principal.getId(), request.followeeId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -44,11 +44,11 @@ public class FollowController implements FollowApi {
     @Override
     @GetMapping("/followed-by-me")
     public ResponseEntity<FollowResponse> getFollowedByMe(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @RequestParam UUID followeeId) {
         log.info("Follow check request: GET /api/follows/followed-by-me, followee={}", followeeId);
 
-        FollowResponse response = followService.getFollowedByMe(userDetails.getId(), followeeId);
+        FollowResponse response = followService.getFollowedByMe(principal.getId(), followeeId);
 
         return ResponseEntity.ok(response);
     }
@@ -64,11 +64,11 @@ public class FollowController implements FollowApi {
     @Override
     @DeleteMapping("/{followId}")
     public ResponseEntity<Void> unfollow(
-            @AuthenticationPrincipal MoplUserDetails userDetails,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @PathVariable UUID followId) {
         log.info("Unfollow request: DELETE /api/follows/{}", followId);
 
-        followService.unfollow(userDetails.getId(), followId);
+        followService.unfollow(principal.getId(), followId);
 
         return ResponseEntity.noContent().build();
     }
