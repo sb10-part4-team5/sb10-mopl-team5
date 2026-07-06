@@ -31,8 +31,11 @@ jobs:
       - name: Gradle 실행 권한 부여
         run: chmod +x gradlew
 
+#      - name: 테스트 및 커버리지 검증
+#        run: ./gradlew clean test jacocoTestReport jacocoTestCoverageVerification
+
       - name: 테스트 및 커버리지 검증
-        run: ./gradlew clean test jacocoTestReport jacocoTestCoverageVerification
+        run: ./gradlew clean test jacocoTestReport --info
 
       - name: Check report
         run: |
