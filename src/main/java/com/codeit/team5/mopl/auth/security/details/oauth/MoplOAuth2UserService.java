@@ -39,6 +39,7 @@ public class MoplOAuth2UserService extends DefaultOAuth2UserService {
             AuthUser authUser =
                     moplPrincipalService.getOrCreateAuthUser(oauthUserInfo);
 
+            // 따로 provider로 빼서 작성?
             if (authUser.locked()) {
                 throw new LockedException("잠긴 계정입니다.");
             }
