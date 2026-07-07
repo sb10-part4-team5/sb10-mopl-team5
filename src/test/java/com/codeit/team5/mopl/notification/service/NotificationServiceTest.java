@@ -68,6 +68,25 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("DM 타입 알림 생성 성공")
+    void create_directMessage_success() {
+        // given
+        UUID receiverId = UUID.randomUUID();
+        Notification saved = mock(Notification.class);
+        NotificationResponse response = mock(NotificationResponse.class);
+        given(notificationRepository.save(any(Notification.class))).willReturn(saved);
+        given(notificationMapper.toResponse(saved)).willReturn(response);
+
+        // when
+        NotificationResponse result = notificationService.create(
+                receiverId, NotificationType.DIRECT_MESSAGE, "제목", "내용", NotificationLevel.INFO);
+
+        // then
+        assertThat(result).isEqualTo(response);
+        verify(publisher).publishEvent(any(NotificationCreatedEvent.class));
+    }
+
+    @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 잘라내고 nextCursor를 채운다")
     void getNotifications_hasNext() {
         // given
