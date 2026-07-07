@@ -66,6 +66,13 @@ public class OAuth2SignInSuccessHandler implements AuthenticationSuccessHandler 
                     "/#/sign-in?error=oauth_failed&error_message="
                             + URLEncoder.encode("OAuth 로그인 처리 중 오류가 발생했습니다.", StandardCharsets.UTF_8)
             );
+        } catch (RuntimeException e) {
+            log.error("OAuth2 login post-processing failed. userId={}", principal.getId(), e);
+
+            response.sendRedirect(
+                    "/#/sign-in?error=oauth_failed&error_message="
+                            + URLEncoder.encode("OAuth 로그인 처리 중 오류가 발생했습니다.", StandardCharsets.UTF_8)
+            );
         }
     }
 }
