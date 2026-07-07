@@ -18,7 +18,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class SseNotificationListener {
+public class SseListener {
 
     private final SseSender sseSender;
 
@@ -27,7 +27,7 @@ public class SseNotificationListener {
         NotificationPayload payload = event.notificationPayload();
         sseSender.sendToUser(payload.receiverId(),
                 SseEmitter.event()
-                        .id(payload.notificationId().toString())
+                        .id(payload.id().toString())
                         .name("notifications")
                         .data(payload));
     }
