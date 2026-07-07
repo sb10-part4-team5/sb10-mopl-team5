@@ -134,11 +134,6 @@ jacocoTestReport {
         xml.required = true
         html.required = true
     }
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: jacocoExcludePatterns)
-        }))
-    }
     doLast {
         if (openJacocoReport) {
             def reportFile = reports.html.entryPoint

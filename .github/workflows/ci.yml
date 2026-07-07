@@ -52,5 +52,4 @@ jobs:
             --git-service github \
             --sha ${{ github.sha }} \
             --file build/reports/jacoco/test/jacocoTestReport.xml \
-            --network-root-folder src/main/java \
-            --verbose
+            --network-root-folder src/main/java
