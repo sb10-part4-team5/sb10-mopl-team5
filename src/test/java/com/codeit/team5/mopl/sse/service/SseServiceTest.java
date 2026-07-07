@@ -169,11 +169,11 @@ class SseServiceTest {
         List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
         // index 0 = connect, 1 = first(t1), 2 = second(t2) 순서여야 한다
         assertThat(extractPayload(sends.get(1), NotificationPayload.class))
-                .map(NotificationPayload::notificationId)
-                .contains(first.notificationId());
+                .map(NotificationPayload::id)
+                .contains(first.id());
         assertThat(extractPayload(sends.get(2), NotificationPayload.class))
-                .map(NotificationPayload::notificationId)
-                .contains(second.notificationId());
+                .map(NotificationPayload::id)
+                .contains(second.id());
     }
 
     @Test
@@ -208,14 +208,14 @@ class SseServiceTest {
         List<SseEmitter.SseEventBuilder> sends = captor.getAllValues();
         // index 0 = connect, 1 = notif1(t1), 2 = dm2(t2), 3 = notif3(t3) 순서여야 한다
         assertThat(extractPayload(sends.get(1), NotificationPayload.class))
-                .map(NotificationPayload::notificationId)
-                .contains(notif1.notificationId());
+                .map(NotificationPayload::id)
+                .contains(notif1.id());
         assertThat(extractPayload(sends.get(2), DirectMessagePayload.class))
                 .map(DirectMessagePayload::id)
                 .contains(dm2.id());
         assertThat(extractPayload(sends.get(3), NotificationPayload.class))
-                .map(NotificationPayload::notificationId)
-                .contains(notif3.notificationId());
+                .map(NotificationPayload::id)
+                .contains(notif3.id());
     }
 
     @Test

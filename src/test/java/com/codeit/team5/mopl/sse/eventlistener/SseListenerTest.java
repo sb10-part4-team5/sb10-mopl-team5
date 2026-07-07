@@ -23,13 +23,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @ExtendWith(MockitoExtension.class)
-class SseNotificationListenerTest {
+class SseListenerTest {
 
     @Mock
     private SseSender sseSender;
 
     @InjectMocks
-    private SseNotificationListener listener;
+    private SseListener listener;
 
     @Test
     @DisplayName("NotificationCreatedEvent 발생 시 수신자에게 notifications 이벤트를 전송한다")
