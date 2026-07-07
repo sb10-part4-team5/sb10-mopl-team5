@@ -111,7 +111,7 @@ class NotificationEventListenerTest {
         verify(notificationService).createAll(eq(new NotificationBatchCreateCommand(
                 List.of(subscriber1, subscriber2), NotificationType.PLAYLIST_UPDATED,
                 "[플레이리스트] 내 플레이리스트",
-                "콘텐츠 제목가 추가되었습니다.", NotificationLevel.INFO)));
+                "콘텐츠 제목이/가 추가되었습니다.", NotificationLevel.INFO)));
     }
 
     @Test
