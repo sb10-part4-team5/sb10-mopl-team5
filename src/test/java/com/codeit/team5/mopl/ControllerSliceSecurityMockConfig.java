@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import com.codeit.team5.mopl.auth.security.details.oauth.MoplOAuth2UserService;
 import com.codeit.team5.mopl.auth.security.handler.signin.OAuth2SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.OAuth2SignInSuccessHandler;
+import com.codeit.team5.mopl.auth.support.HttpCookieOAuth2AuthorizationRequestRepository;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
@@ -24,5 +25,10 @@ public class ControllerSliceSecurityMockConfig {
     @Bean
     OAuth2SignInFailureHandler oAuth2SignInFailureHandler() {
         return mock(OAuth2SignInFailureHandler.class);
+    }
+
+    @Bean
+    HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepositoryHandler() {
+        return mock(HttpCookieOAuth2AuthorizationRequestRepository.class);
     }
 }
