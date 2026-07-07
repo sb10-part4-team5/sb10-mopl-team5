@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Immutable;
 
 @Entity
 @Table(
@@ -18,6 +19,7 @@ import lombok.NoArgsConstructor;
         }
 )
 @Getter
+@Immutable
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SocialAccount extends BaseEntity {
 
