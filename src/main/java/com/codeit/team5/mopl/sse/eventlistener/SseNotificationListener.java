@@ -38,7 +38,7 @@ public class SseNotificationListener {
         event.payloads().forEach(payload ->
                 sseSender.sendToUser(payload.receiverId(),
                         SseEmitter.event()
-                                .id(payload.notificatqionId().toString())
+                                .id(payload.notificationId().toString())
                                 .name("notifications")
                                 .data(payload)));
     }
