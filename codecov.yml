@@ -1,6 +1,3 @@
-fixes:
-  - "com/::src/main/java/com/"
-
 coverage:
   status:
     project:

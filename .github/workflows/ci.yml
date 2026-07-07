@@ -31,11 +31,23 @@ jobs:
       - name: 테스트 및 커버리지 리포트 생성
         run: ./gradlew clean test jacocoTestReport
 
+      - name: JaCoCo 리포트 존재 확인
+        if: always()
+        run: |
+          if [ -f build/reports/jacoco/test/jacocoTestReport.xml ]; then
+            echo "✅ 리포트 존재: $(wc -l < build/reports/jacoco/test/jacocoTestReport.xml) 줄"
+            head -5 build/reports/jacoco/test/jacocoTestReport.xml
+          else
+            echo "❌ 리포트 없음"
+            find build -name "*.xml" 2>/dev/null || echo "build 디렉토리 없음"
+          fi
+
       - name: 커버리지 리포트를 CodeCov에 업로드
         if: always()
         uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/jacoco/test/jacocoTestReport.xml
+          network_root_folder: src/main/java
           fail_ci_if_error: false
           verbose: true
