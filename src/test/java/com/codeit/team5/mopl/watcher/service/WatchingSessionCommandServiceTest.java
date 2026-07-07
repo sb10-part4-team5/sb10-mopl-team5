@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
+import com.codeit.team5.mopl.watcher.event.WatcherLeftEvent;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -144,6 +145,7 @@ class WatchingSessionCommandServiceTest {
         assertThat(result.response()).isEqualTo(dummyResponse);
         assertThat(result.watcherCount()).isEqualTo(4L);
         verify(repository).deleteByWatcherIdDirectly(watcherId);
+        verify(eventPublisher).publishEvent(any(WatcherLeftEvent.class));
     }
 
     @Test

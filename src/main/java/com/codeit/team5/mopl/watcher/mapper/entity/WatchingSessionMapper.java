@@ -19,7 +19,7 @@ public interface WatchingSessionMapper {
 
     default CursorResponse<WatchingSessionResponse> toCursor(Window<WatchingSession> window,
             Long totalCount, WatcherSortByType sortBy, Direction sortDirection) {
-        if (window == null || window.isEmpty()) {
+        if (window == null) {
             return null;
         }
         List<WatchingSessionResponse> data = window.getContent().stream().map(this::toDto).toList();

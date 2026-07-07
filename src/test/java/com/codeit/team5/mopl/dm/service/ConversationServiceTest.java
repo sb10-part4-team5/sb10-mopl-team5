@@ -264,10 +264,10 @@ class ConversationServiceTest {
         Conversation conversation = Conversation.create(participant1, participant2);
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
-        when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(participant1));
+        when(userRepository.findById(participant1.getId())).thenReturn(Optional.of(participant1));
 
         // when & then
-        assertThatCode(() -> conversationService.validateParticipant(conversationId, "a@mopl.com"))
+        assertThatCode(() -> conversationService.validateParticipant(conversationId, participant1.getId()))
                 .doesNotThrowAnyException();
     }
 
@@ -282,10 +282,10 @@ class ConversationServiceTest {
         Conversation conversation = Conversation.create(participant1, participant2);
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
-        when(userRepository.findByEmail("c@mopl.com")).thenReturn(Optional.of(outsider));
+        when(userRepository.findById(outsider.getId())).thenReturn(Optional.of(outsider));
 
         // when & then
-        assertThatThrownBy(() -> conversationService.validateParticipant(conversationId, "c@mopl.com"))
+        assertThatThrownBy(() -> conversationService.validateParticipant(conversationId, outsider.getId()))
                 .isInstanceOf(NotConversationParticipantException.class);
     }
 
@@ -297,7 +297,7 @@ class ConversationServiceTest {
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> conversationService.validateParticipant(conversationId, "a@mopl.com"))
+        assertThatThrownBy(() -> conversationService.validateParticipant(conversationId, UUID.randomUUID()))
                 .isInstanceOf(ConversationNotFoundException.class);
     }
 

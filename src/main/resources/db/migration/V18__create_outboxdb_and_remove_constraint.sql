@@ -10,5 +10,9 @@ CREATE TABLE IF NOT EXISTS event_publication
     PRIMARY KEY (id)
 );
 
+create index idx_event_publication_completion_date on event_publication(completion_date);
+
 -- 유저(users)를 참조하던 외래키 제약조건 삭제
 ALTER TABLE playlist_subscriptions DROP CONSTRAINT IF EXISTS fk_sub_subscriber;
+alter table playlist_subscriptions
+    add constraint fk_playlist_subscriptions_user_id foreign key (subscriber_id) references users(id);
