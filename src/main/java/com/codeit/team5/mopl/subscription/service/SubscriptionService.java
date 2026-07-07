@@ -46,13 +46,16 @@ public class SubscriptionService {
         String subscriberName = user.getName();
         String playlistTitle = playlist.getTitle();
 
-        eventPublisher.publishEvent(
-            new PlaylistSubscribedEvent(
+        // 자기 자신의 플레이리스트를 구독하는지 검증하고 이벤트 발행
+        if (!ownerId.equals(user.getId())) {
+            eventPublisher.publishEvent(                new PlaylistSubscribedEvent(
                 ownerId,
                 subscriberName,
                 playlistTitle
             )
-        );
+            );
+        }
+
         playlistRepository.increaseSubscribeCount(playlistId);
     }
 
