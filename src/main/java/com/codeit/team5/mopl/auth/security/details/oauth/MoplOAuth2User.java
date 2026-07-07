@@ -16,7 +16,6 @@ public class MoplOAuth2User implements OAuth2User, MoplPrincipal {
 
     private final AuthUser authUser;
     private final Map<String, Object> attributes;
-    private final String nameAttributeKey;
 
     @Override
     public UUID getId() {
@@ -50,7 +49,6 @@ public class MoplOAuth2User implements OAuth2User, MoplPrincipal {
 
     @Override
     public String getName() {
-        Object value = attributes.get(nameAttributeKey);
-        return value == null ? authUser.id().toString() : value.toString();
+        return authUser.id().toString();
     }
 }

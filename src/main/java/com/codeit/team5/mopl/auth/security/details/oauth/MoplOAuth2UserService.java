@@ -24,11 +24,6 @@ public class MoplOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
-        String nameAttributeKey = userRequest.getClientRegistration()
-                .getProviderDetails()
-                .getUserInfoEndpoint()
-                .getUserNameAttributeName();
-
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
         // 여기서 provider + providerUserId 추출
@@ -48,7 +43,7 @@ public class MoplOAuth2UserService extends DefaultOAuth2UserService {
                 throw new LockedException("잠긴 계정입니다.");
             }
 
-            return new MoplOAuth2User(authUser, attributes, nameAttributeKey);
+            return new MoplOAuth2User(authUser, attributes);
         } catch (AuthenticationException e) {
             throw e;
         } catch (RuntimeException e) {

@@ -38,11 +38,12 @@ public class SocialAccount extends BaseEntity {
     private String providerUserId;
 
     public static SocialAccount create(User user, SocialProvider provider, String providerUserId) {
-        SocialAccount socialAccount = new SocialAccount();
-        socialAccount.user = user;
-        socialAccount.provider = provider;
-        socialAccount.providerUserId = providerUserId;
+        return new SocialAccount(user, provider, providerUserId);
+    }
 
-        return socialAccount;
+    private SocialAccount(User user, SocialProvider provider, String providerUserId) {
+        this.user = user;
+        this.provider = provider;
+        this.providerUserId = providerUserId;
     }
 }

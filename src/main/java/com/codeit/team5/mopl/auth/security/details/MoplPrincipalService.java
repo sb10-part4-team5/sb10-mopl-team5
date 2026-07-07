@@ -1,12 +1,14 @@
 package com.codeit.team5.mopl.auth.security.details;
 
 import com.codeit.team5.mopl.auth.entity.SocialAccount;
+import com.codeit.team5.mopl.auth.exception.DuplicateSocialAccountException;
 import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.mapper.AuthUserMapper;
 import com.codeit.team5.mopl.auth.repository.SocialAccountRepository;
 import com.codeit.team5.mopl.auth.security.details.oauth.OAuthUserInfo;
 import com.codeit.team5.mopl.auth.support.EmailNormalizer;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.Map;
 import java.util.UUID;
@@ -45,30 +47,19 @@ public class MoplPrincipalService {
 
     @Transactional
     public AuthUser getOrCreateAuthUser(OAuthUserInfo oauthUserInfo) {
-        SocialAccount socialAccount = socialAccountRepository
+        return socialAccountRepository
                 .findByProviderAndProviderUserId(
                         oauthUserInfo.getProvider(),
                         oauthUserInfo.getProviderUserId()
                 )
-                .orElseGet(() -> createOrFindSocialAccount(oauthUserInfo));
-
-        return authUserMapper.toAuthUser(socialAccount.getUser());
+                .map(SocialAccount::getUser)
+                .map(authUserMapper::toAuthUser)
+                .orElseGet(() -> createAuthUserWithSocialAccount(oauthUserInfo));
     }
 
-    private SocialAccount createOrFindSocialAccount(OAuthUserInfo oauthUserInfo) {
-        try {
-            return createUserAndSocialAccount(oauthUserInfo);
-        } catch (DataIntegrityViolationException e) {
-            return socialAccountRepository
-                    .findByProviderAndProviderUserId(
-                            oauthUserInfo.getProvider(),
-                            oauthUserInfo.getProviderUserId()
-                    )
-                    .orElseThrow(() -> e);
-        }
-    }
+    private AuthUser createAuthUserWithSocialAccount(OAuthUserInfo oauthUserInfo) {
+        validateCreatableSocialAccount(oauthUserInfo);
 
-    private SocialAccount createUserAndSocialAccount(OAuthUserInfo oauthUserInfo) {
         User user = createSocialUser(oauthUserInfo);
 
         SocialAccount socialAccount = SocialAccount.create(
@@ -77,19 +68,34 @@ public class MoplPrincipalService {
                 oauthUserInfo.getProviderUserId()
         );
 
-        return socialAccountRepository.saveAndFlush(socialAccount);
+        socialAccountRepository.save(socialAccount);
+
+        return authUserMapper.toAuthUser(user);
+    }
+
+    private void validateCreatableSocialAccount(OAuthUserInfo oauthUserInfo) {
+        if (socialAccountRepository.existsByProviderAndProviderUserId(
+                oauthUserInfo.getProvider(),
+                oauthUserInfo.getProviderUserId()
+        )) {
+            throw new DuplicateSocialAccountException(oauthUserInfo.getProvider(), oauthUserInfo.getProviderUserId());
+        }
     }
 
     private User createSocialUser(OAuthUserInfo oauthUserInfo) {
         String socialEmail = createSocialEmail(oauthUserInfo);
 
-        User user = User.create(
+        if (userRepository.existsByEmail(socialEmail)) {
+            throw new DuplicatedEmailException(socialEmail);
+        }
+
+        User user = User.createSocial(
                 socialEmail,
                 createRandomPassword(),
                 oauthUserInfo.getName()
         );
 
-        return userRepository.saveAndFlush(user);
+        return userRepository.save(user);
     }
 
     private String createSocialEmail(OAuthUserInfo oauthUserInfo) {
