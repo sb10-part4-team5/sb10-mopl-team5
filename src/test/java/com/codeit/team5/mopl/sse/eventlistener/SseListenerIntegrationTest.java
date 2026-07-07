@@ -35,7 +35,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
-class SseNotificationListenerIntegrationTest {
+class SseListenerIntegrationTest {
 
     @Autowired
     private SseEmitterStore emitterStore;
