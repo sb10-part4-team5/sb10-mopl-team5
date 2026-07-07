@@ -86,6 +86,9 @@ mopl:
     email: ${ADMIN_EMAIL}
     password: ${ADMIN_PASSWORD}
     name: ${ADMIN_NAME}
+  auth:
+    cookie:
+      signature-secret-key: ${COOKIE_SIGNATURE_SECRET_KEY}
 
 tmdb:
   access-token: ${TMDB_ACCESS_TOKEN}

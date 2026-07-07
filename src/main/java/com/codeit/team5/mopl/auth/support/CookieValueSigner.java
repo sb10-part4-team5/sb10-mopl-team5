@@ -1,25 +1,22 @@
 package com.codeit.team5.mopl.auth.support;
 
 import com.codeit.team5.mopl.auth.exception.OAuth2AuthorizationRequestCookieException;
-import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class CookieValueSigner {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final String DELIMITER = ".";
 
-    private final JwtProperties jwtProperties;
-
-    public CookieValueSigner(JwtProperties jwtProperties) {
-        this.jwtProperties = jwtProperties;
-    }
+    private final AuthCookieProperties authCookieProperties;
 
     // 쿠키에 저장할 값에 HMAC 서명을 붙인다.
     public String sign(String value) {
@@ -56,7 +53,7 @@ public class CookieValueSigner {
         try {
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);
             SecretKeySpec keySpec = new SecretKeySpec(
-                    jwtProperties.accessSecretKey().getBytes(StandardCharsets.UTF_8),
+                    authCookieProperties.signatureSecretKey().getBytes(StandardCharsets.UTF_8),
                     HMAC_ALGORITHM
             );
 
