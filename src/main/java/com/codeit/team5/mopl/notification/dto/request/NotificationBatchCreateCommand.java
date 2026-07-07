@@ -12,5 +12,7 @@ public record NotificationBatchCreateCommand(
     String content,
     NotificationLevel level
 ) {
-
+    public NotificationBatchCreateCommand {
+        receiverIds = receiverIds == null ? List.of() : List.copyOf(receiverIds);
+    }
 }

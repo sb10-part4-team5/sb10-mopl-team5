@@ -11,5 +11,4 @@ public record NotificationCreateCommand(
     String content,
     NotificationLevel level
 ) {
-
 }
