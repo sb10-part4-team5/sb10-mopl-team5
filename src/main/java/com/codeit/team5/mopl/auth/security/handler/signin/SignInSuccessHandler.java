@@ -54,8 +54,12 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
 
         MoplPrincipal principal = (MoplPrincipal) authentication.getPrincipal();
 
-        User user = findUserWithProfileImage(principal);
-        if (user == null) {
+        User user;
+        try {
+            user = findUserWithProfileImage(principal);
+        } catch (UserNotFoundException e) {
+            log.warn("Login success handling failed. User not found. userId={}", principal.getId());
+            ErrorResponder.sendErrorResponse(response, e);
             return;
         }
 
