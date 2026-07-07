@@ -157,7 +157,7 @@ class ContentItemWriterTest {
         Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
                 ContentSource.TMDB, "1", null, "{}");
         ContentWithMetaData item = new ContentWithMetaData(content, "https://img.example.com/poster.jpg", List.of());
-        BinaryContent savedThumbnail = BinaryContent.of("https://img.example.com/poster.jpg");
+        BinaryContent savedThumbnail = BinaryContent.completed("https://img.example.com/poster.jpg");
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
@@ -200,8 +200,8 @@ class ContentItemWriterTest {
         String sharedUrl = "https://img.example.com/default.jpg";
         ContentWithMetaData item1 = new ContentWithMetaData(content1, sharedUrl, List.of());
         ContentWithMetaData item2 = new ContentWithMetaData(content2, sharedUrl, List.of());
-        BinaryContent savedThumbnail1 = BinaryContent.of(sharedUrl);
-        BinaryContent savedThumbnail2 = BinaryContent.of(sharedUrl);
+        BinaryContent savedThumbnail1 = BinaryContent.completed(sharedUrl);
+        BinaryContent savedThumbnail2 = BinaryContent.completed(sharedUrl);
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content1, content2));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());

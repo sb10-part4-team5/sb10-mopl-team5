@@ -261,7 +261,7 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         User user = User.create("user@example.com", "encoded-password", "기존이름");
         UploadedBinaryContent uploaded = new UploadedBinaryContent("profiles/key", "http://localhost/profiles/key.jpg");
-        BinaryContent saved = BinaryContent.of("http://localhost/profiles/key.jpg");
+        BinaryContent saved = BinaryContent.completed("http://localhost/profiles/key.jpg");
         UserResponse expected = new UserResponse(
                 userId, Instant.parse("2026-06-25T00:00:00Z"),
                 "user@example.com", "새이름", "http://localhost/profiles/key.jpg", "USER", false
@@ -285,10 +285,10 @@ class UserServiceTest {
         // Given
         UUID userId = UUID.randomUUID();
         User user = User.create("user@example.com", "encoded-password", "기존이름");
-        BinaryContent oldImage = BinaryContent.of("http://localhost/profiles/old.jpg");
+        BinaryContent oldImage = BinaryContent.completed("http://localhost/profiles/old.jpg");
         user.updateProfileImage(oldImage);
         UploadedBinaryContent uploaded = new UploadedBinaryContent("profiles/new", "http://localhost/profiles/new.jpg");
-        BinaryContent newSaved = BinaryContent.of("http://localhost/profiles/new.jpg");
+        BinaryContent newSaved = BinaryContent.completed("http://localhost/profiles/new.jpg");
         UserResponse expected = new UserResponse(
                 userId, Instant.parse("2026-06-25T00:00:00Z"),
                 "user@example.com", "새이름", "http://localhost/profiles/new.jpg", "USER", false

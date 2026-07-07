@@ -26,7 +26,7 @@ public class BinaryContent extends BaseUpdatableEntity {
     @Column(name = "upload_status", nullable = false, length = 20)
     private BinaryContentUploadStatus uploadStatus;
 
-    public static BinaryContent of(String url) {
+    public static BinaryContent completed(String url) {
         if (!StringUtils.hasText(url)) {
             throw new InvalidBinaryContentUrlException();
         }

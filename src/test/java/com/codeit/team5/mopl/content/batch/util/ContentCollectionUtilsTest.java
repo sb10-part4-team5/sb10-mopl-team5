@@ -6,7 +6,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.codeit.team5.mopl.content.batch.util.ContentCollectionUtils;
 import org.mockito.ArgumentCaptor;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
@@ -70,7 +69,7 @@ class ContentCollectionUtilsTest {
     void attachThumbnail_validUrl_savesAndAttaches() {
         // given
         Content content = mockContent();
-        BinaryContent thumbnail = BinaryContent.of("https://base.url/poster.jpg");
+        BinaryContent thumbnail = BinaryContent.completed("https://base.url/poster.jpg");
         ArgumentCaptor<BinaryContent> captor = ArgumentCaptor.forClass(BinaryContent.class);
         given(binaryContentRepository.save(captor.capture())).willReturn(thumbnail);
 
@@ -87,7 +86,7 @@ class ContentCollectionUtilsTest {
     void attachThumbnail_emptyBaseUrl_usesUrlAsIs() {
         // given
         Content content = mockContent();
-        BinaryContent thumbnail = BinaryContent.of("https://thumb.url/img.jpg");
+        BinaryContent thumbnail = BinaryContent.completed("https://thumb.url/img.jpg");
         ArgumentCaptor<BinaryContent> captor = ArgumentCaptor.forClass(BinaryContent.class);
         given(binaryContentRepository.save(captor.capture())).willReturn(thumbnail);
 

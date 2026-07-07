@@ -95,7 +95,7 @@ class ContentServiceTest {
         when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(binaryContentService.saveCompleted(thumbnail))
-                .thenReturn(BinaryContent.of("http://localhost:8080/thumbnails/test.jpg"));
+                .thenReturn(BinaryContent.completed("http://localhost:8080/thumbnails/test.jpg"));
         when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);
 
         // when
@@ -287,7 +287,7 @@ class ContentServiceTest {
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
         when(binaryContentService.saveCompleted(thumbnail))
-                .thenReturn(BinaryContent.of("http://localhost/thumbnails/new.jpg"));
+                .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(expectedResponse);
 
         // when
@@ -305,7 +305,7 @@ class ContentServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
-        BinaryContent oldThumbnail = BinaryContent.of("http://localhost/thumbnails/old.jpg");
+        BinaryContent oldThumbnail = BinaryContent.completed("http://localhost/thumbnails/old.jpg");
         content.attachThumbnail(oldThumbnail);
         UploadedBinaryContent thumbnail =
                 new UploadedBinaryContent("thumbnails/new.jpg", "http://localhost/thumbnails/new.jpg");
@@ -313,7 +313,7 @@ class ContentServiceTest {
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
         when(binaryContentService.saveCompleted(thumbnail))
-                .thenReturn(BinaryContent.of("http://localhost/thumbnails/new.jpg"));
+                .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(null);
 
         // when
@@ -543,7 +543,7 @@ class ContentServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
-        BinaryContent thumbnail = BinaryContent.of("http://localhost/thumbnails/thumb.jpg");
+        BinaryContent thumbnail = BinaryContent.completed("http://localhost/thumbnails/thumb.jpg");
         content.attachThumbnail(thumbnail);
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
 

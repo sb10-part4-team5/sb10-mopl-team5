@@ -33,7 +33,7 @@ public final class ContentCollectionUtils {
             return;
         }
         BinaryContent thumbnail = binaryContentRepository.save(
-                BinaryContent.of(baseUrl + url)
+                BinaryContent.completed(baseUrl + url)
         );
         content.attachThumbnail(thumbnail);
     }
