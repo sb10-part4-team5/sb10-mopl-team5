@@ -8,6 +8,7 @@ import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.event.NotificationsBatchCreatedEvent;
 import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
@@ -79,8 +80,10 @@ public class NotificationService {
         log.info("배치 알림 생성됨: type={}, count={}", type, saved.size());
 
         if (type != NotificationType.DIRECT_MESSAGE) {
-            saved.forEach(n -> publisher.publishEvent(
-                    new NotificationCreatedEvent(notificationMapper.toPayload(n))));
+            List<NotificationPayload> payloads = saved.stream()
+                    .map(notificationMapper::toPayload)
+                    .toList();
+            publisher.publishEvent(new NotificationsBatchCreatedEvent(payloads));
         }
     }
 
