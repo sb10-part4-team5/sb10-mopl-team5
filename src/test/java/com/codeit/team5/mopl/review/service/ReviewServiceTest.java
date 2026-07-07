@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.review.service;
 
-import static com.codeit.team5.mopl.review.entity.QReview.review;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -11,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
-import com.codeit.team5.mopl.content.service.ContentStatService;
+import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -55,11 +54,11 @@ class ReviewServiceTest {
     @Mock
     private ReviewMapper reviewMapper;
 
-    @Mock
-    private ContentStatService contentStatService;
-
     @InjectMocks
     private ReviewService reviewService;
+
+    @Mock
+    private ContentStatsRepository contentStatsRepository;
 
     @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 자르고 createdAt 기준 nextCursor를 채운다")
@@ -189,7 +188,6 @@ class ReviewServiceTest {
         // then
         assertThat(result).isEqualTo(response);
         verify(reviewRepository).save(any());
-        verify(contentStatService).reviewUpdateContentStat(contentId, 4.5, 1);
     }
 
     @Test
@@ -264,7 +262,6 @@ class ReviewServiceTest {
         // then
         assertThat(result).isEqualTo(response);
         verify(review).update("수정된 내용", 3.0);
-        verify(contentStatService).reviewUpdateContentStat(contentId, 1.0, 0);
     }
 
     @Test
@@ -318,7 +315,6 @@ class ReviewServiceTest {
         reviewService.deleteReview(reviewId, authorId);
 
         // then
-        verify(contentStatService).reviewUpdateContentStat(contentId, -4.0, -1);
         verify(reviewRepository).delete(review);
     }
 

@@ -13,7 +13,5 @@ public class ContentStatService {
 
     private final ContentStatsRepository contentStatsRepository;
 
-    public void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
-        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
-    }
+
 }
