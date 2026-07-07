@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.notification.service;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.dto.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
@@ -9,12 +8,13 @@ import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.notification.exception.InvalidCursorException;
-import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.mapper.NotificationMapper;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
+import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
+import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -54,11 +54,7 @@ public class NotificationService {
         NotificationResponse response = notificationMapper.toResponse(saved);
         log.info("알림 생성됨: type={}", type);
 
-        // DM 알림의 실시간 전송(SSE direct-messages)은 DirectMessageSseEvent 경로에서
-        // 독립적으로 처리하므로, 여기서는 저장만 하고 그 외 알림 타입만 notifications SSE를 발행한다.
-        if (type != NotificationType.DIRECT_MESSAGE) {
-            publisher.publishEvent(new NotificationCreatedEvent(payload));
-        }
+        publisher.publishEvent(new NotificationCreatedEvent(payload));
 
         return response;
     }
@@ -74,9 +70,9 @@ public class NotificationService {
 
         // 주 커서는 createdAt 문자열로 들어오므로 Instant로 파싱. 없으면(null) 첫 페이지
         Instant cursorInstant;
-        try{
+        try {
             cursorInstant = (cursor == null || cursor.isBlank()) ? null : Instant.parse(cursor);
-        } catch (DateTimeParseException e){
+        } catch (DateTimeParseException e) {
             throw new InvalidCursorException();
         }
 
