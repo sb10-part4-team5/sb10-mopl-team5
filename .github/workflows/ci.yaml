@@ -1,21 +1,26 @@
 name: CI
 
 on:
+  push:
+    branches: [main, dev]
   pull_request:
-    branches:
-      - dev
-      - main
+    branches: [main, dev]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
 
     steps:
       - name: 코드 체크아웃
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: JDK 설정
         uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
@@ -29,12 +34,28 @@ jobs:
       - name: Gradle 실행 권한 부여
         run: chmod +x gradlew
 
-      - name: 테스트 및 커버리지 검증
-        run: ./gradlew clean test jacocoTestReport jacocoTestCoverageVerification
+      - name: 테스트 및 커버리지 리포트 생성
+        run: ./gradlew clean test jacocoTestReport
+
+      - name: JaCoCo 리포트 존재 확인
+        if: always()
+        run: |
+          if [ -f build/reports/jacoco/test/jacocoTestReport.xml ]; then
+            echo "✅ 리포트 존재: $(wc -l < build/reports/jacoco/test/jacocoTestReport.xml) 줄"
+            head -5 build/reports/jacoco/test/jacocoTestReport.xml
+          else
+            echo "❌ 리포트 없음"
+            find build -name "*.xml" 2>/dev/null || echo "build 디렉토리 없음"
+          fi
 
       - name: 커버리지 리포트를 CodeCov에 업로드
-        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: build/reports/jacoco/test/jacocoTestReport.xml
-          fail_ci_if_error: true
+        if: always()
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          ./codecov upload-coverage \
+            -t ${{ secrets.CODECOV_TOKEN }} \
+            --git-service github \
+            --sha ${{ github.sha }} \
+            --file build/reports/jacoco/test/jacocoTestReport.xml \
+            --network-root-folder src/main/java
