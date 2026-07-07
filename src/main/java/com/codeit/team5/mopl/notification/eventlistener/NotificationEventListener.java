@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
@@ -29,6 +30,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NotificationEventListener {
     private final NotificationService notificationService;
     private final FollowRepository followRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     // 비활성 대화에 DM이 도착하면 알림을 생성 (SSE 전송과는 독립)
     @Async("dmEventExecutor")
@@ -54,10 +56,12 @@ public class NotificationEventListener {
     }
 
     // 내가 구독한 플레이리스트에 콘텐츠가 추가되면 구독자 전원에게 알림 배치 생성 (fan-out)
+    // [계약] 구독자 목록은 리스너 실행 시점(AFTER_COMMIT) 기준으로 조회합니다.
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onPlaylistContentAdd(PlaylistContentAddEvent event){
+    public void onPlaylistContentAdd(PlaylistContentAddEvent event) {
+        List<UUID> subscriberIds = subscriptionRepository.findSubscriberIdsByPlaylistId(event.playlistId());
         notificationService.createAll(new NotificationBatchCreateCommand(
-                event.receiverIds(), NotificationType.PLAYLIST_UPDATED,
+                subscriberIds, NotificationType.PLAYLIST_UPDATED,
                 "[플레이리스트] " + event.playlistName(),
                 event.contentTitle() + "이/가 추가되었습니다.",
                 NotificationLevel.INFO));

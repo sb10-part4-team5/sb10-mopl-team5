@@ -9,6 +9,7 @@ import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
@@ -34,6 +35,9 @@ class NotificationEventListenerTest {
 
     @Mock
     private FollowRepository followRepository;
+
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
 
     @InjectMocks
     private NotificationEventListener notificationEventListener;
@@ -99,10 +103,14 @@ class NotificationEventListenerTest {
     @DisplayName("플레이리스트 콘텐츠 추가 이벤트로 구독자 전원에게 배치로 PLAYLIST_UPDATED 알림을 생성한다")
     void onPlaylistContentAdd_createsNotificationForAllSubscribers() {
         // given
+        UUID playlistId = UUID.randomUUID();
         UUID subscriber1 = UUID.randomUUID();
         UUID subscriber2 = UUID.randomUUID();
         PlaylistContentAddEvent event =
-                new PlaylistContentAddEvent(List.of(subscriber1, subscriber2), "내 플레이리스트", "콘텐츠 제목");
+                new PlaylistContentAddEvent(playlistId, "내 플레이리스트", "콘텐츠 제목");
+
+        when(subscriptionRepository.findSubscriberIdsByPlaylistId(playlistId))
+                .thenReturn(List.of(subscriber1, subscriber2));
 
         // when
         notificationEventListener.onPlaylistContentAdd(event);

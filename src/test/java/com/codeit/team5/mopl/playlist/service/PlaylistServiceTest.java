@@ -38,7 +38,6 @@ import com.codeit.team5.mopl.playlist.repository.PlaylistItemRepository;
 import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.mapper.UserSummaryMapperImpl;
-import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -60,9 +59,6 @@ class PlaylistServiceTest {
     private ContentRepository contentRepository;
 
     @Mock
-    private SubscriptionRepository subscriptionRepository;
-
-    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     private User user;
@@ -78,7 +74,7 @@ class PlaylistServiceTest {
                 new PlaylistMapperImpl(userSummaryMapper, contentMapper);
 
         playlistService = new PlaylistService(playlistMapper, playlistRepository, userRepository,
-                playlistItemRepository, contentRepository, subscriptionRepository, eventPublisher);
+                playlistItemRepository, contentRepository, eventPublisher);
 
         user = User.create("test@example.com", "password", "Test User");
         ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
@@ -229,15 +225,12 @@ class PlaylistServiceTest {
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "Content Title", "Desc");
         ReflectionTestUtils.setField(content, "id", contentId);
-        UUID subscriberId = UUID.randomUUID();
 
         given(playlistRepository.existsByIdAndOwnerId(playlist.getId(), user.getId()))
                 .willReturn(true);
         given(contentRepository.existsById(contentId)).willReturn(true);
         given(contentRepository.getReferenceById(contentId)).willReturn(content);
         given(playlistRepository.getReferenceById(playlist.getId())).willReturn(playlist);
-        given(subscriptionRepository.findSubscriberIdsByPlaylistId(playlist.getId()))
-                .willReturn(List.of(subscriberId));
 
         // when
         playlistService.addContent(user.getId(), playlist.getId(), contentId);
