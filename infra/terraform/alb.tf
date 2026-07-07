@@ -21,10 +21,10 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # bridge dynamic port mapping (AWS ECS ephemeral 범위: 49153-65535)
+  # bridge dynamic port mapping (Linux ephemeral 범위: 32768-65535)
   egress {
     description = "to app dynamic ports within VPC"
-    from_port   = 49153
+    from_port   = 32768
     to_port     = 65535
     protocol    = "tcp"
     cidr_blocks = [aws_vpc.mopl.cidr_block]
@@ -41,7 +41,7 @@ resource "aws_security_group" "app" {
 
   ingress {
     description     = "App dynamic ports from ALB"
-    from_port       = 49153
+    from_port       = 32768
     to_port         = 65535
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
