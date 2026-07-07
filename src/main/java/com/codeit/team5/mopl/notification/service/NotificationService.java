@@ -13,7 +13,6 @@ import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionExceptio
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.mapper.NotificationMapper;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -116,16 +115,6 @@ public class NotificationService {
 
         return notificationRepository.findMissedNotifications(receiverId, lastEventId).stream()
                 .map(notificationMapper::toPayload)
-                .toList();
-    }
-
-    // SSE 재연결 시 미수신 DM 조회
-    // TODO: DM 도메인 구현 후 DirectMessageDto로 hydrate하도록 변경
-    public List<DirectMessagePayload> findMissedDirectMessages(UUID receiverId, UUID lastEventId) {
-        validateLastEventId(receiverId, lastEventId);
-
-        return notificationRepository.findMissedDirectMessages(receiverId, lastEventId).stream()
-                .map(notificationMapper::toDirectMessagePayload)
                 .toList();
     }
 
