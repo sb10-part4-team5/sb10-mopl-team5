@@ -42,4 +42,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/jacoco/test/jacocoTestReport.xml
+          override_branch: ${{ github.head_ref || github.ref_name }}
           fail_ci_if_error: true
