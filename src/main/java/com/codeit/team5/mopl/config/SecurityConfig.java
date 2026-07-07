@@ -12,6 +12,7 @@ import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.security.handler.signin.OAuth2SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
+import com.codeit.team5.mopl.auth.support.HttpCookieOAuth2AuthorizationRequestRepository;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +39,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationService jwtAuthenticationService;
     private final MoplOAuth2UserService moplOAuth2UserService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
     private final UserAccessDeniedHandler userAccessDeniedHandler;
     private final MoplAuthenticationProvider moplAuthenticationProvider;
@@ -113,6 +115,11 @@ public class SecurityConfig {
                         .failureHandler(signInFailureHandler)
                 )
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(authorization ->
+                                authorization.authorizationRequestRepository(
+                                        httpCookieOAuth2AuthorizationRequestRepository
+                                )
+                        )
                         .userInfoEndpoint(userInfo ->
                                 userInfo.userService(moplOAuth2UserService)
                         )
