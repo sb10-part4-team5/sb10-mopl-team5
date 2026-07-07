@@ -78,7 +78,7 @@ public class MoplPrincipalService {
                 oauthUserInfo.getProvider(),
                 oauthUserInfo.getProviderUserId()
         )) {
-            throw new DuplicateSocialAccountException(oauthUserInfo.getProvider(), oauthUserInfo.getProviderUserId());
+            throw new DuplicateSocialAccountException(oauthUserInfo.getProvider());
         }
     }
 
