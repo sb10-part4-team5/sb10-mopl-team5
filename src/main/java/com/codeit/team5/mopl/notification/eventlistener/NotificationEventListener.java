@@ -50,15 +50,14 @@ public class NotificationEventListener {
             title, content, NotificationLevel.INFO);
     }
 
-    // 내가 구독한 플레이리스트에 콘텐츠가 추가되면 구독자 전원에게 알림 생성 (fan-out)
+    // 내가 구독한 플레이리스트에 콘텐츠가 추가되면 구독자 전원에게 알림 배치 생성 (fan-out)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPlaylistContentAdd(PlaylistContentAddEvent event){
         String title = "[플레이리스트] " +  event.playlistName();
-        String content =  event.contentTitle() + " 가 추가되었습니다.";
-        for (UUID receiverId : event.receiverId()) {
-            notificationService.create(receiverId, NotificationType.PLAYLIST_UPDATED,
+        String content =  event.contentTitle() + "가 추가되었습니다.";
+        // createAll을 하여 한번의 쿼리만을 실행하도록 수정했습니다.
+        notificationService.createAll(event.receiverIds(), NotificationType.PLAYLIST_UPDATED,
                 title, content, NotificationLevel.INFO);
-        }
     }
 
     // 다른 유저가 나를 팔로우 했을 때 트리거되는 이벤트를 받고 알림 생성
@@ -89,10 +88,8 @@ public class NotificationEventListener {
         String content = event.contentName() + " 시청 중";
 
         List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.watcherUserId());
-        for (UUID followerId : followerIds) {
-            notificationService.create(followerId, NotificationType.WATCHING_ACTIVITY,
+        notificationService.createAll(followerIds, NotificationType.WATCHING_ACTIVITY,
                 title, content, NotificationLevel.INFO);
-        }
     }
 
 
