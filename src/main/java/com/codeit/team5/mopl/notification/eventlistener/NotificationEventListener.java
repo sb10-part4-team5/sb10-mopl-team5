@@ -59,7 +59,7 @@ public class NotificationEventListener {
         notificationService.createAll(new NotificationBatchCreateCommand(
                 event.receiverIds(), NotificationType.PLAYLIST_UPDATED,
                 "[플레이리스트] " + event.playlistName(),
-                event.contentTitle() + "가 추가되었습니다.",
+                event.contentTitle() + "이/가 추가되었습니다.",
                 NotificationLevel.INFO));
     }
 
