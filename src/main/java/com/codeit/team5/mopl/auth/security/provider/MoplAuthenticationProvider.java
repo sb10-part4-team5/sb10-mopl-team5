@@ -7,7 +7,6 @@ import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -41,10 +40,6 @@ public class MoplAuthenticationProvider implements AuthenticationProvider {
             userDetails = (MoplUserDetails) userDetailsService.loadUserByUsername(email);
         } catch (InvalidCredentialsException e) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.", e);
-        }
-
-        if (!userDetails.isAccountNonLocked()) {
-            throw new LockedException("잠긴 계정입니다.");
         }
 
         boolean matchesPassword =
