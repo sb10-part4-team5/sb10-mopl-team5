@@ -78,10 +78,11 @@ class NotificationServiceTest {
         given(notificationMapper.toResponse(saved)).willReturn(response);
 
         // when
-        notificationService.create(
+        NotificationResponse result = notificationService.create(
                 receiverId, NotificationType.DIRECT_MESSAGE, "제목", "내용", NotificationLevel.INFO);
 
         // then
+        assertThat(result).isEqualTo(response);
         verify(publisher).publishEvent(any(NotificationCreatedEvent.class));
     }
 
