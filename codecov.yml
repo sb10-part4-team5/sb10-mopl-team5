@@ -1,2 +1,12 @@
 fixes:
   - "com/::src/main/java/com/"
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        informational: true
