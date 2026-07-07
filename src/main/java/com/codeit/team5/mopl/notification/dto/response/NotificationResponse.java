@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.notification.dto;
+package com.codeit.team5.mopl.notification.dto.response;
 
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import io.swagger.v3.oas.annotations.media.Schema;

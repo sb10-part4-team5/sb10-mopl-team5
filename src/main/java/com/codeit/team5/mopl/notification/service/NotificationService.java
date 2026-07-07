@@ -1,11 +1,13 @@
 package com.codeit.team5.mopl.notification.service;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
+import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
+import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
+import com.codeit.team5.mopl.notification.dto.request.NotificationListQuery;
 import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
-import com.codeit.team5.mopl.notification.dto.NotificationResponse;
+import com.codeit.team5.mopl.notification.dto.response.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
-import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.notification.event.NotificationsBatchCreatedEvent;
@@ -46,18 +48,17 @@ public class NotificationService {
     // AFTER_COMMIT 이벤트 리스너(트랜잭션 동기화 콜백)에서 호출되므로,
     // 활성 트랜잭션 유무와 무관하게 항상 새 물리 트랜잭션을 보장하기 위해 REQUIRES_NEW 사용
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public NotificationResponse create(
-            UUID receiverId, NotificationType type, String title, String content,
-            NotificationLevel level) {
-        Notification notification = Notification.create(receiverId, type, title, content, level);
+    public NotificationResponse create(NotificationCreateCommand command) {
+        Notification notification = Notification.create(
+                command.receiverId(), command.type(), command.title(), command.content(), command.level());
         Notification saved = notificationRepository.save(notification);
         NotificationPayload payload = notificationMapper.toPayload(saved);
         NotificationResponse response = notificationMapper.toResponse(saved);
-        log.info("알림 생성됨: type={}", type);
+        log.info("알림 생성됨: type={}", command.type());
 
         // DM 알림의 실시간 전송(SSE direct-messages)은 DirectMessageSseEvent 경로에서
         // 독립적으로 처리하므로, 여기서는 저장만 하고 그 외 알림 타입만 notifications SSE를 발행한다.
-        if (type != NotificationType.DIRECT_MESSAGE) {
+        if (command.type() != NotificationType.DIRECT_MESSAGE) {
             publisher.publishEvent(new NotificationCreatedEvent(payload));
         }
 
@@ -67,19 +68,18 @@ public class NotificationService {
     // 여러 수신자에게 동일한 알림을 배치로 생성한다.
     // N번의 개별 트랜잭션 대신 단일 트랜잭션 + saveAll로 DB 왕복을 줄인다.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void createAll(
-            List<UUID> receiverIds, NotificationType type, String title, String content,
-            NotificationLevel level) {
-        if (receiverIds.isEmpty()) {
+    public void createAll(NotificationBatchCreateCommand command) {
+        if (command.receiverIds().isEmpty()) {
             return;
         }
-        List<Notification> notifications = receiverIds.stream()
-                .map(receiverId -> Notification.create(receiverId, type, title, content, level))
+        List<Notification> notifications = command.receiverIds().stream()
+                .map(receiverId -> Notification.create(
+                        receiverId, command.type(), command.title(), command.content(), command.level()))
                 .toList();
         List<Notification> saved = notificationRepository.saveAll(notifications);
-        log.info("배치 알림 생성됨: type={}, count={}", type, saved.size());
+        log.info("배치 알림 생성됨: type={}, count={}", command.type(), saved.size());
 
-        if (type != NotificationType.DIRECT_MESSAGE) {
+        if (command.type() != NotificationType.DIRECT_MESSAGE) {
             List<NotificationPayload> payloads = saved.stream()
                     .map(notificationMapper::toPayload)
                     .toList();
@@ -89,32 +89,31 @@ public class NotificationService {
 
     // 수신자별 알림 목록 조회 (커서 페이지네이션)
     // 안 읽은 알림만 조회하여, 이미 읽은 알림이 조회할 때마다 계속 다시 뜨는 것을 방지
-    public CursorResponseNotificationDto getNotifications(
-            UUID receiverId, String cursor, UUID idAfter, int limit,
-            String sortDirection, String sortBy) {
+    public CursorResponseNotificationDto getNotifications(NotificationListQuery query) {
 
         // 지원하는 정렬 값인지 검증하고 오름차순 여부를 결정 (응답 메타와 실제 정렬을 일치시킴)
-        boolean ascending = resolveAscending(sortBy, sortDirection);
+        boolean ascending = resolveAscending(query.sortBy(), query.sortDirection());
 
         // 주 커서는 createdAt 문자열로 들어오므로 Instant로 파싱. 없으면(null) 첫 페이지
         Instant cursorInstant;
-        try{
-            cursorInstant = (cursor == null || cursor.isBlank()) ? null : Instant.parse(cursor);
-        } catch (DateTimeParseException e){
+        try {
+            cursorInstant = (query.cursor() == null || query.cursor().isBlank())
+                    ? null : Instant.parse(query.cursor());
+        } catch (DateTimeParseException e) {
             throw new InvalidCursorException();
         }
 
         // 다음 페이지 존재 여부를 알기 위해 limit보다 1개 더 조회
-        Limit fetchLimit = Limit.of(limit + 1);
+        Limit fetchLimit = Limit.of(query.limit() + 1);
 
         // 정렬 방향에 맞는 커서 조회 메서드 선택
         List<Notification> rows = ascending
-                ? notificationRepository.findPageByReceiverAsc(receiverId, cursorInstant, idAfter, fetchLimit)
-                : notificationRepository.findPageByReceiverDesc(receiverId, cursorInstant, idAfter, fetchLimit);
+                ? notificationRepository.findPageByReceiverAsc(query.receiverId(), cursorInstant, query.idAfter(), fetchLimit)
+                : notificationRepository.findPageByReceiverDesc(query.receiverId(), cursorInstant, query.idAfter(), fetchLimit);
 
         // limit + 1개가 조회됐으면 다음 페이지가 있는 것. 초과분은 잘라내고 limit개만 노출
-        boolean hasNext = rows.size() > limit;
-        List<Notification> page = hasNext ? rows.subList(0, limit) : rows;
+        boolean hasNext = rows.size() > query.limit();
+        List<Notification> page = hasNext ? rows.subList(0, query.limit()) : rows;
 
         // 다음 페이지가 있을 때만 마지막 요소의 (createdAt, id)로 다음 커서를 구성
         String nextCursor = null;
@@ -126,11 +125,11 @@ public class NotificationService {
         }
 
         // 응답의 totalCount (안 읽은 알림 수)
-        long totalCount = notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
+        long totalCount = notificationRepository.countByReceiverIdAndIsReadFalse(query.receiverId());
 
         return new CursorResponseNotificationDto(
                 notificationMapper.toResponseList(page),
-                nextCursor, nextIdAfter, hasNext, totalCount, sortBy, sortDirection);
+                nextCursor, nextIdAfter, hasNext, totalCount, query.sortBy(), query.sortDirection());
     }
 
     // 안 읽은 알림 개수

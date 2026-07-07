@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.subscription.service;
 
 import com.codeit.team5.mopl.playlist.entity.Playlist;
-import com.codeit.team5.mopl.playlist.event.PlaylistSubscribedEvent;
+import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.subscription.entity.Subscription;
 import com.codeit.team5.mopl.subscription.exception.SubscriptionAlreadyExistsException;
@@ -40,6 +40,8 @@ public class SubscriptionService {
         Playlist playlist = playlistRepository.getReferenceById(playlistId);
         repository.save(Subscription.of(playlist, user));
 
+        // 세 파라미터가 event를 정의하는데 필요한 최소의 한 쌍이라고 판단해서
+        // 놔두었습니다.
         UUID ownerId = playlist.getOwner().getId();
         String subscriberName = user.getName();
         String playlistTitle = playlist.getTitle();

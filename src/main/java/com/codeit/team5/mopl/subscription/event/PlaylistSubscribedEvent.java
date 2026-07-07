@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.playlist.event;
+package com.codeit.team5.mopl.subscription.event;
 
 import com.codeit.team5.mopl.notification.exception.InvalidNicknameException;
 import com.codeit.team5.mopl.notification.exception.InvalidReceiverIdException;
