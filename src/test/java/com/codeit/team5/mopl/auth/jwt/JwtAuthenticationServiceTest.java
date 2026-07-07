@@ -3,14 +3,15 @@ package com.codeit.team5.mopl.auth.jwt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.codeit.team5.mopl.auth.exception.AccountLockedException;
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
+import com.codeit.team5.mopl.auth.support.MoplAccountStatusChecker;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jws;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +33,9 @@ class JwtAuthenticationServiceTest {
 
     @Mock
     private MoplUserDetailsService userDetailsService;
+
+    @Mock
+    private MoplAccountStatusChecker moplAccountStatusChecker;
 
     @Mock
     private Jws<Claims> claimsJws;
@@ -67,6 +72,7 @@ class JwtAuthenticationServiceTest {
                 .extracting("authority")
                 .containsExactly("ROLE_USER");
         verify(userDetailsService).loadUserById(userId);
+        verify(moplAccountStatusChecker).check(principal);
     }
 
     @Test
@@ -132,12 +138,16 @@ class JwtAuthenticationServiceTest {
         given(claimsJws.getBody()).willReturn(claims);
         given(claims.getSubject()).willReturn(userId.toString());
         given(userDetailsService.loadUserById(userId)).willReturn(principal);
+        doThrow(new LockedException("잠긴 계정입니다."))
+                .when(moplAccountStatusChecker)
+                .check(principal);
 
         // When & Then
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
-                .isInstanceOf(AccountLockedException.class)
+                .isInstanceOf(LockedException.class)
                 .hasMessage("잠긴 계정입니다.");
         verify(userDetailsService).loadUserById(userId);
+        verify(moplAccountStatusChecker).check(principal);
     }
 
     @Test
