@@ -39,7 +39,18 @@ public class SubscriptionService {
         }
         Playlist playlist = playlistRepository.getReferenceById(playlistId);
         repository.save(Subscription.of(playlist, user));
-        eventPublisher.publishEvent(new PlaylistSubscribedEvent(playlist.getOwner().getId(), user.getName(), playlist.getTitle()));
+
+        UUID ownerId = playlist.getOwner().getId();
+        String subscriberName = user.getName();
+        String playlistTitle = playlist.getTitle();
+
+        eventPublisher.publishEvent(
+            new PlaylistSubscribedEvent(
+                ownerId,
+                subscriberName,
+                playlistTitle
+            )
+        );
         playlistRepository.increaseSubscribeCount(playlistId);
     }
 

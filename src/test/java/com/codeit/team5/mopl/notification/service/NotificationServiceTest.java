@@ -68,6 +68,38 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("여러 수신자에게 배치 알림 생성에 성공한다")
+    void createAll_success() {
+        // given
+        UUID receiverId1 = UUID.randomUUID();
+        UUID receiverId2 = UUID.randomUUID();
+        Notification saved1 = mock(Notification.class);
+        Notification saved2 = mock(Notification.class);
+        given(notificationRepository.saveAll(anyList())).willReturn(List.of(saved1, saved2));
+
+        // when
+        notificationService.createAll(
+                List.of(receiverId1, receiverId2), NotificationType.PLAYLIST_UPDATED,
+                "제목", "내용", NotificationLevel.INFO);
+
+        // then
+        verify(notificationRepository).saveAll(anyList());
+        verify(publisher, org.mockito.Mockito.times(2)).publishEvent(any(NotificationCreatedEvent.class));
+    }
+
+    @Test
+    @DisplayName("수신자 목록이 비어있으면 저장하지 않는다")
+    void createAll_emptyReceivers_skips() {
+        // when
+        notificationService.createAll(
+                List.of(), NotificationType.PLAYLIST_UPDATED, "제목", "내용", NotificationLevel.INFO);
+
+        // then
+        verify(notificationRepository, org.mockito.Mockito.never()).saveAll(anyList());
+        verify(publisher, org.mockito.Mockito.never()).publishEvent(any());
+    }
+
+    @Test
     @DisplayName("DM 타입 알림 생성 성공")
     void create_directMessage_success() {
         // given

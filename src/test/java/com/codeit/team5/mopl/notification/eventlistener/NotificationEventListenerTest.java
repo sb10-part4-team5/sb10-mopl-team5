@@ -94,25 +94,7 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("플레이리스트 콘텐츠 추가 이벤트로 구독자에게 PLAYLIST_UPDATED 알림을 생성한다")
-    void onPlaylistContentAdd_createsNotification() {
-        // given
-        UUID receiverId = UUID.randomUUID();
-        PlaylistContentAddEvent event =
-                new PlaylistContentAddEvent(List.of(receiverId), "내 플레이리스트", "콘텐츠 제목");
-
-        // when
-        notificationEventListener.onPlaylistContentAdd(event);
-
-        // then
-        verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.PLAYLIST_UPDATED),
-                eq("[플레이리스트] 내 플레이리스트"),
-                eq("콘텐츠 제목 가 추가되었습니다."), eq(NotificationLevel.INFO));
-    }
-
-    @Test
-    @DisplayName("플레이리스트 콘텐츠 추가 이벤트로 구독자 전원에게 각각 PLAYLIST_UPDATED 알림을 생성한다")
+    @DisplayName("플레이리스트 콘텐츠 추가 이벤트로 구독자 전원에게 배치로 PLAYLIST_UPDATED 알림을 생성한다")
     void onPlaylistContentAdd_createsNotificationForAllSubscribers() {
         // given
         UUID subscriber1 = UUID.randomUUID();
@@ -124,14 +106,10 @@ class NotificationEventListenerTest {
         notificationEventListener.onPlaylistContentAdd(event);
 
         // then
-        verify(notificationService).create(
-                eq(subscriber1), eq(NotificationType.PLAYLIST_UPDATED),
+        verify(notificationService).createAll(
+                eq(List.of(subscriber1, subscriber2)), eq(NotificationType.PLAYLIST_UPDATED),
                 eq("[플레이리스트] 내 플레이리스트"),
-                eq("콘텐츠 제목 가 추가되었습니다."), eq(NotificationLevel.INFO));
-        verify(notificationService).create(
-                eq(subscriber2), eq(NotificationType.PLAYLIST_UPDATED),
-                eq("[플레이리스트] 내 플레이리스트"),
-                eq("콘텐츠 제목 가 추가되었습니다."), eq(NotificationLevel.INFO));
+                eq("콘텐츠 제목가 추가되었습니다."), eq(NotificationLevel.INFO));
     }
 
     @Test
@@ -168,7 +146,7 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("시청 세션 생성 이벤트로 팔로워들에게 WATCHING_ACTIVITY 알림을 생성한다")
+    @DisplayName("시청 세션 생성 이벤트로 팔로워들에게 배치로 WATCHING_ACTIVITY 알림을 생성한다")
     void onWatchingSessionCreated_createsNotificationForFollowers() {
         // given
         UUID watcherUserId = UUID.randomUUID();
@@ -184,12 +162,8 @@ class NotificationEventListenerTest {
         notificationEventListener.onWatchingSessionCreated(event);
 
         // then
-        verify(notificationService).create(
-                eq(follower1), eq(NotificationType.WATCHING_ACTIVITY),
-                eq("다린 님이 컨텐츠 시청중입니다."),
-                eq("콘텐츠A 시청 중"), eq(NotificationLevel.INFO));
-        verify(notificationService).create(
-                eq(follower2), eq(NotificationType.WATCHING_ACTIVITY),
+        verify(notificationService).createAll(
+                eq(List.of(follower1, follower2)), eq(NotificationType.WATCHING_ACTIVITY),
                 eq("다린 님이 컨텐츠 시청중입니다."),
                 eq("콘텐츠A 시청 중"), eq(NotificationLevel.INFO));
     }

@@ -59,6 +59,27 @@ public class NotificationService {
         return response;
     }
 
+    // 여러 수신자에게 동일한 알림을 배치로 생성한다.
+    // N번의 개별 트랜잭션 대신 단일 트랜잭션 + saveAll로 DB 왕복을 줄인다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createAll(
+            List<UUID> receiverIds, NotificationType type, String title, String content,
+            NotificationLevel level) {
+        if (receiverIds.isEmpty()) {
+            return;
+        }
+        List<Notification> notifications = receiverIds.stream()
+                .map(receiverId -> Notification.create(receiverId, type, title, content, level))
+                .toList();
+        List<Notification> saved = notificationRepository.saveAll(notifications);
+        log.info("배치 알림 생성됨: type={}, count={}", type, saved.size());
+
+        if (type != NotificationType.DIRECT_MESSAGE) {
+            saved.forEach(n -> publisher.publishEvent(
+                    new NotificationCreatedEvent(notificationMapper.toPayload(n))));
+        }
+    }
+
     // 수신자별 알림 목록 조회 (커서 페이지네이션)
     // 안 읽은 알림만 조회하여, 이미 읽은 알림이 조회할 때마다 계속 다시 뜨는 것을 방지
     public CursorResponseNotificationDto getNotifications(
