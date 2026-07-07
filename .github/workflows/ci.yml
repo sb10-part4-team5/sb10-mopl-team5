@@ -45,9 +45,10 @@ jobs:
       - name: 커버리지 리포트를 CodeCov에 업로드
         if: always()
         uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
+        env:
+          CC_NETWORK_ROOT_FOLDER: ${{ github.workspace }}/src/main/java
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/jacoco/test/jacocoTestReport.xml
-          network_root_folder: src/main/java
           fail_ci_if_error: false
           verbose: true
