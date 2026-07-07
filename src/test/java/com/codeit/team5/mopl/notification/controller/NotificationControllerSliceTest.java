@@ -28,7 +28,8 @@ import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
-import com.codeit.team5.mopl.notification.dto.NotificationResponse;
+import com.codeit.team5.mopl.notification.dto.request.NotificationListQuery;
+import com.codeit.team5.mopl.notification.dto.response.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.service.NotificationService;
@@ -109,8 +110,7 @@ class NotificationControllerSliceTest {
                 true, 5L, "createdAt", "DESCENDING");
 
         given(notificationService.getNotifications(
-                eq(receiverId), eq(null), eq(null), eq(20),
-                eq("DESCENDING"), eq("createdAt")))
+                eq(new NotificationListQuery(receiverId, null, null, 20, "DESCENDING", "createdAt"))))
                 .willReturn(response);
 
         // When & Then
@@ -142,8 +142,7 @@ class NotificationControllerSliceTest {
                 List.of(), null, null, false, 0L, "createdAt", "ASCENDING");
 
         given(notificationService.getNotifications(
-                eq(receiverId), eq(cursor), eq(idAfter), eq(10),
-                eq("ASCENDING"), eq("createdAt")))
+                eq(new NotificationListQuery(receiverId, cursor, idAfter, 10, "ASCENDING", "createdAt"))))
                 .willReturn(response);
 
         // When & Then
@@ -165,7 +164,7 @@ class NotificationControllerSliceTest {
                 .andExpect(status().isUnauthorized());
 
         verify(notificationService, never())
-                .getNotifications(any(), any(), any(), any(int.class), any(), any());
+                .getNotifications(any(NotificationListQuery.class));
     }
 
     @Test
@@ -186,7 +185,7 @@ class NotificationControllerSliceTest {
             .andExpect(status().isBadRequest());
 
         verify(notificationService, never())
-            .getNotifications(any(), any(), any(), any(int.class), any(), any());
+            .getNotifications(any(NotificationListQuery.class));
     }
 
     @Test
@@ -207,7 +206,7 @@ class NotificationControllerSliceTest {
             .andExpect(status().isBadRequest());
 
         verify(notificationService, never())
-            .getNotifications(any(), any(), any(), any(int.class), any(), any());
+            .getNotifications(any(NotificationListQuery.class));
     }
 
     // ===== DELETE /api/notifications/{notificationId} =====
