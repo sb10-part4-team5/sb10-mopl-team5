@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Base64;
@@ -129,6 +130,8 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         try (ObjectInputStream objectInputStream =
                 new ObjectInputStream(new ByteArrayInputStream(bytes))) {
 
+            objectInputStream.setObjectInputFilter(OAUTH2_AUTHORIZATION_REQUEST_FILTER);
+
             return (OAuth2AuthorizationRequest) objectInputStream.readObject();
         } catch (IOException | ClassNotFoundException e) {
             throw new OAuth2AuthorizationRequestCookieException(
@@ -137,4 +140,22 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
             );
         }
     }
+
+    // OAuth2AuthorizationRequest 역직렬화 시 허용할 클래스만 제한한다.
+    // Java 기본 역직렬화(ObjectInputStream)는 임의 객체를 생성할 수 있으므로,
+    // Spring Security OAuth2 관련 타입과 JDK 기본 타입만 허용하고 나머지는 모두 차단한다.
+    // 또한 역직렬화 깊이, 참조 수, 데이터 크기를 제한해 과도한 객체 생성 공격도 방지한다.
+    private static final ObjectInputFilter OAUTH2_AUTHORIZATION_REQUEST_FILTER =
+            ObjectInputFilter.Config.createFilter(
+                    "maxdepth=20;"
+                            + "maxrefs=200;"
+                            + "maxbytes=65536;"
+                            + "org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;"
+                            + "org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest$*;"
+                            + "org.springframework.security.oauth2.core.endpoint.*;"
+                            + "org.springframework.security.oauth2.core.*;"
+                            + "java.base/*;"
+                            + "java.util.*;"
+                            + "!*"
+            );
 }
