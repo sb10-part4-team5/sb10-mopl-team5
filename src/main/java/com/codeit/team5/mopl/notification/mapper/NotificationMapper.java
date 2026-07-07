@@ -16,8 +16,4 @@ public interface NotificationMapper {
     List<NotificationResponse> toResponseList(List<Notification> notifications);
 
     NotificationPayload toPayload(Notification notification);
-
-    @Mapping(source = "id", target = "id")
-    DirectMessagePayload toDirectMessagePayload(Notification notification);
-
 }
