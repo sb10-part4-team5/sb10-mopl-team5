@@ -32,6 +32,6 @@ public interface WatchingSessionMapper {
             nextIdAfter = lastElement.id() != null ? lastElement.id().toString() : null;
         }
         return new CursorResponse<>(data, nextCursor, nextIdAfter, window.hasNext(), totalCount,
-                sortBy.toString(), sortDirection.toString());
+                sortBy.getValue(), sortDirection.toString());
     }
 }

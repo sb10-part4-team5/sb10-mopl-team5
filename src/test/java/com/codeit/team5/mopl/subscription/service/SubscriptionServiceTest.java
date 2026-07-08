@@ -85,7 +85,7 @@ class SubscriptionServiceTest {
         UUID playlistId = UUID.randomUUID();
         UUID userId = user.getId();
 
-        given(playlistRepository.findById(playlistId)).willThrow(SubscriptionPlaylistNotFoundException.class);
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> subscriptionService.create(playlistId, userId))

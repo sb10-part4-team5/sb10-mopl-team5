@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.handler;
 
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import java.util.Objects;
 import java.util.UUID;
 import java.security.Principal;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -16,7 +17,7 @@ public abstract class AbstractStompUnsubscribeHandler extends AbstractStompComma
 
     @Override
     public void handle(StompHeaderAccessor accessor) {
-        Principal principal = accessor.getUser();
+        Principal principal = Objects.requireNonNull(accessor.getUser());
         String subscriptionId = accessor.getSubscriptionId();
         UUID userId = UUID.fromString(principal.getName());
         String destination = getSessionDestination(userId, subscriptionId);
