@@ -45,7 +45,7 @@ class StompErrorHandlerTest {
         assertThat(resultAccessor.getReceiptId()).isEqualTo("test-receipt-123");
 
         // 3. 커스텀 헤더들이 정확하게 세팅되었는지 확인
-        assertThat(resultAccessor.getMessage()).isEqualTo(HttpStatus.UNAUTHORIZED.toString());
+        assertThat(resultAccessor.getMessage()).isEqualTo(HttpStatus.UNAUTHORIZED + ": 권한이 없습니다.");
         assertThat(resultAccessor.getFirstNativeHeader("exception-type"))
                 .isEqualTo("TestBusinessException");
 
