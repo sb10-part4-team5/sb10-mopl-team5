@@ -13,6 +13,9 @@ public record AuthCookieProperties(
 
         @NotBlank
         @Pattern(regexp = "Lax|Strict|None")
-        String sameSite
+        String sameSite,
+
+        @NotBlank
+        String signatureSecretKey
 ) {
 }

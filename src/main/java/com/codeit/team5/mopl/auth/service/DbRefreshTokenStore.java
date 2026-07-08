@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.auth.service;
 
 import com.codeit.team5.mopl.auth.entity.RefreshToken;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenSaveException;
 import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
 import com.codeit.team5.mopl.auth.support.RefreshTokenHasher;
 import com.codeit.team5.mopl.user.entity.User;
@@ -10,6 +11,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,14 +27,20 @@ public class DbRefreshTokenStore implements RefreshTokenStore {
     @Override
     @Transactional
     public void save(UUID userId, String rawToken, Instant expiresAt) {
-        UUID requiredUserId = Objects.requireNonNull(userId, "userId must not be null");
-        String requiredRawToken = Objects.requireNonNull(rawToken, "rawToken must not be null");
-        Instant requiredExpiresAt =
-                Objects.requireNonNull(expiresAt, "expiresAt must not be null");
+        try {
+            UUID requiredUserId = Objects.requireNonNull(userId, "userId must not be null");
+            String requiredRawToken = Objects.requireNonNull(rawToken, "rawToken must not be null");
+            Instant requiredExpiresAt =
+                    Objects.requireNonNull(expiresAt, "expiresAt must not be null");
 
-        User user = findUserForUpdate(requiredUserId);
+            User user = findUserForUpdate(requiredUserId);
 
-        replaceToken(user, requiredRawToken, requiredExpiresAt);
+            replaceToken(user, requiredRawToken, requiredExpiresAt);
+        } catch (UserNotFoundException e) {
+            throw e;
+        } catch (DataAccessException e) {
+            throw new RefreshTokenSaveException(e);
+        }
     }
 
     @Override

@@ -39,6 +39,7 @@ import com.codeit.team5.mopl.auth.service.AuthService;
 import com.codeit.team5.mopl.auth.service.PasswordResetService;
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
+import com.codeit.team5.mopl.ControllerSliceSecurityMockConfig;
 import com.codeit.team5.mopl.config.SecurityConfig;
 import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
@@ -70,6 +71,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import({
         GlobalExceptionHandler.class,
         SecurityConfig.class,
+        ControllerSliceSecurityMockConfig.class,
         JwtAuthenticationFilter.class,
         UserAuthenticationEntryPoint.class,
         UserAccessDeniedHandler.class

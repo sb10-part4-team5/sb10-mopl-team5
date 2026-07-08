@@ -52,13 +52,19 @@ public class User extends BaseUpdatableEntity {
             String password,
             String name
     ) {
-        User user = new User();
-        user.email = email;
-        user.name = name;
-        user.password = password;
-        user.locked = false;
-        user.role = UserRole.USER;
-        return user;
+        return new User(email, password, name);
+    }
+
+    public static User createSocial(String email, String password, String name) {
+        return new User(email, password, name);
+    }
+
+    private User(String email, String password, String name) {
+        this.email = email;
+        this.name = name;
+        this.password = password;
+        this.role = UserRole.USER;
+        this.locked = false;
     }
 
     public void updateName(String newName) {
