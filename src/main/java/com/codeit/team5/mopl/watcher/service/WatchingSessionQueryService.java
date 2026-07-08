@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
-import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
+import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
+import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
@@ -38,9 +39,8 @@ public class WatchingSessionQueryService {
     public CursorResponse<WatchingSessionResponse> findCursorByContentId(UUID contentId,
             WatchingSessionCursorRequest request) {
         Sort.Direction direction = request.sortDirection();
-        WatcherSortByType sortBy = request.sortBy();
-        Sort sort =
-                Sort.by(direction, sortBy.getValue()).and(Sort.by(direction, secondarySortBy));
+        String sortBy = request.sortBy();
+        Sort sort = Sort.by(direction, sortBy).and(Sort.by(direction, secondarySortBy));
         ScrollPosition scrollPosition = createScrollPosition(request);
         Window<WatchingSession> result = repository.findByContentId(contentId, scrollPosition,
                 Limit.of(request.limit()), sort);
@@ -49,20 +49,25 @@ public class WatchingSessionQueryService {
     }
 
     public void ensureWatchingContent(UUID contentId, UUID watcherId) {
-        if (!repository.existsByWatcherIdAndContentId(watcherId, contentId)) {
+        if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
             throw new WatchingSessionNotFoundException(
                     Map.of("watcherId", watcherId, "contentId", contentId));
         }
     }
 
+    public WatchingSessionPayload getWatchingSessionPayload(UUID watcherId, WatcherStatus status) {
+        WatchingSession session = repository.findByWatcherId(watcherId).orElseThrow(
+                () -> new WatchingSessionNotFoundException(Map.of("watcherId", watcherId)));
+        return mapper.toPayload(session, status);
+    }
+
     private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {
         Instant cursor = request.cursor();
-        String idAfter = request.idAfter();
+        UUID idAfter = request.idAfter();
         if (cursor == null || idAfter == null) {
             return ScrollPosition.keyset();
         }
-        Map<String, Object> keyset = Map.of(request.sortBy().getValue(), cursor,
-                secondarySortBy, UUID.fromString(idAfter));
+        Map<String, Object> keyset = Map.of(request.sortBy(), cursor, secondarySortBy, idAfter);
         return ScrollPosition.of(keyset, Direction.FORWARD);
     }
 }

@@ -29,7 +29,7 @@ public interface WatchingSessionRepository extends JpaRepository<WatchingSession
 
     Long countByContentId(UUID contentId);
 
-    boolean existsByWatcherIdAndContentId(UUID watcherId, UUID contentId);
+    boolean existsByContentIdAndWatcherId(UUID contentId, UUID watcherId);
 
     boolean existsByWatcherId(UUID watcherId);
 }
