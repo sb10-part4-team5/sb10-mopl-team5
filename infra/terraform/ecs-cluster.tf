@@ -30,16 +30,21 @@ resource "aws_launch_template" "ecs" {
   }
 
   # IMDSv2 강제 (토큰 필수) — SSRF 등으로 메타데이터/자격증명 탈취 방지
-  # hop_limit 2: bridge 네트워크의 컨테이너(alloy)에서도 IMDS 조회가 가능하도록
+  # hop_limit 1: 브리지 네트워크의 컨테이너(mopl 앱 포함)에서는 IMDS 접근 자체를 차단
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
-    http_put_response_hop_limit = 2
+    http_put_response_hop_limit = 1
   }
 
+  # 호스트(0홉)에서만 부팅 시 프라이빗 IP를 조회해 파일로 저장 — alloy가 이 파일을
+  # 읽기 전용으로 마운트해서 사용 (컨테이너에서 직접 IMDS를 호출하지 않도록 함)
   user_data = base64encode(<<-EOF
     #!/bin/bash
     echo "ECS_CLUSTER=${var.ecs_cluster}" >> /etc/ecs/ecs.config
+
+    TOKEN=$(curl -sf -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" http://169.254.169.254/latest/api/token)
+    curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4 > /etc/mopl-host-ip
   EOF
   )
 

@@ -66,20 +66,21 @@ resource "aws_ecs_task_definition" "mopl" {
 
       links      = ["mopl"]
       entryPoint = ["sh", "-c"]
-      # alloy 이미지에 curl이 없을 수 있어 wget도 함께 시도 + IMDSv2 토큰 사용 (hop_limit=2 필요)
-      command = [<<-EOT
-        TOKEN=$(wget -q -T 1 --method=PUT --header="X-aws-ec2-metadata-token-ttl-seconds: 60" -O - http://169.254.169.254/latest/api/token 2>/dev/null || curl -sf --connect-timeout 1 -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" http://169.254.169.254/latest/api/token 2>/dev/null)
-        HOST_IP=$( { [ -n "$TOKEN" ] && wget -q -T 1 --header="X-aws-ec2-metadata-token: $TOKEN" -O - http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null; } || { [ -n "$TOKEN" ] && curl -sf --connect-timeout 1 -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null; } || hostname -i | awk '{print $1}')
-        echo $ALLOY_CONFIG_B64 | base64 -d | sed "s/__HOST_IP__/$HOST_IP/g" > /tmp/config.alloy
-        exec /bin/alloy run /tmp/config.alloy
-        EOT
-      ]
+      # HOST_IP는 호스트가 부팅 시 써둔 파일에서 읽음 (컨테이너에서 IMDS 직접 호출 안 함)
+      command = ["HOST_IP=$(cat /host-ip) && echo $ALLOY_CONFIG_B64 | base64 -d | sed \"s/__HOST_IP__/$HOST_IP/g\" > /tmp/config.alloy && exec /bin/alloy run /tmp/config.alloy"]
 
-      mountPoints = [{
-        sourceVolume  = "docker-sock"
-        containerPath = "/var/run/docker.sock"
-        readOnly      = true
-      }]
+      mountPoints = [
+        {
+          sourceVolume  = "docker-sock"
+          containerPath = "/var/run/docker.sock"
+          readOnly      = true
+        },
+        {
+          sourceVolume  = "host-ip"
+          containerPath = "/host-ip"
+          readOnly      = true
+        }
+      ]
 
       logConfiguration = {
         logDriver = "json-file"
@@ -94,6 +95,11 @@ resource "aws_ecs_task_definition" "mopl" {
   volume {
     name      = "docker-sock"
     host_path = "/var/run/docker.sock"
+  }
+
+  volume {
+    name      = "host-ip"
+    host_path = "/etc/mopl-host-ip"
   }
 }
 
