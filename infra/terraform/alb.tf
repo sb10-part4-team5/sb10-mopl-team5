@@ -161,7 +161,7 @@ resource "aws_lb_listener_rule" "block_known_scan_paths_2" {
 
   condition {
     path_pattern {
-      values = ["/administrator*", "/phpmyadmin*", "/.aws*", "/vendor/*", "/config.php"]
+      values = ["/administrator*", "/phpmyadmin*", "/.aws*", "/vendor*", "/config.php"]
     }
   }
 }
