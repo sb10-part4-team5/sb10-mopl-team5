@@ -1,26 +1,10 @@
 spring:
   application:
     name: data-generator
-  datasource:
-    url: jdbc:postgresql://localhost:5432/mopl?reWriteBatchedInserts=true
-    username: mopl
-    password: mopl
-    driver-class-name: org.postgresql.Driver
   main:
     web-application-type: none
-
-generator:
-  user: 1000
-  content: 5000
-  tag: 100
-  tag-per-content: 3
-  review-per-user: 5
-  playlist-per-user: 3
-  item-per-playlist: 10
-  subscription-per-user: 5
-  follow-per-user: 10
-  notification-per-user: 20
-  db-batch-size: 1000
+  profiles:
+    active: dev
 
 logging:
   level:

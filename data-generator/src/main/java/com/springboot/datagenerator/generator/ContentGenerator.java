@@ -113,6 +113,7 @@ public class ContentGenerator extends BaseGenerator {
             }
             return objectMapper.writeValueAsString(map);
         } catch (JsonProcessingException e) {
+            log.warn("Failed to serialize metadata for type: {}", type, e);
             return null;
         }
     }

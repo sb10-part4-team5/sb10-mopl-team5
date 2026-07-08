@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+generator:
+  user: 1000
+  content: 5000
+  tag: 100
+  tag-per-content: 3
+  review-per-user: 5
+  playlist-per-user: 3
+  item-per-playlist: 10
+  subscription-per-user: 5
+  follow-per-user: 10
+  notification-per-user: 20
+  db-batch-size: 1000
