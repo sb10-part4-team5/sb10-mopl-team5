@@ -52,6 +52,26 @@ class LoginSessionRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    @DisplayName("활성 로그인 세션이 여러 개면 가장 늦게 만료되는 세션을 조회한다")
+    void findCurrentSessionId_multipleActiveSessions_returnsLatestExpiresAtSession() {
+        // Given
+        UUID userId = persistUser("session-multiple-active@example.com");
+        Instant now = Instant.parse("2026-07-08T12:00:00Z");
+        UUID earlySessionId = UUID.randomUUID();
+        UUID latestSessionId = UUID.randomUUID();
+
+        persistAndFlush(LoginSession.create(userId, earlySessionId, now.plusSeconds(60)));
+        persistAndFlush(LoginSession.create(userId, latestSessionId, now.plusSeconds(120)));
+
+        // When
+        Optional<LoginSession> result = loginSessionRepository.findFirstByUserIdAndExpiresAtAfterOrderByExpiresAtDesc(userId, now);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().getSessionId()).isEqualTo(latestSessionId);
+    }
+
+    @Test
     @DisplayName("사용자와 세션 식별자 기준으로 만료되지 않은 세션 존재 여부를 확인한다")
     void existsByUserIdAndSessionIdAndExpiresAtAfter_existingSession_returnsTrue() {
         // Given
