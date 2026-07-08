@@ -6,6 +6,5 @@ import org.springframework.validation.annotation.Validated;
 
 @Configuration
 @EnableConfigurationProperties(GeneratorProperties.class)
-@Validated
 public class GeneratorConfig {
 }

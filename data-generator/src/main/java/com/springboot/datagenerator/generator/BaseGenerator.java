@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -74,11 +75,16 @@ public abstract class BaseGenerator {
 
     protected Set<Integer> uniqueRandomInts(int bound, int count) {
         count = Math.min(count, bound);
-        if (count == bound) {
-            Set<Integer> all = new HashSet<>();
+
+        // count가 절반 이상이면 셔플 방식
+        if (count > bound / 2) {
+            List<Integer> all = new ArrayList<>();
             for (int i = 0; i < bound; i++) all.add(i);
-            return all;
+            Collections.shuffle(all, new Random(ThreadLocalRandom.current().nextLong()));
+            return new HashSet<>(all.subList(0, count));
         }
+
+        // count가 적으면 기존 방식 (빠름)
         Set<Integer> result = new HashSet<>();
         while (result.size() < count) {
             result.add(ThreadLocalRandom.current().nextInt(bound));

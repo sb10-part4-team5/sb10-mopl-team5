@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/mopl}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mopl?reWriteBatchedInserts=true}
     username: ${DB_USERNAME:mopl}
     password: ${DB_PASSWORD:mopl}
     driver-class-name: org.postgresql.Driver
