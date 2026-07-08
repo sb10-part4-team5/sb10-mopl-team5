@@ -43,6 +43,7 @@ public class GeneratorOrchestrator {
 
         contentTagGenerator.run(contentIds, tagIds);
         reviewGenerator.run(userIds, contentIds);
+        updateContentStats();
 
         List<UUID> playlistIds = playlistGenerator.run(userIds);
 
@@ -50,6 +51,22 @@ public class GeneratorOrchestrator {
         playlistSubscriptionGenerator.run(userIds, playlistIds);
         followGenerator.run(userIds);
         notificationGenerator.run(userIds);
+    }
+
+    private void updateContentStats() {
+        log.info("Updating content_stats from reviews...");
+        template.execute("""
+            UPDATE content_stats cs
+            SET review_count = sub.cnt,
+                rating_sum   = sub.sum_rating
+            FROM (
+                SELECT content_id, COUNT(*) AS cnt, SUM(rating) AS sum_rating
+                FROM reviews
+                GROUP BY content_id
+            ) sub
+            WHERE cs.id = sub.content_id
+            """);
+        log.info("content_stats updated");
     }
 
     private void truncate() {
