@@ -145,12 +145,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleDataIntegrityViolationException(
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException e
     ) {
         log.warn("데이터 무결성 제약조건 위반: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ErrorResponseSuggestion.from(e));
+                .body(ErrorResponse.from(e));
     }
 }

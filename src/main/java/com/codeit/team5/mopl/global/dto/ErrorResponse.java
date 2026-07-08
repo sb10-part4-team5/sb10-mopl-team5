@@ -9,6 +9,7 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
@@ -114,6 +115,14 @@ public record ErrorResponse(String exceptionType, String message, Object details
                 locked
                         ? null
                         : Map.of("loginFailed", List.of("Invalid credentials"))
+        );
+    }
+
+    public static ErrorResponse from(DataIntegrityViolationException ex) {
+        return new ErrorResponse(
+            "CONFLICT",
+            "이미 존재하거나 사용할 수 없는 데이터입니다.",
+            null
         );
     }
 }
