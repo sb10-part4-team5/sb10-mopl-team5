@@ -30,10 +30,11 @@ resource "aws_launch_template" "ecs" {
   }
 
   # IMDSv2 강제 (토큰 필수) — SSRF 등으로 메타데이터/자격증명 탈취 방지
+  # hop_limit 2: bridge 네트워크의 컨테이너(alloy)에서도 IMDS 조회가 가능하도록
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
-    http_put_response_hop_limit = 1
+    http_put_response_hop_limit = 2
   }
 
   user_data = base64encode(<<-EOF
@@ -65,6 +66,12 @@ resource "aws_autoscaling_group" "ecs" {
     key                 = "AmazonECSManaged"
     value               = "true"
     propagate_at_launch = true
+  }
+
+  # desired_capacity는 초기값만 지정 — 이후 capacity_provider의 managed_scaling이 조정하므로
+  # terraform이 계속 2로 되돌리며 드리프트나지 않도록 무시
+  lifecycle {
+    ignore_changes = [desired_capacity]
   }
 }
 

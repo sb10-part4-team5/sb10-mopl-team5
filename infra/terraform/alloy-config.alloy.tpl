@@ -33,14 +33,24 @@ prometheus.remote_write "grafana_cloud" {
   }
 }
 
-// ECS 컨테이너 로그 수집 (docker socket)
+// ECS 컨테이너 로그 수집 (docker socket, mopl 컨테이너만 필터링)
 discovery.docker "containers" {
   host = "unix:///var/run/docker.sock"
 }
 
+discovery.relabel "mopl_containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = ".*-mopl-.*"
+    action        = "keep"
+  }
+}
+
 loki.source.docker "mopl" {
   host       = "unix:///var/run/docker.sock"
-  targets    = discovery.docker.containers.targets
+  targets    = discovery.relabel.mopl_containers.output
   forward_to = [loki.write.grafana_cloud.receiver]
 
   labels = {

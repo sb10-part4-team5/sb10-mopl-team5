@@ -177,33 +177,41 @@ variable "kakao_client_secret" {
 }
 
 variable "grafana_prometheus_url" {
-  description = "Grafana Cloud Prometheus remote_write URL"
+  description = "Grafana Cloud Prometheus remote_write URL (terraform.tfvars 에 작성)"
   type        = string
-  default     = "https://prometheus-prod-49-prod-ap-northeast-0.grafana.net/api/prom/push"
 }
 
 variable "grafana_prometheus_username" {
-  description = "Grafana Cloud Prometheus org ID (username)"
+  description = "Grafana Cloud Prometheus org ID (username, terraform.tfvars 에 작성)"
   type        = string
-  default     = "3355868"
 }
 
 variable "grafana_loki_url" {
-  description = "Grafana Cloud Loki push URL"
+  description = "Grafana Cloud Loki push URL (terraform.tfvars 에 작성)"
   type        = string
-  default     = "https://logs-prod-030.grafana.net"
 }
 
 variable "grafana_loki_username" {
-  description = "Grafana Cloud Loki org ID (username)"
+  description = "Grafana Cloud Loki org ID (username, terraform.tfvars 에 작성)"
   type        = string
-  default     = "1673609"
 }
 
 variable "grafana_alloy_token" {
   description = "Grafana Cloud Alloy API 토큰"
   type        = string
   sensitive   = true
+}
+
+variable "grafana_cloudwatch_aws_account_id" {
+  description = "Grafana Cloud가 CloudWatch 조회 시 assume할 role의 신뢰 주체 AWS 계정 ID"
+  type        = string
+  default     = "008923505280"
+}
+
+variable "grafana_cloudwatch_external_id" {
+  description = "Grafana Cloud CloudWatch assume role의 sts:ExternalId"
+  type        = string
+  default     = "1715822"
 }
 
 variable "cookie_signature_secret_key" {

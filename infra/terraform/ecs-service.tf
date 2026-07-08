@@ -50,7 +50,7 @@ resource "aws_ecs_task_definition" "mopl" {
     },
     {
       name      = "alloy"
-      image     = "grafana/alloy:latest"
+      image     = "grafana/alloy:v1.6.1"
       essential = false
 
       memoryReservation = 64
@@ -66,7 +66,14 @@ resource "aws_ecs_task_definition" "mopl" {
 
       links      = ["mopl"]
       entryPoint = ["sh", "-c"]
-      command    = ["HOST_IP=$(curl -sf --connect-timeout 1 http://169.254.169.254/latest/meta-data/local-ipv4 || hostname -i | awk '{print $1}') && echo $ALLOY_CONFIG_B64 | base64 -d | sed \"s/__HOST_IP__/$HOST_IP/g\" > /tmp/config.alloy && exec /bin/alloy run /tmp/config.alloy"]
+      # alloy 이미지에 curl이 없을 수 있어 wget도 함께 시도 + IMDSv2 토큰 사용 (hop_limit=2 필요)
+      command = [<<-EOT
+        TOKEN=$(wget -q -T 1 --method=PUT --header="X-aws-ec2-metadata-token-ttl-seconds: 60" -O - http://169.254.169.254/latest/api/token 2>/dev/null || curl -sf --connect-timeout 1 -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" http://169.254.169.254/latest/api/token 2>/dev/null)
+        HOST_IP=$( { [ -n "$TOKEN" ] && wget -q -T 1 --header="X-aws-ec2-metadata-token: $TOKEN" -O - http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null; } || { [ -n "$TOKEN" ] && curl -sf --connect-timeout 1 -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null; } || hostname -i | awk '{print $1}')
+        echo $ALLOY_CONFIG_B64 | base64 -d | sed "s/__HOST_IP__/$HOST_IP/g" > /tmp/config.alloy
+        exec /bin/alloy run /tmp/config.alloy
+        EOT
+      ]
 
       mountPoints = [{
         sourceVolume  = "docker-sock"

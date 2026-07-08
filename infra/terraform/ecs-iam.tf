@@ -61,7 +61,7 @@ resource "aws_iam_role_policy" "task_execution_ssm" {
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = ["ssm:GetParameters", "kms:Decrypt"]
+      Action   = ["ssm:GetParameters"]
       Resource = [aws_ssm_parameter.grafana_token.arn]
     }]
   })
