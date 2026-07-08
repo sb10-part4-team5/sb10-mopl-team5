@@ -3,18 +3,22 @@ logging {
 }
 
 // Spring Boot /actuator/prometheus 스크랩
-prometheus.scrape "spring_boot" {
+discovery.relabel "spring_boot" {
   targets = [{
     __address__ = "mopl:8080",
   }]
-  metrics_path    = "/actuator/prometheus"
-  scrape_interval = "60s"
-  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
 
   rule {
     target_label = "instance"
     replacement  = "__HOST_IP__:8080"
   }
+}
+
+prometheus.scrape "spring_boot" {
+  targets         = discovery.relabel.spring_boot.output
+  metrics_path    = "/actuator/prometheus"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
 }
 
 // Grafana Cloud Prometheus로 전송
