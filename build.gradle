@@ -36,6 +36,10 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.1'
 
+    // Cache
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
     // Messaging
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
@@ -133,11 +137,6 @@ jacocoTestReport {
     reports {
         xml.required = true
         html.required = true
-    }
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: jacocoExcludePatterns)
-        }))
     }
     doLast {
         if (openJacocoReport) {

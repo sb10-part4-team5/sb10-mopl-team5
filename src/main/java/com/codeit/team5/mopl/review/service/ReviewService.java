@@ -3,7 +3,7 @@ package com.codeit.team5.mopl.review.service;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
-import com.codeit.team5.mopl.content.service.ContentStatService;
+import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
@@ -45,7 +45,11 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final ContentRepository contentRepository;
     private final ReviewMapper reviewMapper;
-    private final ContentStatService contentStatService;
+    private final ContentStatsRepository contentStatsRepository;
+
+    private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
+        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
+    }
 
     @Transactional(readOnly = true)
     public CursorResponse<ReviewResponse> getReviews(ReviewGetRequest request) {
@@ -113,7 +117,7 @@ public class ReviewService {
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
-        contentStatService.reviewUpdateContentStat(request.contentId(), request.rating(), 1);
+        reviewUpdateContentStat(request.contentId(), request.rating(), 1);
         return reviewMapper.toDto(saved);
     }
 
@@ -128,7 +132,7 @@ public class ReviewService {
         double oldRating = review.getRating();
         review.update(request.text(), request.rating());
         if(request.rating() != null){
-            contentStatService.reviewUpdateContentStat(review.getContentId(), request.rating() - oldRating, 0);
+            reviewUpdateContentStat(review.getContentId(), request.rating() - oldRating, 0);
         }
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
         return reviewMapper.toDto(review);
@@ -142,7 +146,7 @@ public class ReviewService {
             log.warn("리뷰 삭제 권한 없음: reviewId={}, requesterId={}", reviewId, authorId);
             throw new ReviewForbiddenException();
         }
-        contentStatService.reviewUpdateContentStat(review.getContentId(), -review.getRating(), -1);
+        reviewUpdateContentStat(review.getContentId(), -review.getRating(), -1);
         reviewRepository.delete(review);
         log.info("리뷰 삭제 완료: reviewId={}, authorId={}", reviewId, authorId);
     }

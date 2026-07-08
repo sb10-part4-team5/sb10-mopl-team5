@@ -9,7 +9,7 @@ import java.util.UUID;
 // 만일 REST 필드가 변경될 시 결합도를 낮추기 위한 페이로드
 // 내부에서 알림 객체를 전달할 때 사용됨.
 public record NotificationPayload(
-    UUID notificationId,
+    UUID id,
     UUID receiverId,
     NotificationType type,
     String title,
@@ -19,7 +19,6 @@ public record NotificationPayload(
 ) implements SseEventPayload {
     @Override
     public UUID eventId(){
-        return notificationId();
+        return id();
     }
 }
-

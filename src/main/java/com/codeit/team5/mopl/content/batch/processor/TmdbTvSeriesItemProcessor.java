@@ -6,7 +6,7 @@ import com.codeit.team5.mopl.content.dto.external.tmdb.TmdbTvGenre;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentType;
-import com.codeit.team5.mopl.content.service.util.ContentCollectionUtils;
+import com.codeit.team5.mopl.content.batch.util.ContentCollectionUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;

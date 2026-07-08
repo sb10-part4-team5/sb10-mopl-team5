@@ -18,7 +18,7 @@ public class SseSender {
     /**
      * userId로 emitter를 조회해 이벤트를 전송한다.
      * emitter가 없으면 조용히 건너뛰고, 전송 실패 시 스토어에서 제거한다.
-     * SseNotificationListener처럼 "조회 → 전송 → 실패 시 정리"가 한 묶음인 경우 사용한다.
+     * SseListener처럼 "조회 → 전송 → 실패 시 정리"가 한 묶음인 경우 사용한다.
      */
     public void sendToUser(UUID userId, SseEmitter.SseEventBuilder event) {
         SseEmitter emitter = emitterStore.get(userId); // userId를 통해 emitterStore에서 꺼내오기

@@ -33,7 +33,7 @@ resource "aws_launch_template" "ecs" {
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
-    http_put_response_hop_limit = 2 # 컨테이너(awsvpc)에서 메타데이터 접근 허용
+    http_put_response_hop_limit = 1
   }
 
   user_data = base64encode(<<-EOF
@@ -48,18 +48,13 @@ resource "aws_launch_template" "ecs" {
   }
 }
 
-# EC2 오토스케일링 그룹 (1대 시작, 최대 2대까지)
+# EC2 오토스케일링 그룹 (1대 고정)
 resource "aws_autoscaling_group" "ecs" {
   name                = "mopl-ecs-asg"
   vpc_zone_identifier = aws_subnet.public[*].id
   desired_capacity    = 1
   min_size            = 1
-  max_size            = 2
-
-  # TODO: 부하 기반 자동 확장(scaling policy) 미설정 — 현재는 1대 고정.
-  #   트래픽 증가에 대응하려면 아래 두 가지를 추가해야 한다.
-  #   1) ECS Service 오토스케일링(target tracking, CPU/메모리 기준)으로 task 수 자동 조정
-  #   2) Capacity Provider managed_scaling 이 task 수요에 맞춰 EC2를 max_size까지 확장
+  max_size            = 1
 
   launch_template {
     id      = aws_launch_template.ecs.id

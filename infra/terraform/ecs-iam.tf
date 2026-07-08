@@ -78,7 +78,10 @@ resource "aws_iam_role_policy" "task_s3" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
-      Resource = "arn:aws:s3:::${var.s3_bucket}/images/*"
+      Resource = [
+        "arn:aws:s3:::${var.s3_bucket}/thumbnails/*",
+        "arn:aws:s3:::${var.s3_bucket}/profiles/*"
+      ]
     }]
   })
 }
