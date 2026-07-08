@@ -10,11 +10,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
-import com.codeit.team5.mopl.notification.dto.NotificationResponse;
+import com.codeit.team5.mopl.notification.dto.response.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
+import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
+import com.codeit.team5.mopl.notification.dto.request.NotificationListQuery;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.event.NotificationsBatchCreatedEvent;
 import com.codeit.team5.mopl.notification.exception.InvalidSortByException;
 import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionException;
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
@@ -59,8 +63,8 @@ class NotificationServiceTest {
         given(notificationMapper.toResponse(saved)).willReturn(response);
 
         // when
-        NotificationResponse result = notificationService.create(
-                receiverId, NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO);
+        NotificationResponse result = notificationService.create(new NotificationCreateCommand(
+                receiverId, NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO));
 
         // then
         assertThat(result).isEqualTo(response);
@@ -68,22 +72,35 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("DM 타입 알림 생성 성공")
-    void create_directMessage_success() {
+    @DisplayName("여러 수신자에게 배치 알림 생성 시 이벤트를 한 번만 발행한다")
+    void createAll_success() {
         // given
-        UUID receiverId = UUID.randomUUID();
-        Notification saved = mock(Notification.class);
-        NotificationResponse response = mock(NotificationResponse.class);
-        given(notificationRepository.save(any(Notification.class))).willReturn(saved);
-        given(notificationMapper.toResponse(saved)).willReturn(response);
+        UUID receiverId1 = UUID.randomUUID();
+        UUID receiverId2 = UUID.randomUUID();
+        Notification saved1 = mock(Notification.class);
+        Notification saved2 = mock(Notification.class);
+        given(notificationRepository.saveAll(anyList())).willReturn(List.of(saved1, saved2));
 
         // when
-        NotificationResponse result = notificationService.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "제목", "내용", NotificationLevel.INFO);
+        notificationService.createAll(new NotificationBatchCreateCommand(
+                List.of(receiverId1, receiverId2), NotificationType.PLAYLIST_UPDATED,
+                "제목", "내용", NotificationLevel.INFO));
 
         // then
-        assertThat(result).isEqualTo(response);
-        verify(publisher).publishEvent(any(NotificationCreatedEvent.class));
+        verify(notificationRepository).saveAll(anyList());
+        verify(publisher, org.mockito.Mockito.times(1)).publishEvent(any(NotificationsBatchCreatedEvent.class));
+    }
+
+    @Test
+    @DisplayName("수신자 목록이 비어있으면 저장하지 않는다")
+    void createAll_emptyReceivers_skips() {
+        // when
+        notificationService.createAll(new NotificationBatchCreateCommand(
+                List.of(), NotificationType.PLAYLIST_UPDATED, "제목", "내용", NotificationLevel.INFO));
+
+        // then
+        verify(notificationRepository, org.mockito.Mockito.never()).saveAll(anyList());
+        verify(publisher, org.mockito.Mockito.never()).publishEvent(any());
     }
 
     @Test
@@ -109,7 +126,7 @@ class NotificationServiceTest {
 
         // when
         CursorResponseNotificationDto result = notificationService.getNotifications(
-                receiverId, null, null, 2, "DESCENDING", "createdAt");
+                new NotificationListQuery(receiverId, null, null, 2, "DESCENDING", "createdAt"));
 
         // then
         assertThat(result.hasNext()).isTrue();
@@ -132,7 +149,7 @@ class NotificationServiceTest {
 
         // when
         CursorResponseNotificationDto result = notificationService.getNotifications(
-                receiverId, null, null, 2, "DESCENDING", "createdAt");
+                new NotificationListQuery(receiverId, null, null, 2, "DESCENDING", "createdAt"));
 
         // then
         assertThat(result.hasNext()).isFalse();
@@ -152,7 +169,7 @@ class NotificationServiceTest {
 
         // when
         CursorResponseNotificationDto result = notificationService.getNotifications(
-                receiverId, null, null, 2, "ASCENDING", "createdAt");
+                new NotificationListQuery(receiverId, null, null, 2, "ASCENDING", "createdAt"));
 
         // then
         assertThat(result.hasNext()).isFalse();
@@ -166,7 +183,7 @@ class NotificationServiceTest {
 
         // when & then
         assertThatThrownBy(() -> notificationService.getNotifications(
-                receiverId, null, null, 2, "DESCENDING", "title"))
+                new NotificationListQuery(receiverId, null, null, 2, "DESCENDING", "title")))
                 .isInstanceOf(InvalidSortByException.class);
     }
 
@@ -178,7 +195,7 @@ class NotificationServiceTest {
 
         // when & then
         assertThatThrownBy(() -> notificationService.getNotifications(
-                receiverId, null, null, 2, "WHATEVER", "createdAt"))
+                new NotificationListQuery(receiverId, null, null, 2, "WHATEVER", "createdAt")))
                 .isInstanceOf(InvalidSortDirectionException.class);
     }
 

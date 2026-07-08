@@ -6,6 +6,7 @@ import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.event.NotificationsBatchCreatedEvent;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,16 @@ public class SseListener {
                         .id(payload.id().toString())
                         .name("notifications")
                         .data(payload));
+    }
+
+    @TransactionalEventListener(phase = AFTER_COMMIT)
+    public void onNotificationsBatchCreated(NotificationsBatchCreatedEvent event) {
+        event.payloads().forEach(payload ->
+                sseSender.sendToUser(payload.receiverId(),
+                        SseEmitter.event()
+                                .id(payload.id().toString())
+                                .name("notifications")
+                                .data(payload)));
     }
 
     // 비활성 대화에 DM이 도착하면 SSE "direct-messages" 이벤트로 전송 (알림 저장과 독립)

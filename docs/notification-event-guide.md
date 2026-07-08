@@ -133,19 +133,20 @@ publisher.publishEvent(new PlaylistSubscribedEvent(ownerId, subscriber.getNickna
 
 ---
 
-### 4. `PlaylistUpdatedEvent` — 구독 플레이리스트 수정
+### 4. `PlaylistContentAddEvent` — 구독 플레이리스트 콘텐츠 추가
 
-**발행 시점:** 구독 중인 플레이리스트가 수정되었을 때
+**발행 시점:** 구독 중인 플레이리스트에 콘텐츠가 추가되었을 때
 
-| 파라미터 | 타입 | 설명 |
-|---|---|---|
-| `receiverId` | `UUID` | 알림을 받을 사용자 (플레이리스트 **구독자**) |
-| `playlistName` | `String` | 수정된 플레이리스트 이름 |
+| 파라미터           | 타입 | 설명                             |
+|----------------|---|--------------------------------|
+| `receiverIds`  | `UUID` | 알림을 받을 사용자 (플레이리스트 **구독자 전체**) |
+| `playlistName` | `String` | 수정된 플레이리스트 이름                  |
+| 'contentTitle' | 'String' | 추가된 콘텐츠 이름                     |
 
 ```java
 // 구독자가 여러 명이면 각각에 대해 발행
 for (UUID subscriberId : subscriberIds) {
-    publisher.publishEvent(new PlaylistUpdatedEvent(subscriberId, playlist.getName()));
+    publisher.publishEvent(new PlaylistContentAddEvent(subscriberId, playlist.getName(), content.getTitle()));
 }
 ```
 
