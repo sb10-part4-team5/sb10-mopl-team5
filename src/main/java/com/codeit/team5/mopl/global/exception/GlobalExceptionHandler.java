@@ -7,6 +7,7 @@ import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenNotFoundException;
 import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.codeit.team5.mopl.global.exception.util.ViolationExceptionUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -89,6 +91,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IOException.class)
     public void handleIOException(IOException e) {
         log.debug("클라이언트 연결 종료로 응답 전송 실패: {}", e.getMessage());
+    }
+
+    // 존재하지 않는 경로로의 요청(봇/스캐너의 무작위 경로 탐색)에서 발생
+    // 버그가 아니므로 ERROR로 로그를 남기지 않고 404만 반환
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponseSuggestion> handleNoResourceFoundException(
+            NoResourceFoundException e, HttpServletRequest request) {
+        log.info("존재하지 않는 리소스 요청: {} | User-Agent: {}",
+                e.getMessage(), request.getHeader("User-Agent"));
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponseSuggestion("NOT_FOUND", "요청하신 리소스를 찾을 수 없습니다.", null));
     }
 
     // 배치 작업 스레드 풀의 큐까지 가득 찬 상태에서 새 수집 요청이 들어오면 AbortPolicy가
