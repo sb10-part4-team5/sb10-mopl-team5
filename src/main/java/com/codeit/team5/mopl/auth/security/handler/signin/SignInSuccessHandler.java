@@ -54,8 +54,12 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
 
         MoplPrincipal principal = (MoplPrincipal) authentication.getPrincipal();
 
-        User user = findUserOrSendError(response, principal);
-        if (user == null) {
+        User user;
+        try {
+            user = findUserWithProfileImage(principal);
+        } catch (UserNotFoundException e) {
+            log.warn("Login success handling failed. User not found. userId={}", principal.getId());
+            ErrorResponder.sendErrorResponse(response, e);
             return;
         }
 
@@ -83,17 +87,9 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
         objectMapper.writeValue(response.getWriter(), jwtResponse);
     }
 
-    private User findUserOrSendError(HttpServletResponse response, MoplPrincipal principal)
-            throws IOException {
-        try {
-            // 로그인 응답 생성에 필요한 프로필 이미지를 함께 조회
-            return userRepository.findWithProfileImageById(principal.getId())
-                    .orElseThrow(() -> new UserNotFoundException(principal.getId()));
-        } catch (UserNotFoundException e) {
-            log.warn("Login success handler failed. userId={}", principal.getId(), e);
-            ErrorResponder.sendErrorResponse(response, e);
-            return null;
-        }
+    private User findUserWithProfileImage(MoplPrincipal principal) {
+        return userRepository.findWithProfileImageById(principal.getId())
+                .orElseThrow(() -> new UserNotFoundException(principal.getId()));
     }
 
     private Instant calculateExpiresAt() {

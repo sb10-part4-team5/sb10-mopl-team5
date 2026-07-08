@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeit.team5.mopl.ControllerSliceSecurityMockConfig;
 import com.codeit.team5.mopl.TestGlobalExceptionHandlerConfig;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
@@ -52,6 +53,7 @@ import org.springframework.test.web.servlet.MockMvc;
         GlobalExceptionHandler.class,
         TestGlobalExceptionHandlerConfig.class,
         SecurityConfig.class,
+        ControllerSliceSecurityMockConfig.class,
         JwtAuthenticationFilter.class,
         UserAuthenticationEntryPoint.class,
         UserAccessDeniedHandler.class

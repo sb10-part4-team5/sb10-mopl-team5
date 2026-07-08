@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -143,4 +144,13 @@ public class GlobalExceptionHandler {
             .body(ErrorResponseSuggestion.from(e));
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseSuggestion> handleDataIntegrityViolationException(
+            DataIntegrityViolationException e
+    ) {
+        log.warn("데이터 무결성 제약조건 위반: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponseSuggestion.from(e));
+    }
 }
