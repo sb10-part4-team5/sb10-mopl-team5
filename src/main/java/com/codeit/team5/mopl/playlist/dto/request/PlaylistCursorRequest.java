@@ -11,7 +11,7 @@ public record PlaylistCursorRequest(String keywordLike,
                                     UUID subscriberIdEqual,
                                     String cursor,
                                     UUID idAfter,
-                                    @NotNull @Positive @Max(50) Integer limit,
+                                    @NotNull @Positive @Max(100) Integer limit,
                                     @NotNull Sort.Direction sortDirection,
                                     @NotNull String sortBy) {
 
