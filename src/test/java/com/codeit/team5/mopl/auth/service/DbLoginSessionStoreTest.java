@@ -59,7 +59,7 @@ class DbLoginSessionStoreTest {
                 sessionId,
                 Instant.now().plusSeconds(60)
         );
-        when(loginSessionRepository.findByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class)))
+        when(loginSessionRepository.findFirstByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class)))
                 .thenReturn(Optional.of(loginSession));
 
         // When
@@ -67,7 +67,7 @@ class DbLoginSessionStoreTest {
 
         // Then
         assertThat(result).contains(sessionId);
-        verify(loginSessionRepository).findByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class));
+        verify(loginSessionRepository).findFirstByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class));
     }
 
     @Test
@@ -75,7 +75,7 @@ class DbLoginSessionStoreTest {
     void findCurrentSessionId_missingSession_returnsEmpty() {
         // Given
         UUID userId = UUID.randomUUID();
-        when(loginSessionRepository.findByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class)))
+        when(loginSessionRepository.findFirstByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class)))
                 .thenReturn(Optional.empty());
 
         // When
@@ -83,7 +83,7 @@ class DbLoginSessionStoreTest {
 
         // Then
         assertThat(result).isEmpty();
-        verify(loginSessionRepository).findByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class));
+        verify(loginSessionRepository).findFirstByUserIdAndExpiresAtAfter(eq(userId), any(Instant.class));
     }
 
     @Test

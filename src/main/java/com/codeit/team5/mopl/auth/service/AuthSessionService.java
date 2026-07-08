@@ -38,5 +38,6 @@ public class AuthSessionService {
 
     public void deleteExpiredSessions() {
         loginSessionStore.deleteExpiredSessions();
+        refreshTokenStore.deleteExpiredTokens();
     }
 }
