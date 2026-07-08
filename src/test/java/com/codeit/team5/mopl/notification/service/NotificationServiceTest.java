@@ -7,14 +7,16 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
 import com.codeit.team5.mopl.notification.dto.response.NotificationResponse;
+import com.codeit.team5.mopl.notification.dto.NotificationPayload;
+import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.dto.request.NotificationListQuery;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
@@ -24,6 +26,7 @@ import com.codeit.team5.mopl.notification.exception.InvalidSortDirectionExceptio
 import com.codeit.team5.mopl.notification.exception.NotificationNotFoundException;
 import com.codeit.team5.mopl.notification.mapper.NotificationMapper;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
+import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -245,5 +248,90 @@ class NotificationServiceTest {
         // when & then
         assertThatThrownBy(() -> notificationService.markAsRead(notificationId, receiverId))
                 .isInstanceOf(NotificationNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("수신자 목록이 비어있으면 배치 알림을 생성하지 않는다")
+    void createAll_emptyReceivers_noOp() {
+        // given
+        NotificationBatchCreateCommand command = new NotificationBatchCreateCommand(
+                List.of(), NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO);
+
+        // when
+        notificationService.createAll(command);
+
+        // then
+        verify(notificationRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("DM이 아닌 타입의 배치 알림을 생성한다")
+    void createAll_nonDm_savesAll() {
+        // given
+        UUID r1 = UUID.randomUUID();
+        UUID r2 = UUID.randomUUID();
+        NotificationBatchCreateCommand command = new NotificationBatchCreateCommand(
+                List.of(r1, r2), NotificationType.FOLLOWED, "제목", "내용", NotificationLevel.INFO);
+        Notification saved1 = mock(Notification.class);
+        Notification saved2 = mock(Notification.class);
+        given(notificationRepository.saveAll(anyList())).willReturn(List.of(saved1, saved2));
+
+        // when
+        notificationService.createAll(command);
+
+        // then
+        verify(notificationRepository).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("DM 타입의 배치 알림을 생성한다")
+    void createAll_dm_savesAll() {
+        // given
+        UUID r1 = UUID.randomUUID();
+        NotificationBatchCreateCommand command = new NotificationBatchCreateCommand(
+                List.of(r1), NotificationType.DIRECT_MESSAGE, "DM", "내용", NotificationLevel.INFO);
+        Notification saved = mock(Notification.class);
+        given(notificationRepository.saveAll(anyList())).willReturn(List.of(saved));
+
+        // when
+        notificationService.createAll(command);
+
+        // then
+        verify(notificationRepository).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("미수신 알림 조회에 성공한다")
+    void findMissedNotifications_success() {
+        // given
+        UUID receiverId = UUID.randomUUID();
+        UUID lastEventId = UUID.randomUUID();
+        Notification notification = mock(Notification.class);
+        NotificationPayload payload = mock(NotificationPayload.class);
+        given(notificationRepository.findByIdAndReceiverId(lastEventId, receiverId))
+                .willReturn(Optional.of(notification));
+        given(notificationRepository.findMissedNotifications(receiverId, lastEventId))
+                .willReturn(List.of(notification));
+        given(notificationMapper.toPayload(notification)).willReturn(payload);
+
+        // when
+        List<NotificationPayload> result = notificationService.findMissedNotifications(receiverId, lastEventId);
+
+        // then
+        assertThat(result).containsExactly(payload);
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 lastEventId면 미수신 알림 조회 시 예외가 발생한다")
+    void findMissedNotifications_invalidLastEventId_exception() {
+        // given
+        UUID receiverId = UUID.randomUUID();
+        UUID lastEventId = UUID.randomUUID();
+        given(notificationRepository.findByIdAndReceiverId(lastEventId, receiverId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.findMissedNotifications(receiverId, lastEventId))
+                .isInstanceOf(InvalidLastEventIdException.class);
     }
 }
