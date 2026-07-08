@@ -8,47 +8,86 @@ resource "aws_ecs_task_definition" "mopl" {
   execution_role_arn       = aws_iam_role.task_execution.arn
   task_role_arn            = aws_iam_role.task.arn
 
-  container_definitions = jsonencode([{
-    name      = "mopl"
-    image     = "${aws_ecr_repository.mopl.repository_url}:${var.app_image_tag}"
-    essential = true
+  container_definitions = jsonencode([
+    {
+      name      = "mopl"
+      image     = "${aws_ecr_repository.mopl.repository_url}:${var.app_image_tag}"
+      essential = true
 
-    portMappings = [{
-      containerPort = 8080
-      hostPort      = 0
-      protocol      = "tcp"
-    }]
+      portMappings = [{
+        containerPort = 8080
+        hostPort      = 0
+        protocol      = "tcp"
+      }]
 
-    environment = [
-      { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
-      { name = "DB_URL", value = "jdbc:postgresql://${aws_db_instance.mopl.address}:5432/mopl" },
-      { name = "DB_USERNAME", value = var.db_username },
-      { name = "DB_PASSWORD", value = var.db_password },
-      { name = "S3_BUCKET", value = var.s3_bucket },
-      { name = "AWS_REGION", value = var.aws_region },
-      { name = "CDN_BASE_URL", value = "https://${var.cdn_domain}" },
-      { name = "MAIL_HOST", value = var.mail_host },
-      { name = "MAIL_PORT", value = var.mail_port },
-      { name = "MAIL_USERNAME", value = var.mail_username },
-      { name = "MAIL_PASSWORD", value = var.mail_password },
-      { name = "JWT_ACCESS_SECRET_KEY", value = var.jwt_access_secret_key },
-      { name = "JWT_REFRESH_SECRET_KEY", value = var.jwt_refresh_secret_key },
-      { name = "ADMIN_EMAIL", value = var.admin_email },
-      { name = "ADMIN_PASSWORD", value = var.admin_password },
-      { name = "ADMIN_NAME", value = var.admin_name },
-      { name = "TMDB_ACCESS_TOKEN", value = var.tmdb_access_token },
-      { name = "TMDB_API_KEY", value = var.tmdb_api_key },
-      { name = "SPORTS_DB_API_KEY", value = var.sports_db_api_key },
-      { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
-      { name = "GOOGLE_CLIENT_SECRET", value = var.google_client_secret },
-      { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
-      { name = "KAKAO_CLIENT_SECRET", value = var.kakao_client_secret },
-      { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx350m -XX:MaxMetaspaceSize=192m -XX:+UseG1GC" }
-    ]
+      environment = [
+        { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
+        { name = "DB_URL", value = "jdbc:postgresql://${aws_db_instance.mopl.address}:5432/mopl" },
+        { name = "DB_USERNAME", value = var.db_username },
+        { name = "DB_PASSWORD", value = var.db_password },
+        { name = "S3_BUCKET", value = var.s3_bucket },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "CDN_BASE_URL", value = "https://${var.cdn_domain}" },
+        { name = "MAIL_HOST", value = var.mail_host },
+        { name = "MAIL_PORT", value = var.mail_port },
+        { name = "MAIL_USERNAME", value = var.mail_username },
+        { name = "MAIL_PASSWORD", value = var.mail_password },
+        { name = "JWT_ACCESS_SECRET_KEY", value = var.jwt_access_secret_key },
+        { name = "JWT_REFRESH_SECRET_KEY", value = var.jwt_refresh_secret_key },
+        { name = "ADMIN_EMAIL", value = var.admin_email },
+        { name = "ADMIN_PASSWORD", value = var.admin_password },
+        { name = "ADMIN_NAME", value = var.admin_name },
+        { name = "TMDB_ACCESS_TOKEN", value = var.tmdb_access_token },
+        { name = "TMDB_API_KEY", value = var.tmdb_api_key },
+        { name = "SPORTS_DB_API_KEY", value = var.sports_db_api_key },
+        { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
+        { name = "GOOGLE_CLIENT_SECRET", value = var.google_client_secret },
+        { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
+        { name = "KAKAO_CLIENT_SECRET", value = var.kakao_client_secret },
+        { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx350m -XX:MaxMetaspaceSize=192m -XX:+UseG1GC" },
+        { name = "COOKIE_SIGNATURE_SECRET_KEY", value = var.cookie_signature_secret_key }
+      ]
+    },
+    {
+      name      = "alloy"
+      image     = "grafana/alloy:latest"
+      essential = false
 
-    # logConfiguration 생략 → ECS EC2 기본 json-file (EC2 로컬, CloudWatch 미사용)
-    # 추후 Loki 도입 시 awsfirelens(Fluent Bit)로 전환
-  }])
+      memoryReservation = 64
+      memory            = 128
+
+      environment = [
+        { name = "ALLOY_CONFIG_B64", value = local.alloy_config_b64 }
+      ]
+
+      secrets = [
+        { name = "GRAFANA_TOKEN", valueFrom = aws_ssm_parameter.grafana_token.arn }
+      ]
+
+      links      = ["mopl"]
+      entryPoint = ["sh", "-c"]
+      command    = ["HOST_IP=$(curl -sf --connect-timeout 1 http://169.254.169.254/latest/meta-data/local-ipv4 || hostname -i | awk '{print $1}') && echo $ALLOY_CONFIG_B64 | base64 -d | sed \"s/__HOST_IP__/$HOST_IP/g\" > /tmp/config.alloy && exec /bin/alloy run /tmp/config.alloy"]
+
+      mountPoints = [{
+        sourceVolume  = "docker-sock"
+        containerPath = "/var/run/docker.sock"
+        readOnly      = true
+      }]
+
+      logConfiguration = {
+        logDriver = "json-file"
+        options = {
+          max-size = "10m"
+          max-file = "3"
+        }
+      }
+    }
+  ])
+
+  volume {
+    name      = "docker-sock"
+    host_path = "/var/run/docker.sock"
+  }
 }
 
 # Service — Task를 desired_count 만큼 실행/유지 + ALB 연결
@@ -57,7 +96,7 @@ resource "aws_ecs_service" "mopl" {
   cluster         = aws_ecs_cluster.mopl.id
   task_definition = aws_ecs_task_definition.mopl.arn
   desired_count                      = 1 # 나중에 2로 확장 가능
-  health_check_grace_period_seconds  = 120
+  health_check_grace_period_seconds  = 180
 
   load_balancer {
     target_group_arn = aws_lb_target_group.mopl.arn

@@ -48,13 +48,13 @@ resource "aws_launch_template" "ecs" {
   }
 }
 
-# EC2 오토스케일링 그룹 (1대 고정)
+# EC2 오토스케일링 그룹 (롤링 배포 가능하도록 2대)
 resource "aws_autoscaling_group" "ecs" {
   name                = "mopl-ecs-asg"
   vpc_zone_identifier = aws_subnet.public[*].id
-  desired_capacity    = 1
+  desired_capacity    = 2
   min_size            = 1
-  max_size            = 1
+  max_size            = 2
 
   launch_template {
     id      = aws_launch_template.ecs.id

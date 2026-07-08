@@ -52,6 +52,21 @@ resource "aws_iam_role_policy_attachment" "task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Alloy 컨테이너가 SSM에서 Grafana 토큰을 읽기 위한 권한
+resource "aws_iam_role_policy" "task_execution_ssm" {
+  name = "mopl-task-execution-ssm"
+  role = aws_iam_role.task_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ssm:GetParameters", "kms:Decrypt"]
+      Resource = [aws_ssm_parameter.grafana_token.arn]
+    }]
+  })
+}
+
 # =========================================================
 # 3) Task Role — 컨테이너 앱이 AWS(S3) 접근
 # =========================================================

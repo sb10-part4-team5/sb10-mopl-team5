@@ -176,3 +176,38 @@ variable "kakao_client_secret" {
   sensitive   = true
 }
 
+variable "grafana_prometheus_url" {
+  description = "Grafana Cloud Prometheus remote_write URL"
+  type        = string
+  default     = "https://prometheus-prod-49-prod-ap-northeast-0.grafana.net/api/prom/push"
+}
+
+variable "grafana_prometheus_username" {
+  description = "Grafana Cloud Prometheus org ID (username)"
+  type        = string
+  default     = "3355868"
+}
+
+variable "grafana_loki_url" {
+  description = "Grafana Cloud Loki push URL"
+  type        = string
+  default     = "https://logs-prod-030.grafana.net"
+}
+
+variable "grafana_loki_username" {
+  description = "Grafana Cloud Loki org ID (username)"
+  type        = string
+  default     = "1673609"
+}
+
+variable "grafana_alloy_token" {
+  description = "Grafana Cloud Alloy API 토큰"
+  type        = string
+  sensitive   = true
+}
+
+variable "cookie_signature_secret_key" {
+  description = "OAuth2 인가 요청 쿠키 HMAC 서명 키"
+  type        = string
+  sensitive   = true
+}
