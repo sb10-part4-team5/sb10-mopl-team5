@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.content.handler;
+package com.codeit.team5.mopl.content.listener;
 
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 @Component
 @Transactional
 @RequiredArgsConstructor
-public class ContentStatsEventHandler {
+public class ContentStatsEventListener {
 
     private final ContentStatsRepository statsRepository;
 
