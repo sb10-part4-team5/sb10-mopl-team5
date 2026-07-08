@@ -19,7 +19,7 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
                             END
         WHERE s.id = :contentId
         """)
-    int applyStatDelta(
+    void applyStatDelta(
         @Param("contentId") UUID contentId,
         @Param("ratingDelta") double ratingDelta,
         @Param("countDelta") int countDelta

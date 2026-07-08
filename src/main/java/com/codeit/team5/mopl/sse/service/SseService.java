@@ -1,20 +1,16 @@
 package com.codeit.team5.mopl.sse.service;
 
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
-import com.codeit.team5.mopl.notification.repository.NotificationRepository;
 import com.codeit.team5.mopl.notification.service.NotificationService;
-import com.codeit.team5.mopl.sse.dto.DirectMessagePayload;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter.SseEventBuilder;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +22,6 @@ public class SseService {
     private final SseEmitterStore emitterStore;
     private final NotificationService notificationService;
     private final SseSender sseSender;
-    private final NotificationRepository notificationRepository;
 
     public SseEmitter subscribe(UUID userId, String lastEventId) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
@@ -78,37 +73,18 @@ public class SseService {
         }
 
         List<NotificationPayload> notifications = notificationService.findMissedNotifications(userId, lastEventIdUuid);
-        List<DirectMessagePayload> dms = notificationService.findMissedDirectMessages(userId, lastEventIdUuid);
 
-        // 알림/dm 페이로드를 concat한 뒤 payload가 순회
-        for (var payload : Stream.concat(notifications.stream(), dms.stream()).sorted().toList()) {
-            SseEmitter.SseEventBuilder event;
-
-            // item이 알림 페이로드라면 알림 이벤트
-            if (payload instanceof NotificationPayload notification) {
-                event = SseEmitter.event()
-                    .id(notification.eventId().toString())
+        for (NotificationPayload payload : notifications) {
+            SseEmitter.SseEventBuilder event = SseEmitter.event()
+                    .id(payload.eventId().toString())
                     .name("notifications")
-                    .data(notification);
-            }
-            // item이 dm 페이로드라면 direct-message 이벤트
-            else if (payload instanceof DirectMessagePayload dm) {
-                event = SseEmitter.event()
-                    .id(dm.eventId().toString())
-                    .name("direct-message")
-                    .data(dm);
-            } else {
-                continue;
-            }
-
-            // send가 실패하면 emitter 정리
+                    .data(payload);
             if (!sseSender.send(userId, emitter, event)) {
                 emitter.complete();
                 return;
             }
         }
 
-        log.debug("SSE 미수신 이벤트 전달: userId={}, notifications={}, dms={}",
-                userId, notifications.size(), dms.size());
+        log.debug("SSE 미수신 이벤트 전달: userId={}, notifications={}", userId, notifications.size());
     }
 }
