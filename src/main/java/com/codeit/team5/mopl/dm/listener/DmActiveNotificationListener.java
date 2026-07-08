@@ -22,7 +22,7 @@ public class DmActiveNotificationListener {
     @Async("dmEventExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onDirectMessageBroadcast(DirectMessageBroadcastEvent event) {
-        if (!activeConversationChecker.isViewing(event.message().conversationId(), event.receiverEmail())) {
+        if (!activeConversationChecker.isViewing(event.message().conversationId(), event.receiverId())) {
             eventPublisher.publishEvent(new DirectMessageNotificationEvent(event.message()));
             eventPublisher.publishEvent(new DirectMessageSseEvent(event.message()));
         }

@@ -16,6 +16,7 @@ import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.user.event.UserLockedEvent;
 import com.codeit.team5.mopl.user.exception.DuplicatedEmailException;
 import com.codeit.team5.mopl.user.exception.UserForbiddenException;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
@@ -116,7 +117,7 @@ public class UserService {
 
         requestUser.updateLocked(request.locked());
         refreshTokenStore.deleteByUserId(userId);
-
+        eventPublisher.publishEvent(new UserLockedEvent(userId, request.locked()));
         log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
     }
 

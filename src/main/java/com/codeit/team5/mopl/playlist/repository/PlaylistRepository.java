@@ -20,6 +20,18 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID>, Playl
     void increaseSubscribeCount(UUID id);
 
     @Modifying
-    @Query("UPDATE Playlist p SET p.subscriberCount = p.subscriberCount - 1 WHERE p.id = :id AND p.subscriberCount > 0")
+    @Query("UPDATE Playlist p SET p.subscriberCount = p.subscriberCount - 1 "
+            + "WHERE p.id = :id AND p.subscriberCount > 0")
     void decreaseSubscribeCount(UUID id);
+
+    @Modifying
+    @Query("UPDATE Playlist p SET p.subscriberCount = p.subscriberCount - 1 "
+            + "WHERE p.id IN (SELECT s.playlist.id FROM Subscription s WHERE s.subscriber.id = :subscriberId) "
+            + "AND p.subscriberCount > 0")
+    void bulkDecreaseSubscribeCountBySubscriberId(UUID subscriberId);
+
+    @Modifying
+    @Query("UPDATE Playlist p SET p.subscriberCount = p.subscriberCount + 1 "
+            + "WHERE p.id IN (SELECT s.playlist.id FROM Subscription s WHERE s.subscriber.id = :subscriberId)")
+    void bulkIncreaseSubscribeCountBySubscriberId(UUID subscriberId);
 }

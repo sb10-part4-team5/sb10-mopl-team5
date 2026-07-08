@@ -6,13 +6,13 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum SortByType {
-    CREATED_AT("createdAt"),
-    ;
+public enum WatcherSortByType {
+    CREATED_AT("createdAt"),;
+
     private final String value;
 
-    public static SortByType from(String text) {
-        for (SortByType type : SortByType.values()) {
+    public static WatcherSortByType from(String text) {
+        for (WatcherSortByType type : WatcherSortByType.values()) {
             if (type.getValue().equalsIgnoreCase(text)) {
                 return type;
             }

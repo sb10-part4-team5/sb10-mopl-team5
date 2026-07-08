@@ -29,10 +29,10 @@ class DmUnsubscribeHandlerTest {
     void doHandle_Success() {
         // Given
         UUID conversationId = UUID.randomUUID();
-        String email = "test@test.com";
+        UUID userId = UUID.randomUUID();
 
         // When
-        handler.doHandle(conversationId, email);
+        handler.doHandle(conversationId, userId);
 
         // Then
         verifyNoInteractions(sessionStore);

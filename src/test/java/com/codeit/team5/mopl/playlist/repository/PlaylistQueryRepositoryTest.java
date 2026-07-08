@@ -1,14 +1,19 @@
 package com.codeit.team5.mopl.playlist.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
+import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.support.base.BaseRepositoryTest;
@@ -43,6 +48,9 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private SubscriptionRepository subscriptionRepository;
 
+    @Autowired
+    private BinaryContentRepository binaryContentRepository;
+
     private User user;
     private Playlist playlist;
 
@@ -54,16 +62,15 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         playlist = Playlist.of(user, "Test Playlist", "Description");
         playlistRepository.save(playlist);
 
-        flush();
-        clear();
-        queryInspector.clear();
-    }
-
-    @Test
-    @DisplayName("콘텐츠와 함께 단건 조회")
-    void findByIdWithContents() {
-        // given
         Content content = Content.createByAdmin(ContentType.MOVIE, "Movie Title", "Desc");
+
+        BinaryContent thumbnail = BinaryContent.completed("http://example.com/thumb.jpg");
+        binaryContentRepository.save(thumbnail);
+        content.attachThumbnail(thumbnail);
+
+        ContentStats stats = ContentStats.create(content);
+        content.attachStats(stats);
+
         contentRepository.save(content);
 
         PlaylistItem item = PlaylistItem.of(playlist.getId(), content);
@@ -72,19 +79,28 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         flush();
         clear();
         queryInspector.clear();
+    }
+
+    @Test
+    @DisplayName("콘텐츠와 함께 단건 조회")
+    void findByIdWithContents() {
 
         // when
         Optional<PlaylistContentsDto> dtoOpt =
                 playlistQueryRepository.findByIdWithContents(playlist.getId(), user.getId());
-        ensureQueryCount(2); // 1. playlist fetch, 2. playlistItem + content fetch
 
         // then
         assertThat(dtoOpt).isPresent();
         PlaylistContentsDto dto = dtoOpt.get();
         assertThat(dto.playlist().getId()).isEqualTo(playlist.getId());
+        assertThat(dto.playlist().getOwner().getEmail()).isEqualTo(user.getEmail()); // Test owner fetch-join
         assertThat(dto.contents()).hasSize(1);
         assertThat(dto.contents().get(0).getTitle()).isEqualTo("Movie Title");
+        assertThat(dto.contents().get(0).getThumbnail().getUrl())
+                .isEqualTo("http://example.com/thumb.jpg"); // Test thumbnail fetch-join
+        assertThat(dto.contents().get(0).getStats().getWatcherCount()).isEqualTo(0L); // Test stats fetch-join
         assertThat(dto.subscribedByMe()).isFalse();
+        ensureQueryCount(2); // 1. playlist fetch, 2. playlistItem + content fetch
 
         // when (subscribe)
         subscriptionRepository.save(Subscription.of(playlist, user));
@@ -93,11 +109,12 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         queryInspector.clear();
 
         dtoOpt = playlistQueryRepository.findByIdWithContents(playlist.getId(), user.getId());
-        ensureQueryCount(2);
 
         // then
         assertThat(dtoOpt).isPresent();
+        assertThat(dtoOpt.get().playlist().getOwner().getEmail()).isEqualTo(user.getEmail());
         assertThat(dtoOpt.get().subscribedByMe()).isTrue();
+        ensureQueryCount(2);
     }
 
     @Test
@@ -114,12 +131,17 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         // when
         List<PlaylistContentsDto> result =
                 playlistQueryRepository.findByCursor(command, user.getId());
-        ensureQueryCount(2); // 1. playlist fetch, 2. playlistItem + content fetch
 
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).playlist().getId()).isEqualTo(playlist.getId());
+        assertThat(result.get(0).playlist().getOwner().getEmail()).isEqualTo(user.getEmail()); // Test owner fetch-join
+        assertThat(result.get(0).contents().get(0).getThumbnail().getUrl())
+                .isEqualTo("http://example.com/thumb.jpg"); // Test thumbnail fetch-join
+        assertThat(result.get(0).contents().get(0).getStats().getWatcherCount()).isEqualTo(0L); // Test stats fetch-join
         assertThat(result.get(0).subscribedByMe()).isFalse();
+
+        ensureQueryCount(2); // 1. playlist fetch, 2. playlistItem + content fetch
 
         // when (subscribe)
         subscriptionRepository.save(Subscription.of(playlist, user));
@@ -128,11 +150,13 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         queryInspector.clear();
 
         result = playlistQueryRepository.findByCursor(command, user.getId());
-        ensureQueryCount(2);
 
         // then
         assertThat(result).hasSize(1);
+        assertThat(result.get(0).playlist().getOwner().getEmail()).isEqualTo(user.getEmail());
         assertThat(result.get(0).subscribedByMe()).isTrue();
+
+        ensureQueryCount(2);
     }
 
     @Test
@@ -176,7 +200,7 @@ class PlaylistQueryRepositoryTest extends BaseRepositoryTest {
         assertThat(result2).hasSize(1);
 
         // Combine results to check all 3 are returned exactly once
-        java.util.List<java.util.UUID> allFetchedIds = new java.util.ArrayList<>();
+        List<UUID> allFetchedIds = new ArrayList<>();
         allFetchedIds.add(result1.get(0).playlist().getId());
         allFetchedIds.add(result1.get(1).playlist().getId());
         allFetchedIds.add(result2.get(0).playlist().getId());

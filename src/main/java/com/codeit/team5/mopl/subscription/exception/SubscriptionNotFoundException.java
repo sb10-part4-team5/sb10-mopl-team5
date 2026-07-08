@@ -7,8 +7,8 @@ import org.springframework.http.HttpStatus;
 
 public class SubscriptionNotFoundException extends BusinessException {
 
-    public SubscriptionNotFoundException(UUID playlistId, String email) {
+    public SubscriptionNotFoundException(UUID playlistId, UUID userId) {
         super(HttpStatus.NOT_FOUND, "구독 정보를 찾을 수 없습니다.",
-                Map.of("playlistId", playlistId, "email", email));
+                Map.of("playlistId", playlistId, "userId", userId));
     }
 }

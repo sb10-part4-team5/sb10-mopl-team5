@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,16 +63,16 @@ class SubscriptionServiceTest {
     void create_success() {
         // given
         UUID playlistId = playlist.getId();
-        String email = user.getEmail();
+        UUID userId = user.getId();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(true);
-        given(userRepository.findByEmail(email)).willReturn(Optional.of(user));
-        given(subscriptionRepository.existsBySubscriberEmailAndPlaylistId(email, playlistId))
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.of(playlist));
+        given(userRepository.existsById(userId)).willReturn(true);
+        given(subscriptionRepository.existsBySubscriberIdAndPlaylistId(userId, playlistId))
                 .willReturn(false);
-        given(playlistRepository.getReferenceById(playlistId)).willReturn(playlist);
+        given(userRepository.getReferenceById(userId)).willReturn(user);
 
         // when
-        subscriptionService.create(playlistId, email);
+        subscriptionService.create(playlistId, userId);
 
         // then
         verify(subscriptionRepository).save(any(Subscription.class));
@@ -82,12 +83,12 @@ class SubscriptionServiceTest {
     void create_fail_playlistNotFound() {
         // given
         UUID playlistId = UUID.randomUUID();
-        String email = user.getEmail();
+        UUID userId = user.getId();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(false);
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> subscriptionService.create(playlistId, email))
+        assertThatThrownBy(() -> subscriptionService.create(playlistId, userId))
                 .isInstanceOf(SubscriptionPlaylistNotFoundException.class);
     }
 
@@ -96,13 +97,13 @@ class SubscriptionServiceTest {
     void create_fail_userNotFound() {
         // given
         UUID playlistId = playlist.getId();
-        String email = "notfound@email.com";
+        UUID userId = UUID.randomUUID();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(true);
-        given(userRepository.findByEmail(email)).willReturn(Optional.empty());
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.of(playlist));
+        given(userRepository.existsById(userId)).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> subscriptionService.create(playlistId, email))
+        assertThatThrownBy(() -> subscriptionService.create(playlistId, userId))
                 .isInstanceOf(SubscriptionUserNotFoundException.class);
     }
 
@@ -111,15 +112,15 @@ class SubscriptionServiceTest {
     void create_fail_alreadyExists() {
         // given
         UUID playlistId = playlist.getId();
-        String email = user.getEmail();
+        UUID userId = user.getId();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(true);
-        given(userRepository.findByEmail(email)).willReturn(Optional.of(user));
-        given(subscriptionRepository.existsBySubscriberEmailAndPlaylistId(email, playlistId))
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.of(playlist));
+        given(userRepository.existsById(userId)).willReturn(true);
+        given(subscriptionRepository.existsBySubscriberIdAndPlaylistId(userId, playlistId))
                 .willReturn(true);
 
         // when & then
-        assertThatThrownBy(() -> subscriptionService.create(playlistId, email))
+        assertThatThrownBy(() -> subscriptionService.create(playlistId, userId))
                 .isInstanceOf(SubscriptionAlreadyExistsException.class);
     }
 
@@ -128,16 +129,16 @@ class SubscriptionServiceTest {
     void delete_success() {
         // given
         UUID playlistId = playlist.getId();
-        String email = user.getEmail();
+        UUID userId = user.getId();
 
-        given(subscriptionRepository.existsBySubscriberEmailAndPlaylistId(email, playlistId))
+        given(subscriptionRepository.existsBySubscriberIdAndPlaylistId(userId, playlistId))
                 .willReturn(true);
 
         // when
-        subscriptionService.delete(playlistId, email);
+        subscriptionService.delete(playlistId, userId);
 
         // then
-        verify(subscriptionRepository).deleteBySubscriberEmailAndPlaylistIdDirectly(email,
+        verify(subscriptionRepository).deleteBySubscriberIdAndPlaylistIdDirectly(userId,
                 playlistId);
     }
 
@@ -146,13 +147,13 @@ class SubscriptionServiceTest {
     void delete_fail_notFound() {
         // given
         UUID playlistId = playlist.getId();
-        String email = user.getEmail();
+        UUID userId = user.getId();
 
-        given(subscriptionRepository.existsBySubscriberEmailAndPlaylistId(email, playlistId))
+        given(subscriptionRepository.existsBySubscriberIdAndPlaylistId(userId, playlistId))
                 .willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> subscriptionService.delete(playlistId, email))
+        assertThatThrownBy(() -> subscriptionService.delete(playlistId, userId))
                 .isInstanceOf(SubscriptionNotFoundException.class);
     }
 }

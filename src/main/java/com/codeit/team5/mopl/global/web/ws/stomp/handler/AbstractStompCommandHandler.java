@@ -51,25 +51,25 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
         if (accessor.getUser() == null || subscriptionId == null) {
             return "";
         }
-        String email = accessor.getUser().getName();
-        String storedDestination = getSessionDestination(email, subscriptionId);
+        UUID userId = UUID.fromString(accessor.getUser().getName());
+        String storedDestination = getSessionDestination(userId, subscriptionId);
         return storedDestination != null ? storedDestination : "";
     }
 
-    protected void connectSession(String email) {
-        sessionStore.connect(email);
+    protected void connectSession(UUID userId) {
+        sessionStore.connect(userId);
     }
 
-    protected void subscribeSession(String email, String subscriptionId, String destination) {
-        sessionStore.subscribe(email, subscriptionId, destination);
+    protected void subscribeSession(UUID userId, String subscriptionId, String destination) {
+        sessionStore.subscribe(userId, subscriptionId, destination);
     }
 
-    protected void unsubscribeSession(String email, String subscriptionId) {
-        sessionStore.unsubscribe(email, subscriptionId);
+    protected void unsubscribeSession(UUID userId, String subscriptionId) {
+        sessionStore.unsubscribe(userId, subscriptionId);
     }
 
-    protected String getSessionDestination(String email, String subscriptionId) {
-        return sessionStore.getDestination(email, subscriptionId);
+    protected String getSessionDestination(UUID userId, String subscriptionId) {
+        return sessionStore.getDestination(userId, subscriptionId);
     }
 
     protected UUID getTargetId(String destination) {

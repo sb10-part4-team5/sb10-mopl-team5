@@ -3,12 +3,12 @@ package com.codeit.team5.mopl.watcher.mapper.payload;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.watcher.dto.payload.ContentChatPayload;
 import com.codeit.team5.mopl.watcher.dto.request.ContentChatCreatedRequest;
-import com.codeit.team5.mopl.watcher.mapper.config.WatcherMapperConfig;
-import com.codeit.team5.mopl.watcher.mapper.entity.WatcherMapper;
+import com.codeit.team5.mopl.global.mapper.GlobalMapperConfig;
+import com.codeit.team5.mopl.user.mapper.UserSummaryMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(config = WatcherMapperConfig.class, uses = {WatcherMapper.class})
+@Mapper(config = GlobalMapperConfig.class, uses = {UserSummaryMapper.class})
 public interface ContentChatPayloadMapper {
 
     @Mapping(target = "content", source = "request.content")

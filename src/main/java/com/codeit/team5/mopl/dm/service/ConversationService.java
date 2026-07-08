@@ -82,10 +82,10 @@ public class ConversationService {
         return toConversationResponse(conversation, currentUser);
     }
 
-    public void validateParticipant(UUID conversationId, String email) {
+    public void validateParticipant(UUID conversationId, UUID userId) {
         Conversation conversation = getConversationById(conversationId);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException(email));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
         conversation.validateParticipant(user.getId());
     }
 

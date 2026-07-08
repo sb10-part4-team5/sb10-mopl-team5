@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.global.web.ws.stomp.handler;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import io.jsonwebtoken.JwtException;
+import java.util.UUID;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.security.core.Authentication;
@@ -29,6 +30,6 @@ public class StompConnectHandler extends AbstractStompCommandHandler {
         }
         Authentication authentication = jwtAuthenticationService.getAuthentication(token);
         accessor.setUser(authentication);
-        connectSession(authentication.getName());
+        connectSession(UUID.fromString(authentication.getName()));
     }
 }

@@ -19,7 +19,6 @@ import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.request.ResetPasswordRequest;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
-import com.codeit.team5.mopl.auth.exception.InvalidCredentialsException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
@@ -41,7 +40,7 @@ import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.ControllerSliceSecurityMockConfig;
 import com.codeit.team5.mopl.config.SecurityConfig;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.entity.User;
@@ -694,7 +693,7 @@ class AuthControllerTest {
             servletResponse.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
             servletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
             servletResponse.setCharacterEncoding("UTF-8");
-            objectMapper.writeValue(servletResponse.getWriter(), new ErrorResponseSuggestion(
+            objectMapper.writeValue(servletResponse.getWriter(), new ErrorResponse(
                     "INVALID_CREDENTIALS",
                     "이메일 또는 비밀번호가 올바르지 않습니다.",
                     java.util.Map.of("loginFailed", java.util.List.of("Invalid credentials"))

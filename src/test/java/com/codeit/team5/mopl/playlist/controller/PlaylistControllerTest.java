@@ -64,10 +64,11 @@ import com.codeit.team5.mopl.user.dto.response.UserSummary;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(controllers = PlaylistController.class,
-                excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                                classes = JwtAuthenticationFilter.class))
+        excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
+                classes = JwtAuthenticationFilter.class))
 @AutoConfigureMockMvc(addFilters = false)
-@Import({GlobalExceptionHandler.class, TestGlobalExceptionHandlerConfig.class, PlaylistControllerTest.TestSecurityConfig.class})
+@Import({GlobalExceptionHandler.class, TestGlobalExceptionHandlerConfig.class,
+        PlaylistControllerTest.TestSecurityConfig.class})
 class PlaylistControllerTest {
 
     @TestConfiguration
@@ -78,312 +79,314 @@ class PlaylistControllerTest {
         }
     }
 
+    @Autowired
+    private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
 
-        @Autowired
-        private MockMvc mockMvc;
+    @MockitoBean
+    private PlaylistService playlistService;
 
-        @Autowired
-        private ObjectMapper objectMapper;
+    @MockitoBean
+    private PlaylistMapper playlistMapper;
 
-        @MockitoBean
-        private PlaylistService playlistService;
+    @Captor
+    private ArgumentCaptor<PlaylistCreateRequest> createRequestCaptor;
 
-        @MockitoBean
-        private PlaylistMapper playlistMapper;
+    @Captor
+    private ArgumentCaptor<PlaylistUpdateRequest> updateRequestCaptor;
 
-        @Captor
-        private ArgumentCaptor<PlaylistCreateRequest> createRequestCaptor;
+    @Captor
+    private ArgumentCaptor<PlaylistCursorRequest> cursorRequestCaptor;
 
-        @Captor
-        private ArgumentCaptor<PlaylistUpdateRequest> updateRequestCaptor;
+    private MoplPrincipal principal;
+    private Authentication auth;
+    private UUID playlistId;
+    private UUID contentId;
+    private PlaylistResponse playlistResponse;
 
-        @Captor
-        private ArgumentCaptor<PlaylistCursorRequest> cursorRequestCaptor;
-
-        private MoplPrincipal principal;
-        private Authentication auth;
-        private UUID playlistId;
-        private UUID contentId;
-        private PlaylistResponse playlistResponse;
-
-        @BeforeEach
-        void setUp() {
-                principal = Mockito.mock(MoplPrincipal.class);
-        auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER")));
+    @BeforeEach
+    void setUp() {
+        principal = Mockito.mock(MoplPrincipal.class);
+        auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                principal, null,
+                java.util.List
+                        .of(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(auth);
-                given(principal.getId()).willReturn(UUID.fromString("11111111-1111-1111-1111-111111111111"));
+        given(principal.getId())
+                .willReturn(UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
-                playlistId = UUID.randomUUID();
-                contentId = UUID.randomUUID();
+        playlistId = UUID.randomUUID();
+        contentId = UUID.randomUUID();
 
-                UserSummary userSummary = new UserSummary(UUID.randomUUID(), "Test User", null);
+        UserSummary userSummary = new UserSummary(UUID.randomUUID(), "Test User", null);
 
-                playlistResponse = new PlaylistResponse(playlistId, userSummary, Instant.now(),
-                                "My Playlist", "Description", 0, false, List.of());
+        playlistResponse = new PlaylistResponse(playlistId, userSummary, Instant.now(),
+                "My Playlist", "Description", 0, false, List.of());
+    }
+
+    @Test
+    @DisplayName("단건 조회")
+    void find() throws Exception {
+        // given
+        given(playlistService.find(playlistId,
+                UUID.fromString("11111111-1111-1111-1111-111111111111")))
+                        .willReturn(playlistResponse);
+
+        // when & then
+        mockMvc.perform(get("/api/playlists/{id}", playlistId)).andDo(print())
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(playlistId.toString()))
+                .andExpect(jsonPath("$.title").value("My Playlist"));
+    }
+
+    @Test
+    @DisplayName("단건 조회 - 실패 (플레이리스트 없음)")
+    void find_fail_PlaylistNotFoundException() throws Exception {
+        // given
+        given(playlistService.find(playlistId,
+                UUID.fromString("11111111-1111-1111-1111-111111111111")))
+                        .willThrow(new PlaylistNotFoundException(playlistId));
+
+        // when & then
+        mockMvc.perform(get("/api/playlists/{id}", playlistId)).andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.exceptionType").value("PlaylistNotFoundException"))
+                .andExpect(jsonPath("$.message").value("플레이리스트를 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("커서 기반 조회")
+    void findCursor() throws Exception {
+        // given
+        CursorResponse<PlaylistResponse> cursorResponse = CursorResponse.<PlaylistResponse>builder()
+                .data(List.of(playlistResponse)).hasNext(false).totalCount(1L).build();
+        PlaylistCursorCommand command = PlaylistCursorCommand.builder().limit(10).build();
+
+        given(playlistMapper.toCommand(any(PlaylistCursorRequest.class))).willReturn(command);
+        given(playlistService.findByCursor(command,
+                UUID.fromString("11111111-1111-1111-1111-111111111111")))
+                        .willReturn(cursorResponse);
+
+        // when & then
+        mockMvc.perform(get("/api/playlists").param("limit", "10").param("sortBy", "UPDATED_AT")
+                .param("sortDirection", "DESC")).andDo(print()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(playlistId.toString()));
+
+        verify(playlistMapper).toCommand(cursorRequestCaptor.capture());
+        PlaylistCursorRequest captured = cursorRequestCaptor.getValue();
+        assertThat(captured.limit()).isEqualTo(10);
+        assertThat(captured.sortBy()).isEqualTo("UPDATED_AT");
+        assertThat(captured.sortDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            // limit 검증
+            "null, DESC, UPDATED_AT, limit", "-5, DESC, UPDATED_AT, limit",
+            "0, DESC, UPDATED_AT, limit", "not_a_number, DESC, UPDATED_AT, limit",
+            // sortDirection 검증
+            "10, null, UPDATED_AT, sortDirection", "10, INVALID, UPDATED_AT, sortDirection",
+            // sortBy 검증
+            "10, DESC, null, sortBy"}, nullValues = {"null"})
+    @DisplayName("커서 기반 조회 - 실패 (입력값 유효성 검증)")
+    void findCursor_fail_validation(String limit, String sortDirection, String sortBy,
+            String errorField) throws Exception {
+        var requestBuilder = get("/api/playlists");
+
+        if (limit != null) {
+            requestBuilder.param("limit", limit);
+        }
+        if (sortDirection != null) {
+            requestBuilder.param("sortDirection", sortDirection);
+        }
+        if (sortBy != null) {
+            requestBuilder.param("sortBy", sortBy);
         }
 
-        @Test
-        @DisplayName("단건 조회")
-        void find() throws Exception {
-                // given
-                given(playlistService.find(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(playlistResponse);
+        mockMvc.perform(requestBuilder).andDo(print()).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details." + errorField).exists());
+    }
 
-                // when & then
-                mockMvc.perform(get("/api/playlists/{id}", playlistId)).andDo(print())
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.id").value(playlistId.toString()))
-                                .andExpect(jsonPath("$.title").value("My Playlist"));
-        }
+    @Test
+    @DisplayName("커서 기반 조회 - 실패 (선택 파라미터 UUID 포맷 오류)")
+    void findCursor_fail_invalid_uuid_format() throws Exception {
+        mockMvc.perform(get("/api/playlists").param("limit", "10").param("sortBy", "UPDATED_AT")
+                .param("sortDirection", "DESC").param("ownerIdEqual", "not_a_uuid")).andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
+                .andExpect(jsonPath("$.details.ownerIdEqual").exists());
+    }
 
-        @Test
-        @DisplayName("단건 조회 - 실패 (플레이리스트 없음)")
-        void find_fail_PlaylistNotFoundException() throws Exception {
-                // given
-                given(playlistService.find(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111")))
-                                .willThrow(new PlaylistNotFoundException(playlistId));
+    @Test
+    @DisplayName("커서 기반 조회 - 실패 (유효하지 않은 정렬 기준)")
+    void findCursor_fail_PlaylistIncorrectSortByException() throws Exception {
+        // given
+        willThrow(new PlaylistIncorrectSortByException("INVALID_SORT")).given(playlistMapper)
+                .toCommand(any());
 
-                // when & then
-                mockMvc.perform(get("/api/playlists/{id}", playlistId)).andDo(print())
-                                .andExpect(status().isNotFound())
-                                .andExpect(jsonPath("$.exceptionType")
-                                                .value("PlaylistNotFoundException"))
-                                .andExpect(jsonPath("$.message").value("플레이리스트를 찾을 수 없습니다."));
-        }
+        // when & then
+        mockMvc.perform(get("/api/playlists").param("limit", "10").param("sortBy", "INVALID_SORT")
+                .param("sortDirection", "DESC")).andDo(print()).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("PlaylistIncorrectSortByException"))
+                .andExpect(jsonPath("$.message").value("SortBy 입력값이 올바르지 않습니다."));
+    }
 
-        @Test
-        @DisplayName("커서 기반 조회")
-        void findCursor() throws Exception {
-                // given
-                CursorResponse<PlaylistResponse> cursorResponse = CursorResponse
-                                .<PlaylistResponse>builder().data(List.of(playlistResponse))
-                                .hasNext(false).totalCount(1L).build();
-                PlaylistCursorCommand command = PlaylistCursorCommand.builder().limit(10).build();
+    @ParameterizedTest
+    @CsvSource({"UPDATED_AT, not_a_date", "SUBSCRIBE_COUNT, not_a_number"})
+    @DisplayName("커서 기반 조회 - 실패 (정렬 기준과 커서 타입 불일치)")
+    void findCursor_fail_PlaylistSortByMismatchException(String sortBy, String cursor)
+            throws Exception {
+        // given
+        willThrow(new PlaylistSortByMismatchException(sortBy, cursor)).given(playlistMapper)
+                .toCommand(any());
 
-                given(playlistMapper.toCommand(any(PlaylistCursorRequest.class)))
-                                .willReturn(command);
-                given(playlistService.findByCursor(command, UUID.fromString("11111111-1111-1111-1111-111111111111"))).willReturn(cursorResponse);
+        // when & then
+        mockMvc.perform(get("/api/playlists").param("limit", "10").param("sortBy", sortBy)
+                .param("sortDirection", "DESC").param("cursor", cursor)).andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("PlaylistSortByMismatchException"))
+                .andExpect(jsonPath("$.message").value(
+                        "정렬 기준과 커서 타입이 일치하지 않습니다. (허용 포맷: updatedAt -> 예: 2026-07-01T10:00:00Z, subscribeCount -> 숫자)"));
+    }
 
-                // when & then
-                mockMvc.perform(get("/api/playlists").param("limit", "10")
-                                .param("sortBy", "UPDATED_AT").param("sortDirection", "DESC"))
-                                .andDo(print()).andExpect(status().isOk())
-                                .andExpect(jsonPath("$.data[0].id").value(playlistId.toString()));
+    @Test
+    @DisplayName("플레이리스트 생성")
+    void create() throws Exception {
+        // given
+        PlaylistCreateRequest request = new PlaylistCreateRequest("New Playlist", "Desc");
+        given(playlistService.create(eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
+                any(PlaylistCreateRequest.class))).willReturn(playlistResponse);
 
-                verify(playlistMapper).toCommand(cursorRequestCaptor.capture());
-                PlaylistCursorRequest captured = cursorRequestCaptor.getValue();
-                assertThat(captured.limit()).isEqualTo(10);
-                assertThat(captured.sortBy()).isEqualTo("UPDATED_AT");
-                assertThat(captured.sortDirection()).isEqualTo(Sort.Direction.DESC);
-        }
+        // when & then
+        mockMvc.perform(post("/api/playlists").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))).andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(playlistId.toString()));
 
-        @ParameterizedTest
-        @CsvSource(value = {
-                        // limit 검증
-                        "null, DESC, UPDATED_AT, limit", "-5, DESC, UPDATED_AT, limit",
-                        "0, DESC, UPDATED_AT, limit", "not_a_number, DESC, UPDATED_AT, limit",
-                        // sortDirection 검증
-                        "10, null, UPDATED_AT, sortDirection",
-                        "10, INVALID, UPDATED_AT, sortDirection",
-                        // sortBy 검증
-                        "10, DESC, null, sortBy"}, nullValues = {"null"})
-        @DisplayName("커서 기반 조회 - 실패 (입력값 유효성 검증)")
-        void findCursor_fail_validation(String limit, String sortDirection, String sortBy,
-                        String errorField) throws Exception {
-                var requestBuilder = get("/api/playlists");
+        verify(playlistService).create(eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
+                createRequestCaptor.capture());
+        PlaylistCreateRequest captured = createRequestCaptor.getValue();
+        assertThat(captured.title()).isEqualTo("New Playlist");
+        assertThat(captured.description()).isEqualTo("Desc");
+    }
 
-                if (limit != null) {
-                        requestBuilder.param("limit", limit);
-                }
-                if (sortDirection != null) {
-                        requestBuilder.param("sortDirection", sortDirection);
-                }
-                if (sortBy != null) {
-                        requestBuilder.param("sortBy", sortBy);
-                }
+    @Test
+    @DisplayName("플레이리스트 수정")
+    void update() throws Exception {
+        // given
+        PlaylistUpdateRequest request =
+                new PlaylistUpdateRequest("Updated Playlist", "Updated Desc");
+        given(playlistService.update(eq(playlistId),
+                eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
+                any(PlaylistUpdateRequest.class))).willReturn(playlistResponse);
 
-                mockMvc.perform(requestBuilder).andDo(print()).andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
-                                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
-                                .andExpect(jsonPath("$.details." + errorField).exists());
-        }
+        // when & then
+        mockMvc.perform(patch("/api/playlists/{id}", playlistId).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))).andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(playlistId.toString()));
 
-        @Test
-        @DisplayName("커서 기반 조회 - 실패 (선택 파라미터 UUID 포맷 오류)")
-        void findCursor_fail_invalid_uuid_format() throws Exception {
-                mockMvc.perform(get("/api/playlists").param("limit", "10")
-                                .param("sortBy", "UPDATED_AT").param("sortDirection", "DESC")
-                                .param("ownerIdEqual", "not_a_uuid")).andDo(print())
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.exceptionType").value("INVALID_INPUT"))
-                                .andExpect(jsonPath("$.message").value("잘못된 입력값입니다."))
-                                .andExpect(jsonPath("$.details.ownerIdEqual").exists());
-        }
+        verify(playlistService).update(eq(playlistId),
+                eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
+                updateRequestCaptor.capture());
+        PlaylistUpdateRequest captured = updateRequestCaptor.getValue();
+        assertThat(captured.title()).isEqualTo("Updated Playlist");
+        assertThat(captured.description()).isEqualTo("Updated Desc");
+    }
 
-        @Test
-        @DisplayName("커서 기반 조회 - 실패 (유효하지 않은 정렬 기준)")
-        void findCursor_fail_PlaylistIncorrectSortByException() throws Exception {
-                // given
-                willThrow(new PlaylistIncorrectSortByException("INVALID_SORT"))
-                                .given(playlistMapper).toCommand(any());
+    @Test
+    @DisplayName("플레이리스트 삭제")
+    void deletePlaylist() throws Exception {
+        // given
+        willDoNothing().given(playlistService).delete(playlistId,
+                UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
-                // when & then
-                mockMvc.perform(get("/api/playlists").param("limit", "10")
-                                .param("sortBy", "INVALID_SORT").param("sortDirection", "DESC"))
-                                .andDo(print()).andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.exceptionType")
-                                                .value("PlaylistIncorrectSortByException"))
-                                .andExpect(jsonPath("$.message").value("SortBy 입력값이 올바르지 않습니다."));
-        }
+        // when & then
+        mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())).andDo(print())
+                .andExpect(status().isNoContent());
+    }
 
-        @ParameterizedTest
-        @CsvSource({"UPDATED_AT, not_a_date", "SUBSCRIBE_COUNT, not_a_number"})
-        @DisplayName("커서 기반 조회 - 실패 (정렬 기준과 커서 타입 불일치)")
-        void findCursor_fail_PlaylistSortByMismatchException(String sortBy, String cursor)
-                        throws Exception {
-                // given
-                willThrow(new PlaylistSortByMismatchException(sortBy, cursor)).given(playlistMapper)
-                                .toCommand(any());
+    @Test
+    @DisplayName("플레이리스트 삭제 - 실패 (권한 없음)")
+    void deletePlaylist_fail_PlaylistAccessDeniedException() throws Exception {
+        // given
+        willThrow(new PlaylistAccessDeniedException(playlistId,
+                UUID.fromString("11111111-1111-1111-1111-111111111111"))).given(playlistService)
+                        .delete(playlistId,
+                                UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
-                // when & then
-                mockMvc.perform(get("/api/playlists").param("limit", "10").param("sortBy", sortBy)
-                                .param("sortDirection", "DESC").param("cursor", cursor))
-                                .andDo(print()).andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.exceptionType")
-                                                .value("PlaylistSortByMismatchException"))
-                                .andExpect(jsonPath("$.message").value(
-                                                "정렬 기준과 커서 타입이 일치하지 않습니다. (허용 포맷: updatedAt -> 예: 2026-07-01T10:00:00Z, subscribeCount -> 숫자)"));
-        }
+        // when & then
+        mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())).andDo(print())
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.exceptionType").value("PlaylistAccessDeniedException"))
+                .andExpect(jsonPath("$.message").value("플레이리스트 접근 권한이 없습니다."));
+    }
 
-        @Test
-        @DisplayName("플레이리스트 생성")
-        void create() throws Exception {
-                // given
-                PlaylistCreateRequest request = new PlaylistCreateRequest("New Playlist", "Desc");
-                given(playlistService.create(eq(UUID.fromString("11111111-1111-1111-1111-111111111111")), any(PlaylistCreateRequest.class)))
-                                .willReturn(playlistResponse);
+    @Test
+    @DisplayName("플레이리스트 아이템 추가")
+    void addContent() throws Exception {
+        // given
+        willDoNothing().given(playlistService).addContent(
+                UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
 
-                // when & then
-                mockMvc.perform(post("/api/playlists").with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(request))).andDo(print())
-                                .andExpect(status().isCreated())
-                                .andExpect(jsonPath("$.id").value(playlistId.toString()));
+        // when & then
+        mockMvc.perform(
+                post("/api/playlists/{playlistId}/contents/{contentId}", playlistId, contentId)
+                        .with(csrf()))
+                .andDo(print()).andExpect(status().isNoContent());
+    }
 
-                verify(playlistService).create(eq(UUID.fromString("11111111-1111-1111-1111-111111111111")), createRequestCaptor.capture());
-                PlaylistCreateRequest captured = createRequestCaptor.getValue();
-                assertThat(captured.title()).isEqualTo("New Playlist");
-                assertThat(captured.description()).isEqualTo("Desc");
-        }
+    @Test
+    @DisplayName("플레이리스트 아이템 추가 - 실패 (컨텐츠 없음)")
+    void addContent_fail_PlaylistContentNotFoundException() throws Exception {
+        // given
+        willThrow(new PlaylistContentNotFoundException(contentId)).given(playlistService)
+                .addContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
+                        contentId);
 
-        @Test
-        @DisplayName("플레이리스트 수정")
-        void update() throws Exception {
-                // given
-                PlaylistUpdateRequest request =
-                                new PlaylistUpdateRequest("Updated Playlist", "Updated Desc");
-                given(playlistService.update(eq(playlistId), eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
-                                any(PlaylistUpdateRequest.class))).willReturn(playlistResponse);
+        // when & then
+        mockMvc.perform(
+                post("/api/playlists/{playlistId}/contents/{contentId}", playlistId, contentId)
+                        .with(csrf()))
+                .andDo(print()).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("PlaylistContentNotFoundException"))
+                .andExpect(jsonPath("$.message").value("컨텐츠를 찾을 수 없습니다."));
+    }
 
-                // when & then
-                mockMvc.perform(patch("/api/playlists/{id}", playlistId).with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(request))).andDo(print())
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.id").value(playlistId.toString()));
+    @Test
+    @DisplayName("플레이리스트 아이템 삭제")
+    void removeContent() throws Exception {
+        // given
+        willDoNothing().given(playlistService).removeContent(
+                UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
 
-                verify(playlistService).update(eq(playlistId), eq(UUID.fromString("11111111-1111-1111-1111-111111111111")),
-                                updateRequestCaptor.capture());
-                PlaylistUpdateRequest captured = updateRequestCaptor.getValue();
-                assertThat(captured.title()).isEqualTo("Updated Playlist");
-                assertThat(captured.description()).isEqualTo("Updated Desc");
-        }
+        // when & then
+        mockMvc.perform(
+                delete("/api/playlists/{playlistId}/contents/{contentId}", playlistId, contentId)
+                        .with(csrf()))
+                .andDo(print()).andExpect(status().isNoContent());
+    }
 
-        @Test
-        @DisplayName("플레이리스트 삭제")
-        void deletePlaylist() throws Exception {
-                // given
-                willDoNothing().given(playlistService).delete(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111"));
+    @Test
+    @DisplayName("플레이리스트 아이템 삭제 - 실패 (아이템 없음)")
+    void removeContent_fail_PlaylistItemNotFoundException() throws Exception {
+        // given
+        willThrow(new PlaylistItemNotFoundException(playlistId, contentId)).given(playlistService)
+                .removeContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
+                        contentId);
 
-                // when & then
-                mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())
-                                ).andDo(print())
-                                .andExpect(status().isNoContent());
-        }
-
-        @Test
-        @DisplayName("플레이리스트 삭제 - 실패 (권한 없음)")
-        void deletePlaylist_fail_PlaylistAccessDeniedException() throws Exception {
-                // given
-                willThrow(new PlaylistAccessDeniedException(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111")))
-                                .given(playlistService).delete(playlistId, UUID.fromString("11111111-1111-1111-1111-111111111111"));
-
-                // when & then
-                mockMvc.perform(delete("/api/playlists/{id}", playlistId).with(csrf())
-                                ).andDo(print())
-                                .andExpect(status().isForbidden())
-                                .andExpect(jsonPath("$.exceptionType")
-                                                .value("PlaylistAccessDeniedException"))
-                                .andExpect(jsonPath("$.message").value("플레이리스트 접근 권한이 없습니다."));
-        }
-
-        @Test
-        @DisplayName("플레이리스트 아이템 추가")
-        void addContent() throws Exception {
-                // given
-                willDoNothing().given(playlistService).addContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
-                                contentId);
-
-                // when & then
-                mockMvc.perform(post("/api/playlists/{playlistId}/contents/{contentId}", playlistId,
-                                contentId).with(csrf())).andDo(print())
-                                .andExpect(status().isNoContent());
-        }
-
-        @Test
-        @DisplayName("플레이리스트 아이템 추가 - 실패 (컨텐츠 없음)")
-        void addContent_fail_PlaylistContentNotFoundException() throws Exception {
-                // given
-                willThrow(new PlaylistContentNotFoundException(contentId)).given(playlistService)
-                                .addContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
-
-                // when & then
-                mockMvc.perform(post("/api/playlists/{playlistId}/contents/{contentId}", playlistId,
-                                contentId).with(csrf())).andDo(print())
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.exceptionType")
-                                                .value("PlaylistContentNotFoundException"))
-                                .andExpect(jsonPath("$.message").value("컨텐츠를 찾을 수 없습니다."));
-        }
-
-        @Test
-        @DisplayName("플레이리스트 아이템 삭제")
-        void removeContent() throws Exception {
-                // given
-                willDoNothing().given(playlistService).removeContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId,
-                                contentId);
-
-                // when & then
-                mockMvc.perform(delete("/api/playlists/{playlistId}/contents/{contentId}",
-                                playlistId, contentId).with(csrf()))
-                                .andDo(print()).andExpect(status().isNoContent());
-        }
-
-        @Test
-        @DisplayName("플레이리스트 아이템 삭제 - 실패 (아이템 없음)")
-        void removeContent_fail_PlaylistItemNotFoundException() throws Exception {
-                // given
-                willThrow(new PlaylistItemNotFoundException(playlistId, contentId))
-                                .given(playlistService)
-                                .removeContent(UUID.fromString("11111111-1111-1111-1111-111111111111"), playlistId, contentId);
-
-                // when & then
-                mockMvc.perform(delete("/api/playlists/{playlistId}/contents/{contentId}",
-                                playlistId, contentId).with(csrf()))
-                                .andDo(print()).andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.exceptionType")
-                                                .value("PlaylistItemNotFoundException"))
-                                .andExpect(jsonPath("$.message")
-                                                .value("플레이리스트에 추가된 컨텐츠를 찾을 수 없습니다."));
-        }
+        // when & then
+        mockMvc.perform(
+                delete("/api/playlists/{playlistId}/contents/{contentId}", playlistId, contentId)
+                        .with(csrf()))
+                .andDo(print()).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exceptionType").value("PlaylistItemNotFoundException"))
+                .andExpect(jsonPath("$.message").value("플레이리스트에 추가된 컨텐츠를 찾을 수 없습니다."));
+    }
 }

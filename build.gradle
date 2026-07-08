@@ -4,6 +4,9 @@ plugins {
     id 'org.springframework.boot' version '3.5.15'
     id 'io.spring.dependency-management' version '1.1.7'
 }
+ext {
+    springModulithVersion = "1.4.12"
+}
 
 group = 'com.codeit.team5'
 version = '0.0.1-SNAPSHOT'
@@ -59,6 +62,8 @@ dependencies {
     implementation 'org.mapstruct:mapstruct:1.6.3'
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springframework:spring-aspects'
+    implementation 'org.springframework.modulith:spring-modulith-starter-jpa'
+    implementation 'org.springframework.modulith:spring-modulith-starter-core'
 
     // OAuth2
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
@@ -117,6 +122,7 @@ def jacocoExcludePatterns = [
         "**/mapper/**",
         "**/constant/**",
         "**/controller/api/**",
+        "**/logging/**",
         "**/Q*.class",
         "**/*MapperImpl.class",
         "**/*properties.class",
@@ -169,5 +175,10 @@ jacocoTestCoverageVerification {
                 minimum = 0.80
             }
         }
+    }
+}
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.modulith:spring-modulith-bom:$springModulithVersion"
     }
 }
