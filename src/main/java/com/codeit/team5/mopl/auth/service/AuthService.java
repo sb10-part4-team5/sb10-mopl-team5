@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
     private final RefreshTokenStore refreshTokenStore;
     private final AuthMapper authMapper;
-
+    private final AuthSessionService authSessionService;
     private final JwtTokenizer jwtTokenizer;
     private final JwtProperties jwtProperties;
     private final UserRepository userRepository;
@@ -48,10 +48,13 @@ public class AuthService {
 
         UserResponse userDto = userMapper.toDto(user);
 
+        UUID sessionId = authSessionService.getCurrentSessionId(userId);
+
         String newAccessToken = jwtTokenizer.generateAccessToken(
                 user.getId().toString(),
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                sessionId.toString()
         );
         String newRefreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
         if (!refreshTokenStore.rotateIfValid(

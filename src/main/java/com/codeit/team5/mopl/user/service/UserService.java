@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.user.service;
 
-import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
+import com.codeit.team5.mopl.auth.service.AuthSessionService;
 import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
 import com.codeit.team5.mopl.auth.support.EmailNormalizer;
 import com.codeit.team5.mopl.binarycontent.dto.UploadedBinaryContent;
@@ -23,7 +23,6 @@ import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,8 +42,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final BinaryContentService binaryContentService;
     private final TemporaryPasswordService temporaryPasswordService;
+    private final AuthSessionService authSessionService;
     private final ApplicationEventPublisher eventPublisher;
-    private final RefreshTokenStore refreshTokenStore;
 
     @Transactional
     public UserResponse create(UserRegisterRequest request) {
@@ -93,7 +92,7 @@ public class UserService {
         UserRole roleBefore = requestedUser.getRole();
 
         requestedUser.updateRole(request.role());
-        refreshTokenStore.deleteByUserId(userId);
+        authSessionService.invalidateUserSessions(userId);
 
         eventPublisher.publishEvent(
                 new RoleChangedEvent(
@@ -116,7 +115,7 @@ public class UserService {
         User requestUser = getUser(userId);
 
         requestUser.updateLocked(request.locked());
-        refreshTokenStore.deleteByUserId(userId);
+        authSessionService.invalidateUserSessions(userId);
         eventPublisher.publishEvent(new UserLockedEvent(userId, request.locked()));
         log.info("User lock status updated: userId={}, isLocked={}", userId, request.locked());
     }
@@ -131,7 +130,7 @@ public class UserService {
         requestUser.updatePassword(encodedPassword);
 
         temporaryPasswordService.deleteByUserId(userId);
-        refreshTokenStore.deleteByUserId(userId);
+        authSessionService.invalidateUserSessions(userId);
 
         log.info("User password updated: userId={}", userId);
     }
