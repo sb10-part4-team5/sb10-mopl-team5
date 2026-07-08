@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
+import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
@@ -41,13 +42,10 @@ class NotificationEventListenerIntegrationTest {
             verifyNoInteractions(notificationService); // 트랜잭션 블록 내에서 상호작용이 없음을 확인함.
         }); // ← 여기서 커밋
         verify(notificationService).create(
-            eq(receiverId), eq(NotificationType.FOLLOWED),
-            eq("다린" + "님이 나를 팔로우했어요."),
-            eq(""),
-            eq(NotificationLevel.INFO)
-        );   // 커밋 후 호출 확인
+                eq(new NotificationCreateCommand(
+                        receiverId, NotificationType.FOLLOWED,
+                        "다린님이 나를 팔로우했어요.", "", NotificationLevel.INFO)));
     }
-
 
     @Test
     void notificationFail_whenRollback() {
@@ -56,8 +54,6 @@ class NotificationEventListenerIntegrationTest {
             publisher.publishEvent(new UserFollowedEvent(receiverId, "다린"));
             status.setRollbackOnly();              // 강제 롤백
         });
-        verify(notificationService, never()).create(
-            any(), any(), any(), any(), any()
-        );   // 호출 안 됨 확인
+        verify(notificationService, never()).create(any(NotificationCreateCommand.class));
     }
 }

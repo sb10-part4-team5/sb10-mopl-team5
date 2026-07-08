@@ -27,6 +27,7 @@ import com.codeit.team5.mopl.playlist.dto.request.PlaylistUpdateRequest;
 import com.codeit.team5.mopl.playlist.dto.response.PlaylistResponse;
 import com.codeit.team5.mopl.playlist.entity.Playlist;
 import com.codeit.team5.mopl.playlist.entity.PlaylistItem;
+import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import com.codeit.team5.mopl.playlist.exception.PlaylistAccessDeniedException;
 import com.codeit.team5.mopl.playlist.exception.PlaylistContentNotFoundException;
 import com.codeit.team5.mopl.playlist.exception.PlaylistItemNotFoundException;
@@ -38,6 +39,7 @@ import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.mapper.UserSummaryMapperImpl;
 import com.codeit.team5.mopl.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PlaylistServiceTest {
@@ -56,6 +58,9 @@ class PlaylistServiceTest {
     @Mock
     private ContentRepository contentRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private User user;
     private Playlist playlist;
 
@@ -69,7 +74,7 @@ class PlaylistServiceTest {
                 new PlaylistMapperImpl(userSummaryMapper, contentMapper);
 
         playlistService = new PlaylistService(playlistMapper, playlistRepository, userRepository,
-                playlistItemRepository, contentRepository);
+                playlistItemRepository, contentRepository, eventPublisher);
 
         user = User.create("test@example.com", "password", "Test User");
         ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
@@ -225,12 +230,14 @@ class PlaylistServiceTest {
                 .willReturn(true);
         given(contentRepository.existsById(contentId)).willReturn(true);
         given(contentRepository.getReferenceById(contentId)).willReturn(content);
+        given(playlistRepository.getReferenceById(playlist.getId())).willReturn(playlist);
 
         // when
         playlistService.addContent(user.getId(), playlist.getId(), contentId);
 
         // then
         verify(playlistItemRepository).save(any(PlaylistItem.class));
+        verify(eventPublisher).publishEvent(any(PlaylistContentAddEvent.class));
     }
 
     @Test

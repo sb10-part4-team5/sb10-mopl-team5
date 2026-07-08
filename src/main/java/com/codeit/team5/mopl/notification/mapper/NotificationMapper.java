@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.notification.mapper;
 
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
-import com.codeit.team5.mopl.notification.dto.NotificationResponse;
+import com.codeit.team5.mopl.notification.dto.response.NotificationResponse;
 import com.codeit.team5.mopl.notification.entity.Notification;
 import java.util.List;
 import org.mapstruct.Mapper;

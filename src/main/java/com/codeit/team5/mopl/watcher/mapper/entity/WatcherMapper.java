@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 @Mapper(config = WatcherMapperConfig.class)
 public interface WatcherMapper {
 
+    @Mapping(target = "userId", source = "id")
     @Mapping(target = "profileImageUrl", source = "profileImage.url")
     WatcherResponse toDto(User user);
 }

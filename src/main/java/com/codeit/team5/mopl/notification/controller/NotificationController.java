@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.notification.controller;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.notification.controller.api.NotificationApi;
 import com.codeit.team5.mopl.notification.dto.CursorResponseNotificationDto;
+import com.codeit.team5.mopl.notification.dto.request.NotificationListQuery;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,7 @@ public class NotificationController implements NotificationApi {
         log.debug("알림 목록 요청 : GET /api/notifications, receiverId={}", receiverId);
 
         CursorResponseNotificationDto response = notificationService.getNotifications(
-            receiverId, cursor, idAfter, limit, sortDirection, sortBy);
+                new NotificationListQuery(receiverId, cursor, idAfter, limit, sortDirection, sortBy));
 
         return ResponseEntity.ok(response);
     }

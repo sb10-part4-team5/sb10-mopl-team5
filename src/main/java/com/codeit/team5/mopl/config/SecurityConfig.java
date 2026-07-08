@@ -2,13 +2,17 @@ package com.codeit.team5.mopl.config;
 
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationFilter;
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
+import com.codeit.team5.mopl.auth.security.details.oauth.MoplOAuth2UserService;
+import com.codeit.team5.mopl.auth.security.handler.signin.OAuth2SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signin.SignInSuccessHandler;
 import com.codeit.team5.mopl.auth.security.handler.SpaCsrfTokenRequestHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAccessDeniedHandler;
 import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
+import com.codeit.team5.mopl.auth.security.handler.signin.OAuth2SignInFailureHandler;
 import com.codeit.team5.mopl.auth.security.handler.signout.SignOutHandler;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
+import com.codeit.team5.mopl.auth.support.HttpCookieOAuth2AuthorizationRequestRepository;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -34,9 +38,13 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 public class SecurityConfig {
 
     private final JwtAuthenticationService jwtAuthenticationService;
+    private final MoplOAuth2UserService moplOAuth2UserService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
     private final UserAccessDeniedHandler userAccessDeniedHandler;
     private final MoplAuthenticationProvider moplAuthenticationProvider;
+    private final OAuth2SignInSuccessHandler oauth2SignInSuccessHandler;
+    private final OAuth2SignInFailureHandler oauth2SignInFailureHandler;
     private final SignInSuccessHandler signInSuccessHandler;
     private final SignInFailureHandler signInFailureHandler;
     private final SignOutHandler signOutHandler;
@@ -67,6 +75,11 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 
                         .requestMatchers("/api/auth/sign-out").permitAll()
+
+                        .requestMatchers(
+                                "/oauth2/**",
+                                "/login/oauth2/**"
+                        ).permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
@@ -100,6 +113,18 @@ public class SecurityConfig {
                         .loginProcessingUrl("/api/auth/sign-in")
                         .successHandler(signInSuccessHandler)
                         .failureHandler(signInFailureHandler)
+                )
+                .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(authorization ->
+                                authorization.authorizationRequestRepository(
+                                        httpCookieOAuth2AuthorizationRequestRepository
+                                )
+                        )
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.userService(moplOAuth2UserService)
+                        )
+                        .successHandler(oauth2SignInSuccessHandler)
+                        .failureHandler(oauth2SignInFailureHandler)
                 )
                 .addFilterBefore(
                         jwtAuthenticationFilter(),

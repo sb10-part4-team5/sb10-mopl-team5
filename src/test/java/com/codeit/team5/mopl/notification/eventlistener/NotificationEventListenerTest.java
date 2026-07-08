@@ -8,11 +8,14 @@ import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
+import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
+import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.service.NotificationService;
-import com.codeit.team5.mopl.playlist.event.PlaylistSubscribedEvent;
-import com.codeit.team5.mopl.playlist.event.PlaylistUpdatedEvent;
+import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
+import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.List;
@@ -33,6 +36,9 @@ class NotificationEventListenerTest {
     @Mock
     private FollowRepository followRepository;
 
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
+
     @InjectMocks
     private NotificationEventListener notificationEventListener;
 
@@ -52,9 +58,9 @@ class NotificationEventListenerTest {
         notificationEventListener.onDirectMessageNotification(event);
 
         // then
-        verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.DIRECT_MESSAGE),
-                eq("[DM] 다린"), eq("안녕하세요"), eq(NotificationLevel.INFO));
+        verify(notificationService).create(eq(new NotificationCreateCommand(
+                receiverId, NotificationType.DIRECT_MESSAGE,
+                "[DM] 다린", "안녕하세요", NotificationLevel.INFO)));
     }
 
     @Test
@@ -70,9 +76,9 @@ class NotificationEventListenerTest {
         notificationEventListener.onDirectMessageNotification(event);
 
         // then
-        verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.DIRECT_MESSAGE),
-                eq("[DM] 다린"), eq(expectedContent), eq(NotificationLevel.INFO));
+        verify(notificationService).create(eq(new NotificationCreateCommand(
+                receiverId, NotificationType.DIRECT_MESSAGE,
+                "[DM] 다린", expectedContent, NotificationLevel.INFO)));
     }
 
     @Test
@@ -87,28 +93,33 @@ class NotificationEventListenerTest {
         notificationEventListener.onPlaylistSubscribe(event);
 
         // then
-        verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.PLAYLIST_SUBSCRIBED),
-                eq("[플레이리스트] 내 플레이리스트"),
-                eq("다린 님이 플레이리스트를 구독하셨습니다."), eq(NotificationLevel.INFO));
+        verify(notificationService).create(eq(new NotificationCreateCommand(
+                receiverId, NotificationType.PLAYLIST_SUBSCRIBED,
+                "[플레이리스트] 내 플레이리스트",
+                "다린 님이 플레이리스트를 구독하셨습니다.", NotificationLevel.INFO)));
     }
 
     @Test
-    @DisplayName("플레이리스트 수정 이벤트로 PLAYLIST_UPDATED 알림을 생성한다")
-    void onPlaylistUpdated_createsNotification() {
+    @DisplayName("플레이리스트 콘텐츠 추가 이벤트로 구독자 전원에게 배치로 PLAYLIST_UPDATED 알림을 생성한다")
+    void onPlaylistContentAdd_createsNotificationForAllSubscribers() {
         // given
-        UUID receiverId = UUID.randomUUID();
-        PlaylistUpdatedEvent event =
-                new PlaylistUpdatedEvent(receiverId, "내 플레이리스트");
+        UUID playlistId = UUID.randomUUID();
+        UUID subscriber1 = UUID.randomUUID();
+        UUID subscriber2 = UUID.randomUUID();
+        PlaylistContentAddEvent event =
+                new PlaylistContentAddEvent(playlistId, "내 플레이리스트", "콘텐츠 제목");
+
+        when(subscriptionRepository.findSubscriberIdsByPlaylistId(playlistId))
+                .thenReturn(List.of(subscriber1, subscriber2));
 
         // when
-        notificationEventListener.onPlaylistUpdated(event);
+        notificationEventListener.onPlaylistContentAdd(event);
 
         // then
-        verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.PLAYLIST_UPDATED),
-                eq("[플레이리스트] 내 플레이리스트"),
-                eq("플레이리스트가 업데이트 되었습니다."), eq(NotificationLevel.INFO));
+        verify(notificationService).createAll(eq(new NotificationBatchCreateCommand(
+                List.of(subscriber1, subscriber2), NotificationType.PLAYLIST_UPDATED,
+                "[플레이리스트] 내 플레이리스트",
+                "콘텐츠 제목이/가 추가되었습니다.", NotificationLevel.INFO)));
     }
 
     @Test
@@ -122,9 +133,9 @@ class NotificationEventListenerTest {
         notificationEventListener.onUserFollowed(event);
 
         // then
-        verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.FOLLOWED),
-                eq("다린님이 나를 팔로우했어요."), eq(""), eq(NotificationLevel.INFO));
+        verify(notificationService).create(eq(new NotificationCreateCommand(
+                receiverId, NotificationType.FOLLOWED,
+                "다린님이 나를 팔로우했어요.", "", NotificationLevel.INFO)));
     }
 
     @Test
@@ -138,14 +149,14 @@ class NotificationEventListenerTest {
         notificationEventListener.onRoleChanged(event);
 
         // then
-        verify(notificationService).create(
-                eq(receiverId), eq(NotificationType.ROLE_CHANGED),
-                eq("내 권한이 변경되었어요."),
-                eq("내 권한이 [USER]에서 [ADMIN]로 변경되었어요."), eq(NotificationLevel.INFO));
+        verify(notificationService).create(eq(new NotificationCreateCommand(
+                receiverId, NotificationType.ROLE_CHANGED,
+                "내 권한이 변경되었어요.",
+                "내 권한이 [USER]에서 [ADMIN]로 변경되었어요.", NotificationLevel.INFO)));
     }
 
     @Test
-    @DisplayName("시청 세션 생성 이벤트로 팔로워들에게 WATCHING_ACTIVITY 알림을 생성한다")
+    @DisplayName("시청 세션 생성 이벤트로 팔로워들에게 배치로 WATCHING_ACTIVITY 알림을 생성한다")
     void onWatchingSessionCreated_createsNotificationForFollowers() {
         // given
         UUID watcherUserId = UUID.randomUUID();
@@ -161,13 +172,9 @@ class NotificationEventListenerTest {
         notificationEventListener.onWatchingSessionCreated(event);
 
         // then
-        verify(notificationService).create(
-                eq(follower1), eq(NotificationType.WATCHING_ACTIVITY),
-                eq("다린 님이 컨텐츠 시청중입니다."),
-                eq("콘텐츠A 시청 중"), eq(NotificationLevel.INFO));
-        verify(notificationService).create(
-                eq(follower2), eq(NotificationType.WATCHING_ACTIVITY),
-                eq("다린 님이 컨텐츠 시청중입니다."),
-                eq("콘텐츠A 시청 중"), eq(NotificationLevel.INFO));
+        verify(notificationService).createAll(eq(new NotificationBatchCreateCommand(
+                List.of(follower1, follower2), NotificationType.WATCHING_ACTIVITY,
+                "다린 님이 컨텐츠 시청중입니다.",
+                "콘텐츠A 시청 중", NotificationLevel.INFO)));
     }
 }
