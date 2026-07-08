@@ -14,7 +14,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -46,16 +45,10 @@ public class OAuth2SignInSuccessHandler implements AuthenticationSuccessHandler 
         try {
             Instant expiresAt = calculateExpiresAt();
 
-            UUID sessionId = authSessionService.replaceUserSession(principal.getId(), expiresAt);
+            authSessionService.replaceUserSession(principal.getId(), expiresAt);
 
             String refreshToken = jwtTokenizer.generateRefreshToken(principal.getId().toString());
             refreshTokenStore.save(principal.getId(), refreshToken, expiresAt);
-
-            refreshTokenStore.save(
-                    principal.getId(),
-                    refreshToken,
-                    expiresAt
-            );
 
             ResponseCookie responseCookie = cookieManager.createCookie(refreshToken);
             response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
