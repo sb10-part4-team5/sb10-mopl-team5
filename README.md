@@ -61,6 +61,8 @@ docker compose down -v    # 볼륨까지 삭제 (DB 초기화)
 | `test` | `src/test/resources/application-test.yml` | 통합 테스트용, testcontainers 보조 |
 
 ## 테스트
+### 커버리지 
+[![codecov](https://codecov.io/gh/sb10-part4-team5/sb10-mopl-team5/branch/dev/graph/badge.svg?token=7FU4IJ3EY7)](https://codecov.io/gh/sb10-part4-team5/sb10-mopl-team5)
 
 ### 실행
 
