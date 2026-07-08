@@ -43,7 +43,7 @@ discovery.relabel "mopl_containers" {
 
   rule {
     source_labels = ["__meta_docker_container_name"]
-    regex         = ".*-mopl-.*"
+    regex         = ".*-mopl-[^-]+$"
     action        = "keep"
   }
 }

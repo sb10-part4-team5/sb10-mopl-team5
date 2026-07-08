@@ -41,10 +41,16 @@ resource "aws_launch_template" "ecs" {
   # 읽기 전용으로 마운트해서 사용 (컨테이너에서 직접 IMDS를 호출하지 않도록 함)
   user_data = base64encode(<<-EOF
     #!/bin/bash
+    set -euo pipefail
+
     echo "ECS_CLUSTER=${var.ecs_cluster}" >> /etc/ecs/ecs.config
 
     TOKEN=$(curl -sf -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" http://169.254.169.254/latest/api/token)
-    curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4 > /etc/mopl-host-ip
+    HOST_IP=$(curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+    test -n "$HOST_IP"
+    printf '%s' "$HOST_IP" > /etc/mopl-host-ip.tmp
+    mv /etc/mopl-host-ip.tmp /etc/mopl-host-ip
+    chmod 0644 /etc/mopl-host-ip
   EOF
   )
 
