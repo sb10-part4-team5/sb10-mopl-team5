@@ -19,12 +19,20 @@ public class DataGeneratorRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        int exitCode = execute();
+        System.exit(SpringApplication.exit(context, () -> exitCode));
+    }
+
+    private int execute() {
         log.info("Data generator started");
         long start = System.currentTimeMillis();
-        orchestrator.run();
-        log.info("Data generation complete in {}ms", System.currentTimeMillis() - start);
-
-        int exitCode = SpringApplication.exit(context, () -> 0);
-        System.exit(exitCode);
+        try {
+            orchestrator.run();
+            log.info("Data generation complete in {}ms", System.currentTimeMillis() - start);
+            return 0;
+        } catch (Exception e) {
+            log.error("Data generation failed", e);
+            return 1;
+        }
     }
 }

@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mopl}
+    username: ${DB_USERNAME:mopl}
+    password: ${DB_PASSWORD:mopl}
     driver-class-name: org.postgresql.Driver
 
 generator:
