@@ -30,15 +30,27 @@ resource "aws_launch_template" "ecs" {
   }
 
   # IMDSv2 강제 (토큰 필수) — SSRF 등으로 메타데이터/자격증명 탈취 방지
+  # hop_limit 1: 브리지 네트워크의 컨테이너(mopl 앱 포함)에서는 IMDS 접근 자체를 차단
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 1
   }
 
+  # 호스트(0홉)에서만 부팅 시 프라이빗 IP를 조회해 파일로 저장 — alloy가 이 파일을
+  # 읽기 전용으로 마운트해서 사용 (컨테이너에서 직접 IMDS를 호출하지 않도록 함)
   user_data = base64encode(<<-EOF
     #!/bin/bash
+    set -euo pipefail
+
     echo "ECS_CLUSTER=${var.ecs_cluster}" >> /etc/ecs/ecs.config
+
+    TOKEN=$(curl -sf -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" http://169.254.169.254/latest/api/token)
+    HOST_IP=$(curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+    test -n "$HOST_IP"
+    printf '%s' "$HOST_IP" > /etc/mopl-host-ip.tmp
+    mv /etc/mopl-host-ip.tmp /etc/mopl-host-ip
+    chmod 0644 /etc/mopl-host-ip
   EOF
   )
 
@@ -48,13 +60,13 @@ resource "aws_launch_template" "ecs" {
   }
 }
 
-# EC2 오토스케일링 그룹 (1대 고정)
+# EC2 오토스케일링 그룹 (롤링 배포 가능하도록 2대)
 resource "aws_autoscaling_group" "ecs" {
   name                = "mopl-ecs-asg"
   vpc_zone_identifier = aws_subnet.public[*].id
-  desired_capacity    = 1
+  desired_capacity    = 2
   min_size            = 1
-  max_size            = 1
+  max_size            = 2
 
   launch_template {
     id      = aws_launch_template.ecs.id
@@ -65,6 +77,12 @@ resource "aws_autoscaling_group" "ecs" {
     key                 = "AmazonECSManaged"
     value               = "true"
     propagate_at_launch = true
+  }
+
+  # desired_capacity는 초기값만 지정 — 이후 capacity_provider의 managed_scaling이 조정하므로
+  # terraform이 계속 2로 되돌리며 드리프트나지 않도록 무시
+  lifecycle {
+    ignore_changes = [desired_capacity]
   }
 }
 

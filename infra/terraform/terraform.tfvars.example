@@ -6,6 +6,11 @@ github_org = "sb10-part4-team5"     # GitHub 조직/사용자명
 
 db_password = "여기에-DB-비밀번호"  # 8자 이상, / @ " 공백 제외
 
+grafana_prometheus_url      = "여기에-Grafana-Cloud-Prometheus-remote_write-URL"
+grafana_prometheus_username = "여기에-Grafana-Cloud-Prometheus-org-ID"
+grafana_loki_url            = "여기에-Grafana-Cloud-Loki-push-URL"
+grafana_loki_username       = "여기에-Grafana-Cloud-Loki-org-ID"
+
 # 아래는 기본값이 있으므로 다를 때만 작성
 # aws_region     = "ap-northeast-2"
 # s3_bucket      = "mopl-bucket"
