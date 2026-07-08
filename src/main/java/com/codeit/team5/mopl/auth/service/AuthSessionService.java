@@ -26,6 +26,11 @@ public class AuthSessionService {
         return loginSessionStore.save(userId, expiresAt);
     }
 
+    public UUID extendCurrentSession(UUID userId, Instant expiresAt) {
+        return loginSessionStore.extendCurrentSession(userId, expiresAt)
+                .orElseThrow(() -> new SessionInvalidException("Invalid login session"));
+    }
+
     @Transactional(readOnly = true)
     public boolean isValidSession(UUID userId, UUID sessionId) {
         return loginSessionStore.isValid(userId, sessionId);

@@ -39,6 +39,16 @@ public class DbLoginSessionStore implements LoginSessionStore {
     }
 
     @Override
+    public Optional<UUID> extendCurrentSession(UUID userId, Instant expiresAt) {
+        return loginSessionRepository
+                .findFirstByUserIdAndExpiresAtAfter(userId, Instant.now())
+                .map(loginSession -> {
+                    loginSession.extendExpiresAt(expiresAt);
+                    return loginSession.getSessionId();
+                });
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean isValid(UUID userId, UUID sessionId) {
         return loginSessionRepository.existsByUserIdAndSessionIdAndExpiresAtAfter(

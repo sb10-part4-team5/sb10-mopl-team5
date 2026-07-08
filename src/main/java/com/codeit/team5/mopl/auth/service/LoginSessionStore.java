@@ -10,6 +10,8 @@ public interface LoginSessionStore {
 
     Optional<UUID> findCurrentSessionId(UUID userId);
 
+    Optional<UUID> extendCurrentSession(UUID userId, Instant expiresAt);
+
     boolean isValid(UUID userId, UUID sessionId);
 
     void deleteByUserId(UUID userId);

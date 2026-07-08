@@ -48,7 +48,9 @@ public class AuthService {
 
         UserResponse userDto = userMapper.toDto(user);
 
-        UUID sessionId = authSessionService.getCurrentSessionId(userId);
+        Instant expiredAt = calculateExpiresAt();
+
+        UUID sessionId = authSessionService.extendCurrentSession(userId, expiredAt);
 
         String newAccessToken = jwtTokenizer.generateAccessToken(
                 user.getId().toString(),
@@ -61,7 +63,7 @@ public class AuthService {
                 userId,
                 refreshToken,
                 newRefreshToken,
-                calculateExpiresAt()
+                expiredAt
         )) {
             throw new RefreshTokenInvalidException("Invalid refresh token");
         }

@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -41,5 +42,9 @@ public class LoginSession extends BaseEntity {
 
     public boolean hasSessionId(UUID sessionId) {
         return this.sessionId.equals(sessionId);
+    }
+
+    public void extendExpiresAt(Instant expiresAt) {
+        this.expiresAt = Objects.requireNonNull(expiresAt, "expiresAt must not be null");
     }
 }
