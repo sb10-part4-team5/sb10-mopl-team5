@@ -1,13 +1,15 @@
 CREATE TABLE users
 (
     id         UUID PRIMARY KEY,
-    email      VARCHAR(255) NOT NULL UNIQUE,
+    email      VARCHAR(255) NOT NULL,
     password   VARCHAR(255),
     name       VARCHAR(100) NOT NULL,
     role       VARCHAR(20)  NOT NULL DEFAULT 'USER',
     locked     BOOLEAN      NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ  NOT NULL,
-    updated_at TIMESTAMPTZ  NOT NULL
+    updated_at TIMESTAMPTZ  NOT NULL,
+    CONSTRAINT uk_users_email UNIQUE (email),
+    CONSTRAINT ck_users_role CHECK (role IN ('USER', 'ADMIN'))
 );
 
 CREATE TABLE contents
@@ -22,21 +24,24 @@ CREATE TABLE contents
     external_id VARCHAR(100) NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL,
     updated_at  TIMESTAMPTZ  NOT NULL,
-    CONSTRAINT uk_contents_source_external_id UNIQUE (source, external_id)
+    CONSTRAINT uk_contents_source_external_id UNIQUE (source, external_id),
+    CONSTRAINT ck_contents_type CHECK (type IN ('MOVIE', 'TV_SERIES', 'SPORT')),
+    CONSTRAINT ck_contents_source CHECK (source IN ('TMDB', 'SPORTS_DB', 'ADMIN'))
 );
 
 CREATE TABLE content_stats
 (
-    id           UUID             PRIMARY KEY REFERENCES contents (id) ON DELETE CASCADE,
-    review_count INTEGER          NOT NULL DEFAULT 0,
-    rating_sum   DOUBLE PRECISION NOT NULL DEFAULT 0,
-    watcher_count BIGINT          NOT NULL DEFAULT 0
+    id            UUID             PRIMARY KEY REFERENCES contents (id) ON DELETE CASCADE,
+    review_count  INTEGER          NOT NULL DEFAULT 0,
+    rating_sum    DOUBLE PRECISION NOT NULL DEFAULT 0,
+    watcher_count BIGINT           NOT NULL DEFAULT 0
 );
 
 CREATE TABLE tags
 (
     id   UUID PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE
+    name VARCHAR(50) NOT NULL,
+    CONSTRAINT uk_tags_name UNIQUE (name)
 );
 
 CREATE TABLE content_tags
@@ -108,5 +113,14 @@ CREATE TABLE notifications
     level       VARCHAR(20)  NOT NULL DEFAULT 'INFO',
     is_read     BOOLEAN      NOT NULL DEFAULT FALSE,
     read_at     TIMESTAMPTZ,
-    created_at  TIMESTAMPTZ  NOT NULL
+    created_at  TIMESTAMPTZ  NOT NULL,
+    CONSTRAINT ck_noti_type CHECK (type IN (
+        'ROLE_CHANGED', 'PLAYLIST_SUBSCRIBED', 'PLAYLIST_UPDATED',
+        'FOLLOWED', 'DIRECT_MESSAGE', 'WATCHING_ACTIVITY'
+    )),
+    CONSTRAINT ck_noti_level CHECK (level IN ('INFO', 'WARNING', 'ERROR')),
+    CONSTRAINT ck_noti_read_state CHECK (
+        (is_read = FALSE AND read_at IS NULL) OR
+        (is_read = TRUE AND read_at IS NOT NULL)
+    )
 );
