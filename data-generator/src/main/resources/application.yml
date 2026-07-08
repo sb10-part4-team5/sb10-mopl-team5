@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: data-generator
+  main:
+    web-application-type: none
+  profiles:
+    active: dev
+
+logging:
+  level:
+    com.springboot.datagenerator: INFO
