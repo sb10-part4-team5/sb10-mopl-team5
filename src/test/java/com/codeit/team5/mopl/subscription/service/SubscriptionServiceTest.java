@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -63,11 +65,10 @@ class SubscriptionServiceTest {
         UUID playlistId = playlist.getId();
         UUID userId = user.getId();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(true);
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.of(playlist));
         given(userRepository.existsById(userId)).willReturn(true);
         given(subscriptionRepository.existsBySubscriberIdAndPlaylistId(userId, playlistId))
                 .willReturn(false);
-        given(playlistRepository.getReferenceById(playlistId)).willReturn(playlist);
         given(userRepository.getReferenceById(userId)).willReturn(user);
 
         // when
@@ -84,7 +85,7 @@ class SubscriptionServiceTest {
         UUID playlistId = UUID.randomUUID();
         UUID userId = user.getId();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(false);
+        given(playlistRepository.findById(playlistId)).willThrow(SubscriptionPlaylistNotFoundException.class);
 
         // when & then
         assertThatThrownBy(() -> subscriptionService.create(playlistId, userId))
@@ -98,7 +99,7 @@ class SubscriptionServiceTest {
         UUID playlistId = playlist.getId();
         UUID userId = UUID.randomUUID();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(true);
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.of(playlist));
         given(userRepository.existsById(userId)).willReturn(false);
 
         // when & then
@@ -113,7 +114,7 @@ class SubscriptionServiceTest {
         UUID playlistId = playlist.getId();
         UUID userId = user.getId();
 
-        given(playlistRepository.existsById(playlistId)).willReturn(true);
+        given(playlistRepository.findById(playlistId)).willReturn(Optional.of(playlist));
         given(userRepository.existsById(userId)).willReturn(true);
         given(subscriptionRepository.existsBySubscriberIdAndPlaylistId(userId, playlistId))
                 .willReturn(true);
