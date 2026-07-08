@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.playlist.service;
 
+import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
 import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
+import com.codeit.team5.mopl.playlist.event.PlaylistCreatedEvent;
 import com.codeit.team5.mopl.playlist.exception.PlaylistItemAlreadyExistsException;
 import java.util.List;
 import java.util.UUID;
@@ -47,7 +49,8 @@ public class PlaylistService {
         User user = userRepository.findWithProfileImageById(userId)
                 .orElseThrow(() -> new PlaylistUserNotFoundException(userId));
         Playlist playlist = Playlist.of(user, request.title(), request.description());
-        repository.save(playlist);
+        repository.saveAndFlush(playlist);
+        eventPublisher.publishEvent(new PlaylistCreatedEvent(playlist.getId()));
         return mapper.toDto(playlist);
     }
 

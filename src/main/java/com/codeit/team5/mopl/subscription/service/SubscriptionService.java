@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.subscription.service;
 
+import com.codeit.team5.mopl.subscription.event.SubscriptionCreatedEvent;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,33 +35,20 @@ public class SubscriptionService {
 
     @Transactional
     public void create(UUID playlistId, UUID userId) {
-        if (!playlistRepository.existsById(playlistId)) {
-            throw new SubscriptionPlaylistNotFoundException(playlistId);
-        }
+        Playlist playlist = playlistRepository.findById(playlistId)
+            .orElseThrow(() -> new SubscriptionPlaylistNotFoundException(playlistId));
         if (!userRepository.existsById(userId)) {
             throw new SubscriptionUserNotFoundException(userId);
         }
         if (repository.existsBySubscriberIdAndPlaylistId(userId, playlistId)) {
             throw new SubscriptionAlreadyExistsException(userId, playlistId);
         }
-        Playlist playlist = playlistRepository.getReferenceById(playlistId);
         User user = userRepository.getReferenceById(userId);
         repository.save(Subscription.of(playlist, user));
 
-        // 세 파라미터가 event를 정의하는데 필요한 최소의 한 쌍이라고 판단해서
-        // 놔두었습니다.
         UUID ownerId = playlist.getOwner().getId();
-        String subscriberName = user.getName();
-        String playlistTitle = playlist.getTitle();
-
-        // 자기 자신의 플레이리스트를 구독하는지 검증하고 이벤트 발행
         if (!ownerId.equals(user.getId())) {
-            eventPublisher.publishEvent(                new PlaylistSubscribedEvent(
-                ownerId,
-                subscriberName,
-                playlistTitle
-            )
-            );
+            eventPublisher.publishEvent(new SubscriptionCreatedEvent(playlistId, userId));
         }
 
         playlistRepository.increaseSubscribeCount(playlistId);
