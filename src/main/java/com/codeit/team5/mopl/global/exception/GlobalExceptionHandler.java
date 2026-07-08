@@ -96,13 +96,13 @@ public class GlobalExceptionHandler {
     // 존재하지 않는 경로로의 요청(봇/스캐너의 무작위 경로 탐색)에서 발생
     // 버그가 아니므로 ERROR로 로그를 남기지 않고 404만 반환
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleNoResourceFoundException(
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
             NoResourceFoundException e, HttpServletRequest request) {
         log.info("존재하지 않는 리소스 요청: {} | User-Agent: {}",
                 e.getMessage(), request.getHeader("User-Agent"));
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponseSuggestion("NOT_FOUND", "요청하신 리소스를 찾을 수 없습니다.", null));
+                .body(new ErrorResponse("NOT_FOUND", "요청하신 리소스를 찾을 수 없습니다.", null));
     }
 
     // 배치 작업 스레드 풀의 큐까지 가득 찬 상태에서 새 수집 요청이 들어오면 AbortPolicy가
