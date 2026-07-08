@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -43,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     jwtAuthenticationService.getAuthentication(accessToken);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-        } catch (JwtException | IllegalArgumentException | AuthException e) {
+        } catch (JwtException | IllegalArgumentException | AuthException | AuthenticationException e) {
             SecurityContextHolder.clearContext();
             request.setAttribute(AUTH_EXCEPTION_ATTRIBUTE, e);
         }
