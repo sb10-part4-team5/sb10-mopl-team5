@@ -34,14 +34,14 @@ public class DbLoginSessionStore implements LoginSessionStore {
     @Override
     @Transactional(readOnly = true)
     public Optional<UUID> findCurrentSessionId(UUID userId) {
-        return loginSessionRepository.findFirstByUserIdAndExpiresAtAfter(userId, Instant.now())
+        return loginSessionRepository.findFirstByUserIdAndExpiresAtAfterOrderByExpiresAtDesc(userId, Instant.now())
                 .map(LoginSession::getSessionId);
     }
 
     @Override
     public Optional<UUID> extendCurrentSession(UUID userId, Instant expiresAt) {
         return loginSessionRepository
-                .findFirstByUserIdAndExpiresAtAfter(userId, Instant.now())
+                .findFirstByUserIdAndExpiresAtAfterOrderByExpiresAtDesc(userId, Instant.now())
                 .map(loginSession -> {
                     loginSession.extendExpiresAt(expiresAt);
                     return loginSession.getSessionId();

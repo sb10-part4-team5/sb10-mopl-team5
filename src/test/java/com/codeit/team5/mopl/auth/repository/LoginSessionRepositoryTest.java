@@ -28,7 +28,7 @@ class LoginSessionRepositoryTest extends BaseRepositoryTest {
         persistAndFlush(loginSession);
 
         // When
-        Optional<LoginSession> result = loginSessionRepository.findFirstByUserIdAndExpiresAtAfter(userId, now);
+        Optional<LoginSession> result = loginSessionRepository.findFirstByUserIdAndExpiresAtAfterOrderByExpiresAtDesc(userId, now);
 
         // Then
         assertThat(result).isPresent();
@@ -45,7 +45,7 @@ class LoginSessionRepositoryTest extends BaseRepositoryTest {
         persistAndFlush(loginSession);
 
         // When
-        Optional<LoginSession> result = loginSessionRepository.findFirstByUserIdAndExpiresAtAfter(userId, now);
+        Optional<LoginSession> result = loginSessionRepository.findFirstByUserIdAndExpiresAtAfterOrderByExpiresAtDesc(userId, now);
 
         // Then
         assertThat(result).isEmpty();

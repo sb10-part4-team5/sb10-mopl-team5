@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LoginSessionRepository extends JpaRepository<LoginSession, UUID> {
 
-    Optional<LoginSession> findFirstByUserIdAndExpiresAtAfter(UUID userId, Instant now);
+    Optional<LoginSession> findFirstByUserIdAndExpiresAtAfterOrderByExpiresAtDesc(UUID userId, Instant now);
 
     boolean existsByUserIdAndSessionIdAndExpiresAtAfter(
             UUID userId,
