@@ -1,12 +1,10 @@
 package com.codeit.team5.mopl.playlist.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
@@ -56,27 +54,30 @@ class PlaylistItemRepositoryTest extends BaseRepositoryTest {
         // given
         PlaylistItem item = PlaylistItem.of(playlist.getId(), content);
         playlistItemRepository.save(item);
-        
+
         flush();
         clear();
         queryInspector.clear();
 
         // when
-        boolean exists = playlistItemRepository.existsByPlaylistIdAndContentId(playlist.getId(), content.getId());
+        boolean exists = playlistItemRepository.existsByPlaylistIdAndContentId(playlist.getId(),
+                content.getId());
         ensureQueryCount(1);
-        
+
         // then
         assertThat(exists).isTrue();
 
         // when
         queryInspector.clear();
-        playlistItemRepository.deleteByPlaylistIdAndContentIdDirectly(playlist.getId(), content.getId());
+        playlistItemRepository.deleteByPlaylistIdAndContentIdDirectly(playlist.getId(),
+                content.getId());
         flush();
         clear();
 
         // then
         queryInspector.clear();
-        boolean existsAfterDelete = playlistItemRepository.existsByPlaylistIdAndContentId(playlist.getId(), content.getId());
+        boolean existsAfterDelete = playlistItemRepository
+                .existsByPlaylistIdAndContentId(playlist.getId(), content.getId());
         ensureQueryCount(1);
         assertThat(existsAfterDelete).isFalse();
     }

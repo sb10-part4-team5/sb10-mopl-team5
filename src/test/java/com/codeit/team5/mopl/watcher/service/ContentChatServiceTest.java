@@ -6,12 +6,13 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
+import com.codeit.team5.mopl.watcher.exception.ContentChatUserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.dto.payload.ContentChatPayload;
 import com.codeit.team5.mopl.watcher.dto.request.ContentChatCreatedRequest;
 import com.codeit.team5.mopl.watcher.mapper.payload.ContentChatPayloadMapper;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,35 +33,35 @@ class ContentChatServiceTest {
     private ContentChatService chatService;
 
     @Test
-    @DisplayName("유효한 유저 이메일과 요청이 주어지면 Payload를 생성한다_성공")
+    @DisplayName("유효한 유저 ID와 요청이 주어지면 Payload를 생성한다_성공")
     void createContentChatPayload_Success() {
         // Given
-        String email = "test@test.com";
+        UUID watcherId = UUID.randomUUID();
         ContentChatCreatedRequest request = new ContentChatCreatedRequest("Hello");
         User mockUser = mock(User.class);
         ContentChatPayload expectedPayload = new ContentChatPayload(null, "Hello");
 
-        given(userRepository.findByEmail(email)).willReturn(Optional.of(mockUser));
+        given(userRepository.findWithProfileImageById(watcherId)).willReturn(Optional.of(mockUser));
         given(payloadMapper.toDto(mockUser, request)).willReturn(expectedPayload);
 
         // When
-        ContentChatPayload result = chatService.createContentChatPayload(email, request);
+        ContentChatPayload result = chatService.createContentChatPayload(watcherId, request);
 
         // Then
         assertThat(result).isEqualTo(expectedPayload);
     }
 
     @Test
-    @DisplayName("존재하지 않는 유저 이메일이 주어지면 예외가 발생한다_실패")
+    @DisplayName("존재하지 않는 유저 ID가 주어지면 예외가 발생한다_실패")
     void createContentChatPayload_UserNotFound() {
         // Given
-        String email = "notfound@test.com";
+        UUID watcherId = UUID.randomUUID();
         ContentChatCreatedRequest request = new ContentChatCreatedRequest("Hello");
 
-        given(userRepository.findByEmail(email)).willReturn(Optional.empty());
+        given(userRepository.findWithProfileImageById(watcherId)).willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> chatService.createContentChatPayload(email, request))
-                .isInstanceOf(UserNotFoundException.class);
+        assertThatThrownBy(() -> chatService.createContentChatPayload(watcherId, request))
+                .isInstanceOf(ContentChatUserNotFoundException.class);
     }
 }

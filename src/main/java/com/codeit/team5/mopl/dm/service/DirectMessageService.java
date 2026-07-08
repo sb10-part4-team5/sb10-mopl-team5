@@ -54,7 +54,7 @@ public class DirectMessageService {
         DirectMessageResponse response = directMessageMapper.toResponse(message);
 
         eventPublisher.publishEvent(
-                new DirectMessageBroadcastEvent(response, message.getReceiver().getEmail()));
+                new DirectMessageBroadcastEvent(response, message.getReceiver().getId()));
 
         log.info("DM sent: conversationId={}, senderId={}", conversationId, sender.getId());
         return response;

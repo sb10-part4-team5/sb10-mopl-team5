@@ -24,7 +24,7 @@ public interface PlaylistMapper {
     @Mapping(target = ".", source = "playlist")
     PlaylistResponse toDto(PlaylistContentsDto dto);
 
-    @Mapping(target = "contents", expression = "java(java.util.List.of())")
+    @Mapping(target = "contents", expression = "java(java.util.Collections.emptyList())")
     @Mapping(target = "subscribedByMe", constant = "false")
     PlaylistResponse toDto(Playlist playlist);
 

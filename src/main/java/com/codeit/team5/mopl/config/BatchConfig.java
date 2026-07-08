@@ -31,6 +31,7 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
@@ -63,7 +64,7 @@ public class BatchConfig {
 
     @Bean
     public JobLauncher asyncJobLauncher(JobRepository jobRepository,
-            ThreadPoolTaskExecutor batchJobTaskExecutor) throws Exception {
+            @Qualifier("batchJobTaskExecutor") ThreadPoolTaskExecutor batchJobTaskExecutor) throws Exception {
         TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
         launcher.setJobRepository(jobRepository);
         launcher.setTaskExecutor(batchJobTaskExecutor);

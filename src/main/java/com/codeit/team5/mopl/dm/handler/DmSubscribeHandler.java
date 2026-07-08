@@ -18,7 +18,7 @@ public class DmSubscribeHandler extends AbstractStompSubscribeHandler {
     }
 
     @Override
-    protected void doHandle(UUID conversationId, String email) {
-        conversationService.validateParticipant(conversationId, email);
+    protected void doHandle(UUID targetId, UUID userId) {
+        conversationService.validateParticipant(targetId, userId);
     }
 }

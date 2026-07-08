@@ -1,9 +1,9 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.handler;
 
-import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import java.util.UUID;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 
 public abstract class AbstractStompSubscribeHandler extends AbstractStompCommandHandler {
 
@@ -15,14 +15,14 @@ public abstract class AbstractStompSubscribeHandler extends AbstractStompCommand
 
     @Override
     public void handle(StompHeaderAccessor accessor) {
-        String destination = accessor.getDestination();
-        UUID targetId = getTargetId(destination);
-        String email = accessor.getUser().getName();
-        doHandle(targetId, email);
         String subscriptionId = accessor.getSubscriptionId();
-        subscribeSession(email, subscriptionId, destination);
+        String destination = accessor.getDestination();
+        UUID userId = UUID.fromString(accessor.getUser().getName());
+        UUID targetId = getTargetId(destination);
+        doHandle(targetId, userId);
+        subscribeSession(userId, subscriptionId, destination);
     }
 
-    protected abstract void doHandle(UUID targetId, String email);
+    protected abstract void doHandle(UUID targetId, UUID userId);
 
 }

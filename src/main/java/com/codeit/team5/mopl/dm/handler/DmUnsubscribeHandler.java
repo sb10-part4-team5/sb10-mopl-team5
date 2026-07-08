@@ -14,7 +14,7 @@ public class DmUnsubscribeHandler extends AbstractStompUnsubscribeHandler {
     }
 
     @Override
-    protected void doHandle(UUID conversationId, String email) {
+    protected void doHandle(UUID targetId, UUID userId) {
         // 세션 스토어에서 구독 제거는 부모 클래스(unsubscribeSession)에서 처리
     }
 }

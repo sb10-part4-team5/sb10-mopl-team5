@@ -2,7 +2,7 @@ package com.codeit.team5.mopl.review.controller.api;
 
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
 import com.codeit.team5.mopl.review.dto.request.ReviewGetRequest;
 import com.codeit.team5.mopl.review.dto.request.ReviewUpdateRequest;
@@ -27,11 +27,11 @@ public interface ReviewApi {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공"),
         @ApiResponse(responseCode = "400", description = "잘못된 요청",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "401", description = "인증 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "서버 내부 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<CursorResponse<ReviewResponse>> getReviews(
         @Valid ReviewGetRequest request);
@@ -41,13 +41,13 @@ public interface ReviewApi {
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "생성 성공"),
         @ApiResponse(responseCode = "400", description = "잘못된 요청",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "401", description = "인증 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "409", description = "이미 리뷰 작성함",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "서버 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<ReviewResponse> createReview(
         @Parameter(hidden = true) MoplPrincipal moplPrincipal,
@@ -57,15 +57,15 @@ public interface ReviewApi {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "수정 성공"),
         @ApiResponse(responseCode = "400", description = "잘못된 요청",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "401", description = "인증 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "403", description = "권한 없음",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "리뷰 없음",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "서버 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<ReviewResponse> updateReview(
         @Parameter(hidden = true) MoplPrincipal moplPrincipal,
@@ -77,13 +77,13 @@ public interface ReviewApi {
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "삭제 성공"),
         @ApiResponse(responseCode = "401", description = "인증 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "403", description = "권한 없음",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "리뷰 없음",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class))),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "서버 오류",
-            content = @Content(schema = @Schema(implementation = ErrorResponseSuggestion.class)))
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ResponseEntity<Void> deleteReview(
         @Parameter(hidden = true) MoplPrincipal moplPrincipal,

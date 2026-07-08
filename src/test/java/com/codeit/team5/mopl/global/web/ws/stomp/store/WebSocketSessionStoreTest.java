@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.store;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CountDownLatch;
@@ -23,7 +25,7 @@ class WebSocketSessionStoreTest {
     @DisplayName("connect 호출 시 빈 세션 맵이 생성된다_성공")
     void connect_성공() {
         // given
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
 
         // when
         store.connect(email);
@@ -36,7 +38,7 @@ class WebSocketSessionStoreTest {
     @DisplayName("subscribe 호출 시 세션에 구독 정보가 저장된다_성공")
     void subscribe_성공() {
         // given
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
         store.connect(email);
 
         // when
@@ -50,7 +52,7 @@ class WebSocketSessionStoreTest {
     @DisplayName("unsubscribe 호출 시 세션에서 구독 정보가 삭제된다_성공")
     void unsubscribe_성공() {
         // given
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
         store.connect(email);
         store.subscribe(email, "sub-1", "/topic/content/1");
 
@@ -65,7 +67,7 @@ class WebSocketSessionStoreTest {
     @DisplayName("disconnect 호출 시 유저의 모든 정보가 삭제된다_성공")
     void disconnect_성공() {
         // given
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
         store.connect(email);
         store.subscribe(email, "sub-1", "/topic/content/1");
 
@@ -80,7 +82,7 @@ class WebSocketSessionStoreTest {
     @DisplayName("이미 존재하는 세션에 대해 다시 connect를 호출해도 기존 구독 정보가 유지된다_성공")
     void connect_ExistingSession_성공() {
         // given
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
         store.connect(email);
         store.subscribe(email, "sub-1", "/topic/content/1");
 
@@ -95,7 +97,7 @@ class WebSocketSessionStoreTest {
     @DisplayName("멀티스레드 환경에서 안전하게 동작한다_성공")
     void threadSafety_성공() throws InterruptedException {
         // given
-        String email = "test@test.com";
+        UUID email = UUID.randomUUID();
         store.connect(email);
 
         int threadCount = 100;

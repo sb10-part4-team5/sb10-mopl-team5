@@ -6,9 +6,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.auth.jwt.JwtAuthenticationService;
-import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import io.jsonwebtoken.JwtException;
+import java.util.Collections;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,8 +20,6 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-
-import java.util.Collections;
 
 @ExtendWith(MockitoExtension.class)
 class StompConnectHandlerTest {
@@ -67,7 +66,8 @@ class StompConnectHandlerTest {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
         accessor.setNativeHeader("Authorization", "Bearer valid-token");
 
-        Authentication auth = new UsernamePasswordAuthenticationToken("test@test.com", "", Collections.emptyList());
+        UUID testUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        Authentication auth = new UsernamePasswordAuthenticationToken(testUserId.toString(), "", Collections.emptyList());
         when(jwtAuthenticationService.getAuthentication("valid-token")).thenReturn(auth);
 
         // when
@@ -75,7 +75,7 @@ class StompConnectHandlerTest {
 
         // then
         assertThat(accessor.getUser()).isEqualTo(auth);
-        verify(sessionStore).connect("test@test.com");
+        verify(sessionStore).connect(UUID.fromString("00000000-0000-0000-0000-000000000000"));
     }
 
     @Test

@@ -5,8 +5,9 @@ import com.codeit.team5.mopl.auth.exception.AuthException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenExpiredException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenNotFoundException;
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.codeit.team5.mopl.global.exception.util.ViolationExceptionUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -33,15 +35,15 @@ public class GlobalExceptionHandler {
     private final RefreshTokenCookieManager refreshTokenCookieManager;
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleBusinessException(BusinessException e) {
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
         log.warn(e.toString());
         return ResponseEntity
                 .status(e.getStatus())
-                .body(ErrorResponseSuggestion.from(e));
+                .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleMethodArgumentNotValidException(
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException e) {
         String detailedErrorLog = e.getBindingResult().getFieldErrors().stream()
                 .map(error -> String.format("필드 [%s] - 입력값: [%s], 원인: [%s]",
@@ -52,11 +54,11 @@ public class GlobalExceptionHandler {
         log.warn("유효성 검사 실패 (MethodArgumentNotValidException) -> {}", detailedErrorLog);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseSuggestion.from(e));
+                .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleConstraintViolationException(
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
             ConstraintViolationException e) {
         String detailedErrorLog = e.getConstraintViolations().stream()
                 .map(v -> String.format("경로 [%s] - 입력값: [%s], 원인: [%s]",
@@ -71,16 +73,16 @@ public class GlobalExceptionHandler {
                 isFromController ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
         return ResponseEntity
                 .status(status)
-                .body(ErrorResponseSuggestion.from(e));
+                .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleHttpMessageNotReadableException(
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException e
     ) {
         return ResponseEntity
                 .badRequest()
-                .body(ErrorResponseSuggestion.from(e));
+                .body(ErrorResponse.from(e));
     }
 
     // 클라이언트가 SSE 연결을 끊을 때(브라우저 탭 닫기, 새로고침 등) 응답 스트림에 쓰다가 발생하는
@@ -91,23 +93,35 @@ public class GlobalExceptionHandler {
         log.debug("클라이언트 연결 종료로 응답 전송 실패: {}", e.getMessage());
     }
 
+    // 존재하지 않는 경로로의 요청(봇/스캐너의 무작위 경로 탐색)에서 발생
+    // 버그가 아니므로 ERROR로 로그를 남기지 않고 404만 반환
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
+            NoResourceFoundException e, HttpServletRequest request) {
+        log.info("존재하지 않는 리소스 요청: {} | User-Agent: {}",
+                e.getMessage(), request.getHeader("User-Agent"));
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("NOT_FOUND", "요청하신 리소스를 찾을 수 없습니다.", null));
+    }
+
     // 배치 작업 스레드 풀의 큐까지 가득 찬 상태에서 새 수집 요청이 들어오면 AbortPolicy가
     // TaskRejectedException을 던진다. 일시적인 과부하이므로 503으로 매핑해 재시도를 유도한다.
     @ExceptionHandler(TaskRejectedException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleTaskRejectedException(TaskRejectedException e) {
+    public ResponseEntity<ErrorResponse> handleTaskRejectedException(TaskRejectedException e) {
         log.warn("배치 작업 큐 포화로 요청 거부: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ErrorResponseSuggestion("SERVICE_UNAVAILABLE",
+                .body(new ErrorResponse("SERVICE_UNAVAILABLE",
                         "현재 수집 작업이 많아 요청을 처리할 수 없습니다. 잠시 후 다시 시도해주세요.", null));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleException(Exception e) {
+    public ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("Unexpected exception", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseSuggestion("INTERNAL_SERVER_ERROR",
+                .body(new ErrorResponse("INTERNAL_SERVER_ERROR",
                         "서버 내부 에러가 발생했습니다.", null));
     }
 
@@ -116,41 +130,41 @@ public class GlobalExceptionHandler {
             RefreshTokenNotFoundException.class,
             RefreshTokenExpiredException.class
     })
-    public ResponseEntity<ErrorResponseSuggestion> handleRefreshTokenException(AuthException e) {
+    public ResponseEntity<ErrorResponse> handleRefreshTokenException(AuthException e) {
         ResponseCookie deleteCookie = refreshTokenCookieManager.deleteCookie();
 
         return ResponseEntity.status(e.getStatus())
                 .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
-                .body(ErrorResponseSuggestion.from(e));
+                .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleMissingServletRequestParameterException(
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
         MissingServletRequestParameterException e
     ){
         log.warn(e.toString());
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(ErrorResponseSuggestion.from(e));
+            .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleMethodArgumentTypeMismatchException(
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
         MethodArgumentTypeMismatchException e
     ) {
         log.warn(e.toString());
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(ErrorResponseSuggestion.from(e));
+            .body(ErrorResponse.from(e));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponseSuggestion> handleDataIntegrityViolationException(
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException e
     ) {
         log.warn("데이터 무결성 제약조건 위반: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ErrorResponseSuggestion.from(e));
+                .body(ErrorResponse.from(e));
     }
 }

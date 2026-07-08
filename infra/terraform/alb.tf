@@ -123,3 +123,66 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.mopl.arn
   }
 }
+
+# 잘 알려진 스캐너/봇 프로브 경로 차단 — WordPress/PHP류 취약점 스캐너가 흔히 찌르는 경로.
+# 우리 스택(Spring Boot)엔 존재하지 않지만 요청 자체를 앱까지 안 보내고 ALB에서 끊는다.
+resource "aws_lb_listener_rule" "block_known_scan_paths_1" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 10
+
+  action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/wp-admin*", "/wp-login*", "/xmlrpc.php", "/.env*", "/.git*"]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "block_known_scan_paths_2" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 11
+
+  action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/administrator*", "/phpmyadmin*", "/.aws*", "/vendor*", "/config.php"]
+    }
+  }
+}
+
+# API 문서는 인터넷에 노출하지 않는다. 앱에는 여전히 활성화돼 있어 SSM 포트포워딩으로만 확인 가능.
+resource "aws_lb_listener_rule" "block_swagger" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 12
+
+  action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/swagger-ui*", "/v3/api-docs*"]
+    }
+  }
+}

@@ -15,7 +15,7 @@ public class ContentChatUnsubscribeHandler extends AbstractStompUnsubscribeHandl
     }
 
     @Override
-    protected void doHandle(UUID targetId, String email) {
-        // 추가 로직 필요 없음
+    protected void doHandle(UUID targetId, UUID userId) {
+        // nothing to handle
     }
 }

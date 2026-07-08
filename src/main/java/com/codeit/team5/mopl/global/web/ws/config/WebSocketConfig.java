@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.global.web.ws.config;
 
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
+import com.codeit.team5.mopl.global.web.ws.stomp.handler.StompErrorHandler;
 import com.codeit.team5.mopl.global.web.ws.stomp.interceptor.StompInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -17,12 +18,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final String WEBSOCKET_ENDPOINT = "/ws";
     private final StompInterceptor interceptor;
+    private final StompErrorHandler stompErrorHandler;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint(WEBSOCKET_ENDPOINT)
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
+        registry.setErrorHandler(stompErrorHandler);
     }
 
     @Override

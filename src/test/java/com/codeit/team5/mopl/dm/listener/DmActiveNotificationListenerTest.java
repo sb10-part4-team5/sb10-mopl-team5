@@ -5,13 +5,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
-import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
-import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
-import com.codeit.team5.mopl.dm.provider.ActiveConversationChecker;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +14,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
+import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
+import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
+import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
+import com.codeit.team5.mopl.dm.provider.ActiveConversationChecker;
+import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
 
 @ExtendWith(MockitoExtension.class)
 class DmActiveNotificationListenerTest {
@@ -34,21 +33,22 @@ class DmActiveNotificationListenerTest {
     @InjectMocks
     private DmActiveNotificationListener listener;
 
-    private DirectMessageBroadcastEvent event(String receiverEmail) {
+    private DirectMessageBroadcastEvent event(UUID receiverId) {
         UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), "A", null);
-        UserSummaryResponse receiver = new UserSummaryResponse(UUID.randomUUID(), "B", null);
+        UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "B", null);
         DirectMessageResponse message = new DirectMessageResponse(
                 UUID.randomUUID(), UUID.randomUUID(), sender, receiver, "hi", Instant.now());
-        return new DirectMessageBroadcastEvent(message, receiverEmail);
+        return new DirectMessageBroadcastEvent(message, receiverId);
     }
 
     @Test
     @DisplayName("수신자가 대화방 비활성이면 알림·SSE 이벤트 발행 성공")
     void inactiveReceiver_publishesEvent_success() {
         // given
-        DirectMessageBroadcastEvent event = event("b@mopl.com");
+        UUID receiverId = UUID.randomUUID();
+        DirectMessageBroadcastEvent event = event(receiverId);
         UUID conversationId = event.message().conversationId();
-        when(activeConversationChecker.isViewing(eq(conversationId), eq("b@mopl.com"))).thenReturn(false);
+        when(activeConversationChecker.isViewing(eq(conversationId), eq(receiverId))).thenReturn(false);
 
         // when
         listener.onDirectMessageBroadcast(event);
@@ -62,9 +62,10 @@ class DmActiveNotificationListenerTest {
     @DisplayName("수신자가 대화방 활성이면 알림 미발행 성공")
     void activeReceiver_noNotification_success() {
         // given
-        DirectMessageBroadcastEvent event = event("b@mopl.com");
+        UUID receiverId = UUID.randomUUID();
+        DirectMessageBroadcastEvent event = event(receiverId);
         UUID conversationId = event.message().conversationId();
-        when(activeConversationChecker.isViewing(eq(conversationId), eq("b@mopl.com"))).thenReturn(true);
+        when(activeConversationChecker.isViewing(eq(conversationId), eq(receiverId))).thenReturn(true);
 
         // when
         listener.onDirectMessageBroadcast(event);

@@ -67,4 +67,51 @@ class PlaylistRepositoryTest extends BaseRepositoryTest {
         assertThat(found).isEmpty();
     }
 
+    @Test
+    @DisplayName("특정 유저가 구독한 모든 플레이리스트의 구독자 수를 1 감소시킨다")
+    void bulkDecreaseSubscribeCountBySubscriberId() {
+        // given
+        User subscriber = persistAndFlush(User.create("sub@test.com", "pass", "sub"));
+        persistAndFlush(com.codeit.team5.mopl.subscription.entity.Subscription.of(playlist, subscriber));
+        
+        // 초기 구독자 수 세팅 (업데이트 쿼리 테스트를 위해 1로 시작)
+        entityManager.getEntityManager()
+                .createQuery("UPDATE Playlist p SET p.subscriberCount = 1 WHERE p.id = :id")
+                .setParameter("id", playlist.getId())
+                .executeUpdate();
+        clear();
+
+        // when
+        playlistRepository.bulkDecreaseSubscribeCountBySubscriberId(subscriber.getId());
+        flush();
+        clear();
+
+        // then
+        Playlist found = playlistRepository.findById(playlist.getId()).orElseThrow();
+        assertThat(found.getSubscriberCount()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("특정 유저가 구독한 모든 플레이리스트의 구독자 수를 1 증가시킨다")
+    void bulkIncreaseSubscribeCountBySubscriberId() {
+        // given
+        User subscriber = persistAndFlush(User.create("sub2@test.com", "pass", "sub"));
+        persistAndFlush(com.codeit.team5.mopl.subscription.entity.Subscription.of(playlist, subscriber));
+        
+        // 초기 구독자 수 세팅
+        entityManager.getEntityManager()
+                .createQuery("UPDATE Playlist p SET p.subscriberCount = 1 WHERE p.id = :id")
+                .setParameter("id", playlist.getId())
+                .executeUpdate();
+        clear();
+
+        // when
+        playlistRepository.bulkIncreaseSubscribeCountBySubscriberId(subscriber.getId());
+        flush();
+        clear();
+
+        // then
+        Playlist found = playlistRepository.findById(playlist.getId()).orElseThrow();
+        assertThat(found.getSubscriberCount()).isEqualTo(2);
+    }
 }

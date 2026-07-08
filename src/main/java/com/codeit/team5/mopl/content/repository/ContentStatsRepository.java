@@ -24,4 +24,12 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
         @Param("ratingDelta") double ratingDelta,
         @Param("countDelta") int countDelta
     );
+
+    @Modifying
+    @Query("update ContentStats s set s.watcherCount = s.watcherCount - 1 where s.id = :id and s.watcherCount > 0")
+    void decreaseWatcherCountById(UUID id);
+
+    @Modifying
+    @Query("update ContentStats s set s.watcherCount = s.watcherCount + 1 where s.id = :id")
+    void increaseWatcherCountById(UUID id);
 }

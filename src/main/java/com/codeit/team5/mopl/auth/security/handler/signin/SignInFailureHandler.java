@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.auth.security.handler.signin;
 
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +23,8 @@ public class SignInFailureHandler implements AuthenticationFailureHandler {
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException exception) throws IOException, ServletException {
         int status = HttpServletResponse.SC_UNAUTHORIZED;
-        ErrorResponseSuggestion body =
-                ErrorResponseSuggestion.from(exception);
+        ErrorResponse body =
+                ErrorResponse.from(exception);
 
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

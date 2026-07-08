@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.auth.support;
 
-import com.codeit.team5.mopl.global.dto.suggestion.ErrorResponseSuggestion;
+import com.codeit.team5.mopl.global.dto.ErrorResponse;
 import com.codeit.team5.mopl.global.exception.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,7 +20,7 @@ public class ErrorResponder {
             BusinessException exception
     ) throws IOException {
 
-        ErrorResponseSuggestion errorResponse = ErrorResponseSuggestion.from(exception);
+        ErrorResponse errorResponse = ErrorResponse.from(exception);
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
@@ -36,7 +36,7 @@ public class ErrorResponder {
             AuthenticationException exception
     ) throws IOException {
         write(response, HttpStatus.UNAUTHORIZED.value(),
-                new ErrorResponseSuggestion(
+                new ErrorResponse(
                         "UNAUTHORIZED",
                         "인증이 필요합니다.",
                         null
@@ -48,7 +48,7 @@ public class ErrorResponder {
             AccessDeniedException exception
     ) throws IOException {
         write(response, HttpStatus.FORBIDDEN.value(),
-                new ErrorResponseSuggestion(
+                new ErrorResponse(
                         "FORBIDDEN",
                         "접근 권한이 없습니다.",
                         null
@@ -58,7 +58,7 @@ public class ErrorResponder {
     private static void write(
             HttpServletResponse response,
             int status,
-            ErrorResponseSuggestion errorResponse
+            ErrorResponse errorResponse
     ) throws IOException {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
