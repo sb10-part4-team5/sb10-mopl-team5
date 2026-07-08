@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.auth.security.handler.signin;
 
+import com.codeit.team5.mopl.auth.entity.LoginSession;
+import com.codeit.team5.mopl.auth.service.AuthSessionService;
 import com.codeit.team5.mopl.auth.support.ErrorResponder;
 import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.dto.response.JwtResponse;
@@ -21,6 +23,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +40,7 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
 
     private final ObjectMapper objectMapper;
 
+    private final AuthSessionService authSessionService;
     private final RefreshTokenCookieManager cookieManager;
     private final RefreshTokenStore refreshTokenStore;
     private final AuthMapper authMapper;
@@ -65,13 +69,19 @@ public class SignInSuccessHandler implements AuthenticationSuccessHandler {
 
         UserResponse userDto = userMapper.toDto(user);
 
+        Instant expiresAt = calculateExpiresAt();
+
+        // 로그인시 세션 교체 -> 동시 로그인 제한
+        UUID sessionId = authSessionService.replaceUserSession(user.getId(), expiresAt);
+
         String accessToken = jwtTokenizer.generateAccessToken(
                 user.getId().toString(),
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                sessionId.toString()
         );
         String refreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
-        refreshTokenStore.save(user.getId(), refreshToken, calculateExpiresAt());
+        refreshTokenStore.save(user.getId(), refreshToken, expiresAt);
 
         ResponseCookie responseCookie = cookieManager.createCookie(refreshToken);
         response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());

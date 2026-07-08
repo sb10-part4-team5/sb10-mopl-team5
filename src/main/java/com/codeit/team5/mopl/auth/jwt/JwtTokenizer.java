@@ -21,11 +21,12 @@ public class JwtTokenizer {
     private final JwtProperties jwtProperties;
 
     // subject = userId 사용
-    public String generateAccessToken(String subject, String email, String role) {
+    public String generateAccessToken(String subject, String email, String role, String sessionId) {
         return Jwts.builder()
                 .setSubject(subject)
                 .claim("email", email)
                 .claim("role", role)
+                .claim("sessionId", sessionId)
                 .setIssuedAt(new Date())
                 .setExpiration(getTokenExpiration(jwtProperties.accessTokenExpirationMinutes()))
                 .signWith(getAccessKey())

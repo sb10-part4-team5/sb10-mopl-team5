@@ -11,6 +11,7 @@ import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
+import com.codeit.team5.mopl.auth.service.AuthSessionService;
 import com.codeit.team5.mopl.auth.support.MoplAccountStatusChecker;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -38,6 +39,9 @@ class JwtAuthenticationServiceTest {
     private MoplAccountStatusChecker moplAccountStatusChecker;
 
     @Mock
+    private AuthSessionService authSessionService;
+
+    @Mock
     private Jws<Claims> claimsJws;
 
     @Mock
@@ -52,6 +56,7 @@ class JwtAuthenticationServiceTest {
         // Given
         String accessToken = "valid-access-token";
         UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
         MoplUserDetails principal = new MoplUserDetails(
                 new AuthUser(userId, "user@example.com", "USER", false),
                 "encoded-password"
@@ -60,6 +65,8 @@ class JwtAuthenticationServiceTest {
         given(jwtTokenizer.getAccessClaims(accessToken)).willReturn(claimsJws);
         given(claimsJws.getBody()).willReturn(claims);
         given(claims.getSubject()).willReturn(userId.toString());
+        given(claims.get("sessionId")).willReturn(sessionId.toString());
+        given(authSessionService.isValidSession(userId, sessionId)).willReturn(true);
         given(userDetailsService.loadUserById(userId)).willReturn(principal);
 
         // When
@@ -71,6 +78,7 @@ class JwtAuthenticationServiceTest {
         assertThat(authentication.getAuthorities())
                 .extracting("authority")
                 .containsExactly("ROLE_USER");
+        verify(authSessionService).isValidSession(userId, sessionId);
         verify(userDetailsService).loadUserById(userId);
         verify(moplAccountStatusChecker).check(principal);
     }
@@ -88,7 +96,7 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token subject");
-        verifyNoInteractions(userDetailsService);
+        verifyNoInteractions(authSessionService, userDetailsService);
     }
 
     @Test
@@ -104,7 +112,7 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token subject");
-        verifyNoInteractions(userDetailsService);
+        verifyNoInteractions(authSessionService, userDetailsService);
     }
 
     @Test
@@ -120,6 +128,81 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token subject");
+        verifyNoInteractions(authSessionService, userDetailsService);
+    }
+
+    @Test
+    @DisplayName("access token sessionId가 없으면 인증 객체 생성에 실패한다")
+    void getAuthentication_missingSessionId_throwsException() {
+        // Given
+        String accessToken = "invalid-access-token";
+        UUID userId = UUID.randomUUID();
+        given(jwtTokenizer.getAccessClaims(accessToken)).willReturn(claimsJws);
+        given(claimsJws.getBody()).willReturn(claims);
+        given(claims.getSubject()).willReturn(userId.toString());
+        given(claims.get("sessionId")).willReturn(null);
+
+        // When & Then
+        assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
+                .isInstanceOf(JwtInvalidException.class)
+                .hasMessage("Invalid token sessionId");
+        verifyNoInteractions(authSessionService, userDetailsService);
+    }
+
+    @Test
+    @DisplayName("access token sessionId가 공백이면 인증 객체 생성에 실패한다")
+    void getAuthentication_blankSessionId_throwsException() {
+        // Given
+        String accessToken = "invalid-access-token";
+        UUID userId = UUID.randomUUID();
+        given(jwtTokenizer.getAccessClaims(accessToken)).willReturn(claimsJws);
+        given(claimsJws.getBody()).willReturn(claims);
+        given(claims.getSubject()).willReturn(userId.toString());
+        given(claims.get("sessionId")).willReturn(" ");
+
+        // When & Then
+        assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
+                .isInstanceOf(JwtInvalidException.class)
+                .hasMessage("Invalid token sessionId");
+        verifyNoInteractions(authSessionService, userDetailsService);
+    }
+
+    @Test
+    @DisplayName("access token sessionId가 UUID 형식이 아니면 인증 객체 생성에 실패한다")
+    void getAuthentication_invalidUuidSessionId_throwsException() {
+        // Given
+        String accessToken = "invalid-access-token";
+        UUID userId = UUID.randomUUID();
+        given(jwtTokenizer.getAccessClaims(accessToken)).willReturn(claimsJws);
+        given(claimsJws.getBody()).willReturn(claims);
+        given(claims.getSubject()).willReturn(userId.toString());
+        given(claims.get("sessionId")).willReturn("not-uuid");
+
+        // When & Then
+        assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
+                .isInstanceOf(JwtInvalidException.class)
+                .hasMessage("Invalid token sessionId");
+        verifyNoInteractions(authSessionService, userDetailsService);
+    }
+
+    @Test
+    @DisplayName("로그인 세션이 유효하지 않으면 인증 객체 생성에 실패한다")
+    void getAuthentication_invalidSession_throwsException() {
+        // Given
+        String accessToken = "invalid-session-access-token";
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        given(jwtTokenizer.getAccessClaims(accessToken)).willReturn(claimsJws);
+        given(claimsJws.getBody()).willReturn(claims);
+        given(claims.getSubject()).willReturn(userId.toString());
+        given(claims.get("sessionId")).willReturn(sessionId.toString());
+        given(authSessionService.isValidSession(userId, sessionId)).willReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
+                .isInstanceOf(JwtInvalidException.class)
+                .hasMessage("Invalid login session");
+        verify(authSessionService).isValidSession(userId, sessionId);
         verifyNoInteractions(userDetailsService);
     }
 
@@ -129,6 +212,7 @@ class JwtAuthenticationServiceTest {
         // Given
         String accessToken = "valid-access-token";
         UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
         MoplUserDetails principal = new MoplUserDetails(
                 new AuthUser(userId, "locked@example.com", "USER", true),
                 "encoded-password"
@@ -137,6 +221,8 @@ class JwtAuthenticationServiceTest {
         given(jwtTokenizer.getAccessClaims(accessToken)).willReturn(claimsJws);
         given(claimsJws.getBody()).willReturn(claims);
         given(claims.getSubject()).willReturn(userId.toString());
+        given(claims.get("sessionId")).willReturn(sessionId.toString());
+        given(authSessionService.isValidSession(userId, sessionId)).willReturn(true);
         given(userDetailsService.loadUserById(userId)).willReturn(principal);
         doThrow(new LockedException("잠긴 계정입니다."))
                 .when(moplAccountStatusChecker)
@@ -146,6 +232,7 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(LockedException.class)
                 .hasMessage("잠긴 계정입니다.");
+        verify(authSessionService).isValidSession(userId, sessionId);
         verify(userDetailsService).loadUserById(userId);
         verify(moplAccountStatusChecker).check(principal);
     }
@@ -161,6 +248,6 @@ class JwtAuthenticationServiceTest {
         // When & Then
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isSameAs(exception);
-        verifyNoInteractions(userDetailsService);
+        verifyNoInteractions(authSessionService, userDetailsService);
     }
 }

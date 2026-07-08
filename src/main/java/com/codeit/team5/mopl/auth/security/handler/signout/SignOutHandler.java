@@ -1,9 +1,9 @@
 package com.codeit.team5.mopl.auth.security.handler.signout;
 
+import com.codeit.team5.mopl.auth.service.AuthSessionService;
 import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenInvalidException;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
-import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,7 +25,7 @@ public class SignOutHandler implements LogoutHandler {
     private static final String REFRESH_TOKEN_COOKIE_NAME = "REFRESH_TOKEN";
 
     private final JwtTokenizer jwtTokenizer;
-    private final RefreshTokenStore refreshTokenStore;
+    private final AuthSessionService authSessionService;
     private final RefreshTokenCookieManager cookieManager;
 
     @Override
@@ -53,7 +53,7 @@ public class SignOutHandler implements LogoutHandler {
 
         try {
             UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
-            refreshTokenStore.deleteByUserId(userId);
+            authSessionService.invalidateUserSessions(userId);
             log.info("Logout success");
         } catch (RefreshTokenInvalidException e) {
             log.info("Logout requested with invalid or expired refresh token");
