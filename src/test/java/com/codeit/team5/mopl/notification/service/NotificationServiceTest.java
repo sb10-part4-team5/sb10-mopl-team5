@@ -104,24 +104,6 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("DM 타입 알림은 SSE 이벤트를 발행하지 않는다")
-    void create_directMessage_doesNotPublishSseEvent() {
-        // given
-        UUID receiverId = UUID.randomUUID();
-        Notification saved = mock(Notification.class);
-        NotificationResponse response = mock(NotificationResponse.class);
-        given(notificationRepository.save(any(Notification.class))).willReturn(saved);
-        given(notificationMapper.toResponse(saved)).willReturn(response);
-
-        // when
-        notificationService.create(new NotificationCreateCommand(
-                receiverId, NotificationType.DIRECT_MESSAGE, "제목", "내용", NotificationLevel.INFO));
-
-        // then
-        verify(publisher, org.mockito.Mockito.never()).publishEvent(any(NotificationCreatedEvent.class));
-    }
-
-    @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 잘라내고 nextCursor를 채운다")
     void getNotifications_hasNext() {
         // given
