@@ -49,8 +49,24 @@ public class GeneratorOrchestrator {
 
         playlistItemGenerator.run(playlistIds, contentIds);
         playlistSubscriptionGenerator.run(userIds, playlistIds);
+        updateSubscriberCount();
         followGenerator.run(userIds);
         notificationGenerator.run(userIds);
+    }
+
+    private void updateSubscriberCount() {
+        log.info("Updating playlists.subscriber_count...");
+        template.execute("""
+            UPDATE playlists p
+            SET subscriber_count = sub.cnt
+            FROM (
+                SELECT playlist_id, COUNT(*) AS cnt
+                FROM playlist_subscriptions
+                GROUP BY playlist_id
+            ) sub
+            WHERE p.id = sub.playlist_id
+            """);
+        log.info("subscriber_count updated");
     }
 
     private void updateContentStats() {
