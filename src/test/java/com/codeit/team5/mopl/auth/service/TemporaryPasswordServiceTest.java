@@ -18,6 +18,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -57,7 +58,12 @@ class TemporaryPasswordServiceTest {
         verify(temporaryPasswordRepository).findByUserId(user.getId());
         verify(temporaryPasswordGenerator).generate();
         verify(passwordEncoder).encode("Temp1234");
-        verify(temporaryPasswordRepository, never()).save(any());
+        ArgumentCaptor<TemporaryPassword> captor = ArgumentCaptor.forClass(TemporaryPassword.class);
+        verify(temporaryPasswordRepository).save(captor.capture());
+        TemporaryPassword saved = captor.getValue();
+        assertThat(saved.getUser()).isSameAs(user);
+        assertThat(saved.getPasswordHash()).isEqualTo("encoded-temp-password");
+        assertThat(saved.isValidAt(Instant.now())).isTrue();
     }
 
     @Test
@@ -84,7 +90,9 @@ class TemporaryPasswordServiceTest {
         verify(temporaryPasswordRepository).findByUserId(user.getId());
         verify(temporaryPasswordGenerator).generate();
         verify(passwordEncoder).encode("NewTemp1234");
-        verify(temporaryPasswordRepository, never()).save(any());
+        ArgumentCaptor<TemporaryPassword> captor = ArgumentCaptor.forClass(TemporaryPassword.class);
+        verify(temporaryPasswordRepository).save(captor.capture());
+        assertThat(captor.getValue()).isSameAs(existing);
     }
 
     @Test

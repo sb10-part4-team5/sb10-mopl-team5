@@ -60,6 +60,9 @@ class AuthServiceTest {
     private RefreshTokenStore refreshTokenStore;
 
     @Mock
+    private AuthSessionService authSessionService;
+
+    @Mock
     private AuthMapper authMapper;
 
     @Mock
@@ -121,6 +124,7 @@ class AuthServiceTest {
         );
         String accessToken = "access-token";
         String refreshToken = "refresh-token";
+        UUID sessionId = UUID.randomUUID();
         JwtResponse expectedResponse = new JwtResponse(userResponse, accessToken);
         ResponseCookie refreshTokenCookie = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
                 .httpOnly(true)
@@ -130,7 +134,13 @@ class AuthServiceTest {
 
         when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
-        when(jwtTokenizer.generateAccessToken(userId.toString(), userResponse.email(), userResponse.role()))
+        when(authSessionService.replaceUserSession(eq(userId), any(Instant.class))).thenReturn(sessionId);
+        when(jwtTokenizer.generateAccessToken(
+                userId.toString(),
+                userResponse.email(),
+                userResponse.role(),
+                sessionId.toString()
+        ))
                 .thenReturn(accessToken);
         when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(refreshToken);
         when(jwtProperties.refreshTokenExpirationMinutes()).thenReturn(420L);
@@ -141,6 +151,7 @@ class AuthServiceTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         SignInSuccessHandler handler = new SignInSuccessHandler(
                 new ObjectMapper().findAndRegisterModules(),
+                authSessionService,
                 cookieManager,
                 refreshTokenStore,
                 authMapper,
@@ -157,8 +168,14 @@ class AuthServiceTest {
         Instant after = Instant.now().plus(420, ChronoUnit.MINUTES).plusSeconds(1);
         ArgumentCaptor<Instant> expiresAtCaptor = ArgumentCaptor.forClass(Instant.class);
 
-        verify(jwtTokenizer).generateAccessToken(userId.toString(), userResponse.email(), userResponse.role());
+        verify(jwtTokenizer).generateAccessToken(
+                userId.toString(),
+                userResponse.email(),
+                userResponse.role(),
+                sessionId.toString()
+        );
         verify(jwtTokenizer).generateRefreshToken(userId.toString());
+        verify(authSessionService).replaceUserSession(eq(userId), any(Instant.class));
         verify(refreshTokenStore).save(eq(userId), eq(refreshToken), expiresAtCaptor.capture());
         verify(cookieManager).createCookie(refreshToken);
         verify(authMapper).toJwtResponse(userResponse, accessToken);
@@ -221,13 +238,13 @@ class AuthServiceTest {
         verify(userDetailsService).loadUserByUsername("user@example.com");
         verify(passwordEncoder).matches("wrong-password", "encoded-password");
         verify(temporaryPasswordService).matchesAndDelete(userId, "wrong-password");
-        verify(jwtTokenizer, never()).generateAccessToken(any(), any(), any());
+        verify(jwtTokenizer, never()).generateAccessToken(any(), any(), any(), any());
         verify(jwtTokenizer, never()).generateRefreshToken(any());
         verifyNoInteractions(refreshTokenStore, authMapper);
     }
 
     @Test
-    @DisplayName("유효한 리프레시 토큰으로 로그아웃하면 사용자 식별자로 리프레시 토큰을 삭제한다")
+    @DisplayName("유효한 리프레시 토큰으로 로그아웃하면 사용자 세션을 무효화한다")
     void logout_validRefreshToken_success() {
         // Given
         UUID userId = UUID.randomUUID();
@@ -242,21 +259,21 @@ class AuthServiceTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("REFRESH_TOKEN", refreshToken));
         MockHttpServletResponse response = new MockHttpServletResponse();
-        SignOutHandler handler = new SignOutHandler(jwtTokenizer, refreshTokenStore, cookieManager);
+        SignOutHandler handler = new SignOutHandler(jwtTokenizer, authSessionService, cookieManager);
 
         // When
         handler.logout(request, response, null);
 
         // Then
         verify(jwtTokenizer).getRefreshUserId(refreshToken);
-        verify(refreshTokenStore).deleteByUserId(userId);
+        verify(authSessionService).invalidateUserSessions(userId);
         verify(cookieManager).deleteCookie();
         assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).contains("REFRESH_TOKEN=");
         assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).contains("Max-Age=0");
     }
 
     @Test
-    @DisplayName("리프레시 토큰이 없으면 로그아웃은 리프레시 토큰을 삭제하지 않고 종료한다")
+    @DisplayName("리프레시 토큰이 없으면 로그아웃은 세션을 무효화하지 않고 종료한다")
     void logout_missingRefreshToken_doesNotDeleteRefreshToken() {
         // Given
         Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -272,21 +289,21 @@ class AuthServiceTest {
         when(cookieManager.deleteCookie()).thenReturn(deleteCookie);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        SignOutHandler handler = new SignOutHandler(jwtTokenizer, refreshTokenStore, cookieManager);
+        SignOutHandler handler = new SignOutHandler(jwtTokenizer, authSessionService, cookieManager);
 
         // When
         handler.logout(request, response, null);
 
         // Then
         verifyNoInteractions(jwtTokenizer);
-        verify(refreshTokenStore, never()).deleteByUserId(any());
+        verify(authSessionService, never()).invalidateUserSessions(any());
         verify(cookieManager).deleteCookie();
         assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).contains("REFRESH_TOKEN=");
         assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).contains("Max-Age=0");
     }
 
     @Test
-    @DisplayName("유효하지 않은 리프레시 토큰이면 로그아웃은 삭제하지 않고 정상 종료한다")
+    @DisplayName("유효하지 않은 리프레시 토큰이면 로그아웃은 세션을 무효화하지 않고 정상 종료한다")
     void logout_invalidRefreshToken_doesNotDeleteRefreshToken() {
         // Given
         String refreshToken = "invalid-refresh-token";
@@ -301,27 +318,28 @@ class AuthServiceTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("REFRESH_TOKEN", refreshToken));
         MockHttpServletResponse response = new MockHttpServletResponse();
-        SignOutHandler handler = new SignOutHandler(jwtTokenizer, refreshTokenStore, cookieManager);
+        SignOutHandler handler = new SignOutHandler(jwtTokenizer, authSessionService, cookieManager);
 
         // When
         handler.logout(request, response, null);
 
         // Then
         verify(jwtTokenizer).getRefreshUserId(refreshToken);
-        verify(refreshTokenStore, never()).deleteByUserId(any());
+        verify(authSessionService, never()).invalidateUserSessions(any());
         verify(cookieManager).deleteCookie();
         assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).contains("REFRESH_TOKEN=");
         assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).contains("Max-Age=0");
     }
 
     @Test
-    @DisplayName("유효한 리프레시 토큰이면 새 토큰을 발급하고 리프레시 토큰을 회전한다")
+    @DisplayName("유효한 리프레시 토큰이면 세션 만료 시간을 연장하고 새 토큰을 발급한다")
     void refresh_validRefreshToken_success() {
         // Given
         UUID userId = UUID.randomUUID();
         String refreshToken = "refresh-token";
         String newAccessToken = "new-access-token";
         String newRefreshToken = "new-refresh-token";
+        UUID sessionId = UUID.randomUUID();
         User user = User.create("user@example.com", "encoded-password", "사용자");
         ReflectionTestUtils.setField(user, "id", userId);
         UserResponse userResponse = new UserResponse(
@@ -339,7 +357,13 @@ class AuthServiceTest {
         when(jwtTokenizer.getRefreshUserId(refreshToken)).thenReturn(userId);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
-        when(jwtTokenizer.generateAccessToken(userId.toString(), user.getEmail(), user.getRole().name()))
+        when(authSessionService.extendCurrentSession(eq(userId), any(Instant.class))).thenReturn(sessionId);
+        when(jwtTokenizer.generateAccessToken(
+                userId.toString(),
+                user.getEmail(),
+                user.getRole().name(),
+                sessionId.toString()
+        ))
                 .thenReturn(newAccessToken);
         when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(newRefreshToken);
         when(jwtProperties.refreshTokenExpirationMinutes()).thenReturn(420L);
@@ -365,13 +389,19 @@ class AuthServiceTest {
         verify(jwtTokenizer).getRefreshUserId(refreshToken);
         verify(userRepository).findById(userId);
         verify(userMapper).toDto(user);
-        verify(jwtTokenizer).generateAccessToken(userId.toString(), user.getEmail(), user.getRole().name());
+        verify(authSessionService).extendCurrentSession(eq(userId), expiresAtCaptor.capture());
+        verify(jwtTokenizer).generateAccessToken(
+                userId.toString(),
+                user.getEmail(),
+                user.getRole().name(),
+                sessionId.toString()
+        );
         verify(jwtTokenizer).generateRefreshToken(userId.toString());
         verify(refreshTokenStore).rotateIfValid(
                 eq(userId),
                 eq(refreshToken),
                 eq(newRefreshToken),
-                expiresAtCaptor.capture()
+                eq(expiresAtCaptor.getValue())
         );
         verify(refreshTokenStore, never()).existsValidToken(any(), any());
         verify(refreshTokenStore, never()).save(any(), any(), any());
@@ -381,13 +411,14 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("리프레시 토큰 회전에 실패하면 토큰 재발급에 실패한다")
+    @DisplayName("리프레시 토큰 회전에 실패하면 세션 만료 시간을 연장한 뒤 토큰 재발급에 실패한다")
     void refresh_rotateIfValidFalse_throwsException() {
         // Given
         UUID userId = UUID.randomUUID();
         String refreshToken = "refresh-token";
         String newAccessToken = "new-access-token";
         String newRefreshToken = "new-refresh-token";
+        UUID sessionId = UUID.randomUUID();
         User user = User.create("user@example.com", "encoded-password", "사용자");
         ReflectionTestUtils.setField(user, "id", userId);
         UserResponse userResponse = new UserResponse(
@@ -403,7 +434,13 @@ class AuthServiceTest {
         when(jwtTokenizer.getRefreshUserId(refreshToken)).thenReturn(userId);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
-        when(jwtTokenizer.generateAccessToken(userId.toString(), user.getEmail(), user.getRole().name()))
+        when(authSessionService.extendCurrentSession(eq(userId), any(Instant.class))).thenReturn(sessionId);
+        when(jwtTokenizer.generateAccessToken(
+                userId.toString(),
+                user.getEmail(),
+                user.getRole().name(),
+                sessionId.toString()
+        ))
                 .thenReturn(newAccessToken);
         when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(newRefreshToken);
         when(jwtProperties.refreshTokenExpirationMinutes()).thenReturn(420L);
@@ -419,6 +456,7 @@ class AuthServiceTest {
                 .isInstanceOf(RefreshTokenInvalidException.class)
                 .hasMessage("Invalid refresh token");
 
+        verify(authSessionService).extendCurrentSession(eq(userId), any(Instant.class));
         verify(refreshTokenStore).rotateIfValid(
                 eq(userId),
                 eq(refreshToken),

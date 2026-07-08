@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.auth.exception.RefreshTokenSaveException;
 import com.codeit.team5.mopl.auth.jwt.JwtProperties;
 import com.codeit.team5.mopl.auth.jwt.JwtTokenizer;
 import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
+import com.codeit.team5.mopl.auth.service.AuthSessionService;
 import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OAuth2SignInSuccessHandler implements AuthenticationSuccessHandler {
 
+    private final AuthSessionService authSessionService;
     private final RefreshTokenCookieManager cookieManager;
     private final RefreshTokenStore refreshTokenStore;
     private final JwtTokenizer jwtTokenizer;
@@ -41,16 +43,12 @@ public class OAuth2SignInSuccessHandler implements AuthenticationSuccessHandler 
         MoplPrincipal principal = (MoplPrincipal) authentication.getPrincipal();
 
         try {
-            String refreshToken = jwtTokenizer.generateRefreshToken(principal.getId().toString());
+            Instant expiresAt = calculateExpiresAt();
 
-            refreshTokenStore.save(
-                    principal.getId(),
-                    refreshToken,
-                    Instant.now().plus(
-                            jwtProperties.refreshTokenExpirationMinutes(),
-                            ChronoUnit.MINUTES
-                    )
-            );
+            authSessionService.replaceUserSession(principal.getId(), expiresAt);
+
+            String refreshToken = jwtTokenizer.generateRefreshToken(principal.getId().toString());
+            refreshTokenStore.save(principal.getId(), refreshToken, expiresAt);
 
             ResponseCookie responseCookie = cookieManager.createCookie(refreshToken);
             response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
@@ -74,5 +72,10 @@ public class OAuth2SignInSuccessHandler implements AuthenticationSuccessHandler 
                             + URLEncoder.encode("OAuth 로그인 처리 중 오류가 발생했습니다.", StandardCharsets.UTF_8)
             );
         }
+    }
+
+    private Instant calculateExpiresAt() {
+        return Instant.now()
+                .plus(jwtProperties.refreshTokenExpirationMinutes(), ChronoUnit.MINUTES);
     }
 }

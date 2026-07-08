@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,13 @@ public class UserAuthenticationEntryPoint implements AuthenticationEntryPoint {
         if (exception instanceof BusinessException businessException) {
             log.warn("Unauthorized access: {}", businessException.getMessage(), businessException);
             ErrorResponder.sendErrorResponse(response, businessException);
+            return;
+        }
+
+        if (exception instanceof LockedException lockedException) {
+            log.warn("Locked account access: {}", lockedException.getMessage(), lockedException);
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            ErrorResponder.sendErrorResponse(response, lockedException);
             return;
         }
 

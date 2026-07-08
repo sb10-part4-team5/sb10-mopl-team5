@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
+import com.codeit.team5.mopl.auth.service.AuthSessionService;
 import com.codeit.team5.mopl.auth.service.TemporaryPasswordService;
 import com.codeit.team5.mopl.binarycontent.dto.UploadedBinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
@@ -70,7 +70,7 @@ class UserServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private RefreshTokenStore refreshTokenStore;
+    private AuthSessionService authSessionService;
 
     @Mock
     private TemporaryPasswordService temporaryPasswordService;
@@ -335,7 +335,7 @@ class UserServiceTest {
         // Then
         assertThat(user.getRole()).isEqualTo(UserRole.ADMIN);
         verify(userRepository).findById(userId);
-        verify(refreshTokenStore).deleteByUserId(userId);
+        verify(authSessionService).invalidateUserSessions(userId);
 
         ArgumentCaptor<RoleChangedEvent> eventCaptor = ArgumentCaptor.forClass(RoleChangedEvent.class);
         verify(eventPublisher).publishEvent(eventCaptor.capture());
@@ -357,7 +357,7 @@ class UserServiceTest {
                 .isInstanceOf(UserNotFoundException.class);
 
         verify(userRepository).findById(userId);
-        verifyNoInteractions(refreshTokenStore, eventPublisher);
+        verifyNoInteractions(authSessionService, eventPublisher);
     }
 
     @Test
@@ -374,7 +374,7 @@ class UserServiceTest {
 
         assertThat(user.getRole()).isEqualTo(UserRole.USER);
         verify(userRepository).findById(userId);
-        verifyNoInteractions(refreshTokenStore, eventPublisher);
+        verifyNoInteractions(authSessionService, eventPublisher);
     }
 
     @Test
@@ -391,7 +391,7 @@ class UserServiceTest {
         // Then
         assertThat(user.isLocked()).isTrue();
         verify(userRepository).findById(userId);
-        verify(refreshTokenStore).deleteByUserId(userId);
+        verify(authSessionService).invalidateUserSessions(userId);
     }
 
     @Test
@@ -409,7 +409,7 @@ class UserServiceTest {
         // Then
         assertThat(user.isLocked()).isFalse();
         verify(userRepository).findById(userId);
-        verify(refreshTokenStore).deleteByUserId(userId);
+        verify(authSessionService).invalidateUserSessions(userId);
     }
 
     @Test
@@ -424,7 +424,7 @@ class UserServiceTest {
                 .isInstanceOf(UserNotFoundException.class);
 
         verify(userRepository).findById(userId);
-        verifyNoInteractions(refreshTokenStore);
+        verifyNoInteractions(authSessionService);
     }
 
     @Test
@@ -441,7 +441,7 @@ class UserServiceTest {
 
         assertThat(user.isLocked()).isFalse();
         verify(userRepository).findById(userId);
-        verifyNoInteractions(refreshTokenStore);
+        verifyNoInteractions(authSessionService);
     }
 
     @Test
@@ -461,7 +461,7 @@ class UserServiceTest {
         verify(userRepository).findById(userId);
         verify(passwordEncoder).encode("newPassword1");
         verify(temporaryPasswordService).deleteByUserId(userId);
-        verify(refreshTokenStore).deleteByUserId(userId);
+        verify(authSessionService).invalidateUserSessions(userId);
     }
 
     @Test

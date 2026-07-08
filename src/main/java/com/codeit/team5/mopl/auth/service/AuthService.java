@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
     private final RefreshTokenStore refreshTokenStore;
     private final AuthMapper authMapper;
-
+    private final AuthSessionService authSessionService;
     private final JwtTokenizer jwtTokenizer;
     private final JwtProperties jwtProperties;
     private final UserRepository userRepository;
@@ -48,17 +48,22 @@ public class AuthService {
 
         UserResponse userDto = userMapper.toDto(user);
 
+        Instant expiredAt = calculateExpiresAt();
+
+        UUID sessionId = authSessionService.extendCurrentSession(userId, expiredAt);
+
         String newAccessToken = jwtTokenizer.generateAccessToken(
                 user.getId().toString(),
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                sessionId.toString()
         );
         String newRefreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
         if (!refreshTokenStore.rotateIfValid(
                 userId,
                 refreshToken,
                 newRefreshToken,
-                calculateExpiresAt()
+                expiredAt
         )) {
             throw new RefreshTokenInvalidException("Invalid refresh token");
         }
