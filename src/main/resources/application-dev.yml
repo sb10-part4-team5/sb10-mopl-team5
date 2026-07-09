@@ -23,8 +23,8 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        show_sql: false
-        format_sql: false
+        show_sql: true
+        format_sql: true
 
   data:
     redis:
@@ -60,5 +60,5 @@ logging:
   level:
     root: INFO
     com.codeit.team5.mopl: DEBUG
-    # org.hibernate.SQL: DEBUG
-    # org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
