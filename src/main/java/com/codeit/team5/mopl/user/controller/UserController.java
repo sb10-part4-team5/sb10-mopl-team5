@@ -18,7 +18,6 @@ import com.codeit.team5.mopl.user.service.UserService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -36,7 +35,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@Slf4j
 public class UserController implements UserApi {
     private final UserService userService;
     private final UserProfileFacade userProfileFacade;
@@ -46,8 +44,6 @@ public class UserController implements UserApi {
     public ResponseEntity<UserResponse> registerUser(
             @Valid @RequestBody UserRegisterRequest userRegisterRequest
     ) {
-        log.info("User register request: POST /api/users");
-
         UserResponse response = userService.create(userRegisterRequest);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -56,8 +52,6 @@ public class UserController implements UserApi {
     @Override
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponse> getUser(@PathVariable UUID userId) {
-        log.info("User detail request: GET /api/users/{}", userId);
-
         UserResponse response = userService.getById(userId);
 
         return ResponseEntity.ok(response);
@@ -71,8 +65,6 @@ public class UserController implements UserApi {
             @Valid @RequestPart("request") UserUpdateRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image
     ) {
-        log.info("User update request: PATCH /api/users/{}", userId);
-
         FileRequest imageRequest = MultipartFiles.toImageResource(image);
 
         UserResponse response = userProfileFacade.updateProfile(
@@ -91,8 +83,6 @@ public class UserController implements UserApi {
             @PathVariable UUID userId,
             @Valid @RequestBody UserRoleUpdateRequest request
     ) {
-        log.info("User role update request: PATCH /api/users/{}/role", userId);
-
         userService.updateRole(userId, request);
 
         return ResponseEntity.noContent().build();
@@ -104,8 +94,6 @@ public class UserController implements UserApi {
             @PathVariable UUID userId,
             @Valid @RequestBody UserLockedUpdateRequest request
     ) {
-        log.info("User lock status update request: PATCH /api/users/{}/locked", userId);
-
         userService.updateLock(userId, request);
 
         return ResponseEntity.noContent().build();
@@ -117,8 +105,6 @@ public class UserController implements UserApi {
             @AuthenticationPrincipal MoplPrincipal userDetails,
             @PathVariable UUID userId,
             @Valid @RequestBody ChangePasswordRequest request) {
-        log.info("User password update request: PATCH /api/users/{}/password", userId);
-
         userService.updatePassword(userDetails.getId(), userId, request);
 
         return ResponseEntity.noContent().build();
@@ -129,8 +115,6 @@ public class UserController implements UserApi {
     public ResponseEntity<CursorResponse<UserResponse>> getUsers(
             @Valid UserCursorRequest request
     ) {
-        log.info("User list request: GET /api/users");
-
         CursorResponse<UserResponse> response = userService.findUsers(request);
 
         return ResponseEntity.ok(response);

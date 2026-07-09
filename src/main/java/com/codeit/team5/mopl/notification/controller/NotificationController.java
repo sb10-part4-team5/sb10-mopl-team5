@@ -9,7 +9,6 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @Validated
-@Slf4j
 @RequestMapping("/api/notifications")
 public class NotificationController implements NotificationApi {
 
@@ -40,9 +38,6 @@ public class NotificationController implements NotificationApi {
 
         UUID receiverId = userDetails.getId();
 
-        log.info("알림 목록 요청 : GET /api/notifications");
-        log.debug("알림 목록 요청 : GET /api/notifications, receiverId={}", receiverId);
-
         CursorResponseNotificationDto response = notificationService.getNotifications(
                 new NotificationListQuery(receiverId, cursor, idAfter, limit, sortDirection, sortBy));
 
@@ -55,10 +50,6 @@ public class NotificationController implements NotificationApi {
         @AuthenticationPrincipal MoplUserDetails userDetails,
         @PathVariable UUID notificationId) {
         UUID receiverId = userDetails.getId();
-        log.info("Notification read request: DELETE /api/notifications/{}", notificationId);
-        log.debug("Notification read request: DELETE /api/notifications/{}, receiverId={}",
-            notificationId, receiverId);
-
 
         notificationService.markAsRead(notificationId, receiverId);
 

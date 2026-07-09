@@ -9,7 +9,6 @@ import com.codeit.team5.mopl.auth.service.model.AuthPayload;
 import com.codeit.team5.mopl.auth.support.RefreshTokenCookieManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Slf4j
 @RequestMapping("/api/auth")
 @RestController
 @RequiredArgsConstructor
@@ -36,8 +34,6 @@ public class AuthController implements AuthApi {
     public ResponseEntity<JwtResponse> refresh(
             @CookieValue(name = "REFRESH_TOKEN", required = false) String refreshToken
     ) {
-        log.info("RefreshToken regenerate request: POST /api/auth/refresh");
-
         AuthPayload authPayload = authService.refresh(refreshToken);
 
         ResponseCookie refreshTokenCookie =
@@ -50,8 +46,6 @@ public class AuthController implements AuthApi {
 
     @GetMapping("/csrf-token")
     public ResponseEntity<Void> csrfToken(CsrfToken csrfToken) {
-        log.info("CSRF token request: GET /api/auth/csrf-token");
-
         csrfToken.getToken();
 
         return ResponseEntity.noContent().build();
@@ -61,8 +55,6 @@ public class AuthController implements AuthApi {
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request) {
-        log.info("Password reset request: POST /api/auth/reset-password");
-
         passwordResetService.resetPassword(request);
 
         return ResponseEntity.noContent().build();

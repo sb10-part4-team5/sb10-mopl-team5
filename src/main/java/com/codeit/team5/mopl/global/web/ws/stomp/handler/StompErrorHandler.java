@@ -35,7 +35,7 @@ public class StompErrorHandler extends StompSubProtocolErrorHandler {
         }
 
         byte[] payload = ex.getMessage().getBytes(StandardCharsets.UTF_8);
-        log.error("STOMP error: {}", ex.toString());
+        log.warn("STOMP error: {}", ex.toString());
         return MessageBuilder.createMessage(payload, accessor.getMessageHeaders());
     }
 
