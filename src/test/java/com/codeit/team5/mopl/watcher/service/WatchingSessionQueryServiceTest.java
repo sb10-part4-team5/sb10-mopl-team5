@@ -23,6 +23,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Window;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
+import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
+import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
@@ -170,6 +172,43 @@ class WatchingSessionQueryServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.ensureWatchingContent(contentId, watcherId))
+                .isInstanceOf(WatchingSessionNotFoundException.class);
+    }
+
+    // --- READ (getWatchingSessionPayload) ---
+    @Test
+    @DisplayName("워쳐 ID와 상태로 세션 페이로드 조회_성공")
+    void getWatchingSessionPayload_성공() {
+        // given
+        UUID watcherId = UUID.randomUUID();
+        WatcherStatus status = WatcherStatus.JOIN;
+        WatchingSession session = mock(WatchingSession.class);
+        WatchingSessionPayload payload = mock(WatchingSessionPayload.class);
+
+        when(repository.findByWatcherId(watcherId)).thenReturn(Optional.of(session));
+        when(mapper.toPayload(session, status)).thenReturn(payload);
+
+        // when
+        WatchingSessionPayload result = service.getWatchingSessionPayload(watcherId, status);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualTo(payload);
+        verify(repository).findByWatcherId(watcherId);
+        verify(mapper).toPayload(session, status);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 워쳐 ID로 세션 페이로드 조회 시 예외 발생")
+    void getWatchingSessionPayload_NotFound_예외발생() {
+        // given
+        UUID watcherId = UUID.randomUUID();
+        WatcherStatus status = WatcherStatus.JOIN;
+
+        when(repository.findByWatcherId(watcherId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> service.getWatchingSessionPayload(watcherId, status))
                 .isInstanceOf(WatchingSessionNotFoundException.class);
     }
 }
