@@ -27,7 +27,7 @@ public class SseController implements SseApi {
     public SseEmitter subscribe(
             @AuthenticationPrincipal MoplPrincipal moplPrincipal,
             @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
-        log.info("SSE subscribe request: GET /api/sse");
+        log.debug("SSE subscribe request: GET /api/sse");
         return sseService.subscribe(moplPrincipal.getId(), lastEventId);
     }
 }
