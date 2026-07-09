@@ -55,7 +55,7 @@ public class JwtAuthenticationService {
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException e) {
-            throw new JwtInvalidException("Invalid token sessionId", e.getMessage());
+            throw new JwtInvalidException("Invalid token sessionId");
         }
     }
 
@@ -69,7 +69,7 @@ public class JwtAuthenticationService {
         try {
             return UUID.fromString(subject);
         } catch (IllegalArgumentException e) {
-            throw new JwtInvalidException("Invalid token subject", e.getMessage());
+            throw new JwtInvalidException("Invalid token subject");
         }
     }
 }
