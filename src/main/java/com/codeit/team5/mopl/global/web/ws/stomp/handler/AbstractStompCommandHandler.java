@@ -52,7 +52,7 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
         // 저장된 객체가 있다면, 핸들러가 가진 패턴(this.destinationPattern)과
         // storedDestination의 패턴을 비교하여 매칭을 완료함
         return storedDestination.map(StompDestination::destination)
-            .map(this.destinationPattern::equals).orElse(false);
+            .map(this::matchDestination).orElse(false);
     }
 
     protected boolean matchDestination(String destination) {
