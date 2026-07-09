@@ -58,7 +58,7 @@ class DirectMessageBroadcastIntegrationTest {
         Conversation conversation = conversationRepository.save(Conversation.create(sender, receiver));
         UUID conversationId = conversation.getId();
 
-        directMessageService.sendMessage(sender.getEmail(), conversationId, "hello");
+        directMessageService.sendMessage(sender.getId(), conversationId, "hello");
 
         verify(messagingTemplate, timeout(2000)).convertAndSend(
                 eq("/sub/conversations/" + conversationId + "/direct-messages"),

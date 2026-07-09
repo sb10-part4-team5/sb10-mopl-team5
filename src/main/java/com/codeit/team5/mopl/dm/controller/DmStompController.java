@@ -1,10 +1,11 @@
 package com.codeit.team5.mopl.dm.controller;
 
+import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.codeit.team5.mopl.dm.dto.request.DirectMessageSendRequest;
 import com.codeit.team5.mopl.dm.service.DirectMessageService;
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
 import jakarta.validation.Valid;
-import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,16 +25,15 @@ public class DmStompController {
 
     @MessageMapping(StompConstants.PUB_CONVERSATION_DM)
     public void sendDirectMessage(
-            Principal principal,
+            @AuthenticationPrincipal MoplPrincipal principal,
             @DestinationVariable("id") UUID conversationId,
             @Valid @Payload DirectMessageSendRequest request) {
-        log.info("DM STOMP send: conversationId={}, sender={}", conversationId, principal.getName());
-        directMessageService.sendMessage(principal.getName(), conversationId, request.content());
+        directMessageService.sendMessage(principal.getId(), conversationId, request.content());
     }
 
     @MessageExceptionHandler(MethodArgumentNotValidException.class)
-    public void handleValidationException(MethodArgumentNotValidException e, Principal principal) {
-        String sender = principal != null ? principal.getName() : "unknown";
+    public void handleValidationException(MethodArgumentNotValidException e, MoplPrincipal principal) {
+        String sender = principal != null ? principal.getId().toString() : "unknown";
         log.warn("DM STOMP validation failed: sender={}, reason={}", sender, e.getMessage());
     }
 }

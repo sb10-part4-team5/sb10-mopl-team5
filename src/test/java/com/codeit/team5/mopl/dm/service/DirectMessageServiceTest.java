@@ -81,13 +81,13 @@ class DirectMessageServiceTest {
         DirectMessageResponse response = new DirectMessageResponse(
                 UUID.randomUUID(), conversationId, null, null, "hello", null);
 
-        when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(sender));
+        when(userRepository.findById(sender.getId())).thenReturn(Optional.of(sender));
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(directMessageRepository.save(any(DirectMessage.class))).then(returnsFirstArg());
         when(directMessageMapper.toResponse(any(DirectMessage.class))).thenReturn(response);
 
         // when
-        DirectMessageResponse result = directMessageService.sendMessage("a@mopl.com", conversationId, "hello");
+        DirectMessageResponse result = directMessageService.sendMessage(sender.getId(), conversationId, "hello");
 
         // then
         assertThat(result).isSameAs(response);
@@ -102,11 +102,11 @@ class DirectMessageServiceTest {
         UUID conversationId = UUID.randomUUID();
         User sender = userWithId("a@mopl.com", "A", UUID.randomUUID());
 
-        when(userRepository.findByEmail("a@mopl.com")).thenReturn(Optional.of(sender));
+        when(userRepository.findById(sender.getId())).thenReturn(Optional.of(sender));
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> directMessageService.sendMessage("a@mopl.com", conversationId, "hello"))
+        assertThatThrownBy(() -> directMessageService.sendMessage(sender.getId(), conversationId, "hello"))
                 .isInstanceOf(ConversationNotFoundException.class);
         verify(directMessageRepository, never()).save(any(DirectMessage.class));
     }
@@ -121,11 +121,11 @@ class DirectMessageServiceTest {
         User outsider = userWithId("c@mopl.com", "C", UUID.randomUUID());
         Conversation conversation = Conversation.create(participant1, participant2);
 
-        when(userRepository.findByEmail("c@mopl.com")).thenReturn(Optional.of(outsider));
+        when(userRepository.findById(outsider.getId())).thenReturn(Optional.of(outsider));
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
 
         // when & then
-        assertThatThrownBy(() -> directMessageService.sendMessage("c@mopl.com", conversationId, "hello"))
+        assertThatThrownBy(() -> directMessageService.sendMessage(outsider.getId(), conversationId, "hello"))
                 .isInstanceOf(NotConversationParticipantException.class);
         verify(directMessageRepository, never()).save(any(DirectMessage.class));
     }
