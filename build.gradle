@@ -182,3 +182,7 @@ dependencyManagement {
         mavenBom "org.springframework.modulith:spring-modulith-bom:$springModulithVersion"
     }
 }
+
+jar {
+    enabled = true
+}
