@@ -5,7 +5,6 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
-import com.codeit.team5.mopl.global.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -29,13 +28,6 @@ public class ExecutionTracerLogger {
         Object result;
         try {
             result = joinPoint.proceed();
-        } catch (BusinessException e) {
-            log.error("{} | {}", where, e.toString());
-            throw e;
-        } catch (Exception e) {
-            log.error("[error] {} | type: {} | message: {}", where, e.getClass().getSimpleName(),
-                    e.getMessage());
-            throw e;
         } finally {
             stopWatch.stop();
         }

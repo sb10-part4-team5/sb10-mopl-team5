@@ -14,10 +14,12 @@ import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -48,6 +50,7 @@ public class SubscriptionService {
         }
 
         playlistRepository.increaseSubscribeCount(playlistId);
+        log.info("Subscription created: playlistId={}, userId={}", playlistId, userId);
     }
 
     @Transactional
@@ -55,6 +58,7 @@ public class SubscriptionService {
         if (repository.existsBySubscriberIdAndPlaylistId(userId, playlistId)) {
             repository.deleteBySubscriberIdAndPlaylistIdDirectly(userId, playlistId);
             playlistRepository.decreaseSubscribeCount(playlistId);
+            log.info("Subscription deleted: playlistId={}, userId={}", playlistId, userId);
             return;
         }
         throw new SubscriptionNotFoundException(playlistId, userId);

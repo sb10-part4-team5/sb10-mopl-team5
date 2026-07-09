@@ -32,6 +32,8 @@ public class PasswordResetService {
                     eventPublisher.publishEvent(
                             new TemporaryPasswordIssuedEvent(user.getEmail(), tempPassword)
                     );
+
+                    log.info("Password reset requested: userId={}", user.getId());
                 });
     }
 }

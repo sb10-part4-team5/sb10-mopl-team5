@@ -3,16 +3,27 @@ package com.codeit.team5.mopl.config;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.global.exception.InvalidSortDirectionException;
+import com.codeit.team5.mopl.global.logging.MdcUserIdInterceptor;
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.user.constant.UserSortBy;
 import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.FormatterRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
+
+    private final MdcUserIdInterceptor mdcUserIdInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(mdcUserIdInterceptor);
+    }
 
     @Override
     public void addFormatters(FormatterRegistry registry) {

@@ -9,7 +9,6 @@ import com.codeit.team5.mopl.global.dto.CursorResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/conversations/{conversationId}/direct-messages")
 @RequiredArgsConstructor
-@Slf4j
 public class DirectMessageController implements DirectMessageApi {
 
     private final DirectMessageService directMessageService;
@@ -32,7 +30,6 @@ public class DirectMessageController implements DirectMessageApi {
             @AuthenticationPrincipal MoplPrincipal principal,
             @PathVariable UUID conversationId,
             @Valid DirectMessageCursorRequest request) {
-        log.info("Request API: GET /api/conversations/{}/direct-messages", conversationId);
         return ResponseEntity.ok(directMessageService.getMessages(principal.getId(), conversationId, request));
     }
 
@@ -42,7 +39,6 @@ public class DirectMessageController implements DirectMessageApi {
             @AuthenticationPrincipal MoplPrincipal principal,
             @PathVariable UUID conversationId,
             @PathVariable UUID directMessageId) {
-        log.info("Request API: POST /api/conversations/{}/direct-messages/{}/read", conversationId, directMessageId);
         directMessageService.markMessagesAsRead(principal.getId(), conversationId, directMessageId);
         return ResponseEntity.ok().build();
     }

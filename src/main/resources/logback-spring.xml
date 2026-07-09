@@ -4,13 +4,13 @@
     <!-- 로그 파일 저장 경로: 기본값은 프로젝트 루트의 .logs, 환경변수 LOG_PATH로 override 가능 -->
     <property name="LOG_PATH" value="${LOG_PATH:-.logs}"/>
 
-    <!-- 파일용 패턴 (색상 없음): 년-월-일 시:분:초.밀리초 [스레드] 레벨 [requestId] [clientIp] 로거 - 메시지 -->
+    <!-- 파일용 패턴 (색상 없음): 년-월-일 시:분:초.밀리초 [스레드] 레벨 [requestId] [clientIp] [userId] 로거 - 메시지 -->
     <property name="FILE_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:-system}] [%X{clientIp:-internal}] %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:-system}] [%X{clientIp:-internal}] [%X{userId:-anonymous}] %logger{36} - %msg%n"/>
 
     <!-- 콘솔용 패턴 (레벨에 색상 적용) -->
     <property name="CONSOLE_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) [%X{requestId:-system}] [%X{clientIp:-internal}] %cyan(%logger{36}) - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) [%X{requestId:-system}] [%X{clientIp:-internal}] [%X{userId:-anonymous}] %cyan(%logger{36}) - %msg%n"/>
 
     <!-- 콘솔 출력 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

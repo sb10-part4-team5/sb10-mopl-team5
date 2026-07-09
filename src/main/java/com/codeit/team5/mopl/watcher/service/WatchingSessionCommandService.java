@@ -16,7 +16,9 @@ import com.codeit.team5.mopl.watcher.exception.WatchingSessionContentNotFoundExc
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionUserNotFoundException;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
