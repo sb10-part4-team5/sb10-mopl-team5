@@ -1,9 +1,12 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
@@ -16,9 +19,12 @@ import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
+import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +44,12 @@ class NotificationEventListenerTest {
 
     @Mock
     private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private ContentRepository contentRepository;
 
     @InjectMocks
     private NotificationEventListener notificationEventListener;
@@ -166,6 +178,12 @@ class NotificationEventListenerTest {
         WatchingSessionCreatedEvent event =
                 new WatchingSessionCreatedEvent(watcherUserId, contentId);
 
+        User mockUser = mock(User.class);
+        Content mockContent = mock(Content.class);
+        when(mockUser.getName()).thenReturn("다린");
+        when(mockContent.getTitle()).thenReturn("콘텐츠A");
+        when(userRepository.findById(watcherUserId)).thenReturn(Optional.of(mockUser));
+        when(contentRepository.findById(contentId)).thenReturn(Optional.of(mockContent));
         when(followRepository.findFollowerIdsByFolloweeId(watcherUserId))
                 .thenReturn(List.of(follower1, follower2));
 
