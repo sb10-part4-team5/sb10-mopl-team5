@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.messaging.simp.stomp.StompCommand.SUBSCRIBE;
 import static org.springframework.messaging.simp.stomp.StompCommand.UNSUBSCRIBE;
-
-import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 
 @ExtendWith(MockitoExtension.class)
 class DmUnsubscribeHandlerTest {
@@ -30,9 +29,10 @@ class DmUnsubscribeHandlerTest {
         // Given
         UUID conversationId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(UNSUBSCRIBE);
 
         // When
-        handler.doHandle(conversationId, userId);
+        handler.doHandle(conversationId, userId, accessor);
 
         // Then
         verifyNoInteractions(sessionStore);

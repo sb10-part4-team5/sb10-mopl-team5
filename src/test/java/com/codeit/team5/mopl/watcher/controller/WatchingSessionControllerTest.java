@@ -29,7 +29,6 @@ import com.codeit.team5.mopl.auth.security.handler.UserAuthenticationEntryPoint;
 import com.codeit.team5.mopl.auth.security.provider.MoplAuthenticationProvider;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
-import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionQueryService;
@@ -103,7 +102,7 @@ class WatchingSessionControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/contents/{contentId}/watching-sessions", contentId)
-                .param("limit", "10").param("sortDirection", "DESC").param("sortBy", "CREATED_AT"))
+                .param("limit", "10").param("sortDirection", "DESC").param("sortBy", "createdAt"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].id").value(session.id().toString()));
 
@@ -114,11 +113,11 @@ class WatchingSessionControllerTest {
         WatchingSessionCursorRequest captured = requestCaptor.getValue();
         assertThat(captured.limit()).isEqualTo(10);
         assertThat(captured.sortDirection()).isEqualTo(Sort.Direction.DESC);
-        assertThat(captured.sortBy()).isEqualTo(WatcherSortByType.CREATED_AT);
+        assertThat(captured.sortBy()).isEqualTo("createdAt");
     }
 
     @ParameterizedTest(name = "limit={0}, sortDirection={1}, sortBy={2}")
-    @CsvSource({", DESC, CREATED_AT", "10, , CREATED_AT", "10, DESC, "})
+    @CsvSource({", DESC, createdAt", "10, , createdAt", "10, DESC, "})
     @DisplayName("필수 파라미터가 누락되면 400 에러를 반환한다_실패")
     void findWatchingSessionsByContent_MissingParam(Integer limit, String sortDirection,
             String sortBy) throws Exception {
@@ -142,7 +141,7 @@ class WatchingSessionControllerTest {
     }
 
     @ParameterizedTest(name = "limit={0}, sortDirection={1}, sortBy={2}")
-    @CsvSource({"0, DESC, CREATED_AT", "-1, DESC, CREATED_AT"})
+    @CsvSource({"0, DESC, createdAt", "-1, DESC, createdAt"})
     @DisplayName("limit이 1 미만이면 400 에러를 반환한다_실패")
     void findWatchingSessionsByContent_InvalidLimit(Integer limit, String sortDirection,
             String sortBy) throws Exception {

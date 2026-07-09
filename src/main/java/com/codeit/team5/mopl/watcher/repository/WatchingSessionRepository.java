@@ -19,8 +19,8 @@ public interface WatchingSessionRepository extends JpaRepository<WatchingSession
     Optional<WatchingSession> findByWatcherId(UUID watcherId);
 
     @Modifying
-    @Query("DELETE FROM WatchingSession w WHERE w.watcher.id = :watcherId")
-    void deleteByWatcherIdDirectly(UUID watcherId);
+    @Query("DELETE FROM WatchingSession w WHERE w.content.id = :contentId and w.watcher.id = :watcherId")
+    void deleteByContentIdAndWatcherIdDirectly(UUID contentId, UUID watcherId);
 
     @EntityGraph(attributePaths = {"watcher", "watcher.profileImage", "content", "content.stats",
             "content.thumbnail"})
@@ -29,7 +29,7 @@ public interface WatchingSessionRepository extends JpaRepository<WatchingSession
 
     Long countByContentId(UUID contentId);
 
-    boolean existsByWatcherIdAndContentId(UUID watcherId, UUID contentId);
+    boolean existsByContentIdAndWatcherId(UUID contentId, UUID watcherId);
 
     boolean existsByWatcherId(UUID watcherId);
 }

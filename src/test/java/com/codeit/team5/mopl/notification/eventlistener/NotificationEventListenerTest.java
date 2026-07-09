@@ -22,7 +22,7 @@ import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
-import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
+import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.List;
@@ -173,7 +173,7 @@ class NotificationEventListenerTest {
         UUID watcherUserId = UUID.randomUUID();
         UUID follower1 = UUID.randomUUID();
         UUID follower2 = UUID.randomUUID();
-        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watcherUserId);
+        WatcherJoinedEvent event = new WatcherJoinedEvent(UUID.randomUUID(), watcherUserId);
 
         User mockWatcher = mock(User.class);
         Content mockContent = mock(Content.class);
@@ -202,7 +202,7 @@ class NotificationEventListenerTest {
     void onWatchingSessionCreated_throwsWhenSessionNotFound() {
         // given
         UUID watcherUserId = UUID.randomUUID();
-        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watcherUserId);
+        WatcherJoinedEvent event = new WatcherJoinedEvent(UUID.randomUUID(), watcherUserId);
         when(watchingSessionRepository.findByWatcherId(watcherUserId)).thenReturn(Optional.empty());
 
         // when & then

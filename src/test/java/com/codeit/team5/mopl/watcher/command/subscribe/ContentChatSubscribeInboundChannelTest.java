@@ -18,6 +18,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import com.codeit.team5.mopl.global.web.ws.stomp.handler.StompCommandHandler;
 import com.codeit.team5.mopl.global.web.ws.stomp.interceptor.StompInterceptor;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore.StompDestination;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionQueryService;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +54,7 @@ class ContentChatSubscribeInboundChannelTest {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
         accessor.setDestination(destination);
         accessor.setSubscriptionId(subscriptionId);
-        accessor.setUser(() -> testUserId.toString());
+        accessor.setUser(testUserId::toString);
         Message<byte[]> message =
                 MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
 
@@ -62,7 +63,8 @@ class ContentChatSubscribeInboundChannelTest {
 
         // Then
         verify(watchingSessionQueryService).ensureWatchingContent(contentId, testUserId);
-        verify(sessionStore).subscribe(testUserId, subscriptionId, destination);
+        verify(sessionStore).subscribe(testUserId, subscriptionId,
+                new StompDestination("/sub/contents/{id}/chat", contentId));
     }
 
     @Test

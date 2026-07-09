@@ -17,8 +17,8 @@ import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
+import com.codeit.team5.mopl.watcher.service.WatchingSessionQueryService;
 
 @ExtendWith(MockitoExtension.class)
 class WatchingContentUnsubscribeHandlerTest {
@@ -30,7 +30,7 @@ class WatchingContentUnsubscribeHandlerTest {
     private WatchingSessionCommandService service;
 
     @Mock
-    private WatchingSessionPayloadSender payloadSender;
+    private WatchingSessionQueryService queryService;
 
     @InjectMocks
     private WatchingContentUnsubscribeHandler handler;
@@ -49,19 +49,24 @@ class WatchingContentUnsubscribeHandlerTest {
         WatchingSessionPayload payload =
                 new WatchingSessionPayload(WatcherStatus.LEAVE, response, watchCount);
 
-        given(service.left(userId)).willReturn(payload);
-        when(sessionStore.getDestination(userId, subscriptionId)).thenReturn(destination);
+        given(queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE))
+                .willReturn(payload);
+        when(sessionStore.getDestination(userId, subscriptionId)).thenReturn(java.util.Optional.of(
+                new WebSocketSessionStore.StompDestination("/sub/contents/{id}/watch", contentId)));
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
         accessor.setSubscriptionId(subscriptionId);
         accessor.setUser(() -> userId.toString());
+        accessor.setSessionAttributes(new java.util.HashMap<>());
 
         // When
         handler.handle(accessor);
 
         // Then
-        verify(service).left(userId);
-        verify(payloadSender).send(contentId, payload);
+        verify(service).left(contentId, userId);
+        org.assertj.core.api.Assertions
+                .assertThat(accessor.getSessionAttributes().get(userId + "/" + subscriptionId))
+                .isEqualTo(payload);
         verify(sessionStore).unsubscribe(userId, subscriptionId);
     }
 
@@ -90,7 +95,8 @@ class WatchingContentUnsubscribeHandlerTest {
         accessor.setUser(() -> userId.toString());
 
         when(sessionStore.getDestination(userId, subscriptionId))
-                .thenReturn("/sub/contents/123/chat");
+                .thenReturn(java.util.Optional.of(new WebSocketSessionStore.StompDestination(
+                        "/sub/contents/{id}/chat", java.util.UUID.randomUUID())));
 
         // When
         boolean result = handler.canHandle(accessor);
@@ -110,7 +116,8 @@ class WatchingContentUnsubscribeHandlerTest {
         accessor.setUser(() -> userId.toString());
 
         when(sessionStore.getDestination(userId, subscriptionId))
-                .thenReturn("/sub/contents/123/watch");
+                .thenReturn(java.util.Optional.of(new WebSocketSessionStore.StompDestination(
+                        "/sub/contents/{id}/watch", java.util.UUID.randomUUID())));
 
         // When
         boolean result = handler.canHandle(accessor);
