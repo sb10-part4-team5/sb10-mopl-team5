@@ -111,6 +111,12 @@ loki.process "docker_json" {
       stream = "stream",
     }
   }
+
+  // filename에는 컨테이너 ID가 박혀있어 배포/재시작마다 값이 바뀐다.
+  // 라벨로 남기면 배포할 때마다 새 스트림이 생겨 고카디널리티 문제가 되므로 드롭한다.
+  stage.label_drop {
+    values = ["filename"]
+  }
 }
 
 // Grafana Cloud Loki로 전송
