@@ -42,11 +42,11 @@ public class DirectMessageService {
 
     @Transactional
     public DirectMessageResponse sendMessage(
-            String senderEmail,
+            UUID senderId,
             UUID conversationId,
             String content
     ) {
-        User sender = getUserByEmail(senderEmail);
+        User sender = getUserById(senderId);
         Conversation conversation = getConversationById(conversationId);
 
         DirectMessage directMessage = DirectMessage.create(conversation, sender, content);
@@ -139,8 +139,8 @@ public class DirectMessageService {
         return message;
     }
 
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException(email));
+    private User getUserById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
     }
 }
