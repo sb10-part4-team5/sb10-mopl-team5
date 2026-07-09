@@ -2,20 +2,20 @@ package com.codeit.team5.mopl.notification.eventlistener;
 
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
-import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.watcher.entity.WatchingSession;
-import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
-import com.codeit.team5.mopl.user.event.RoleChangedEvent;
-import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
-import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
+import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.List;
@@ -101,7 +101,7 @@ public class NotificationEventListener {
     // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
-    public void onWatchingSessionCreated(WatchingSessionCreatedEvent event){
+    public void onWatchingSessionCreated(WatcherJoinedEvent event){
         WatchingSession watchingSession = watchingSessionRepository.findByWatcherId(event.watcherId()).orElseThrow(() -> new WatchingSessionNotFoundException(
             Map.of("watcherId", event.watcherId())));
 

@@ -41,10 +41,7 @@ public class WatchingSessionCommandService {
         Content content = contentRepository.getReferenceById(contentId);
         User user = userRepository.getReferenceById(watcherId);
         repository.save(WatchingSession.of(user, content));
-        eventPublisher.publishEvent(new WatcherJoinedEvent(contentId));
-        eventPublisher.publishEvent(new WatchingSessionCreatedEvent(watcherId));
-        return new WatchingSessionPayload(WatcherStatus.JOIN, mapper.toDto(session),
-                repository.countByContentId(contentId));
+        eventPublisher.publishEvent(new WatcherJoinedEvent(contentId, watcherId));
     }
 
     public void left(UUID contentId, UUID watcherId) {
