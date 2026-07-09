@@ -1,24 +1,32 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
-import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
+import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.watcher.entity.WatchingSession;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
+import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +46,9 @@ class NotificationEventListenerTest {
 
     @Mock
     private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private WatchingSessionRepository watchingSessionRepository;
 
     @InjectMocks
     private NotificationEventListener notificationEventListener;
@@ -162,9 +173,17 @@ class NotificationEventListenerTest {
         UUID watcherUserId = UUID.randomUUID();
         UUID follower1 = UUID.randomUUID();
         UUID follower2 = UUID.randomUUID();
-        WatchingSessionCreatedEvent event =
-                new WatchingSessionCreatedEvent(watcherUserId, "다린", "콘텐츠A");
+        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watcherUserId);
 
+        User mockWatcher = mock(User.class);
+        Content mockContent = mock(Content.class);
+        WatchingSession mockSession = mock(WatchingSession.class);
+        when(mockWatcher.getId()).thenReturn(watcherUserId);
+        when(mockWatcher.getName()).thenReturn("다린");
+        when(mockContent.getTitle()).thenReturn("콘텐츠A");
+        when(mockSession.getWatcher()).thenReturn(mockWatcher);
+        when(mockSession.getContent()).thenReturn(mockContent);
+        when(watchingSessionRepository.findByWatcherId(watcherUserId)).thenReturn(Optional.of(mockSession));
         when(followRepository.findFollowerIdsByFolloweeId(watcherUserId))
                 .thenReturn(List.of(follower1, follower2));
 
@@ -176,5 +195,18 @@ class NotificationEventListenerTest {
                 List.of(follower1, follower2), NotificationType.WATCHING_ACTIVITY,
                 "다린 님이 컨텐츠 시청중입니다.",
                 "콘텐츠A 시청 중", NotificationLevel.INFO)));
+    }
+
+    @Test
+    @DisplayName("시청 세션이 존재하지 않으면 WatchingSessionNotFoundException이 발생한다")
+    void onWatchingSessionCreated_throwsWhenSessionNotFound() {
+        // given
+        UUID watcherUserId = UUID.randomUUID();
+        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watcherUserId);
+        when(watchingSessionRepository.findByWatcherId(watcherUserId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThrows(WatchingSessionNotFoundException.class,
+                () -> notificationEventListener.onWatchingSessionCreated(event));
     }
 }
