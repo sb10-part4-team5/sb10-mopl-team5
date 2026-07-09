@@ -28,7 +28,7 @@ public class ContentChatService {
             ContentChatCreatedRequest request) {
         User user = userRepository.findWithProfileImageById(watcherId)
                 .orElseThrow(() -> new ContentChatUserNotFoundException(watcherId));
-        log.debug("Content chat message created: watcherId={}", watcherId);
+        log.debug("Content chat payload created: watcherId={}", watcherId);
         return payloadMapper.toDto(user, request);
     }
 }
