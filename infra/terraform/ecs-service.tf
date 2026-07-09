@@ -3,7 +3,7 @@ resource "aws_ecs_task_definition" "mopl" {
   family                   = "mopl"
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  cpu                      = "512" # 0.5 vCPU
+  cpu                      = "1024" # 1 vCPU (t3.micro 2048 unit 중 50%)
   memory                   = "768" # MB (t3.micro 1GB 중 시스템 여유)
   execution_role_arn       = aws_iam_role.task_execution.arn
   task_role_arn            = aws_iam_role.task.arn
@@ -79,6 +79,11 @@ resource "aws_ecs_task_definition" "mopl" {
           sourceVolume  = "host-ip"
           containerPath = "/host-ip"
           readOnly      = true
+        },
+        {
+          sourceVolume  = "docker-containers"
+          containerPath = "/var/lib/docker/containers"
+          readOnly      = true
         }
       ]
 
@@ -101,6 +106,11 @@ resource "aws_ecs_task_definition" "mopl" {
     name      = "host-ip"
     host_path = "/etc/mopl-host-ip"
   }
+
+  volume {
+    name      = "docker-containers"
+    host_path = "/var/lib/docker/containers"
+  }
 }
 
 # Service — Task를 desired_count 만큼 실행/유지 + ALB 연결
@@ -120,6 +130,11 @@ resource "aws_ecs_service" "mopl" {
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.mopl.name
     weight            = 100
+  }
+
+  # 롤링 배포 시 신구 태스크가 같은 EC2에 몰리지 않도록 강제 분산
+  placement_constraints {
+    type = "distinctInstance"
   }
 
   # 배포 실패(새 task가 안정화 안 됨) 시 이전 버전으로 자동 롤백
