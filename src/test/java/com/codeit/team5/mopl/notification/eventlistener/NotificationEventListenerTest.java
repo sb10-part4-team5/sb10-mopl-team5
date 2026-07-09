@@ -170,11 +170,10 @@ class NotificationEventListenerTest {
     @DisplayName("시청 세션 생성 이벤트로 팔로워들에게 배치로 WATCHING_ACTIVITY 알림을 생성한다")
     void onWatchingSessionCreated_createsNotificationForFollowers() {
         // given
-        UUID watchingSessionId = UUID.randomUUID();
         UUID watcherUserId = UUID.randomUUID();
         UUID follower1 = UUID.randomUUID();
         UUID follower2 = UUID.randomUUID();
-        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watchingSessionId);
+        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watcherUserId);
 
         User mockWatcher = mock(User.class);
         Content mockContent = mock(Content.class);
@@ -184,7 +183,7 @@ class NotificationEventListenerTest {
         when(mockContent.getTitle()).thenReturn("콘텐츠A");
         when(mockSession.getWatcher()).thenReturn(mockWatcher);
         when(mockSession.getContent()).thenReturn(mockContent);
-        when(watchingSessionRepository.findById(watchingSessionId)).thenReturn(Optional.of(mockSession));
+        when(watchingSessionRepository.findByWatcherId(watcherUserId)).thenReturn(Optional.of(mockSession));
         when(followRepository.findFollowerIdsByFolloweeId(watcherUserId))
                 .thenReturn(List.of(follower1, follower2));
 
@@ -202,9 +201,9 @@ class NotificationEventListenerTest {
     @DisplayName("시청 세션이 존재하지 않으면 WatchingSessionNotFoundException이 발생한다")
     void onWatchingSessionCreated_throwsWhenSessionNotFound() {
         // given
-        UUID watchingSessionId = UUID.randomUUID();
-        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watchingSessionId);
-        when(watchingSessionRepository.findById(watchingSessionId)).thenReturn(Optional.empty());
+        UUID watcherUserId = UUID.randomUUID();
+        WatchingSessionCreatedEvent event = new WatchingSessionCreatedEvent(watcherUserId);
+        when(watchingSessionRepository.findByWatcherId(watcherUserId)).thenReturn(Optional.empty());
 
         // when & then
         assertThrows(WatchingSessionNotFoundException.class,

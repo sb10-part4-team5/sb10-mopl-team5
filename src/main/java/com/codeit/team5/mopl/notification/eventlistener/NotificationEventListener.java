@@ -99,11 +99,11 @@ public class NotificationEventListener {
     // [계약] 팔로워 목록은 리스너 실행 시점(AFTER_COMMIT) 기준으로 조회합니다.
     // 시청 시작과 리스너 실행 사이에 follow/unfollow가 발생하면 결과가 달라질 수 있으나,
     // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
     public void onWatchingSessionCreated(WatchingSessionCreatedEvent event){
-        WatchingSession watchingSession = watchingSessionRepository.findById(event.watchingSessionId()).orElseThrow(() -> new WatchingSessionNotFoundException(
-            Map.of("watchingSessionId", event.watchingSessionId())));
+        WatchingSession watchingSession = watchingSessionRepository.findByWatcherId(event.watcherId()).orElseThrow(() -> new WatchingSessionNotFoundException(
+            Map.of("watcherId", event.watcherId())));
 
         String contentTitle = watchingSession.getContent().getTitle();
         User watcher = watchingSession.getWatcher();
