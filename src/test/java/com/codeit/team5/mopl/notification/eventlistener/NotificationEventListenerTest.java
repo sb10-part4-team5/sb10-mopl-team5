@@ -1,11 +1,13 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
@@ -21,6 +23,7 @@ import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.List;
@@ -195,5 +198,39 @@ class NotificationEventListenerTest {
                 List.of(follower1, follower2), NotificationType.WATCHING_ACTIVITY,
                 "다린 님이 컨텐츠 시청중입니다.",
                 "콘텐츠A 시청 중", NotificationLevel.INFO)));
+    }
+    
+    @Test
+    @DisplayName("사용자가 삭제된 경우 UserNotFoundException이 발생한다")
+    void onWatchingSessionCreated_throwsWhenUserNotFound() {
+        // given
+         UUID watcherUserId = UUID.randomUUID();
+         UUID contentId = UUID.randomUUID();
+         WatchingSessionCreatedEvent event =
+             new WatchingSessionCreatedEvent(watcherUserId, contentId);
+
+         when(userRepository.findById(watcherUserId)).thenReturn(Optional.empty());
+
+         // when & then
+         assertThrows(UserNotFoundException.class,
+             () -> notificationEventListener.onWatchingSessionCreated(event));
+    }
+
+    @Test
+    @DisplayName("콘텐츠가 삭제된 경우 ContentNotFoundException이 발생한다")
+    void onWatchingSessionCreated_throwsWhenContentNotFound() {
+        // given
+        UUID watcherUserId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
+        WatchingSessionCreatedEvent event =
+            new WatchingSessionCreatedEvent(watcherUserId, contentId);
+        
+        User mockUser = mock(User.class);
+        when(userRepository.findById(watcherUserId)).thenReturn(Optional.of(mockUser));
+        when(contentRepository.findById(contentId)).thenReturn(Optional.empty());
+        
+        // when & then
+        assertThrows(ContentNotFoundException.class,
+            () -> notificationEventListener.onWatchingSessionCreated(event));
     }
 }
