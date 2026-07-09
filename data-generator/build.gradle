@@ -1,44 +1,37 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.5.15'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'co.uzzu.dotenv.gradle' version '4.0.0'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
 }
 
-group = 'com.springboot'
+group = 'com.codeit.team5.mopl'
 version = '0.0.1-SNAPSHOT'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-}
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'org.postgresql:postgresql'
-    implementation 'net.datafaker:datafaker:2.5.4'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.security:spring-security-crypto'
+    implementation project(":")
+    
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'org.springframework.security:spring-security-crypto'
+    
+    implementation 'net.datafaker:datafaker:2.5.4'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    developmentOnly 'org.postgresql:postgresql'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.modulith:spring-modulith-bom:${rootProject.ext.springModulithVersion}"
+    }
 }
 
 tasks.named('test') {
     useJUnitPlatform()
-}
-
-tasks.named('bootRun') {
-    environment env.allVariables()
 }

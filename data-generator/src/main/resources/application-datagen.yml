@@ -1,9 +1,8 @@
 spring:
   datasource:
+    # URL에 대량 Insert 성능 최적화를 위한 옵션(reWriteBatchedInserts) 추가
+    # 나머지 username, password 등은 상위 모듈의 application-dev.yml에서 상속받습니다.
     url: ${DB_URL:jdbc:postgresql://localhost:5432/mopl?reWriteBatchedInserts=true}
-    username: ${DB_USERNAME:mopl}
-    password: ${DB_PASSWORD:mopl}
-    driver-class-name: org.postgresql.Driver
 
 generator:
   user: 1000
