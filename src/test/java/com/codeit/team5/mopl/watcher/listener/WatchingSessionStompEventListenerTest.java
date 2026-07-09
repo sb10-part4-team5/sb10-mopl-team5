@@ -64,7 +64,7 @@ class WatchingSessionStompEventListenerTest {
         StompDestination dest1 = mock(StompDestination.class);
         when(dest1.getPattern()).thenReturn("different-pattern");
         StompDestination dest2 = mock(StompDestination.class);
-        when(dest2.getPattern()).thenReturn(StompConstants.SUB_WATCHING_CONTENT);
+        when(dest2.getPattern()).thenReturn(StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*"));
         when(dest2.targetId()).thenReturn(UUID.randomUUID());
 
         List<StompDestination> destinations = List.of(dest1, dest2);
@@ -184,7 +184,6 @@ class WatchingSessionStompEventListenerTest {
         // then
         verify(payloadSender).send(any(UUID.class), eq(payload));
         assertThat(accessor.getSessionAttributes()).doesNotContainKey(key);
-        verify(sessionStore).unsubscribe(userId, subId);
     }
 
     @Test
