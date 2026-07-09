@@ -25,8 +25,11 @@ public abstract class AbstractStompUnsubscribeHandler extends AbstractStompComma
         // 세션에서 StompDestination 가져오기
         Optional<StompDestination> storedDestination = getSessionDestination(userId, subscriptionId);
         storedDestination.ifPresent(dest -> {
-            doHandle(dest.targetId(), userId, accessor);
-            unsubscribeSession(userId, subscriptionId);
+            try {
+                doHandle(dest.targetId(), userId, accessor);
+            } finally {
+                unsubscribeSession(userId, subscriptionId);
+            }
         });
     }
 

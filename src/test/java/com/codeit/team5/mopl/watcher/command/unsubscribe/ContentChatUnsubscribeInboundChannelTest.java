@@ -36,7 +36,6 @@ class ContentChatUnsubscribeInboundChannelTest extends BaseStompInboundChannelTe
         UUID contentId = UUID.randomUUID();
         String subscriptionId = "sub-001";
         String storedDestinationPattern = "/sub/contents/{id}/chat";
-        // Unsubscribe 시에는 목적지(destination) 헤더가 없으므로 sessionStore에서 조회하도록 모킹
         when(sessionStore.getDestination(testUserId, subscriptionId))
                 .thenReturn(Optional.of(new StompDestination(storedDestinationPattern, contentId)));
 

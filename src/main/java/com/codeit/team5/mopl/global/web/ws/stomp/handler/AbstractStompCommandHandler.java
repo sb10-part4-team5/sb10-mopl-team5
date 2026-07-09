@@ -51,7 +51,7 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
             subscriptionId);
         // 저장된 객체가 있다면, 핸들러가 가진 패턴(this.destinationPattern)과
         // storedDestination의 패턴을 비교하여 매칭을 완료함
-        return storedDestination.map(StompDestination::destination)
+        return storedDestination.map(StompDestination::destinationPattern)
             .map(this::matchDestination).orElse(false);
     }
 
@@ -82,12 +82,12 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
     protected UUID getTargetId(String destination) {
         String id = matcher.extractUriTemplateVariables(destinationPattern, destination).get("id");
         if (!StringUtils.hasText(id)) {
-            throw new IllegalArgumentException("Invalid destination: missing id");
+            throw new IllegalArgumentException("Invalid destinationPattern: missing id");
         }
         try {
             return UUID.fromString(id);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid destination id format", e);
+            throw new IllegalArgumentException("Invalid destinationPattern id format", e);
         }
     }
 

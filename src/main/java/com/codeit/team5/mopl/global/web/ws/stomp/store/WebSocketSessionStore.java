@@ -43,7 +43,7 @@ public class WebSocketSessionStore {
         Map<String, StompDestination> userDestinations =
             session.getOrDefault(userId, Collections.emptyMap());
         return userDestinations.values().stream()
-            .anyMatch(d -> d.destination().equals(destination));
+            .anyMatch(d -> d.destinationPattern().equals(destination));
     }
 
     public Collection<StompDestination> getAllDestination(UUID userId) {
@@ -66,14 +66,14 @@ public class WebSocketSessionStore {
         return innerMap.isEmpty() ? null : innerMap;
     }
 
-    public record StompDestination(String destination, UUID targetId) implements Serializable {
+    public record StompDestination(String destinationPattern, UUID targetId) implements Serializable {
 
         public String getPattern() {
-            return destination.replace("{id}", "*");
+            return destinationPattern.replace("{id}", "*");
         }
 
-        public String destination() {
-            return this.destination.replace("{id}", this.targetId.toString());
+        public String destinationPattern() {
+            return this.destinationPattern.replace("{id}", this.targetId.toString());
         }
     }
 }

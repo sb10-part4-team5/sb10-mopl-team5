@@ -39,18 +39,11 @@ public class WatchingSessionStompEventListener {
             return;
         }
         UUID userId = UUID.fromString(user.getName());
-        String pattern = StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*");
-        for (StompDestination dest : sessionStore.getAllDestination(userId)) {
-            if (pattern.equals(dest.getPattern())) {
-                UUID contentId = dest.targetId();
-                WatchingSessionPayload payload =
-                        queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE);
-                commandService.left(contentId, userId);
-                payloadSender.send(contentId, payload);
-                break;
-            }
+        try {
+            handleUserDisconnect(userId);
+        } finally {
+            sessionStore.disconnect(userId);
         }
-        sessionStore.disconnect(userId);
     }
 
     @EventListener
@@ -73,7 +66,27 @@ public class WatchingSessionStompEventListener {
         }
         payloadSender.send(payload.response().content().id(), payload);
         accessor.getSessionAttributes().remove("%s/%s".formatted(userId, subId));
-        sessionStore.unsubscribe(userId, subId);
     }
 
+    private void handleUserDisconnect(UUID userId) {
+        String watchingContentPattern = StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*");
+        for (StompDestination destination : sessionStore.getAllDestination(userId)) {
+            if (isWatchingContentDestination(destination, watchingContentPattern)) {
+                UUID contentId = destination.targetId();
+                leaveWatchingSession(contentId, userId);
+                break;
+            }
+        }
+    }
+
+    private boolean isWatchingContentDestination(StompDestination destination, String pattern) {
+        return pattern.equals(destination.getPattern());
+    }
+
+    private void leaveWatchingSession(UUID contentId, UUID userId) {
+        WatchingSessionPayload payload =
+            queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE);
+        commandService.left(contentId, userId);
+        payloadSender.send(contentId, payload);
+    }
 }

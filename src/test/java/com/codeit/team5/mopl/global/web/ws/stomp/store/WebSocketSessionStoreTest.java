@@ -132,8 +132,8 @@ class WebSocketSessionStoreTest {
 
         // then
         for (int i = 0; i < threadCount; i++) {
-            assertThat(store.getDestination(email, "sub-" + i).get().destination())
-                    .isEqualTo("/topic/content/" + email.toString());
+            assertThat(store.getDestination(email, "sub-" + i).get().destinationPattern())
+                    .isEqualTo("/topic/content/" + email);
         }
     }
 }
