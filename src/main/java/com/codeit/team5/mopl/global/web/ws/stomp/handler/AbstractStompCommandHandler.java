@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.handler;
 
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore.StompDestination;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -15,14 +17,14 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
     protected final String destinationPattern;
 
     protected AbstractStompCommandHandler(WebSocketSessionStore sessionStore,
-            StompCommand command) {
+        StompCommand command) {
         this.sessionStore = sessionStore;
         this.command = command;
         this.destinationPattern = "";
     }
 
     protected AbstractStompCommandHandler(WebSocketSessionStore sessionStore, StompCommand command,
-            String destinationPattern) {
+        String destinationPattern) {
         this.sessionStore = sessionStore;
         this.command = command;
         this.destinationPattern = destinationPattern;
@@ -31,8 +33,26 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
     @Override
     public boolean canHandle(StompHeaderAccessor accessor) {
         StompCommand command = accessor.getCommand();
-        String destination = getDestination(accessor);
-        return matchCommand(command) && matchDestination(destination);
+        if (!matchCommand(command)) {
+            return false;
+        }
+        String incomingDestination = accessor.getDestination();
+        // 1. 목적지가 명시된 경우 (SUBSCRIBE, SEND 등) -> 기존처럼 AntPathMatcher 사용
+        if (StringUtils.hasText(incomingDestination)) {
+            return matchDestination(incomingDestination);
+        }
+        // 2. 목적지가 없는 경우 (UNSUBSCRIBE 등) -> 세션 스토어의 패턴 활용
+        String subscriptionId = accessor.getSubscriptionId();
+        if (accessor.getUser() == null || subscriptionId == null) {
+            return !StringUtils.hasText(this.destinationPattern); // CONNECT 등
+        }
+        UUID userId = UUID.fromString(accessor.getUser().getName());
+        Optional<StompDestination> storedDestination = getSessionDestination(userId,
+            subscriptionId);
+        // 저장된 객체가 있다면, 핸들러가 가진 패턴(this.destinationPattern)과
+        // storedDestination의 패턴을 비교하여 매칭을 완료함
+        return storedDestination.map(StompDestination::destinationPattern)
+            .map(this::matchDestination).orElse(false);
     }
 
     protected boolean matchDestination(String destination) {
@@ -42,25 +62,12 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
         return matcher.match(this.destinationPattern, destination);
     }
 
-    protected String getDestination(StompHeaderAccessor accessor) {
-        String destination = accessor.getDestination();
-        if (StringUtils.hasText(destination)) {
-            return destination;
-        }
-        String subscriptionId = accessor.getSubscriptionId();
-        if (accessor.getUser() == null || subscriptionId == null) {
-            return "";
-        }
-        UUID userId = UUID.fromString(accessor.getUser().getName());
-        String storedDestination = getSessionDestination(userId, subscriptionId);
-        return storedDestination != null ? storedDestination : "";
-    }
-
     protected void connectSession(UUID userId) {
         sessionStore.connect(userId);
     }
 
-    protected void subscribeSession(UUID userId, String subscriptionId, String destination) {
+    protected void subscribeSession(UUID userId, String subscriptionId,
+        StompDestination destination) {
         sessionStore.subscribe(userId, subscriptionId, destination);
     }
 
@@ -68,19 +75,19 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
         sessionStore.unsubscribe(userId, subscriptionId);
     }
 
-    protected String getSessionDestination(UUID userId, String subscriptionId) {
+    protected Optional<StompDestination> getSessionDestination(UUID userId, String subscriptionId) {
         return sessionStore.getDestination(userId, subscriptionId);
     }
 
     protected UUID getTargetId(String destination) {
         String id = matcher.extractUriTemplateVariables(destinationPattern, destination).get("id");
         if (!StringUtils.hasText(id)) {
-            throw new IllegalArgumentException("Invalid destination: missing id");
+            throw new IllegalArgumentException("Invalid destinationPattern: missing id");
         }
         try {
             return UUID.fromString(id);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid destination id format", e);
+            throw new IllegalArgumentException("Invalid destinationPattern id format", e);
         }
     }
 
@@ -96,3 +103,4 @@ public abstract class AbstractStompCommandHandler implements StompCommandHandler
         return this.command.equals(command);
     }
 }
+

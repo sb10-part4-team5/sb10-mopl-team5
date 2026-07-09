@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.sse.emitter;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,5 +26,10 @@ public class SseEmitterStore {
     // 수신자 ID에 해당하는 emitter 객체를 삭제함
     public void remove(UUID userId, SseEmitter emitter) {
         emitters.remove(userId, emitter);
+    }
+
+    // 현재 연결된 모든 emitter를 조회 (하트비트 브로드캐스트 등에 사용)
+    public Map<UUID, SseEmitter> getAll() {
+        return Collections.unmodifiableMap(emitters);
     }
 }

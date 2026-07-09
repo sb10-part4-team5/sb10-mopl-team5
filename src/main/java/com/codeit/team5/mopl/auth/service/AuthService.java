@@ -14,11 +14,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -39,12 +37,10 @@ public class AuthService {
 
         UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.warn("User not found: userId={}", userId);
-                    // refreshToken 안의 userId가 DB에 없다는 뜻이라서 인증 실패로 처리
-                    return new RefreshTokenInvalidException("Invalid refresh token");
-                });
+        // refreshToken 안의 userId가 DB에 없다는 뜻이라서 인증 실패로 처리
+        User user = userRepository.findWithProfileImageById(userId)
+                .orElseThrow(() -> new RefreshTokenInvalidException(
+                        "Invalid refresh token: user not found - userId=" + userId));
 
         UserResponse userDto = userMapper.toDto(user);
 

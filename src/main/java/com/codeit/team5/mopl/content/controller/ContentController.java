@@ -43,8 +43,8 @@ public class ContentController implements ContentApi {
             @Valid @RequestPart("request") ContentCreateRequest request,
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
-        log.info("Content Create request: POST /api/contents");
         ContentResponse response = contentFacade.create(request, MultipartFiles.toImageResource(thumbnail));
+        log.info("Content created: id={}", response.id());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -56,15 +56,14 @@ public class ContentController implements ContentApi {
             @Valid @RequestPart("request") ContentUpdateRequest request,
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
-        log.info("Content Update request: PATCH /api/contents/{}", contentId);
         ContentResponse response = contentFacade.update(contentId, request, MultipartFiles.toImageResource(thumbnail));
+        log.info("Content updated: id={}", contentId);
         return ResponseEntity.ok(response);
     }
 
     @Override
     @GetMapping("/{contentId}")
     public ResponseEntity<ContentResponse> getContent(@PathVariable UUID contentId) {
-        log.info("Content Get request: GET /api/contents/{}", contentId);
         ContentResponse response = contentService.findById(contentId);
         return ResponseEntity.ok(response);
     }
@@ -72,7 +71,6 @@ public class ContentController implements ContentApi {
     @Override
     @GetMapping
     public ResponseEntity<CursorResponse<ContentResponse>> getContents(@Valid ContentCursorRequest request) {
-        log.info("Content List request: GET /api/contents");
         CursorResponse<ContentResponse> response = contentService.findContents(request);
         return ResponseEntity.ok(response);
     }
@@ -81,8 +79,8 @@ public class ContentController implements ContentApi {
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{contentId}")
     public ResponseEntity<Void> deleteContent(@PathVariable UUID contentId) {
-        log.info("Content Delete request: DELETE /api/contents/{}", contentId);
         contentService.delete(contentId);
+        log.info("Content deleted: id={}", contentId);
         return ResponseEntity.noContent().build();
     }
 }

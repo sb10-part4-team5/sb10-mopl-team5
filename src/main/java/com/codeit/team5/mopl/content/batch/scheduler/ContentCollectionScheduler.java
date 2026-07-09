@@ -60,7 +60,7 @@ public class ContentCollectionScheduler {
     public void runSportsDbDayJob() {
         log.info("[Scheduler] SportsDB 일별 경기 수집 시작");
         run(sportsDbDayJob, new JobParametersBuilder()
-                .addString("date", LocalDate.now(ZoneId.of("Asia/Seoul")).toString())
+                .addString("date", LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1).toString())
                 .addString("run.id", String.valueOf(System.currentTimeMillis()))
                 .toJobParameters());
     }

@@ -18,8 +18,8 @@ public class StompWatchingSessionPayloadSender implements WatchingSessionPayload
 
     @Override
     public void send(UUID targetId, Object payload) {
-        String destination = StompConstants.SUB_WATCHING_CONTENT.replace("{id}",
-                targetId.toString());
+        String destination =
+                StompConstants.SUB_WATCHING_CONTENT.replace("{id}", targetId.toString());
         template.convertAndSend(destination, payload);
     }
 }

@@ -11,7 +11,6 @@ import com.codeit.team5.mopl.review.service.ReviewService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @Validated
-@Slf4j
 @RequestMapping("/api/reviews")
 public class ReviewController implements ReviewApi {
 
@@ -38,9 +36,6 @@ public class ReviewController implements ReviewApi {
     @Override
     @GetMapping
     public ResponseEntity<CursorResponse<ReviewResponse>> getReviews(@Valid ReviewGetRequest request) {
-
-        log.info("리뷰 목록 조회: GET /api/reviews, contentId={}", request.contentId());
-
         CursorResponse<ReviewResponse> response = reviewService.getReviews(request);
 
         return ResponseEntity.ok(response);
@@ -51,9 +46,6 @@ public class ReviewController implements ReviewApi {
     public ResponseEntity<ReviewResponse> createReview(
         @AuthenticationPrincipal MoplPrincipal moplPrincipal,
         @RequestBody @Valid ReviewCreateRequest request) {
-
-        log.info("리뷰 생성: POST /api/reviews, authorId={}", moplPrincipal.getId());
-
         ReviewResponse response = reviewService.createReview(moplPrincipal.getId(), request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -65,9 +57,6 @@ public class ReviewController implements ReviewApi {
         @AuthenticationPrincipal MoplPrincipal moplPrincipal,
         @PathVariable UUID reviewId,
         @RequestBody @Valid ReviewUpdateRequest request) {
-
-        log.info("리뷰 수정: PATCH /api/reviews/{}, authorId={}", reviewId, moplPrincipal.getId());
-
         ReviewResponse response = reviewService.updateReview(reviewId, moplPrincipal.getId(), request);
 
         return ResponseEntity.ok(response);
@@ -78,9 +67,6 @@ public class ReviewController implements ReviewApi {
     public ResponseEntity<Void> deleteReview(
         @AuthenticationPrincipal MoplPrincipal moplPrincipal,
         @PathVariable UUID reviewId) {
-
-        log.info("리뷰 삭제: DELETE /api/reviews/{}, authorId={}", reviewId, moplPrincipal.getId());
-
         reviewService.deleteReview(reviewId, moplPrincipal.getId());
 
         return ResponseEntity.noContent().build();

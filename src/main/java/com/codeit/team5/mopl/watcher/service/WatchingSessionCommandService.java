@@ -1,64 +1,56 @@
 package com.codeit.team5.mopl.watcher.service;
 
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.codeit.team5.mopl.content.entity.Content;
-import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
 import com.codeit.team5.mopl.user.entity.User;
-import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
-import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
-import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
 import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
 import com.codeit.team5.mopl.watcher.event.WatcherLeftEvent;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionAlreadyExistsException;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionContentNotFoundException;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionUserNotFoundException;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
-@ExecutionTracer
+@ExecutionTracer(verbose = true)
 public class WatchingSessionCommandService {
 
     private final WatchingSessionRepository repository;
     private final UserRepository userRepository;
     private final ContentRepository contentRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final WatchingSessionMapper mapper;
 
-    public WatchingSessionPayload join(UUID contentId, UUID watcherId) {
-        if (repository.existsByWatcherId(watcherId)) {
-            throw new WatchingSessionAlreadyExistsException(watcherId);
+    public void join(UUID contentId, UUID watcherId) {
+        if (repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
+            return;
         }
-        User user = userRepository.findWithProfileImageById(watcherId)
-                .orElseThrow(() -> new UserNotFoundException(watcherId));
-        Content content = contentRepository.findWithStatsAndTagsById(contentId)
-                .orElseThrow(() -> new ContentNotFoundException(contentId));
-        WatchingSession session = WatchingSession.of(user, content);
-        repository.save(session);
-        eventPublisher.publishEvent(new WatcherJoinedEvent(contentId));
-        return new WatchingSessionPayload(WatcherStatus.JOIN, mapper.toDto(session),
-                repository.countByContentId(contentId));
+        if (!contentRepository.existsById(contentId)) {
+            throw new WatchingSessionContentNotFoundException(contentId);
+        }
+        if (!userRepository.existsById(watcherId)) {
+            throw new WatchingSessionUserNotFoundException(watcherId);
+        }
+        Content content = contentRepository.getReferenceById(contentId);
+        User user = userRepository.getReferenceById(watcherId);
+        repository.save(WatchingSession.of(user, content));
+        eventPublisher.publishEvent(new WatcherJoinedEvent(contentId, watcherId));
     }
 
-    public WatchingSessionPayload left(UUID watcherId) {
-        WatchingSession session = repository.findByWatcherId(watcherId).orElseThrow(
-                () -> new WatchingSessionNotFoundException(Map.of("watcherId", watcherId)));
-        UUID contentId = session.getContent().getId();
-        WatchingSessionResponse response = mapper.toDto(session);
-        repository.deleteByWatcherIdDirectly(watcherId);
+    public void left(UUID contentId, UUID watcherId) {
+        if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
+            return;
+        }
+        repository.deleteByContentIdAndWatcherIdDirectly(contentId, watcherId);
         eventPublisher.publishEvent(new WatcherLeftEvent(contentId));
-        return new WatchingSessionPayload(WatcherStatus.LEAVE, response,
-                repository.countByContentId(contentId));
     }
 }

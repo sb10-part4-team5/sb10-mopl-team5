@@ -66,9 +66,14 @@ public class GlobalExceptionHandler {
                         v.getInvalidValue(),
                         v.getMessage()))
                 .collect(Collectors.joining(" | "));
-        log.warn("제약조건 위반 (ConstraintViolationException) -> {}", detailedErrorLog);
 
         boolean isFromController = ViolationExceptionUtils.isFromController(e);
+        if (isFromController) {
+            log.warn("제약조건 위반 (ConstraintViolationException) -> {}", detailedErrorLog);
+        } else {
+            log.error("제약조건 위반 (ConstraintViolationException) -> {}", detailedErrorLog, e);
+        }
+
         HttpStatus status =
                 isFromController ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
         return ResponseEntity
@@ -80,6 +85,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException e
     ) {
+        log.warn("요청 본문을 읽을 수 없음 (HttpMessageNotReadableException) -> {}", e.getMessage());
         return ResponseEntity
                 .badRequest()
                 .body(ErrorResponse.from(e));
@@ -98,7 +104,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
             NoResourceFoundException e, HttpServletRequest request) {
-        log.info("존재하지 않는 리소스 요청: {} | User-Agent: {}",
+        log.warn("존재하지 않는 리소스 요청: {} | User-Agent: {}",
                 e.getMessage(), request.getHeader("User-Agent"));
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
@@ -131,6 +137,7 @@ public class GlobalExceptionHandler {
             RefreshTokenExpiredException.class
     })
     public ResponseEntity<ErrorResponse> handleRefreshTokenException(AuthException e) {
+        log.warn(e.toString());
         ResponseCookie deleteCookie = refreshTokenCookieManager.deleteCookie();
 
         return ResponseEntity.status(e.getStatus())

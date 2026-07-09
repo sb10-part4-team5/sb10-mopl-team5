@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.watcher.command.subscribe;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -13,10 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
-import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore.StompDestination;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,9 +23,6 @@ class WatchingContentSubscribeHandlerTest {
 
     @Mock
     private WatchingSessionCommandService service;
-
-    @Mock
-    private WatchingSessionPayloadSender payloadSender;
 
     @InjectMocks
     private WatchingContentSubscribeHandler handler;
@@ -43,25 +36,18 @@ class WatchingContentSubscribeHandlerTest {
         String subscriptionId = "sub-0";
         String destination = "/sub/contents/" + contentId + "/watch";
 
-        WatchingSessionResponse response = WatchingSessionResponse.builder().build();
-        long watchCount = 5L;
-        WatchingSessionPayload payload =
-                new WatchingSessionPayload(WatcherStatus.JOIN, response, watchCount);
-
-        given(service.join(contentId, userId)).willReturn(payload);
-
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
         accessor.setDestination(destination);
         accessor.setSubscriptionId(subscriptionId);
-        accessor.setUser(() -> userId.toString());
+        accessor.setUser(userId::toString);
 
         // When
         handler.handle(accessor);
 
         // Then
         verify(service).join(contentId, userId);
-        verify(payloadSender).send(contentId, payload);
-        verify(sessionStore).subscribe(userId, subscriptionId, destination);
+        verify(sessionStore).subscribe(userId, subscriptionId,
+                new StompDestination("/sub/contents/{id}/watch", contentId));
     }
 
     @Test

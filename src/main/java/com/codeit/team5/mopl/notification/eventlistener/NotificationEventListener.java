@@ -2,25 +2,32 @@ package com.codeit.team5.mopl.notification.eventlistener;
 
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
+import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCommand;
-import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
-import com.codeit.team5.mopl.user.event.RoleChangedEvent;
-import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
 import com.codeit.team5.mopl.notification.service.NotificationService;
-import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
+import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
+import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.event.RoleChangedEvent;
+import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
+import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -31,6 +38,7 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final FollowRepository followRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final WatchingSessionRepository watchingSessionRepository;
 
     // 비활성 대화에 DM이 도착하면 알림을 생성 (SSE 전송과는 독립)
     @Async("dmEventExecutor")
@@ -47,7 +55,6 @@ public class NotificationEventListener {
     // 다른 사용자가 내 플레이리스트 구독 시 알림 생성
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPlaylistSubscribe(PlaylistSubscribedEvent event){
-
         notificationService.create(new NotificationCreateCommand(
                 event.receiverId(), NotificationType.PLAYLIST_SUBSCRIBED,
                 "[플레이리스트] " + event.playlistName(),
@@ -57,6 +64,7 @@ public class NotificationEventListener {
 
     // 내가 구독한 플레이리스트에 콘텐츠가 추가되면 구독자 전원에게 알림 배치 생성 (fan-out)
     // [계약] 구독자 목록은 리스너 실행 시점(AFTER_COMMIT) 기준으로 조회합니다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPlaylistContentAdd(PlaylistContentAddEvent event) {
         List<UUID> subscriberIds = subscriptionRepository.findSubscriberIdsByPlaylistId(event.playlistId());
@@ -91,13 +99,20 @@ public class NotificationEventListener {
     // [계약] 팔로워 목록은 리스너 실행 시점(AFTER_COMMIT) 기준으로 조회합니다.
     // 시청 시작과 리스너 실행 사이에 follow/unfollow가 발생하면 결과가 달라질 수 있으나,
     // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
-    public void onWatchingSessionCreated(WatchingSessionCreatedEvent event){
-        List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.watcherUserId());
+    public void onWatchingSessionCreated(WatcherJoinedEvent event){
+        WatchingSession watchingSession = watchingSessionRepository.findByWatcherId(event.watcherId()).orElseThrow(() -> new WatchingSessionNotFoundException(
+            Map.of("watcherId", event.watcherId())));
+
+        String contentTitle = watchingSession.getContent().getTitle();
+        User watcher = watchingSession.getWatcher();
+
+        List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(watcher.getId());
         notificationService.createAll(new NotificationBatchCreateCommand(
                 followerIds, NotificationType.WATCHING_ACTIVITY,
-                event.watcherNickname() + " 님이 컨텐츠 시청중입니다.",
-                event.contentName() + " 시청 중",
+                watcher.getName() + " 님이 컨텐츠 시청중입니다.",
+                contentTitle + " 시청 중",
                 NotificationLevel.INFO));
     }
 

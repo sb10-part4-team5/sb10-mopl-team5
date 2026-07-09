@@ -169,7 +169,7 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
     // 3. deleteByWatcherIdDirectly
     @Test
     @DisplayName("유저 ID로 세션을 직접 삭제_성공")
-    void deleteByWatcherIdDirectly_성공() {
+    void deleteByContentIdAndWatcherIdDirectly_성공() {
         // given
         User user = createUser();
         Content content = createContent();
@@ -178,7 +178,7 @@ class WatchingSessionRepositoryTest extends BaseRepositoryTest {
         clear();
 
         // when
-        repository.deleteByWatcherIdDirectly(user.getId());
+        repository.deleteByContentIdAndWatcherIdDirectly(content.getId(), user.getId());
 
         // then
         assertThat(repository.existsByWatcherId(user.getId())).isFalse();

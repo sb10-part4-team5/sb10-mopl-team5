@@ -21,8 +21,10 @@ gradle-app.setting
 !.idea/codeStyles
 !.idea/runConfigurations
 *.iws
+*.iml
 out/
 .idea_modules/
+.github/.idea/
 
 ### macOS ###
 .DS_Store

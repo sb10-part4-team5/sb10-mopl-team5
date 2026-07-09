@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore.StompDestination;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionQueryService;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,19 +34,21 @@ class ContentChatSubscribeHandlerTest {
         UUID contentId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         String subscriptionId = "sub-0";
-        String destination = "/sub/contents/" + contentId + "/chat";
+        String destinationPattern = "/sub/contents/{id}/chat";
+        String destination = destinationPattern.replace("{id}", contentId.toString());
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
         accessor.setDestination(destination);
         accessor.setSubscriptionId(subscriptionId);
-        accessor.setUser(() -> userId.toString());
+        accessor.setUser(userId::toString);
 
         // When
         handler.handle(accessor);
 
         // Then
         verify(service).ensureWatchingContent(contentId, userId);
-        verify(sessionStore).subscribe(userId, subscriptionId, destination);
+        verify(sessionStore).subscribe(userId, subscriptionId,
+                new StompDestination(destinationPattern, contentId));
     }
 
     @Test

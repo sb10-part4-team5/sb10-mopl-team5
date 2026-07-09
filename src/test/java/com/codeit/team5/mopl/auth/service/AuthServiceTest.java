@@ -355,7 +355,7 @@ class AuthServiceTest {
         AuthPayload expectedPayload = new AuthPayload(jwtResponse, newRefreshToken);
 
         when(jwtTokenizer.getRefreshUserId(refreshToken)).thenReturn(userId);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
         when(authSessionService.extendCurrentSession(eq(userId), any(Instant.class))).thenReturn(sessionId);
         when(jwtTokenizer.generateAccessToken(
@@ -387,7 +387,7 @@ class AuthServiceTest {
 
         ArgumentCaptor<Instant> expiresAtCaptor = ArgumentCaptor.forClass(Instant.class);
         verify(jwtTokenizer).getRefreshUserId(refreshToken);
-        verify(userRepository).findById(userId);
+        verify(userRepository).findWithProfileImageById(userId);
         verify(userMapper).toDto(user);
         verify(authSessionService).extendCurrentSession(eq(userId), expiresAtCaptor.capture());
         verify(jwtTokenizer).generateAccessToken(
@@ -432,7 +432,7 @@ class AuthServiceTest {
         );
 
         when(jwtTokenizer.getRefreshUserId(refreshToken)).thenReturn(userId);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
         when(authSessionService.extendCurrentSession(eq(userId), any(Instant.class))).thenReturn(sessionId);
         when(jwtTokenizer.generateAccessToken(
