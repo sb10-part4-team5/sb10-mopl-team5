@@ -29,9 +29,10 @@ class ContentChatUnsubscribeHandlerTest {
         // Given
         UUID contentId = UUID.randomUUID();
         UUID email = UUID.randomUUID();
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(UNSUBSCRIBE);
 
         // When
-        handler.doHandle(contentId, email);
+        handler.doHandle(contentId, email, accessor);
 
         // Then
         verifyNoInteractions(sessionStore);

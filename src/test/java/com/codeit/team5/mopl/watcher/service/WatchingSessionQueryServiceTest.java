@@ -83,7 +83,7 @@ class WatchingSessionQueryServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         WatchingSessionCursorRequest request = new WatchingSessionCursorRequest(null, null, null,
-                10, Sort.Direction.DESC, WatcherSortByType.CREATED_AT);
+                10, Sort.Direction.DESC, WatcherSortByType.CREATED_AT.getValue());
 
         @SuppressWarnings("unchecked")
         Window<WatchingSession> window = mock(Window.class);
@@ -117,8 +117,8 @@ class WatchingSessionQueryServiceTest {
         // given
         UUID contentId = UUID.randomUUID();
         WatchingSessionCursorRequest request =
-                new WatchingSessionCursorRequest(null, Instant.now(), UUID.randomUUID().toString(),
-                        10, Sort.Direction.DESC, WatcherSortByType.CREATED_AT);
+                new WatchingSessionCursorRequest(null, Instant.now(), UUID.randomUUID(), 10,
+                        Sort.Direction.DESC, WatcherSortByType.CREATED_AT.getValue());
 
         @SuppressWarnings("unchecked")
         Window<WatchingSession> window = mock(Window.class);
@@ -153,11 +153,11 @@ class WatchingSessionQueryServiceTest {
         // given
         UUID watcherId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
-        when(repository.existsByWatcherIdAndContentId(watcherId, contentId)).thenReturn(true);
+        when(repository.existsByContentIdAndWatcherId(contentId, watcherId)).thenReturn(true);
 
         // when & then (예외가 발생하지 않으면 성공)
         service.ensureWatchingContent(contentId, watcherId);
-        verify(repository).existsByWatcherIdAndContentId(watcherId, contentId);
+        verify(repository).existsByContentIdAndWatcherId(contentId, watcherId);
     }
 
     @Test
@@ -166,7 +166,7 @@ class WatchingSessionQueryServiceTest {
         // given
         UUID watcherId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
-        when(repository.existsByWatcherIdAndContentId(watcherId, contentId)).thenReturn(false);
+        when(repository.existsByContentIdAndWatcherId(contentId, watcherId)).thenReturn(false);
 
         // when & then
         assertThatThrownBy(() -> service.ensureWatchingContent(contentId, watcherId))

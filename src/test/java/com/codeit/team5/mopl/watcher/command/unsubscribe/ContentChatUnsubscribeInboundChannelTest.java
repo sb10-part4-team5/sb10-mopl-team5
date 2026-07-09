@@ -1,10 +1,10 @@
 package com.codeit.team5.mopl.watcher.command.unsubscribe;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.codeit.team5.mopl.global.web.ws.stomp.base.BaseStompInboundChannelTest;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore.StompDestination;
 import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
 
 class ContentChatUnsubscribeInboundChannelTest extends BaseStompInboundChannelTest {
@@ -34,10 +35,10 @@ class ContentChatUnsubscribeInboundChannelTest extends BaseStompInboundChannelTe
         UUID testUserId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
         String subscriptionId = "sub-001";
-        String storedDestination = "/sub/contents/" + contentId + "/chat";
-
+        String storedDestinationPattern = "/sub/contents/{id}/chat";
         // Unsubscribe 시에는 목적지(destination) 헤더가 없으므로 sessionStore에서 조회하도록 모킹
-        when(sessionStore.getDestination(testUserId, subscriptionId)).thenReturn(storedDestination);
+        when(sessionStore.getDestination(testUserId, subscriptionId))
+                .thenReturn(Optional.of(new StompDestination(storedDestinationPattern, contentId)));
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
         accessor.setSubscriptionId(subscriptionId);
@@ -54,30 +55,6 @@ class ContentChatUnsubscribeInboundChannelTest extends BaseStompInboundChannelTe
         // 1. SessionStore 구독 해제 확인
         verify(sessionStore).unsubscribe(testUserId, subscriptionId);
         // ContentChatUnsubscribeHandler 내부 로직은 비어있음 (nothing to handle)
-    }
-
-    @Test
-    @DisplayName("STOMP UNSUBSCRIBE 메시지에 연결된 구독 목적지가 유효한 UUID가 아니면 IllegalArgumentException 예외가 발생한다_실패")
-    void inboundUnsubscribeTest_Fail_InvalidDestinationId() {
-        // given
-        UUID testUserId = UUID.randomUUID();
-        String subscriptionId = "sub-invalid";
-        String storedDestination = "/sub/contents/invalid-uuid-string/chat";
-
-        when(sessionStore.getDestination(testUserId, subscriptionId)).thenReturn(storedDestination);
-
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.UNSUBSCRIBE);
-        accessor.setSubscriptionId(subscriptionId);
-        accessor.setUser(new UsernamePasswordAuthenticationToken(testUserId.toString(), null,
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-
-        Message<byte[]> message =
-                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
-
-        // when & then
-        assertThatThrownBy(() -> clientInboundChannel.send(message)).cause()
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid destination id format");
     }
 
     @Test

@@ -31,7 +31,7 @@ class WebSocketSessionStoreTest {
         store.connect(email);
 
         // then
-        assertThat(store.getDestination(email, "sub-1")).isNull();
+        assertThat(store.getDestination(email, "sub-1")).isEmpty();
     }
 
     @Test
@@ -41,11 +41,13 @@ class WebSocketSessionStoreTest {
         UUID email = UUID.randomUUID();
         store.connect(email);
 
+        UUID targetId = UUID.randomUUID();
+        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
         // when
-        store.subscribe(email, "sub-1", "/topic/content/1");
+        store.subscribe(email, "sub-1", dest);
 
         // then
-        assertThat(store.getDestination(email, "sub-1")).isEqualTo("/topic/content/1");
+        assertThat(store.getDestination(email, "sub-1")).contains(dest);
     }
 
     @Test
@@ -54,13 +56,15 @@ class WebSocketSessionStoreTest {
         // given
         UUID email = UUID.randomUUID();
         store.connect(email);
-        store.subscribe(email, "sub-1", "/topic/content/1");
+        UUID targetId = UUID.randomUUID();
+        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
+        store.subscribe(email, "sub-1", dest);
 
         // when
         store.unsubscribe(email, "sub-1");
 
         // then
-        assertThat(store.getDestination(email, "sub-1")).isNull();
+        assertThat(store.getDestination(email, "sub-1")).isEmpty();
     }
 
     @Test
@@ -69,13 +73,15 @@ class WebSocketSessionStoreTest {
         // given
         UUID email = UUID.randomUUID();
         store.connect(email);
-        store.subscribe(email, "sub-1", "/topic/content/1");
+        UUID targetId = UUID.randomUUID();
+        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
+        store.subscribe(email, "sub-1", dest);
 
         // when
         store.disconnect(email);
 
         // then
-        assertThat(store.getDestination(email, "sub-1")).isNull();
+        assertThat(store.getDestination(email, "sub-1")).isEmpty();
     }
 
     @Test
@@ -84,13 +90,15 @@ class WebSocketSessionStoreTest {
         // given
         UUID email = UUID.randomUUID();
         store.connect(email);
-        store.subscribe(email, "sub-1", "/topic/content/1");
+        UUID targetId = UUID.randomUUID();
+        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
+        store.subscribe(email, "sub-1", dest);
 
         // when
         store.connect(email);
 
         // then
-        assertThat(store.getDestination(email, "sub-1")).isEqualTo("/topic/content/1");
+        assertThat(store.getDestination(email, "sub-1")).contains(dest);
     }
 
     @Test
@@ -110,7 +118,7 @@ class WebSocketSessionStoreTest {
                 final int index = i;
                 executorService.submit(() -> {
                     try {
-                        store.subscribe(email, "sub-" + index, "/topic/content/" + index);
+                        store.subscribe(email, "sub-" + index, new WebSocketSessionStore.StompDestination("/topic/content/{id}", email));
                     } finally {
                         latch.countDown();
                     }
@@ -124,8 +132,8 @@ class WebSocketSessionStoreTest {
 
         // then
         for (int i = 0; i < threadCount; i++) {
-            assertThat(store.getDestination(email, "sub-" + i))
-                    .isEqualTo("/topic/content/" + i);
+            assertThat(store.getDestination(email, "sub-" + i).get().destination())
+                    .isEqualTo("/topic/content/" + email.toString());
         }
     }
 }

@@ -1,9 +1,7 @@
 package com.codeit.team5.mopl.watcher.command.subscribe;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,10 +18,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import com.codeit.team5.mopl.global.web.ws.stomp.handler.StompCommandHandler;
 import com.codeit.team5.mopl.global.web.ws.stomp.interceptor.StompInterceptor;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
-import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
-import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
-import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
-import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionCommandService;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,8 +29,6 @@ class WatchingContentSubscribeInboundChannelTest {
     @Mock
     private WatchingSessionCommandService watchingSessionCommandService;
 
-    @Mock
-    private WatchingSessionPayloadSender payloadSender;
 
     @Mock
     private MessageChannel messageChannel;
@@ -45,8 +37,8 @@ class WatchingContentSubscribeInboundChannelTest {
 
     @BeforeEach
     void setUp() {
-        WatchingContentSubscribeHandler handler = new WatchingContentSubscribeHandler(sessionStore,
-                watchingSessionCommandService, payloadSender);
+        WatchingContentSubscribeHandler handler =
+                new WatchingContentSubscribeHandler(sessionStore, watchingSessionCommandService);
         stompInterceptor = new StompInterceptor(List.of((StompCommandHandler) handler));
     }
 
@@ -66,19 +58,15 @@ class WatchingContentSubscribeInboundChannelTest {
         Message<byte[]> message =
                 MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
 
-        WatchingSessionResponse fakeResponse = WatchingSessionResponse.builder().build();
-        WatchingSessionPayload payload =
-                new WatchingSessionPayload(WatcherStatus.JOIN, fakeResponse, 5L);
 
-        when(watchingSessionCommandService.join(contentId, testUserId)).thenReturn(payload);
 
         // When
         stompInterceptor.preSend(message, messageChannel);
 
         // Then
         verify(watchingSessionCommandService).join(contentId, testUserId);
-        verify(payloadSender).send(eq(contentId), eq(payload));
-        verify(sessionStore).subscribe(testUserId, subscriptionId, destination);
+        verify(sessionStore).subscribe(testUserId, subscriptionId,
+                new WebSocketSessionStore.StompDestination("/sub/contents/{id}/watch", contentId));
     }
 
     @Test
@@ -96,6 +84,5 @@ class WatchingContentSubscribeInboundChannelTest {
 
         // Then
         verifyNoInteractions(watchingSessionCommandService);
-        verifyNoInteractions(payloadSender);
     }
 }
