@@ -48,7 +48,7 @@ public class WatchingSessionCommandService {
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
         eventPublisher.publishEvent(new WatcherJoinedEvent(contentId));
-        eventPublisher.publishEvent(new WatchingSessionCreatedEvent(watcherId, user.getName(), content.getTitle()));
+        eventPublisher.publishEvent(new WatchingSessionCreatedEvent(watcherId, contentId));
         return new WatchingSessionPayload(WatcherStatus.JOIN, mapper.toDto(session),
                 repository.countByContentId(contentId));
     }

@@ -160,10 +160,11 @@ class NotificationEventListenerTest {
     void onWatchingSessionCreated_createsNotificationForFollowers() {
         // given
         UUID watcherUserId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
         UUID follower1 = UUID.randomUUID();
         UUID follower2 = UUID.randomUUID();
         WatchingSessionCreatedEvent event =
-                new WatchingSessionCreatedEvent(watcherUserId, "다린", "콘텐츠A");
+                new WatchingSessionCreatedEvent(watcherUserId, contentId);
 
         when(followRepository.findFollowerIdsByFolloweeId(watcherUserId))
                 .thenReturn(List.of(follower1, follower2));

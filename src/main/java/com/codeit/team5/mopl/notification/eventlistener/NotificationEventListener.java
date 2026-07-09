@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.follow.repository.FollowRepository;
@@ -8,6 +10,8 @@ import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
@@ -31,6 +35,8 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final FollowRepository followRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final UserRepository userRepository;
+    private final ContentRepository contentRepository;
 
     // 비활성 대화에 DM이 도착하면 알림을 생성 (SSE 전송과는 독립)
     @Async("dmEventExecutor")
@@ -93,11 +99,13 @@ public class NotificationEventListener {
     // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
     public void onWatchingSessionCreated(WatchingSessionCreatedEvent event){
+        User user = userRepository.findById(event.watcherUserId()).orElseThrow();
+        Content content = contentRepository.findById(event.contentId()).orElseThrow();
         List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.watcherUserId());
         notificationService.createAll(new NotificationBatchCreateCommand(
                 followerIds, NotificationType.WATCHING_ACTIVITY,
-                event.watcherNickname() + " 님이 컨텐츠 시청중입니다.",
-                event.contentName() + " 시청 중",
+                user.getName() + " 님이 컨텐츠 시청중입니다.",
+                content.getTitle() + " 시청 중",
                 NotificationLevel.INFO));
     }
 

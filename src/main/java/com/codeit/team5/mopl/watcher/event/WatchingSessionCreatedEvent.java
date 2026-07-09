@@ -4,7 +4,6 @@ import java.util.UUID;
 
 public record WatchingSessionCreatedEvent(
     UUID watcherUserId,
-    String watcherNickname,
-    String contentName
+    UUID contentId
 ) {
 }
