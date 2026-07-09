@@ -4,7 +4,7 @@ spring:
   main:
     web-application-type: none
   profiles:
-    active: dev
+    active: dev, datagen
 
 logging:
   level:
