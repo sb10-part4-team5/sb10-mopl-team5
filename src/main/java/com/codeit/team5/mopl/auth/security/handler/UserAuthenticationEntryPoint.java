@@ -25,20 +25,20 @@ public class UserAuthenticationEntryPoint implements AuthenticationEntryPoint {
         );
 
         if (exception instanceof BusinessException businessException) {
-            log.warn("Unauthorized access: {}", businessException.getMessage());
+            log.warn("Unauthorized access: {}", businessException.toString());
             ErrorResponder.sendErrorResponse(response, businessException);
             return;
         }
 
         if (exception instanceof LockedException lockedException) {
-            log.warn("Locked account access: {}", lockedException.getMessage());
+            log.warn("Locked account access: {}", lockedException.toString());
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             ErrorResponder.sendErrorResponse(response, lockedException);
             return;
         }
 
         if (exception != null) {
-            log.warn("Unauthorized access: {}", exception.getMessage());
+            log.warn("Unauthorized access: {}", exception.toString());
         } else {
             log.warn("Unauthorized access", authException);
         }
