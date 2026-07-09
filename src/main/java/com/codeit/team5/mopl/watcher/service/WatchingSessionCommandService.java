@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.watcher.service;
 
+import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
@@ -47,6 +48,7 @@ public class WatchingSessionCommandService {
         WatchingSession session = WatchingSession.of(user, content);
         repository.save(session);
         eventPublisher.publishEvent(new WatcherJoinedEvent(contentId));
+        eventPublisher.publishEvent(new WatchingSessionCreatedEvent(watcherId, user.getName(), content.getTitle()));
         return new WatchingSessionPayload(WatcherStatus.JOIN, mapper.toDto(session),
                 repository.countByContentId(contentId));
     }
