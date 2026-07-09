@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.watcher.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.util.UUID;
@@ -124,7 +125,7 @@ class WatchingSessionCommandServiceTest {
 
         // then
 
-        verify(repository).deleteByWatcherIdDirectly(watcherId);
+        verify(repository).deleteByContentIdAndWatcherIdDirectly(contentId, watcherId);
         verify(eventPublisher).publishEvent(any(WatcherLeftEvent.class));
     }
 
@@ -136,11 +137,12 @@ class WatchingSessionCommandServiceTest {
         UUID contentId = UUID.randomUUID();
         when(repository.existsByContentIdAndWatcherId(contentId, watcherId)).thenReturn(false);
 
-
         // when
         service.left(contentId, watcherId);
+
         // then
-        // nothing happens because it returns if it doesn't exist
+        verify(repository, never()).deleteByContentIdAndWatcherIdDirectly(contentId, watcherId);
+        verify(eventPublisher, never()).publishEvent(any(WatcherLeftEvent.class));
 
     }
 

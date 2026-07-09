@@ -51,7 +51,7 @@ public class WatchingSessionCommandService {
         if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
             return;
         }
-        repository.deleteByWatcherIdDirectly(watcherId);
+        repository.deleteByContentIdAndWatcherIdDirectly(contentId, watcherId);
         eventPublisher.publishEvent(new WatcherLeftEvent(contentId));
     }
 }

@@ -61,11 +61,10 @@ class WatchingSessionStompEventListenerTest {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
         accessor.setUser(mockPrincipal);
 
-        String pattern = StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*");
         StompDestination dest1 = mock(StompDestination.class);
         when(dest1.getPattern()).thenReturn("different-pattern");
         StompDestination dest2 = mock(StompDestination.class);
-        when(dest2.getPattern()).thenReturn(pattern);
+        when(dest2.getPattern()).thenReturn(StompConstants.SUB_WATCHING_CONTENT);
         when(dest2.targetId()).thenReturn(UUID.randomUUID());
 
         List<StompDestination> destinations = List.of(dest1, dest2);

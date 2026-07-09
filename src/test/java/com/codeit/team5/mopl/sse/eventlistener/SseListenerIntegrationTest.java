@@ -127,7 +127,6 @@ class SseListenerIntegrationTest {
         emitterStore.save(receiverId, mockEmitter);
 
         DirectMessageResponse message = dmMessage(receiverId);
-        String destination = StompConstants.SUB_CONVERSATION_DM.replace("{id}", message.conversationId().toString());
         webSocketSessionStore.subscribe(receiverId, "sub-1", new WebSocketSessionStore.StompDestination(StompConstants.SUB_CONVERSATION_DM, message.conversationId()));
 
         tx.executeWithoutResult(status ->
