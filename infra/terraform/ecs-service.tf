@@ -47,6 +47,15 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "JDK_JAVA_OPTIONS", value = "-Xms256m -Xmx350m -XX:MaxMetaspaceSize=192m -XX:+UseG1GC" },
         { name = "COOKIE_SIGNATURE_SECRET_KEY", value = var.cookie_signature_secret_key }
       ]
+
+      # 로테이션 설정 없으면 json-file 로그가 무제한으로 커져 디스크/메모리 압박 유발
+      logConfiguration = {
+        logDriver = "json-file"
+        options = {
+          max-size = "10m"
+          max-file = "3"
+        }
+      }
     },
     {
       name      = "alloy"
