@@ -12,7 +12,9 @@ import com.codeit.team5.mopl.watcher.dto.request.ContentChatCreatedRequest;
 import com.codeit.team5.mopl.watcher.exception.ContentChatUserNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.payload.ContentChatPayloadMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class ContentChatService {
             ContentChatCreatedRequest request) {
         User user = userRepository.findWithProfileImageById(watcherId)
                 .orElseThrow(() -> new ContentChatUserNotFoundException(watcherId));
+        log.debug("Content chat message created: watcherId={}", watcherId);
         return payloadMapper.toDto(user, request);
     }
 }

@@ -30,7 +30,9 @@ import com.codeit.team5.mopl.playlist.repository.PlaylistRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -51,6 +53,7 @@ public class PlaylistService {
         Playlist playlist = Playlist.of(user, request.title(), request.description());
         repository.saveAndFlush(playlist);
         eventPublisher.publishEvent(new PlaylistCreatedEvent(playlist.getId()));
+        log.info("Playlist created: id={}, ownerId={}", playlist.getId(), userId);
         return mapper.toDto(playlist);
     }
 
@@ -65,6 +68,7 @@ public class PlaylistService {
         Playlist playlist = dto.playlist();
         playlist.updateTitle(request.title());
         playlist.updateDescription(request.description());
+        log.info("Playlist updated: id={}", id);
         return mapper.toDto(dto);
     }
 
@@ -72,6 +76,7 @@ public class PlaylistService {
     public void delete(UUID id, UUID userId) {
         validateOwner(id, userId);
         repository.deleteByIdDirectly(id);
+        log.info("Playlist deleted: id={}", id);
     }
 
     public CursorResponse<PlaylistResponse> findByCursor(PlaylistCursorCommand dto, UUID userId) {
@@ -99,6 +104,7 @@ public class PlaylistService {
         eventPublisher.publishEvent(new PlaylistContentAddEvent(
                 playlistId, playlist.getTitle(), content.getTitle()
         ));
+        log.info("Playlist content added: playlistId={}, contentId={}", playlistId, contentId);
     }
 
     @Transactional
@@ -108,6 +114,7 @@ public class PlaylistService {
             throw new PlaylistItemNotFoundException(playlistId, contentId);
         }
         playlistItemRepository.deleteByPlaylistIdAndContentIdDirectly(playlistId, contentId);
+        log.info("Playlist content removed: playlistId={}, contentId={}", playlistId, contentId);
     }
 
     private void validateOwner(UUID id, UUID userId) {
