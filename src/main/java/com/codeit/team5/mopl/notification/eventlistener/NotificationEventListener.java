@@ -64,7 +64,7 @@ public class NotificationEventListener {
 
     // 내가 구독한 플레이리스트에 콘텐츠가 추가되면 구독자 전원에게 알림 배치 생성 (fan-out)
     // [계약] 구독자 목록은 리스너 실행 시점(AFTER_COMMIT) 기준으로 조회합니다.
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPlaylistContentAdd(PlaylistContentAddEvent event) {
         List<UUID> subscriberIds = subscriptionRepository.findSubscriberIdsByPlaylistId(event.playlistId());
