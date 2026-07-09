@@ -11,7 +11,8 @@ public final class StompConstants {
 
     public static final String PUB_WATCHING_CONTENT_CHAT = "/contents/{id}/chat";
     public static final String SUB_WATCHING_CONTENT_CHAT = SUB_PREFIX + "/contents/{id}/chat";
-    public static final String SUB_WATCHING_CONTENT = SUB_PREFIX + "/contents/{id}/watch";
+    public static final String WATCHING_CONTENT = "/contents/{id}/watch";
+    public static final String SUB_WATCHING_CONTENT = SUB_PREFIX + WATCHING_CONTENT;
 
     public static final String PUB_CONVERSATION_DM = "/conversations/{id}/direct-messages";
     public static final String SUB_CONVERSATION_DM = SUB_PREFIX + "/conversations/{id}/direct-messages";

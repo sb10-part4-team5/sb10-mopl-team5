@@ -1,7 +1,10 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.store;
 
+import java.io.Serializable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
@@ -9,16 +12,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class WebSocketSessionStore {
 
-    // userId - (sessionId - destination)
-    private final Map<UUID, Map<String, String>> session = new ConcurrentHashMap<>();
+    // userId - (subscriptionId - StompDestination)
+    private final Map<UUID, Map<String, StompDestination>> session = new ConcurrentHashMap<>();
 
     public void connect(UUID userId) {
         session.putIfAbsent(userId, new ConcurrentHashMap<>());
     }
 
-    public void subscribe(UUID userId, String subscriptionId, String destination) {
+    public void subscribe(UUID userId, String subscriptionId, StompDestination stompDestination) {
         session.compute(userId,
-                (k, innerMap) -> addSubscription(innerMap, subscriptionId, destination));
+            (k, innerMap) -> addSubscription(innerMap, subscriptionId, stompDestination));
     }
 
     public void unsubscribe(UUID userId, String subscriptionId) {
@@ -29,25 +32,48 @@ public class WebSocketSessionStore {
         session.remove(userId);
     }
 
-    public String getDestination(UUID userId, String subscriptionId) {
-        return session.getOrDefault(userId, Collections.emptyMap()).getOrDefault(subscriptionId, null);
+    public Optional<StompDestination> getDestination(UUID userId,
+        String subscriptionId) {
+        return Optional.ofNullable(session.getOrDefault(userId, Collections.emptyMap())
+            .getOrDefault(subscriptionId, null));
     }
 
     // 해당 사용자가 특정 destination을 구독 중인지 (활성 여부 판단)
     public boolean isSubscribed(UUID userId, String destination) {
-        return session.getOrDefault(userId, Collections.emptyMap()).containsValue(destination);
+        Map<String, StompDestination> userDestinations =
+            session.getOrDefault(userId, Collections.emptyMap());
+        return userDestinations.values().stream()
+            .anyMatch(d -> d.destination().equals(destination));
     }
 
-    private Map<String, String> addSubscription(Map<String, String> innerMap, String subscriptionId,
-            String destination) {
-        Map<String, String> map = (innerMap != null) ? innerMap : new ConcurrentHashMap<>();
-        map.put(subscriptionId, destination);
+    public Collection<StompDestination> getAllDestination(UUID userId) {
+        return session.getOrDefault(userId, Collections.emptyMap()).values();
+    }
+
+    private Map<String, StompDestination> addSubscription(
+        Map<String, StompDestination> innerMap, String subscriptionId,
+        StompDestination stompDestination) {
+
+        Map<String, StompDestination> map =
+            (innerMap != null) ? innerMap : new ConcurrentHashMap<>();
+        map.put(subscriptionId, stompDestination);
         return map;
     }
 
-    private Map<String, String> removeIfEmpty(Map<String, String> innerMap, String subscriptionId) {
+    private Map<String, StompDestination> removeIfEmpty(
+        Map<String, StompDestination> innerMap, String subscriptionId) {
         innerMap.remove(subscriptionId);
         return innerMap.isEmpty() ? null : innerMap;
     }
 
+    public record StompDestination(String destination, UUID targetId) implements Serializable {
+
+        public String getPattern() {
+            return destination.replace("{id}", "*");
+        }
+
+        public String destination() {
+            return this.destination.replace("{id}", this.targetId.toString());
+        }
+    }
 }

@@ -1,7 +1,9 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.handler;
 
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
+import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore.StompDestination;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.security.Principal;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -20,15 +22,15 @@ public abstract class AbstractStompUnsubscribeHandler extends AbstractStompComma
         Principal principal = Objects.requireNonNull(accessor.getUser());
         String subscriptionId = accessor.getSubscriptionId();
         UUID userId = UUID.fromString(principal.getName());
-        String destination = getSessionDestination(userId, subscriptionId);
-        if (destination != null) {
-            UUID targetId = getTargetId(destination);
-            doHandle(targetId, userId);
+        // 세션에서 StompDestination 가져오기
+        Optional<StompDestination> storedDestination = getSessionDestination(userId, subscriptionId);
+        storedDestination.ifPresent(dest -> {
+            doHandle(dest.targetId(), userId, accessor);
             unsubscribeSession(userId, subscriptionId);
-        }
+        });
     }
 
-    protected abstract void doHandle(UUID targetId, UUID userId);
+    protected abstract void doHandle(UUID targetId, UUID userId, StompHeaderAccessor accessor);
 
 }
 
