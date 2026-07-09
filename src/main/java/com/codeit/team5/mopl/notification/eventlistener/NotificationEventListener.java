@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
@@ -11,6 +12,7 @@ import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.event.WatchingSessionCreatedEvent;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
@@ -99,8 +101,8 @@ public class NotificationEventListener {
     // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
     public void onWatchingSessionCreated(WatchingSessionCreatedEvent event){
-        User user = userRepository.findById(event.watcherUserId()).orElseThrow();
-        Content content = contentRepository.findById(event.contentId()).orElseThrow();
+        User user = userRepository.findById(event.watcherUserId()).orElseThrow(() -> new UserNotFoundException(event.watcherUserId()));
+        Content content = contentRepository.findById(event.contentId()).orElseThrow(() -> new ContentNotFoundException(event.contentId()));
         List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(event.watcherUserId());
         notificationService.createAll(new NotificationBatchCreateCommand(
                 followerIds, NotificationType.WATCHING_ACTIVITY,
