@@ -41,13 +41,13 @@ def handler(event, context):
     if in_cooldown():
         return {"triggered": False, "reason": "cooldown active"}
 
-    instance_id = find_running_instance()
-    if not instance_id:
+    instance_ids = find_running_instances()
+    if not instance_ids:
         return {"triggered": False, "reason": "no running mopl task found"}
 
-    command_id = trigger_dump(instance_id)
+    command_ids = [trigger_dump(instance_id) for instance_id in instance_ids]
     mark_triggered()
-    return {"triggered": True, "instanceId": instance_id, "commandId": command_id}
+    return {"triggered": True, "instanceIds": instance_ids, "commandIds": command_ids}
 
 
 def thread_starvation_detected():
@@ -64,8 +64,12 @@ def thread_starvation_detected():
         url, headers={"Authorization": f"Basic {credentials}"}
     )
 
-    with urllib.request.urlopen(request, timeout=10) as response:
-        body = json.loads(response.read())
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = json.loads(response.read())
+    except Exception as e:
+        print(f"Loki query failed: {e}")
+        return False
 
     results = body.get("data", {}).get("result", [])
     return len(results) > 0
@@ -90,25 +94,27 @@ def mark_triggered():
     )
 
 
-def find_running_instance():
+def find_running_instances():
     task_arns = ecs.list_tasks(
         cluster=CLUSTER, serviceName=SERVICE, desiredStatus="RUNNING"
     )["taskArns"]
     if not task_arns:
-        return None
+        return []
 
     tasks = ecs.describe_tasks(cluster=CLUSTER, tasks=task_arns)["tasks"]
     if not tasks:
-        return None
+        return []
 
-    container_instance_arn = tasks[0]["containerInstanceArn"]
+    container_instance_arns = {
+        task["containerInstanceArn"] for task in tasks if task.get("containerInstanceArn")
+    }
+    if not container_instance_arns:
+        return []
+
     container_instances = ecs.describe_container_instances(
-        cluster=CLUSTER, containerInstances=[container_instance_arn]
+        cluster=CLUSTER, containerInstances=list(container_instance_arns)
     )["containerInstances"]
-    if not container_instances:
-        return None
-
-    return container_instances[0]["ec2InstanceId"]
+    return [ci["ec2InstanceId"] for ci in container_instances]
 
 
 def trigger_dump(instance_id):
