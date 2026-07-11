@@ -48,6 +48,9 @@ spring:
 
 server:
   forward-headers-strategy: native
+  tomcat:
+    threads:
+      max: 100
 
 # 배포 환경: 이미지를 S3에 저장
 mopl:

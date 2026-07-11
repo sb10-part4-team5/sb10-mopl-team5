@@ -23,6 +23,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class MdcLoggingFilter extends OncePerRequestFilter {
 
+    private static final String HEALTH_CHECK_PATH = "/actuator/health";
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -37,7 +39,9 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
             // 클라이언트가 응답의 ID로 서버 로그를 추적할 수 있도록 헤더로 반환
             response.setHeader(MdcKey.REQUEST_ID_HEADER, requestId);
 
-            log.info("{} {}", request.getMethod(), request.getRequestURI());
+            if (!HEALTH_CHECK_PATH.equals(request.getRequestURI())) {
+                log.info("{} {}", request.getMethod(), request.getRequestURI());
+            }
 
             filterChain.doFilter(request, response);
         } finally {
