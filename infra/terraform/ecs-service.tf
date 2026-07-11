@@ -46,7 +46,7 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "GOOGLE_CLIENT_SECRET", value = var.google_client_secret },
         { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
         { name = "KAKAO_CLIENT_SECRET", value = var.kakao_client_secret },
-        { name = "JDK_JAVA_OPTIONS", value = "-XX:MaxRAMPercentage=45.0 -XX:InitialRAMPercentage=30.0 -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=96m -XX:+UseG1GC" },
+        { name = "JDK_JAVA_OPTIONS", value = "-XX:MaxRAMPercentage=35.0 -XX:InitialRAMPercentage=20.0 -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseG1GC" },
         { name = "COOKIE_SIGNATURE_SECRET_KEY", value = var.cookie_signature_secret_key }
       ]
 

@@ -39,8 +39,9 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
             // 클라이언트가 응답의 ID로 서버 로그를 추적할 수 있도록 헤더로 반환
             response.setHeader(MdcKey.REQUEST_ID_HEADER, requestId);
 
-            if (!HEALTH_CHECK_PATH.equals(request.getRequestURI())) {
-                log.info("{} {}", request.getMethod(), request.getRequestURI());
+            String requestURI = request.getRequestURI();
+            if (!requestURI.equals(HEALTH_CHECK_PATH) && !requestURI.startsWith(HEALTH_CHECK_PATH + "/")) {
+                log.info("{} {}", request.getMethod(), requestURI);
             }
 
             filterChain.doFilter(request, response);
