@@ -14,10 +14,12 @@ TypeScript로 작성하며, **k6가 `.ts`를 직접 실행**하므로 webpack/do
    - 계정: `user1@loadtest.local` ~ `user{N}@loadtest.local`, 비밀번호 `Test1234!` (전부 고정)
    - 기존 데이터를 TRUNCATE 후 재생성하므로 **테스트 전 1회만** 돌리면 됨
 4. (선택) **타입 지원** — 에디터 자동완성/타입검사를 받으려면:
+
    ```bash
    cd k6
    npm install
    ```
+
    > `@types/k6` 설치용이며, 실행 자체엔 필요 없습니다.
 
 ## 실행
@@ -27,21 +29,21 @@ TypeScript로 작성하며, **k6가 `.ts`를 직접 실행**하므로 webpack/do
 
 ```bash
 # 기본 (VUS=5, 비밀번호 Test1234!, BASE_URL=http://localhost:8080)
-k6 run scripts/main.ts
+k6 run scripts/smoke.ts
 
 # VU 수 조정
-k6 run -e VUS=30 scripts/main.ts
+k6 run -e VUS=30 scripts/smoke.ts
 
 # 비밀번호/BASE_URL 이 다르면 함께 주입
-k6 run -e BASE_URL=http://localhost:8080 -e DATAGEN_PASSWORD=Test1234! -e VUS=10 scripts/main.ts
+k6 run -e BASE_URL=http://localhost:8080 -e DATAGEN_PASSWORD=Test1234! -e VUS=10 scripts/smoke.ts
 ```
 
-현재 `main.ts` 는 계정별 로그인 후 조회가 200으로 응답하는지 확인하는 **연결 스모크**만 수행합니다.
+현재 `smoke.ts` 는 계정별 로그인 후 조회가 200으로 응답하는지 확인하는 **연결 스모크**만 수행합니다.
 
 ### HTML 리포트
 
 테스트가 끝나면 터미널 요약과 함께 **`summary.html`** 파일이 실행 폴더에 생성됩니다
-(`main.ts` 의 `handleSummary` → `utils/reporter.ts`). 브라우저로 열면 VU·RPS·에러율·응답시간·
+(`smoke.ts` 의 `handleSummary` → `utils/reporter.ts`). 브라우저로 열면 VU·RPS·에러율·응답시간·
 엔드포인트별 지표를 볼 수 있어요.
 
 - 시나리오에서 재사용: `export function handleSummary(data) { return summaryHandler(data); }`
@@ -52,7 +54,7 @@ k6 run -e BASE_URL=http://localhost:8080 -e DATAGEN_PASSWORD=Test1234! -e VUS=10
 
 대부분의 API는 로그인이 필요하고(`authenticated()`), 일부는 추가로 `ADMIN` 역할이 필요합니다.
 
-```
+```text
 1. GET  /api/auth/csrf-token   → Set-Cookie: XSRF-TOKEN=<값>
 2. POST /api/auth/sign-in      (form-urlencoded: username=<email>&password=<pw>)
                                 header: X-XSRF-TOKEN: <1번 쿠키 값>
@@ -63,7 +65,7 @@ k6 run -e BASE_URL=http://localhost:8080 -e DATAGEN_PASSWORD=Test1234! -e VUS=10
 - `scripts/api/auth.api.ts` 의 `login(email, password)` 가 1~2번을 처리하고 accessToken을 반환합니다.
 - `loginByIndex(i)` 는 `user{i}@loadtest.local` 계정으로 로그인하는 헬퍼입니다.
 - ⚠️ **계정당 세션 1개** 정책이라 여러 VU가 같은 계정을 공유하면 서로 세션을 무효화(401)합니다.
-  반드시 VU마다 별도 계정을 쓰세요 (`main.ts` 의 `exec.vu.idInTest` 매핑 참고).
+  반드시 VU마다 별도 계정을 쓰세요 (`smoke.ts` 의 `exec.vu.idInTest` 매핑 참고).
 
 ### API별 인증 요구사항
 
@@ -78,13 +80,13 @@ k6 run -e BASE_URL=http://localhost:8080 -e DATAGEN_PASSWORD=Test1234! -e VUS=10
 
 ## 폴더 구조
 
-```
+```text
 k6/
 ├─ package.json / tsconfig.json / .gitignore
 ├─ README.md
 └─ scripts/
    ├─ config.ts            # [공용] BASE_URL, 엔드포인트, threshold, 계정
-   ├─ main.ts              # [공용] 진입점 (setup 로그인 + 시나리오 등록)
+   ├─ smoke.ts             # [공용] 스모크 (연결 점검 + 공용 패턴 예시)
    ├─ utils/
    │  ├─ http-client.ts     # [공용] get/post/patch/del 래퍼
    │  ├─ random.ts          # [공용] think time, 랜덤 헬퍼
@@ -206,4 +208,4 @@ thresholds: {
 - `typeEqual`: `MOVIE` | `TV_SERIES` | `SPORT` (선택)
 - `keywordLike`, `tagsIn`, `cursor`, `idAfter` (선택)
 
-관련 파일: `types/content.type.ts`(응답 타입), `main.ts`(조회 스모크 예시).
+관련 파일: `types/content.type.ts`(응답 타입), `smoke.ts`(조회 스모크 예시).
