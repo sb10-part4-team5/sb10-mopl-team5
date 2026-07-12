@@ -44,7 +44,9 @@ public class UserGenerator extends BaseGenerator {
                 Instant createdAt = randomBetween(twoWeeksAgo, now);
                 rows.add(new Object[]{
                     id,
-                    "user" + counter.getAndIncrement() + "@" + faker.get().internet().domainName(),
+                    // 부하테스트에서 k6가 DB 조회 없이 로그인할 수 있도록 이메일을 순번 고정으로 생성
+                    // (user1@loadtest.local ~ user{N}@loadtest.local). counter가 유일성 보장.
+                    "user" + counter.getAndIncrement() + "@loadtest.local",
                     HASHED_PASSWORD,
                     faker.get().name().fullName(),
                     "USER",
