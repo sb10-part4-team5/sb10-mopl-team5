@@ -1,11 +1,10 @@
 import http, { RefinedResponse, ResponseType } from 'k6/http';
 
-// 공통 HTTP 래퍼 — 요청 전송 + 상태코드 검증 + 에러 로깅 + 타입 파싱
-// 조회/쓰기 시나리오가 공통으로 사용한다.
+// 공통 HTTP 래퍼 (요청 + 상태 검증 + 에러 로깅 + 타입 파싱)
 
 interface RequestOptions {
-  token?: string | null; // 인증이 필요한 요청(POST/PATCH/DELETE)용. 조회는 생략.
-  tag?: string;          // 지표 태그 (config.tags.* 사용)
+  token?: string | null; // 인증 필요한 요청용 (조회는 생략)
+  tag?: string;          // 지표 태그 (config.tags.*)
 }
 
 function buildParams(options?: RequestOptions) {
@@ -20,10 +19,7 @@ function buildParams(options?: RequestOptions) {
   return params;
 }
 
-// 2xx 여부 반환. non-2xx면 상태·본문을 로깅한다.
-// 호출부는 false일 때 본문을 파싱하지 말고 null 을 반환해야 한다
-// (에러 응답이 비JSON(예: 401 HTML)일 때 res.json() 이 던지는 "JSON parse error"로
-//  실제 원인(HTTP 상태)이 가려지는 것을 방지).
+// 2xx 여부 반환. non-2xx면 로깅만 하고 false → 호출부는 파싱 없이 null 반환
 function isOk(res: RefinedResponse<ResponseType | undefined>, method: string): boolean {
   if (res.status >= 200 && res.status < 300) {
     return true;
@@ -34,7 +30,7 @@ function isOk(res: RefinedResponse<ResponseType | undefined>, method: string): b
   return false;
 }
 
-// 2xx 응답 본문을 안전하게 JSON 파싱. 본문이 없거나 비JSON이면 null + 경고 (VU 중단 방지).
+// 본문 JSON 파싱. 없거나 비JSON이면 null + 경고 (VU 중단 방지)
 function parseJson<T>(res: RefinedResponse<ResponseType | undefined>, method: string): T | null {
   if (!res.body) {
     return null;
@@ -42,9 +38,7 @@ function parseJson<T>(res: RefinedResponse<ResponseType | undefined>, method: st
   try {
     return res.json() as unknown as T;
   } catch (e) {
-    console.error(
-      `[${method} 파싱 실패] 2xx 이지만 본문이 JSON이 아닙니다. status=${res.status} body=${res.body}`,
-    );
+    console.error(`[${method} 파싱 실패] 2xx 이지만 비JSON. status=${res.status} body=${res.body}`);
     return null;
   }
 }

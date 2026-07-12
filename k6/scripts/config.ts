@@ -1,70 +1,51 @@
-// 부하테스트 공용 설정 — 엔드포인트 / 파라미터 / 임계값(threshold)
-// BASE_URL 은 하드코딩하지 말고 실행 시 -e 로 주입: k6 run -e BASE_URL=http://localhost:8080 ...
-//
-// 엔드포인트는 도메인별로 그룹핑했습니다. 경로의 {xxx} 자리표시자는 각 api 함수에서
-// 실제 값으로 치환해서 사용하세요. 예: config.endpoints.content.detail.replace('{contentId}', id)
+// 부하테스트 공용 설정. BASE_URL 은 -e 로 주입 (예: -e BASE_URL=http://localhost:8080).
+// 경로의 {xxx} 는 각 api 함수에서 치환. 예: content.detail.replace('{contentId}', id)
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const API = `${BASE_URL}/api`;
-// STOMP/WebSocket 용 (http -> ws, https -> wss)
-const WS_BASE = BASE_URL.replace(/^http/, 'ws');
+const WS_BASE = BASE_URL.replace(/^http/, 'ws'); // http->ws, https->wss
 
 export const config = {
   baseUrl: BASE_URL,
   wsBase: WS_BASE,
 
   endpoints: {
-    // 로그인 / 인증
     auth: {
-      csrfToken: `${API}/auth/csrf-token`, // GET, 로그인 전 CSRF 쿠키 발급
-      signIn: `${API}/auth/sign-in`,       // POST (form-urlencoded: username/password)
+      csrfToken: `${API}/auth/csrf-token`,
+      signIn: `${API}/auth/sign-in`,
     },
-
-    // 콘텐츠
     content: {
-      list: `${API}/contents`,             // GET(목록, 커서) / POST(생성, ADMIN)
-      detail: `${API}/contents/{contentId}`, // GET(단건) / PATCH(ADMIN) / DELETE(ADMIN)
+      list: `${API}/contents`,
+      detail: `${API}/contents/{contentId}`,
     },
-
-    // 콘텐츠 리뷰 CRUD
     review: {
-      list: `${API}/reviews`,              // GET(목록, 커서)
-      create: `${API}/reviews`,            // POST(생성)
-      detail: `${API}/reviews/{reviewId}`, // PATCH(수정) / DELETE(삭제)
+      list: `${API}/reviews`,
+      create: `${API}/reviews`,
+      detail: `${API}/reviews/{reviewId}`,
     },
-
-    // 플레이리스트 CRUD
     playlist: {
-      list: `${API}/playlists`,               // GET(목록, 커서)
-      create: `${API}/playlists`,             // POST(생성)
-      detail: `${API}/playlists/{id}`,        // GET(단건) / PATCH(수정) / DELETE(삭제)
-      content: `${API}/playlists/{playlistId}/contents/{contentId}`, // POST(추가) / DELETE(제거)
+      list: `${API}/playlists`,
+      create: `${API}/playlists`,
+      detail: `${API}/playlists/{id}`,
+      content: `${API}/playlists/{playlistId}/contents/{contentId}`,
     },
-
-    // 구독 CRUD (플레이리스트 구독)
     subscription: {
-      // POST(구독) / DELETE(구독취소)
-      toggle: `${API}/playlists/{playlistId}/subscription`,
+      toggle: `${API}/playlists/{playlistId}/subscription`, // POST 구독 / DELETE 취소
     },
-
-    // 시청 세션 (실시간 채팅의 REST 부분)
     watching: {
-      byUser: `${API}/users/{watcherId}/watching-sessions`,    // GET
-      byContent: `${API}/contents/{contentId}/watching-sessions`, // GET
+      byUser: `${API}/users/{watcherId}/watching-sessions`,
+      byContent: `${API}/contents/{contentId}/watching-sessions`,
     },
-
-    // 콘텐츠 시청 실시간 채팅 (STOMP over WebSocket / SockJS)
-    // ⚠️ 일반 HTTP 가 아니라 WebSocket+STOMP 라, utils/http-client.ts 로는 호출할 수 없습니다.
-    //    부하테스트 시 k6 experimental websockets 모듈 + STOMP 프레이밍 + SockJS 경로가 필요합니다.
+    // 실시간 채팅: STOMP over WebSocket(SockJS). HTTP 아님 → http-client 로 호출 불가.
     chat: {
-      wsEndpoint: `${WS_BASE}/ws`,             // SockJS 연결 엔드포인트
-      pubChat: '/pub/contents/{id}/chat',      // 채팅 전송 (publish)
-      subChat: '/sub/contents/{id}/chat',      // 채팅 수신 (subscribe)
-      subWatch: '/sub/contents/{id}/watch',    // 시청자 상태 수신 (subscribe)
+      wsEndpoint: `${WS_BASE}/ws`,
+      pubChat: '/pub/contents/{id}/chat',
+      subChat: '/sub/contents/{id}/chat',
+      subWatch: '/sub/contents/{id}/watch',
     },
   },
 
-  // 지표 태그 (k6 태그로 엔드포인트별 응답시간/에러율을 분리해서 봄)
+  // 엔드포인트별 지표 분리용 태그
   tags: {
     auth: {
       csrfToken: 'GET /api/auth/csrf-token',
@@ -105,9 +86,7 @@ export const config = {
     },
   },
 
-  // data-generator 로 시딩된 부하테스트 계정
-  // 이메일: user1@loadtest.local ~ user{N}@loadtest.local (UserGenerator 순번 고정)
-  // 비밀번호: Test1234! (data-generator 고정값, 필요 시 -e DATAGEN_PASSWORD 로 override)
+  // data-generator 시딩 계정: user1@loadtest.local ~ (순번), 비번 Test1234! (-e DATAGEN_PASSWORD 로 override)
   loadTestAccount: {
     password: __ENV.DATAGEN_PASSWORD || 'Test1234!',
     email(index: number): string {
@@ -136,7 +115,7 @@ export const ContentTypeParam = {
 // 공통 통과 기준
 export const commonThresholds = {
   http_req_failed: ['rate<0.01'],     // 에러율 1% 미만
-  http_req_duration: ['p(95)<500'],   // 95%가 500ms 이내
+  http_req_duration: ['p(95)<500'],   // p95 500ms 이내
 };
 
 export default config;

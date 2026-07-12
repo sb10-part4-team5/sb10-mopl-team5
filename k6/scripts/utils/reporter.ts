@@ -1,13 +1,6 @@
-// k6 handleSummary 용 커스텀 HTML 리포트 생성기 (공용)
-//
-// 각 시나리오 파일에서 이렇게 재사용:
-//   import { summaryHandler } from '../utils/reporter.ts';
-//   export function handleSummary(data: any) {
-//     return summaryHandler(data);            // stdout 요약 + summary.html 동시 생성
-//   }
-//
-// ⚠️ textSummary 는 원격 jslib 에서 import 하므로, 최초 실행 시 인터넷 연결이 필요합니다
-//    (k6가 받아서 캐시함).
+// handleSummary 용 HTML 리포트 생성기.
+// 사용: export function handleSummary(data) { return summaryHandler(data); }
+// ⚠️ textSummary 는 원격 jslib import → 최초 실행 시 인터넷 필요 (k6가 캐시).
 
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
@@ -15,7 +8,7 @@ function fmt(v: number | undefined, digits = 2): string {
   return (v ?? 0).toFixed(digits);
 }
 
-// 엔드포인트별(태그 name:...) 지표 추출. 시나리오에서 해당 서브메트릭/thresholds 가 있을 때만 채워짐.
+// 엔드포인트별(태그 name:...) 지표 추출 (해당 서브메트릭/thresholds 있을 때만)
 function extractPerEndpoint(metrics: Record<string, any>) {
   const rows: {
     name: string; count: number; avg: number; p95: number; max: number; errorRate: number;
@@ -122,7 +115,7 @@ export function generateReport(data: any): string {
 </html>`;
 }
 
-// handleSummary 에서 그대로 반환할 수 있는 형태 (터미널 요약 + HTML 파일 동시 출력)
+// 터미널 요약 + HTML 파일 동시 출력
 export function summaryHandler(data: any, htmlPath = 'summary.html') {
   return {
     stdout: textSummary(data, { indent: ' ', enableColors: true }),
