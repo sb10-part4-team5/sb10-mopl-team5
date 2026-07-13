@@ -12,7 +12,8 @@ import config, { commonThresholds, ContentSortBy, SortDirection } from '../confi
 import { get } from '../utils/http-client.ts';
 import { randomThinkTime, randomInt } from '../utils/random.ts';
 import { summaryHandler } from '../utils/reporter.ts';
-import { loginByIndex, fetchCsrfToken } from '../api/auth.api.ts';
+import { fetchCsrfToken } from '../api/auth.api.ts';
+import { setupAuth } from '../utils/setup.ts';
 
 import { getReviews, createReview, updateReview, deleteReview } from '../api/review.api.ts';
 
@@ -38,12 +39,7 @@ interface SetupData {
 }
 
 export function setup(): SetupData {
-  // VU 수만큼 로그인
-  const tokens: string[] = [];
-  for (let i = 1; i <= VUS; i++) {
-    tokens.push(loginByIndex(i));
-  }
-  console.log(`[setup] ${tokens.length}개 계정 로그인 완료`);
+  const tokens = setupAuth(VUS);
 
   // 테스트에 필요한 콘텐츠 ID 수집 (VUS * CONTENTS_PER_VU 개)
   const contentIds: string[] = [];

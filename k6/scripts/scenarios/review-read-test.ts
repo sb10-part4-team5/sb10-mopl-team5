@@ -12,7 +12,7 @@ import config, { commonThresholds, ContentSortBy, SortDirection } from '../confi
 import { get } from '../utils/http-client.ts';
 import { randomThinkTime, pickOne } from '../utils/random.ts';
 import { summaryHandler } from '../utils/reporter.ts';
-import { loginByIndex } from '../api/auth.api.ts';
+import { setupAuth } from '../utils/setup.ts';
 import { getReviews } from '../api/review.api.ts';
 import { CursorResponse } from '../types/global.type.ts';
 import { ContentResponse } from '../types/content.type.ts';
@@ -42,11 +42,7 @@ interface SetupData {
 }
 
 export function setup(): SetupData {
-  const tokens: string[] = [];
-  for (let i = 1; i <= VUS; i++) {
-    tokens.push(loginByIndex(i));
-  }
-  console.log(`[setup] ${tokens.length}개 계정 로그인 완료`);
+  const tokens = setupAuth(VUS);
 
   const contentIds: string[] = [];
   let nextCursor: string | null = null;
