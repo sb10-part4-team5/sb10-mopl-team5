@@ -1,0 +1,13 @@
+{
+  "name": "mopl-content-load-test",
+  "version": "1.0.0",
+  "description": "MOPL 콘텐츠 API k6 부하테스트",
+  "private": true,
+  "scripts": {
+    "smoke": "k6 run scripts/smoke.ts"
+  },
+  "devDependencies": {
+    "@types/k6": "^0.50.0",
+    "typescript": "^5.4.0"
+  }
+}
