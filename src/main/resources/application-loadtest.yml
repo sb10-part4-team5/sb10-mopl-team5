@@ -1,0 +1,66 @@
+server:
+  shutdown: immediate
+spring:
+  config:
+    activate:
+      on-profile: loadtest
+
+  docker:
+    compose:
+      lifecycle-management: start-only   # 앱 종료 시 컨테이너를 stop하지 않음
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mopl
+    username: mopl
+    password: mopl
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+    kafka:
+      bootstrap-servers: localhost:9092
+      consumer:
+        group-id: mopl-dev
+        auto-offset-reset: earliest
+        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  web:
+    resources:
+      static-locations: classpath:/static/, file:./uploads/
+
+mopl:
+  storage:
+    local:
+      base-url: http://localhost:8080
+      upload-dir: ./uploads
+  auth:
+    cookie:
+      secure: false
+      same-site: Lax
+
+# dev와 동일하되, 부하테스트 시 응답속도에 영향을 주는 것으로 확인된
+# SQL 바인딩 TRACE 로깅만 낮춤 (k6 A/B 비교로 확인)
+logging:
+  level:
+    root: INFO
+    com.codeit.team5.mopl: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
