@@ -19,7 +19,7 @@ import { getContents } from '../api/content.api.ts';
 import { summaryHandler } from '../utils/reporter.ts';
 import { randomThinkTime } from '../utils/random.ts';
 import { CONTENT_QUERY_CASE_NAMES, CONTENT_QUERY_TAGS, buildCaseParams } from './content-query-cases.ts';
-import { setupAuth } from "../utils/setup.ts";
+import { setupAuth } from '../utils/setup.ts';
 
 const TARGET_VUS = Number(__ENV.TARGET_VUS || 20);
 const RAMP_TIME = __ENV.RAMP_TIME || '30s';

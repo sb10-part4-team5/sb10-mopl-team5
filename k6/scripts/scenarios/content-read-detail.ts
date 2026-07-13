@@ -14,9 +14,9 @@ import { check } from 'k6';
 import exec from 'k6/execution';
 import config, { endpointThresholds, warmupLoadScenarios, ContentSortBy, SortDirection } from '../config.ts';
 import { getContents, getContent } from '../api/content.api.ts';
-import { loginByIndex } from '../api/auth.api.ts';
 import { summaryHandler } from '../utils/reporter.ts';
 import { randomThinkTime, pickOne } from '../utils/random.ts';
+import { setupAuth } from '../utils/setup.ts';
 
 const TARGET_VUS = Number(__ENV.TARGET_VUS || 20);
 const RAMP_TIME = __ENV.RAMP_TIME || '30s';
@@ -73,13 +73,7 @@ function collectContentIds(token: string, target: number): string[] {
 }
 
 export function setup(): SetupData {
-  const tokens: string[] = [];
-  for (let i = 1; i <= TARGET_VUS; i++) {
-    tokens.push(loginByIndex(i));
-  }
-  if (tokens.length === 0) {
-    throw new Error(`[setup] 로그인된 계정이 없습니다 (TARGET_VUS=${TARGET_VUS}).`);
-  }
+  const tokens = setupAuth(TARGET_VUS);
 
   const contentIds = collectContentIds(tokens[0], ID_POOL);
   if (contentIds.length === 0) {
