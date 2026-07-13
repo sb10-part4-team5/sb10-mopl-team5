@@ -13,8 +13,16 @@ import { CursorResponse, ContentResponse } from './types/content.type.ts';
 const VUS = Number(__ENV.VUS || 5);
 
 export const options = {
-  vus: VUS,
-  iterations: VUS, // 스모크: VU당 1회
+  // per-vu-iterations: VU마다 정확히 iterations 회 실행을 "보장" (shared-iterations는 공유 풀이라 미보장)
+  // VU별 고정 계정 매핑(exec.vu.idInTest) 설계상, 모든 VU가 실행되는 게 보장돼야 함
+  scenarios: {
+    smoke: {
+      executor: 'per-vu-iterations',
+      vus: VUS,
+      iterations: 1,
+      maxDuration: '30s', // 안전장치: 이 시간 넘으면 강제 종료
+    },
+  },
   thresholds: commonThresholds,
 };
 
