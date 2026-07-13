@@ -118,4 +118,52 @@ export const commonThresholds = {
   http_req_duration: ['p(95)<500'],   // p95 500ms 이내
 };
 
+// 엔드포인트(name 태그)별 threshold 세트.
+export function endpointThresholds(
+  tagName: string,
+  durationThresholds: string[] = ['p(95)<500'],
+  scenario?: string,
+) {
+  const sel = scenario ? `name:${tagName},scenario:${scenario}` : `name:${tagName}`;
+  return {
+    [`http_req_duration{${sel}}`]: durationThresholds,
+    [`http_reqs{${sel}}`]: ['count>=0'],
+    [`http_req_failed{${sel}}`]: ['rate>=0'],
+  };
+}
+
+// 워밍업(constant-vus) → 본 측정(ramping-vus) 2단계 시나리오 세트.
+// 그 뒤에 load 가 시작된다. 두 시나리오 모두 exec 로 지정한 같은 함수를 실행한다.
+// threshold/리포트는 endpointThresholds(tag, thresholds, 'load') 로 스코프해 워밍업을 측정에서 제외할 것.
+export function warmupLoadScenarios(opts: {
+  exec: string;
+  targetVus: number;
+  rampTime?: string;
+  holdTime?: string;
+  warmupVus?: number;
+  warmupTime?: string;
+}) {
+  const warmupTime = opts.warmupTime ?? '20s';
+  return {
+    warmup: {
+      executor: 'constant-vus',
+      vus: opts.warmupVus ?? 5,
+      duration: warmupTime,
+      exec: opts.exec,
+      startTime: '0s',
+    },
+    load: {
+      executor: 'ramping-vus',
+      startTime: warmupTime,
+      startVUs: 0,
+      stages: [
+        { duration: opts.rampTime ?? '30s', target: opts.targetVus },
+        { duration: opts.holdTime ?? '1m', target: opts.targetVus },
+        { duration: opts.rampTime ?? '30s', target: 0 },
+      ],
+      exec: opts.exec,
+    },
+  };
+}
+
 export default config;
