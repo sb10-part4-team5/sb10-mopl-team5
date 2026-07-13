@@ -4,7 +4,7 @@
 //
 //   실행 예시:
 //     k6 run scripts/scenarios/review-read-test.ts
-//     k6 run -e VUS=20 -e DURATION=2m cd y-e CONTENT_POOL=100 scripts/scenarios/review-read-test.ts
+//     k6 run -e VUS=20 -e DURATION=2m -e CONTENT_POOL=100 scripts/scenarios/review-read-test.ts
 
 import { check } from 'k6';
 import exec from 'k6/execution';

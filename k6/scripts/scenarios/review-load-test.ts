@@ -67,6 +67,13 @@ export function setup(): SetupData {
 
     if (!res || res.data.length === 0) break;
     res.data.forEach((c) => contentIds.push(c.id));
+
+    // 커서가 전진하지 않으면 중복 수집 방지
+    if (res.nextCursor === nextCursor && res.nextIdAfter === nextIdAfter) {
+      console.warn('[setup] 커서가 전진하지 않아 페이지네이션을 중단합니다.');
+      break;
+    }
+
     nextCursor = res.nextCursor;
     nextIdAfter = res.nextIdAfter;
     if (!res.hasNext) break;
@@ -132,7 +139,10 @@ export default function (data: SetupData): void {
   randomThinkTime(0.5, 1.5);
 
   // 4. 리뷰 삭제
-  deleteReview(createRes.id, token);
+  const deleteRes = deleteReview(createRes.id, token);
+  check(deleteRes, {
+    '리뷰 삭제 성공': (r) => r !== null && r.status === 204,
+  });
 }
 
 export function handleSummary(data: any) {

@@ -1,3 +1,4 @@
+import { RefinedResponse, ResponseType } from 'k6/http';
 import { get, post, patch, del } from '../utils/http-client.ts';
 import config from '../config.ts';
 import { ReviewListResponse, ReviewResponse, ReviewCreateRequest, ReviewUpdateRequest } from '../types/review.type.ts';
@@ -25,7 +26,7 @@ export function updateReview(reviewId: string, body: ReviewUpdateRequest, token:
   });
 }
 
-export function deleteReview(reviewId: string, token: string): void {
+export function deleteReview(reviewId: string, token: string): RefinedResponse<ResponseType | undefined> {
   const url = config.endpoints.review.detail.split('{reviewId}').join(reviewId);
-  del(url, { token, tag: config.tags.review.delete });
+  return del(url, { token, tag: config.tags.review.delete });
 }

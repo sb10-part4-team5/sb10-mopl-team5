@@ -81,7 +81,8 @@ export function patch<T>(url: string, body: unknown, options?: RequestOptions): 
   return parseJson<T>(res, 'PATCH');
 }
 
-export function del(url: string, options?: RequestOptions): void {
+export function del(url: string, options?: RequestOptions): RefinedResponse<ResponseType | undefined> {
   const res = http.del(url, null, buildParams(options, true)); // DELETE 요청에는 CSRF 헤더를 포함한다.
   isOk(res, 'DELETE');
+  return res;
 }
