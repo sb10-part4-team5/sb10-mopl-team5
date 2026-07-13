@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    # URL에 대량 Insert 성능 최적화를 위한 옵션(reWriteBatchedInserts) 추가
+    # 나머지 username, password 등은 상위 모듈의 application-dev.yml에서 상속받습니다.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mopl?reWriteBatchedInserts=true}
+
+generator:
+  user: 1000
+  content: 5000
+  tag: 100
+  tag-per-content: 3
+  review-per-user: 5
+  playlist-per-user: 3
+  item-per-playlist: 10
+  subscription-per-user: 5
+  follow-per-user: 10
+  notification-per-user: 20
+  db-batch-size: 1000

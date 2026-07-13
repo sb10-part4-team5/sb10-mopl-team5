@@ -1,7 +1,6 @@
 package com.codeit.team5.mopl.notification.repository.querydsl;
 
 import com.codeit.team5.mopl.notification.entity.Notification;
-import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.entity.QNotification;
 import com.codeit.team5.mopl.notification.exception.CursorIdAfterNotTogetherException;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -63,40 +62,26 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 
     @Override
     public List<Notification> findMissedNotifications(UUID receiverId, UUID lastEventId) {
-        return findMissedAfter(receiverId, lastEventId, false);
-    }
-
-    @Override
-    public List<Notification> findMissedDirectMessages(UUID receiverId, UUID lastEventId) {
-        return findMissedAfter(receiverId, lastEventId, true);
-    }
-
-    private List<Notification> findMissedAfter(UUID receiverId, UUID lastEventId, boolean directMessage) {
         QNotification n = QNotification.notification;
 
         Notification ref = queryFactory.selectFrom(n)
-                .where(n.id.eq(lastEventId).and(n.receiverId.eq(receiverId)))
-                .fetchOne();
+            .where(n.id.eq(lastEventId).and(n.receiverId.eq(receiverId)))
+            .fetchOne();
 
         if (ref == null) {
             return List.of();
         }
 
         BooleanExpression afterCursor = n.createdAt.gt(ref.getCreatedAt())
-                .or(n.createdAt.eq(ref.getCreatedAt()).and(n.id.gt(ref.getId())));
-
-        BooleanExpression typeFilter = directMessage
-                ? n.type.eq(NotificationType.DIRECT_MESSAGE)
-                : n.type.ne(NotificationType.DIRECT_MESSAGE);
+            .or(n.createdAt.eq(ref.getCreatedAt()).and(n.id.gt(ref.getId())));
 
         return queryFactory.selectFrom(n)
-                .where(
-                        n.receiverId.eq(receiverId),
-                        n.isRead.isFalse(),
-                        typeFilter,
-                        afterCursor
-                )
-                .orderBy(n.createdAt.asc(), n.id.asc())
-                .fetch();
+            .where(
+                n.receiverId.eq(receiverId),
+                n.isRead.isFalse(),
+                afterCursor)
+            .orderBy(n.createdAt.asc(), n.id.asc())
+            .fetch();
     }
+
 }

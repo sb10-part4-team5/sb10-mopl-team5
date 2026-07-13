@@ -1,0 +1,14 @@
+# 의존성
+node_modules/
+
+# k6 실행 결과물 — 실행 폴더(k6/) 루트에 생성되는 리포트만 타겟 (하위 디렉토리 파일은 보호)
+results/
+/*.json
+/*.html
+# 루트의 설정 파일은 제외 대상에서 되살림
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+
+# 로컬 환경설정
+.env

@@ -30,8 +30,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.util.ReflectionUtils;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -400,47 +398,6 @@ class NotificationRepositoryTest {
                 .containsExactly(n1.getId(), n2.getId(), n3.getId());
     }
 
-    @Test
-    @DisplayName("findMissedDirectMessages: 결과가 createdAt 오름차순으로 정렬된다 (인터리빙 전제 조건)")
-    void findMissedDirectMessages_returnsSortedByCreatedAtAsc() {
-        // Given
-        UUID receiverId = persistReceiver("missed-dm-sort@example.com");
-
-        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
-        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
-        Instant t2 = Instant.parse("2026-01-01T00:02:00Z");
-        Instant t3 = Instant.parse("2026-01-01T00:03:00Z");
-
-        Notification ref = notificationRepository.save(Notification.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "기준DM", null, NotificationLevel.INFO));
-        setCreatedAt(ref.getId(), t0);
-
-        // 역순(t3 → t1 → t2)으로 저장
-        Notification dm3 = notificationRepository.save(Notification.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "DM3", null, NotificationLevel.INFO));
-        setCreatedAt(dm3.getId(), t3);
-
-        Notification dm1 = notificationRepository.save(Notification.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "DM1", null, NotificationLevel.INFO));
-        setCreatedAt(dm1.getId(), t1);
-
-        Notification dm2 = notificationRepository.save(Notification.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "DM2", null, NotificationLevel.INFO));
-        setCreatedAt(dm2.getId(), t2);
-
-        entityManager.flush();
-        entityManager.clear();
-
-        // When
-        List<Notification> result =
-                notificationRepository.findMissedDirectMessages(receiverId, ref.getId());
-
-        // Then: createdAt 오름차순(t1 → t2 → t3)이어야 한다
-        assertThat(result).hasSize(3);
-        assertThat(result).extracting(Notification::getId)
-                .containsExactly(dm1.getId(), dm2.getId(), dm3.getId());
-    }
-
     // created_at을 직접 지정 (@CreatedDate는 덮어쓸 수 없어 native query 사용)
     private void setCreatedAt(UUID id, Instant createdAt) {
         entityManager.createNativeQuery(
@@ -448,40 +405,5 @@ class NotificationRepositoryTest {
                 .setParameter("ts", OffsetDateTime.ofInstant(createdAt, ZoneOffset.UTC))
                 .setParameter("id", id)
                 .executeUpdate();
-    }
-
-    @Test
-    @DisplayName("미수신 DM 조회 시 읽음 처리된 DM은 제외된다")
-    void findMissedDirectMessages_excludesRead() {
-        // Given
-        UUID receiverId = persistReceiver("missed-dm@example.com");
-
-        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
-        Instant t1 = Instant.parse("2026-01-01T00:01:00Z");
-
-        Notification ref = notificationRepository.save(Notification.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "기준", null, NotificationLevel.INFO));
-        setCreatedAt(ref.getId(), t0);
-
-        Notification unread = notificationRepository.save(Notification.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "안읽음", null, NotificationLevel.INFO));
-        setCreatedAt(unread.getId(), t1);
-
-        Notification read = notificationRepository.save(Notification.create(
-                receiverId, NotificationType.DIRECT_MESSAGE, "읽음", null, NotificationLevel.INFO));
-        setCreatedAt(read.getId(), t1);
-
-        read.markAsRead();
-        notificationRepository.save(read);
-        entityManager.flush();
-        entityManager.clear();
-
-        // When
-        List<Notification> result =
-                notificationRepository.findMissedDirectMessages(receiverId, ref.getId());
-
-        // Then: read는 제외, unread만 반환
-        assertThat(result).extracting(Notification::getId)
-                .containsExactly(unread.getId());
     }
 }

@@ -13,7 +13,8 @@ public class SseEmitterStore {
     // emitter 객체를 담을 스토리지 <수신자id, emitter>
     private final Map<UUID, SseEmitter> emitters = new ConcurrentHashMap<>();
 
-    // Emitter 객체를 emitters에 저장
+    // UserId를 키로 Emitter 저장한다.
+    // 동일한 userId의 Emitter가 이미 존재하면 기존 Emitter를 반환하고, 없으면 null 반환
     public SseEmitter save(UUID userId, SseEmitter emitter) {
         return emitters.put(userId, emitter);
     }

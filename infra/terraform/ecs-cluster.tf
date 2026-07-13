@@ -51,6 +51,16 @@ resource "aws_launch_template" "ecs" {
     printf '%s' "$HOST_IP" > /etc/mopl-host-ip.tmp
     mv /etc/mopl-host-ip.tmp /etc/mopl-host-ip
     chmod 0644 /etc/mopl-host-ip
+
+    SWAPFILE=/swapfile
+    fallocate -l 1G "$SWAPFILE"
+    chmod 600 "$SWAPFILE"
+    mkswap "$SWAPFILE"
+    swapon "$SWAPFILE"
+    echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+
+    sysctl -w vm.swappiness=10
+    echo "vm.swappiness=10" >> /etc/sysctl.conf
   EOF
   )
 

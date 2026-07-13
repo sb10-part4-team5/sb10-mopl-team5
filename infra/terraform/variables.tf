@@ -202,6 +202,12 @@ variable "grafana_alloy_token" {
   sensitive   = true
 }
 
+variable "grafana_loki_read_token" {
+  description = "Grafana Cloud Loki 조회(logs:read)용 Access Policy 토큰 — dump-trigger Lambda가 폴링에 사용"
+  type        = string
+  sensitive   = true
+}
+
 variable "grafana_cloudwatch_aws_account_id" {
   description = "Grafana Cloud가 CloudWatch 조회 시 assume할 role의 신뢰 주체 AWS 계정 ID"
   type        = string

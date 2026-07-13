@@ -7,3 +7,4 @@ infra
 *.md
 docker-compose.yml
 .env
+data-generator

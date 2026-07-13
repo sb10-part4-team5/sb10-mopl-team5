@@ -2,15 +2,15 @@
 
 CREATE TABLE users
 (
-    id                UUID PRIMARY KEY,
-    email             VARCHAR(255) NOT NULL,
-    password          VARCHAR(255),
-    name              VARCHAR(100) NOT NULL,
-    profile_image_url VARCHAR(512),
-    role              VARCHAR(20)  NOT NULL DEFAULT 'USER',
-    locked            BOOLEAN      NOT NULL DEFAULT FALSE,
-    created_at        TIMESTAMPTZ  NOT NULL,
-    updated_at        TIMESTAMPTZ  NOT NULL,
+    id               UUID PRIMARY KEY,
+    email            VARCHAR(255) NOT NULL,
+    password         VARCHAR(255),
+    name             VARCHAR(100) COLLATE "ko-KR-x-icu" NOT NULL,
+    profile_image_id UUID,
+    role             VARCHAR(20)  NOT NULL DEFAULT 'USER',
+    locked           BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMPTZ  NOT NULL,
+    updated_at       TIMESTAMPTZ  NOT NULL,
     CONSTRAINT uk_users_email UNIQUE (email),
     CONSTRAINT ck_users_role CHECK (role IN ('USER', 'ADMIN'))
 );
@@ -53,37 +53,33 @@ CREATE INDEX idx_temppw_expires ON temporary_passwords (expires_at);
 
 CREATE TABLE contents
 (
-    id            UUID PRIMARY KEY,
-    type          VARCHAR(20)  NOT NULL,
-    title         VARCHAR(500) NOT NULL,
-    description   TEXT,
-    thumbnail_url VARCHAR(512),
-    released_at   TIMESTAMPTZ, -- 개봉일 / 경기 일시
-    metadata      JSONB,       -- 영화:runtime,genres,language / 스포츠:league,season,homeTeam,awayTeam
-    source        VARCHAR(20)  NOT NULL,
-    external_id   VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ  NOT NULL,
-    updated_at    TIMESTAMPTZ  NOT NULL,
+    id           UUID PRIMARY KEY,
+    type         VARCHAR(20)  NOT NULL,
+    title        VARCHAR(500) NOT NULL,
+    description  TEXT,
+    thumbnail_id UUID,
+    released_at  TIMESTAMPTZ,
+    metadata     JSONB,
+    source       VARCHAR(20)  NOT NULL,
+    external_id  VARCHAR(100) NOT NULL,
+    created_at   TIMESTAMPTZ  NOT NULL,
+    updated_at   TIMESTAMPTZ  NOT NULL,
     CONSTRAINT ck_contents_type CHECK (type IN ('MOVIE', 'TV_SERIES', 'SPORT')),
-    CONSTRAINT ck_contents_source CHECK (source IN ('TMDB', 'SPORTS_DB')),
+    CONSTRAINT ck_contents_source CHECK (source IN ('TMDB', 'SPORTS_DB', 'ADMIN')),
     CONSTRAINT uk_contents_source_external_id UNIQUE (source, external_id)
 );
 CREATE INDEX idx_contents_type ON contents (type);
 CREATE INDEX idx_contents_title ON contents (title);
 CREATE INDEX idx_contents_metadata ON contents USING GIN (metadata);
 
--- 리뷰/시청 도메인 이벤트로 갱신되는 집계
 CREATE TABLE content_stats
 (
-    content_id    UUID PRIMARY KEY,
+    id            UUID             PRIMARY KEY REFERENCES contents (id) ON DELETE CASCADE,
     review_count  INTEGER          NOT NULL DEFAULT 0,
     rating_sum    DOUBLE PRECISION NOT NULL DEFAULT 0,
-    watcher_count INTEGER          NOT NULL DEFAULT 0,
-    updated_at    TIMESTAMPTZ      NOT NULL,
-    CONSTRAINT fk_content_stats_content FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE
+    watcher_count BIGINT           NOT NULL DEFAULT 0
 );
 
--- 태그
 CREATE TABLE tags
 (
     id   UUID PRIMARY KEY,
@@ -138,7 +134,6 @@ CREATE TABLE playlist_items
     id          UUID PRIMARY KEY,
     playlist_id UUID        NOT NULL,
     content_id  UUID        NOT NULL,
-    position    INTEGER     NOT NULL DEFAULT 0,
     added_at    TIMESTAMPTZ NOT NULL,
     CONSTRAINT fk_item_playlist FOREIGN KEY (playlist_id) REFERENCES playlists (id) ON DELETE CASCADE,
     CONSTRAINT fk_item_content FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE,
@@ -152,7 +147,7 @@ CREATE TABLE playlist_subscriptions
     subscriber_id UUID        NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL,
     CONSTRAINT fk_sub_playlist FOREIGN KEY (playlist_id) REFERENCES playlists (id) ON DELETE CASCADE,
-    CONSTRAINT fk_sub_subscriber FOREIGN KEY (subscriber_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_playlist_subscriptions_user_id FOREIGN KEY (subscriber_id) REFERENCES users (id),
     CONSTRAINT uk_playlist_subscriptions_playlist_id_subscriber_id UNIQUE (playlist_id, subscriber_id)
 );
 CREATE INDEX idx_sub_subscriber ON playlist_subscriptions (subscriber_id);
@@ -206,7 +201,7 @@ CREATE TABLE direct_messages
     conversation_id UUID        NOT NULL,
     sender_id       UUID        NOT NULL,
     receiver_id     UUID        NOT NULL,
-    content         TEXT        NOT NULL,
+    content         VARCHAR(1000) NOT NULL,
     is_read         BOOLEAN     NOT NULL DEFAULT FALSE,
     read_at         TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL,
@@ -219,7 +214,7 @@ CREATE TABLE direct_messages
         )
 );
 CREATE INDEX idx_dm_conversation ON direct_messages (conversation_id, created_at);
-CREATE INDEX idx_dm_unread ON direct_messages (receiver_id) WHERE is_read = FALSE;
+CREATE INDEX idx_dm_conversation_receiver_unread ON direct_messages (conversation_id, receiver_id, created_at) WHERE is_read = false;
 
 -- ---------- 6. 알림 (SSE) ----------
 
@@ -249,5 +244,5 @@ CREATE TABLE notifications
         (is_read = TRUE AND read_at IS NOT NULL)
         )
 );
-CREATE INDEX idx_noti_receiver ON notifications (receiver_id, created_at DESC);
+CREATE INDEX idx_noti_receiver_created_id ON notifications (receiver_id, created_at DESC, id DESC);
 CREATE INDEX idx_noti_unread ON notifications (receiver_id) WHERE is_read = FALSE;
