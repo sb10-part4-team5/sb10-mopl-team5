@@ -56,11 +56,9 @@ mopl:
       secure: false
       same-site: Lax
 
-# dev와 동일하되, 부하테스트 시 응답속도에 영향을 주는 것으로 확인된
-# SQL 바인딩 TRACE 로깅만 낮춤 (k6 A/B 비교로 확인)
 logging:
   level:
     root: INFO
-    com.codeit.team5.mopl: DEBUG
+    com.codeit.team5.mopl: INFO
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
