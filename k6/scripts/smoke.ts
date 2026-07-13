@@ -7,8 +7,8 @@ import exec from 'k6/execution';
 import config, { commonThresholds, ContentSortBy, SortDirection } from './config.ts';
 import { get } from './utils/http-client.ts';
 import { summaryHandler } from './utils/reporter.ts';
-import { loginByIndex } from './api/auth.api.ts';
 import { CursorResponse, ContentResponse } from './types/content.type.ts';
+import { setupAuth } from './utils/setup.ts';
 
 const VUS = Number(__ENV.VUS || 5);
 
@@ -26,20 +26,11 @@ export const options = {
   thresholds: commonThresholds,
 };
 
-type SetupData = { token: string }[];
+type SetupData = string[];
 
 // 시작 전 1회: VU 수만큼 계정 로그인해 토큰 확보
 export function setup(): SetupData {
-  const tokens: SetupData = [];
-  for (let i = 1; i <= VUS; i++) {
-    tokens.push({ token: loginByIndex(i) });
-  }
-  // 빈 배열 방지 (아래 % 0 → NaN 가드)
-  if (tokens.length === 0) {
-    throw new Error(`[setup] 로그인된 계정이 없습니다 (VUS=${VUS}). VUS>=1 인지, 서버·계정 시딩을 확인하세요.`);
-  }
-  console.log(`[setup] ${tokens.length}개 계정 로그인 완료`);
-  return tokens;
+  return setupAuth(VUS);
 }
 
 // VU마다 자기 인덱스 토큰만 사용
@@ -48,13 +39,13 @@ export default function (data: SetupData): void {
   if (data.length === 0) {
     throw new Error('[VU] 사용 가능한 계정 토큰이 없습니다. setup() 로그인 실패 또는 VUS=0 여부를 확인하세요.');
   }
-  const account = data[(exec.vu.idInTest - 1) % data.length];
+  const token = data[(exec.vu.idInTest - 1) % data.length];
 
   const params = `limit=10&sortDirection=${SortDirection.DESC}&sortBy=${ContentSortBy.CREATED_AT}`;
   const url = `${config.endpoints.content.list}?${params}`;
 
   const body = get<CursorResponse<ContentResponse>>(url, {
-    token: account.token,
+    token: token,
     tag: config.tags.content.list,
   });
 

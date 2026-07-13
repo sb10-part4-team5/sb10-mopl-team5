@@ -115,10 +115,24 @@ export function generateReport(data: any): string {
 </html>`;
 }
 
-// 터미널 요약 + HTML 파일 동시 출력
+// 파일명의 확장자 앞에 타임스탬프(KST)를 끼워 넣어 실행마다 파일이 겹치지 않게 함
+// (예: content-read-latest-summary.html -> content-read-latest-summary-2026-07-13T17-07-54-471.html)
+// toISOString()은 항상 UTC라 +9시간 보정 후 'Z'를 뗀다 (그대로 두면 UTC라고 오해하기 쉬움).
+function withTimestamp(basePath: string): string {
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const suffix = new Date(Date.now() + KST_OFFSET_MS)
+    .toISOString()
+    .replace('Z', '')
+    .replace(/[:.]/g, '-');
+  const dotIndex = basePath.lastIndexOf('.');
+  if (dotIndex === -1) return `${basePath}-${suffix}`;
+  return `${basePath.slice(0, dotIndex)}-${suffix}${basePath.slice(dotIndex)}`;
+}
+
+// 터미널 요약 + HTML 파일 동시 출력. 파일명은 실행마다 자동으로 고유해짐 (덮어쓰기 방지)
 export function summaryHandler(data: any, htmlPath = 'summary.html') {
   return {
     stdout: textSummary(data, { indent: ' ', enableColors: true }),
-    [htmlPath]: generateReport(data),
+    [withTimestamp(htmlPath)]: generateReport(data),
   };
 }
