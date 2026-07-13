@@ -3,6 +3,9 @@ package com.codeit.team5.mopl.global.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -10,9 +13,11 @@ import jakarta.servlet.ServletResponse;
 import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -141,6 +146,61 @@ class MdcLoggingFilterTest {
                 .isInstanceOf(ServletException.class);
             assertThat(MDC.get(MdcKey.REQUEST_ID)).isNull();
             assertThat(MDC.get(MdcKey.CLIENT_IP)).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("헬스체크 요청 로그 제외")
+    class HealthCheckLogging {
+
+        private ListAppender<ILoggingEvent> appender;
+
+        @BeforeEach
+        void attachAppender() {
+            appender = new ListAppender<>();
+            appender.start();
+            ((Logger) LoggerFactory.getLogger(MdcLoggingFilter.class)).addAppender(appender);
+        }
+
+        @AfterEach
+        void detachAppender() {
+            ((Logger) LoggerFactory.getLogger(MdcLoggingFilter.class)).detachAppender(appender);
+        }
+
+        @Test
+        @DisplayName("/actuator/health 요청은 로그를 남기지 않기 성공")
+        void skipsHealthCheckPath() throws Exception {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            CapturingFilterChain chain = new CapturingFilterChain();
+
+            filter.doFilter(request, response, chain);
+
+            assertThat(appender.list).isEmpty();
+        }
+
+        @Test
+        @DisplayName("/actuator/health/liveness 같은 하위 경로도 로그를 남기지 않기 성공")
+        void skipsHealthCheckSubPath() throws Exception {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health/liveness");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            CapturingFilterChain chain = new CapturingFilterChain();
+
+            filter.doFilter(request, response, chain);
+
+            assertThat(appender.list).isEmpty();
+        }
+
+        @Test
+        @DisplayName("헬스체크 경로가 아니면 로그를 남기기 성공")
+        void logsNonHealthCheckPath() throws Exception {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            CapturingFilterChain chain = new CapturingFilterChain();
+
+            filter.doFilter(request, response, chain);
+
+            assertThat(appender.list).hasSize(1);
         }
     }
 

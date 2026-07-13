@@ -7,12 +7,12 @@ COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 RUN chmod +x gradlew && ./gradlew dependencies --no-daemon || true
 
-# 소스 복사 후 빌드 (테스트는 CI에서 별도 수행)
+# 소스 복사 후 빌드
 COPY src ./src
 RUN ./gradlew bootJar -x test --no-daemon
 
-# 2단계: 실행 (가벼운 JRE)
-FROM eclipse-temurin:17-jre
+# 2단계: 실행
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 # 빌드 산출물만 복사
