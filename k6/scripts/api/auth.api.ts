@@ -21,6 +21,10 @@ export function fetchCsrfToken(): string {
       `CSRF 토큰을 쿠키에서 찾지 못했습니다. status=${res.status} body=${res.body}`,
     );
   }
+
+  // 모든 경로에서 쿠키가 전송되도록 base URL 기준으로 명시 재설정
+  http.cookieJar().set(config.baseUrl, CSRF_COOKIE_NAME, token);
+
   return token;
 }
 

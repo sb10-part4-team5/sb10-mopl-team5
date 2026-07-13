@@ -1,5 +1,4 @@
 import { get, post, patch, del } from '../utils/http-client.ts';
-import { fetchCsrfToken } from './auth.api.ts';
 import config from '../config.ts';
 import { ReviewListResponse, ReviewResponse, ReviewCreateRequest, ReviewUpdateRequest } from '../types/review.type.ts';
 
@@ -14,21 +13,19 @@ export function getReviews(contentId: string, token: string): ReviewListResponse
 export function createReview(body: ReviewCreateRequest, token: string): ReviewResponse | null {
   return post<ReviewResponse>(config.endpoints.review.create, body, {
     token,
-    csrfToken: fetchCsrfToken(),
     tag: config.tags.review.create,
   });
 }
 
 export function updateReview(reviewId: string, body: ReviewUpdateRequest, token: string): ReviewResponse | null {
-  const url = config.endpoints.review.detail.replace('{reviewId}', reviewId);
+  const url = config.endpoints.review.detail.split('{reviewId}').join(reviewId);
   return patch<ReviewResponse>(url, body, {
     token,
-    csrfToken: fetchCsrfToken(),
     tag: config.tags.review.update,
   });
 }
 
 export function deleteReview(reviewId: string, token: string): void {
-  const url = config.endpoints.review.detail.replace('{reviewId}', reviewId);
-  del(url, { token, csrfToken: fetchCsrfToken(), tag: config.tags.review.delete });
+  const url = config.endpoints.review.detail.split('{reviewId}').join(reviewId);
+  del(url, { token, tag: config.tags.review.delete });
 }
