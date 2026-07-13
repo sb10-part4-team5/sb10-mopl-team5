@@ -27,9 +27,11 @@ export const options = {
   vus: VUS,
   iterations: VUS * CONTENTS_PER_VU,
   thresholds: {
-    ...commonThresholds, // config에 명시된 기본 임계점
-    'http_req_duration{name:GET /api/reviews}': ['p(95)<500'], // 리뷰 조회 시 95% 이상의 요청이 500ms 미만이어야 할 것
-    'http_req_duration{name:POST /api/reviews}': ['p(95)<800'], // 리뷰 생성 시 95% 이상의 요청이 800ms 미만이어야 할 것
+    ...commonThresholds,
+    'http_req_duration{name:GET /api/reviews}': ['p(95)<500'],
+    'http_req_duration{name:POST /api/reviews}': ['p(95)<800'],
+    'http_req_duration{name:PATCH /api/reviews/{id}}': ['p(95)<800'],
+    'http_req_duration{name:DELETE /api/reviews/{id}}': ['p(95)<800'],
   },
 };
 
