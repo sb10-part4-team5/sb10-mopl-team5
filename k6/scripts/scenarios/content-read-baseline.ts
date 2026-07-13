@@ -11,7 +11,6 @@ import { check } from 'k6';
 import exec from 'k6/execution';
 import config, { endpointThresholds, warmupLoadScenarios } from '../config.ts';
 import { getContents } from '../api/content.api.ts';
-import { loginByIndex } from '../api/auth.api.ts';
 import { summaryHandler } from '../utils/reporter.ts';
 import { randomThinkTime } from '../utils/random.ts';
 import {
@@ -20,6 +19,7 @@ import {
   buildCaseParams,
   ContentQueryCase,
 } from './content-query-cases.ts';
+import { setupAuth } from "../utils/setup.ts";
 
 const TARGET_VUS = Number(__ENV.TARGET_VUS || 20);
 const RAMP_TIME = __ENV.RAMP_TIME || '30s';
@@ -56,18 +56,10 @@ export const options = {
   },
 };
 
-type SetupData = { token: string }[];
+type SetupData = string[];
 
 export function setup(): SetupData {
-  const tokens: SetupData = [];
-  for (let i = 1; i <= TARGET_VUS; i++) {
-    tokens.push({ token: loginByIndex(i) });
-  }
-  if (tokens.length === 0) {
-    throw new Error(`[setup] 로그인된 계정이 없습니다 (TARGET_VUS=${TARGET_VUS}).`);
-  }
-  console.log(`[setup] ${tokens.length}개 계정 로그인 완료 (CASE=${CASE})`);
-  return tokens;
+  return setupAuth(TARGET_VUS);
 }
 
 // warmup / load 두 시나리오가 공유하는 실행 함수
@@ -77,7 +69,7 @@ export function run(data: SetupData): void {
   }
   const account = data[(exec.vu.idInTest - 1) % data.length];
 
-  const body = getContents(account.token, PARAMS, TAG);
+  const body = getContents(account, PARAMS, TAG);
 
   check(body, {
     '응답 본문 존재': (b) => b !== null,

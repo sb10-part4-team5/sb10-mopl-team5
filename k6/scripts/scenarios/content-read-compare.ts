@@ -16,10 +16,10 @@ import { check } from 'k6';
 import exec from 'k6/execution';
 import config, { commonThresholds, endpointThresholds } from '../config.ts';
 import { getContents } from '../api/content.api.ts';
-import { loginByIndex } from '../api/auth.api.ts';
 import { summaryHandler } from '../utils/reporter.ts';
 import { randomThinkTime } from '../utils/random.ts';
 import { CONTENT_QUERY_CASE_NAMES, CONTENT_QUERY_TAGS, buildCaseParams } from './content-query-cases.ts';
+import { setupAuth } from "../utils/setup.ts";
 
 const TARGET_VUS = Number(__ENV.TARGET_VUS || 20);
 const RAMP_TIME = __ENV.RAMP_TIME || '30s';
@@ -55,25 +55,17 @@ export const options = {
   },
 };
 
-type SetupData = { token: string }[];
+type SetupData = string[];
 
 export function setup(): SetupData {
-  const tokens: SetupData = [];
-  for (let i = 1; i <= TARGET_VUS; i++) {
-    tokens.push({ token: loginByIndex(i) });
-  }
-  if (tokens.length === 0) {
-    throw new Error(`[setup] 로그인된 계정이 없습니다 (TARGET_VUS=${TARGET_VUS}).`);
-  }
-  console.log(`[setup] ${tokens.length}개 계정 로그인 완료`);
-  return tokens;
+  return setupAuth(TARGET_VUS);
 }
 
 export default function (data: SetupData): void {
   if (data.length === 0) {
     throw new Error('[VU] 사용 가능한 계정 토큰이 없습니다.');
   }
-  const token = data[(exec.vu.idInTest - 1) % data.length].token;
+  const token = data[(exec.vu.idInTest - 1) % data.length];
 
   // 모든 케이스를 순서대로 실행 (케이스별 동일 샘플 수 확보)
   for (const caseName of CONTENT_QUERY_CASE_NAMES) {
