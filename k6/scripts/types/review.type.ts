@@ -13,6 +13,7 @@ export interface ReviewResponse {
   rating: number;
 }
 
+// 리뷰 목록 조회를 커서 페이지네이션 응답으로
 export type ReviewListResponse = CursorResponse<ReviewResponse>;
 
 // ReviewCreateRequest.java

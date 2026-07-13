@@ -3,14 +3,18 @@ import http, { RefinedResponse, ResponseType } from 'k6/http';
 // 공통 HTTP 래퍼 (요청 + 상태 검증 + 에러 로깅 + 타입 파싱)
 
 interface RequestOptions {
-  token?: string | null; // 인증 필요한 요청용 (조회는 생략)
-  tag?: string;          // 지표 태그 (config.tags.*)
+  token?: string | null;      // 인증 필요한 요청용 (조회는 생략)
+  tag?: string;               // 지표 태그 (config.tags.*)
+  csrfToken?: string | null;  // POST/PATCH/DELETE 에 필요한 CSRF 토큰
 }
 
 function buildParams(options?: RequestOptions) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (options?.token) {
     headers['Authorization'] = `Bearer ${options.token}`;
+  }
+  if (options?.csrfToken) {
+    headers['X-XSRF-TOKEN'] = options.csrfToken;
   }
   const params: { headers: Record<string, string>; tags?: { name: string } } = { headers };
   if (options?.tag) {

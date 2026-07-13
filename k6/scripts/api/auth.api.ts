@@ -7,7 +7,8 @@ const CSRF_COOKIE_NAME = 'XSRF-TOKEN';
 const CSRF_HEADER_NAME = 'X-XSRF-TOKEN';
 
 // 로그인 전 CSRF 쿠키 발급
-function fetchCsrfToken(): string {
+// csrfToken이 필요한 요청이면 CSRF 쿠키 발급
+export function fetchCsrfToken(): string {
   const res = http.get(config.endpoints.auth.csrfToken, {
     tags: { name: config.tags.auth.csrfToken },
   });
