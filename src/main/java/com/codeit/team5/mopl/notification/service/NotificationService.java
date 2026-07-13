@@ -17,6 +17,7 @@ import com.codeit.team5.mopl.notification.exception.NotificationNotFoundExceptio
 import com.codeit.team5.mopl.notification.mapper.NotificationMapper;
 import com.codeit.team5.mopl.notification.repository.NotificationRepository;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
+import com.codeit.team5.mopl.sse.provider.MissedNotificationProvider;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -33,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class NotificationService {
+public class NotificationService implements MissedNotificationProvider {
 
     private static final String SORT_BY_CREATED_AT = "createdAt";
     private static final String SORT_ASCENDING = "ASCENDING";
@@ -133,7 +134,7 @@ public class NotificationService {
         return notificationRepository.countByReceiverIdAndIsReadFalse(receiverId);
     }
 
-    // SSE 재연결 시 미수신 일반 알림 조회 (DM 제외)
+    // SSE 재연결 시 미수신 일반 알림 조회
     public List<NotificationPayload> findMissedNotifications(UUID receiverId, UUID lastEventId) {
         validateLastEventId(receiverId, lastEventId);
 

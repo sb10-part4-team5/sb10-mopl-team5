@@ -13,9 +13,9 @@ import static org.mockito.Mockito.verify;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
 import com.codeit.team5.mopl.sse.exception.InvalidLastEventIdException;
+import com.codeit.team5.mopl.sse.provider.MissedNotificationProvider;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import java.time.Instant;
 import java.util.List;
@@ -40,7 +40,7 @@ class SseServiceTest {
     private SseEmitterStore emitterStore;
 
     @Mock
-    private NotificationService notificationService;
+    private MissedNotificationProvider missedNotificationProvider;
 
     @Mock
     private SseSender sseSender;
@@ -96,7 +96,7 @@ class SseServiceTest {
 
         // then
         assertThat(result).isNotNull();
-        verify(notificationService, never()).findMissedNotifications(any(), any());
+        verify(missedNotificationProvider, never()).findMissedNotifications(any(), any());
     }
 
     // ===== Last-Event-ID — 미수신 이벤트 조회 =====
@@ -109,13 +109,13 @@ class SseServiceTest {
         UUID lastEventId = UUID.randomUUID();
         given(emitterStore.save(eq(userId), any())).willReturn(null);
         given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
-        given(notificationService.findMissedNotifications(userId, lastEventId)).willReturn(List.of());
+        given(missedNotificationProvider.findMissedNotifications(userId, lastEventId)).willReturn(List.of());
 
         // when
         sseService.subscribe(userId, lastEventId.toString());
 
         // then
-        verify(notificationService).findMissedNotifications(eq(userId), eq(lastEventId));
+        verify(missedNotificationProvider).findMissedNotifications(eq(userId), eq(lastEventId));
     }
 
     @Test
@@ -130,14 +130,14 @@ class SseServiceTest {
         sseService.subscribe(userId, null);
 
         // then
-        verify(notificationService, never()).findMissedNotifications(any(), any());
+        verify(missedNotificationProvider, never()).findMissedNotifications(any(), any());
     }
 
     // ===== Last-Event-ID — 순서 =====
 
     @Test
     @DisplayName("subscribe: 미수신 알림을 createdAt 오름차순으로 전송한다")
-    void subscribe_sendsNotificationsInOrder() throws Exception {
+    void subscribe_sendsNotificationsInOrder() {
         // given
         UUID userId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
@@ -149,7 +149,7 @@ class SseServiceTest {
 
         given(emitterStore.save(eq(userId), any())).willReturn(null);
         given(sseSender.send(eq(userId), any(SseEmitter.class), any())).willReturn(true);
-        given(notificationService.findMissedNotifications(userId, lastEventId))
+        given(missedNotificationProvider.findMissedNotifications(userId, lastEventId))
                 .willReturn(List.of(first, second));
 
         // when
@@ -188,7 +188,7 @@ class SseServiceTest {
         }
 
         verify(emitterStore).remove(eq(userId), any(SseEmitter.class));
-        verify(notificationService, never()).findMissedNotifications(any(), any());
+        verify(missedNotificationProvider, never()).findMissedNotifications(any(), any());
     }
 
     @Test
@@ -200,7 +200,7 @@ class SseServiceTest {
         NotificationPayload missed = notifPayload(userId, Instant.now());
 
         given(emitterStore.save(eq(userId), any())).willReturn(null);
-        given(notificationService.findMissedNotifications(userId, lastEventId))
+        given(missedNotificationProvider.findMissedNotifications(userId, lastEventId))
                 .willReturn(List.of(missed));
         // connect → 성공, 미수신 알림 → 실패
         given(sseSender.send(eq(userId), any(SseEmitter.class), any()))
