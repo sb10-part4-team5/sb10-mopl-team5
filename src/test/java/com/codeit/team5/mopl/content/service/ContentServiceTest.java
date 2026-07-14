@@ -23,23 +23,17 @@ import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
-import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
-import com.codeit.team5.mopl.tag.entity.Tag;
-import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.Sort;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,7 +53,7 @@ class ContentServiceTest {
     private ContentStatsRepository contentStatsRepository;
 
     @Mock
-    private TagRepository tagRepository;
+    private ContentTagService contentTagService;
 
     @Mock
     private ContentMapper contentMapper;
@@ -83,16 +77,13 @@ class ContentServiceTest {
         );
         UploadedBinaryContent thumbnail =
                 new UploadedBinaryContent("thumbnails/test.jpg", "http://localhost:8080/thumbnails/test.jpg");
-        Tag actionTag = Tag.create("액션");
-        Tag dramaTag = Tag.create("드라마");
         ContentResponse expectedResponse = new ContentResponse(
                 UUID.randomUUID(), ContentType.MOVIE, "테스트 영화", "테스트 설명",
                 null, List.of("액션", "드라마"), 0.0, 0, 0
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByNameIn(List.of("액션", "드라마"))).thenReturn(List.of(actionTag));
-        when(tagRepository.saveAll(anyList())).thenReturn(List.of(dramaTag));
+        when(contentTagService.normalizeNames(List.of("액션", "드라마"))).thenReturn(List.of("액션", "드라마"));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(binaryContentService.saveCompleted(thumbnail))
                 .thenReturn(BinaryContent.completed("http://localhost:8080/thumbnails/test.jpg"));
@@ -113,7 +104,7 @@ class ContentServiceTest {
 
         verify(binaryContentService).saveCompleted(thumbnail);
 
-        verify(tagRepository).findByNameIn(List.of("액션", "드라마"));
+        verify(contentTagService).attachTags(savedContent, List.of("액션", "드라마"));
         verify(contentStatsRepository).save(any(ContentStats.class));
     }
 
@@ -124,14 +115,13 @@ class ContentServiceTest {
         ContentCreateRequest request = new ContentCreateRequest(
                 ContentType.TV_SERIES, "테스트 드라마", null, List.of("로맨스")
         );
-        Tag romanceTag = Tag.create("로맨스");
         ContentResponse expectedResponse = new ContentResponse(
                 UUID.randomUUID(), ContentType.TV_SERIES, "테스트 드라마",
                 null, null, List.of("로맨스"), 0.0, 0, 0
         );
 
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByNameIn(List.of("로맨스"))).thenReturn(List.of(romanceTag));
+        when(contentTagService.normalizeNames(List.of("로맨스"))).thenReturn(List.of("로맨스"));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class))).thenReturn(expectedResponse);
 
@@ -144,14 +134,15 @@ class ContentServiceTest {
     }
 
     @Test
-    @DisplayName("이미 존재하는 태그는 새로 저장하지 않는다")
-    void create_existingTag_doesNotSaveNewTag() {
+    @DisplayName("정규화된 태그 이름으로 태그 연결을 위임한다")
+    void create_delegatesNormalizedTagNamesToContentTagService() {
         // given
         ContentCreateRequest request = new ContentCreateRequest(
-                ContentType.MOVIE, "테스트 영화", null, List.of("액션")
+                ContentType.MOVIE, "테스트 영화", null, List.of("  Action  ", "DRAMA", "action")
         );
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
+        when(contentTagService.normalizeNames(List.of("  Action  ", "DRAMA", "action")))
+                .thenReturn(List.of("action", "drama"));
         when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
         when(contentMapper.toDto(any(Content.class))).thenReturn(null);
 
@@ -159,51 +150,7 @@ class ContentServiceTest {
         contentService.create(request, null);
 
         // then
-        verify(tagRepository, never()).saveAll(anyList());
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 태그는 새로 저장한다")
-    void create_newTag_savesTag() {
-        // given
-        ContentCreateRequest request = new ContentCreateRequest(
-                ContentType.MOVIE, "테스트 영화", null, List.of("새태그1", "새태그2")
-        );
-        when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByNameIn(anyList())).thenReturn(List.of());
-        when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
-        when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class))).thenReturn(null);
-
-        // when
-        contentService.create(request, null);
-
-        // then
-        ArgumentCaptor<List<Tag>> captor = ArgumentCaptor.forClass(List.class);
-        verify(tagRepository).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(2);
-    }
-
-    @Test
-    @DisplayName("중복된 태그가 요청에 포함되어도 한 번만 저장한다")
-    void create_duplicateTags_savesOnce() {
-        // given
-        ContentCreateRequest request = new ContentCreateRequest(
-                ContentType.MOVIE, "테스트 영화", null, List.of("액션", "액션")
-        );
-        when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of());
-        when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
-        when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class))).thenReturn(null);
-
-        // when
-        contentService.create(request, null);
-
-        // then
-        ArgumentCaptor<List<Tag>> captor = ArgumentCaptor.forClass(List.class);
-        verify(tagRepository).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(1);
+        verify(contentTagService).attachTags(any(Content.class), eq(List.of("action", "drama")));
     }
 
     @Test
@@ -214,33 +161,13 @@ class ContentServiceTest {
                 ContentType.MOVIE, "테스트 영화", null, List.of("   ", " ")
         );
         when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
+        when(contentTagService.normalizeNames(List.of("   ", " "))).thenReturn(List.of());
 
         // when & then
         assertThatThrownBy(() -> contentService.create(request, null))
                 .isInstanceOf(EmptyTagException.class);
 
-        verify(tagRepository, never()).findByNameIn(anyList());
-        verify(tagRepository, never()).saveAll(anyList());
-    }
-
-    @Test
-    @DisplayName("태그는 앞뒤 공백 제거 및 소문자로 정규화되어 저장된다")
-    void create_tagsNormalized() {
-        // given
-        ContentCreateRequest request = new ContentCreateRequest(
-                ContentType.MOVIE, "테스트 영화", null, List.of("  Action  ", "DRAMA")
-        );
-        when(contentRepository.save(any(Content.class))).then(returnsFirstArg());
-        when(tagRepository.findByNameIn(List.of("action", "drama"))).thenReturn(List.of());
-        when(tagRepository.saveAll(anyList())).then(returnsFirstArg());
-        when(contentStatsRepository.save(any(ContentStats.class))).then(returnsFirstArg());
-        when(contentMapper.toDto(any(Content.class))).thenReturn(null);
-
-        // when
-        contentService.create(request, null);
-
-        // then
-        verify(tagRepository).findByNameIn(List.of("action", "drama"));
+        verify(contentTagService, never()).attachTags(any(Content.class), anyList());
     }
 
     // --- UPDATE ---
@@ -257,7 +184,7 @@ class ContentServiceTest {
         );
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
-        when(tagRepository.findByNameIn(List.of("sf"))).thenReturn(List.of(Tag.create("sf")));
+        when(contentTagService.normalizeNames(List.of("SF"))).thenReturn(List.of("sf"));
         when(contentMapper.toDto(content)).thenReturn(expectedResponse);
 
         // when
@@ -285,7 +212,7 @@ class ContentServiceTest {
         );
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
-        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
+        when(contentTagService.normalizeNames(List.of("액션"))).thenReturn(List.of("액션"));
         when(binaryContentService.saveCompleted(thumbnail))
                 .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(expectedResponse);
@@ -311,7 +238,7 @@ class ContentServiceTest {
                 new UploadedBinaryContent("thumbnails/new.jpg", "http://localhost/thumbnails/new.jpg");
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
-        when(tagRepository.findByNameIn(List.of("액션"))).thenReturn(List.of(Tag.create("액션")));
+        when(contentTagService.normalizeNames(List.of("액션"))).thenReturn(List.of("액션"));
         when(binaryContentService.saveCompleted(thumbnail))
                 .thenReturn(BinaryContent.completed("http://localhost/thumbnails/new.jpg"));
         when(contentMapper.toDto(content)).thenReturn(null);
@@ -325,37 +252,22 @@ class ContentServiceTest {
     }
 
     @Test
-    @DisplayName("수정 시 유지되는 태그는 delete/insert 없이 그대로 유지된다")
-    void update_retainedTags_notReinserted() {
+    @DisplayName("정규화된 태그 이름으로 태그 갱신을 위임한다")
+    void update_delegatesNormalizedTagNamesToContentTagService() {
         // given
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
-        ReflectionTestUtils.setField(content, "id", contentId);
-
-        Tag actionTag = tagWithId("액션");
-        Tag sfTag = tagWithId("sf");
-        content.addTag(ContentTag.create(content, actionTag));  // 유지될 태그
-        content.addTag(ContentTag.create(content, sfTag));      // 제거될 태그
-
-        // 요청: 액션 유지 + 코미디 추가 (sf 제거)
-        ContentUpdateRequest request = new ContentUpdateRequest("기존 제목", null, List.of("액션", "코미디"));
-        Tag comedyTag = tagWithId("코미디");
+        ContentUpdateRequest request = new ContentUpdateRequest("기존 제목", null, List.of("  Action  ", "action"));
 
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
-        when(tagRepository.findByNameIn(List.of("코미디"))).thenReturn(List.of(comedyTag));
+        when(contentTagService.normalizeNames(List.of("  Action  ", "action"))).thenReturn(List.of("action"));
         when(contentMapper.toDto(content)).thenReturn(null);
 
         // when
         contentService.update(contentId, request, null);
 
-        // then: 추가할 태그만 조회
-        verify(tagRepository).findByNameIn(List.of("코미디"));
-        verify(tagRepository, never()).saveAll(anyList());
-
-        Set<String> finalTagNames = content.getContentTags().stream()
-                .map(ct -> ct.getTag().getName())
-                .collect(Collectors.toSet());
-        assertThat(finalTagNames).containsExactlyInAnyOrder("액션", "코미디");
+        // then
+        verify(contentTagService).updateTags(content, List.of("action"));
     }
 
     @Test
@@ -370,7 +282,7 @@ class ContentServiceTest {
                 contentId, new ContentUpdateRequest("제목", null, List.of("액션")), null))
                 .isInstanceOf(ContentNotFoundException.class);
 
-        verifyNoInteractions(tagRepository, binaryContentService, eventPublisher, contentMapper);
+        verifyNoInteractions(contentTagService, binaryContentService, eventPublisher, contentMapper);
     }
 
     @Test
@@ -380,6 +292,7 @@ class ContentServiceTest {
         UUID contentId = UUID.randomUUID();
         Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(contentTagService.normalizeNames(List.of("  ", " "))).thenReturn(List.of());
 
         // when & then
         assertThatThrownBy(() -> contentService.update(
@@ -387,7 +300,7 @@ class ContentServiceTest {
                 .isInstanceOf(EmptyTagException.class);
 
         assertThat(content.getTitle()).isEqualTo("기존 제목");
-        verify(tagRepository, never()).findByNameIn(anyList());
+        verify(contentTagService, never()).updateTags(any(Content.class), anyList());
         verifyNoInteractions(binaryContentService, eventPublisher, contentMapper);
     }
 
@@ -567,11 +480,5 @@ class ContentServiceTest {
                 .isInstanceOf(ContentNotFoundException.class);
 
         verify(contentRepository, never()).delete(any());
-    }
-
-    private Tag tagWithId(String name) {
-        Tag tag = Tag.create(name);
-        ReflectionTestUtils.setField(tag, "id", UUID.randomUUID());
-        return tag;
     }
 }
