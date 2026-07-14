@@ -26,8 +26,14 @@ const CONTENTS_PER_VU = Number(__ENV.CONTENTS_PER_VU || 10);
 
 export const options = {
   setupTimeout: '180s',
-  vus: VUS,
-  iterations: VUS * CONTENTS_PER_VU,
+  scenarios: {
+    review_crud: {
+      executor: 'per-vu-iterations',
+      vus: VUS,
+      iterations: CONTENTS_PER_VU, // VU마다 정확히 CONTENTS_PER_VU번 실행 보장
+      maxDuration: '10m',
+    },
+  },
   thresholds: {
     ...commonThresholds,
     'http_req_duration{name:GET /api/reviews}': ['p(95)<500'],
