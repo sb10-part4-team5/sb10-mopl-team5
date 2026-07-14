@@ -36,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
 
@@ -58,7 +59,11 @@ class ReviewServiceTest {
     private ReviewService reviewService;
 
     @Mock
+    private CacheManager cacheManager;
+
+    @Mock
     private ContentStatsRepository contentStatsRepository;
+
 
     @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 자르고 createdAt 기준 nextCursor를 채운다")
