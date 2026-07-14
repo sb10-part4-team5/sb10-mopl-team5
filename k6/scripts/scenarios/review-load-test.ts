@@ -41,10 +41,10 @@ export const options = {
     'http_req_duration{name:PATCH /api/reviews/{id}}': ['p(95)<800'],
     'http_req_duration{name:DELETE /api/reviews/{id}}': ['p(95)<800'],
     // 엔드포인트별 요청 수 집계용 (reporter가 http_reqs sub-metric을 참조)
-    'http_reqs{name:GET /api/reviews}': [],
-    'http_reqs{name:POST /api/reviews}': [],
-    'http_reqs{name:PATCH /api/reviews/{id}}': [],
-    'http_reqs{name:DELETE /api/reviews/{id}}': [],
+    'http_reqs{name:GET /api/reviews}': ['count>=0'],
+    'http_reqs{name:POST /api/reviews}': ['count>=0'],
+    'http_reqs{name:PATCH /api/reviews/{id}}': ['count>=0'],
+    'http_reqs{name:DELETE /api/reviews/{id}}': ['count>=0'],
   },
 };
 
