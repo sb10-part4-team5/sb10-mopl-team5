@@ -1,13 +1,13 @@
 import { CursorResponse } from './global.type.ts';
 
-// ReviewResponse.java
+// ReviewResponse.java (author는 UserSummaryResponse 기준)
 export interface ReviewResponse {
   id: string;
   contentId: string;
   author: {
-    id: string;
-    email: string;
+    userId: string;
     name: string;
+    profileImageUrl: string | null;
   };
   text: string;
   rating: number;
