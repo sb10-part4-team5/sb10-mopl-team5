@@ -6,6 +6,7 @@ spring:
 
 generator:
   user: 1000
+  profile-image-percent: 50
   content: 5000
   tag: 100
   tag-per-content: 3
@@ -15,4 +16,6 @@ generator:
   subscription-per-user: 5
   follow-per-user: 10
   notification-per-user: 20
+  conversation-per-user: 3
+  message-per-conversation: 10
   db-batch-size: 1000
