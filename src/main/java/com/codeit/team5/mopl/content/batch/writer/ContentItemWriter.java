@@ -11,12 +11,13 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
-import com.codeit.team5.mopl.tag.util.TagResolver;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,15 +100,15 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         }
 
         // 4. 태그 저장
-        List<String> allTagNames = TagResolver.normalizeNames(deduplicatedItems.stream()
+        List<String> allTagNames = normalizeTagNames(deduplicatedItems.stream()
                 .flatMap(item -> item.tagNames().stream())
                 .toList());
 
         if (!allTagNames.isEmpty()) {
-            Map<String, Tag> existingTags = TagResolver.resolve(allTagNames, tagRepository);
+            Map<String, Tag> existingTags = findOrCreateTags(allTagNames);
 
             deduplicatedItems.forEach(item -> item.tagNames().forEach(rawTagName -> {
-                String normalized = TagResolver.normalize(rawTagName);
+                String normalized = normalizeTagName(rawTagName);
                 Tag tag = normalized == null ? null : existingTags.get(normalized);
                 if (tag != null) {
                     item.content().addTag(ContentTag.create(item.content(), tag));
@@ -116,5 +117,39 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         }
 
         log.info("[Batch] {}건 저장 완료 (청크 원본: {}건)", deduplicatedItems.size(), items.size());
+    }
+
+    // 배치 수집 콘텐츠는 관리자 콘텐츠(ContentService/ContentTagService)와 도메인·검증 규칙이 달라
+    // 태그 정규화/해석 로직을 공유하지 않고 이 클래스 안에서 자체적으로 처리한다.
+
+    private String normalizeTagName(String rawName) {
+        String trimmed = rawName.trim();
+        return trimmed.isEmpty() ? null : trimmed.toLowerCase();
+    }
+
+    private List<String> normalizeTagNames(List<String> rawTagNames) {
+        return rawTagNames.stream()
+                .map(this::normalizeTagName)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private Map<String, Tag> findOrCreateTags(List<String> tagNames) {
+        List<String> uniqueNames = tagNames.stream().distinct().toList();
+
+        Map<String, Tag> existingTags = tagRepository.findByNameIn(uniqueNames).stream()
+                .collect(Collectors.toMap(Tag::getName, Function.identity()));
+
+        List<Tag> newTags = uniqueNames.stream()
+                .filter(name -> !existingTags.containsKey(name))
+                .map(Tag::create)
+                .toList();
+
+        if (!newTags.isEmpty()) {
+            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
+        }
+
+        return existingTags;
     }
 }
