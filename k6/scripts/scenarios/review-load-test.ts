@@ -1,6 +1,7 @@
 // 리뷰 부하테스트
-//   - 1 VU가 CONTENTS_PER_VU 개의 콘텐츠에 순서대로 리뷰 CRUD 수행
-//   - VU끼리 콘텐츠 구간이 겹치지 않아 409(중복 리뷰) 충돌 없음
+//    - 1 VU가 CONTENTS_PER_VU 개의 콘텐츠에 순서대로 리뷰 CRUD 수행
+//    - 데이터 제네레이터가 생성한 리뷰를 제외하면, K6 실행 중에는 VU 간 리뷰 작성 충돌이 발생하지 않는다.
+//    - 데이터 제네레이터가 미리 생성한 동일 사용자의 리뷰가 존재하면 새로 생성하지 않고 재사용한다.
 //
 //   실행 예시:
 //     k6 run scripts/scenarios/review-load-test.ts
@@ -15,7 +16,7 @@ import { summaryHandler } from '../utils/reporter.ts';
 import { fetchCsrfToken } from '../api/auth.api.ts';
 import { setupAuth } from '../utils/setup.ts';
 
-import { getReviews, createReview, updateReview, deleteReview } from '../api/review.api.ts';
+import { getReviews, createReview, updateReview, deleteReview, findMyReview } from '../api/review.api.ts';
 
 import { CursorResponse } from '../types/global.type.ts';
 import { ContentResponse } from '../types/content.type.ts';
@@ -24,6 +25,7 @@ const VUS = Number(__ENV.VUS || 5);
 const CONTENTS_PER_VU = Number(__ENV.CONTENTS_PER_VU || 10);
 
 export const options = {
+  setupTimeout: '180s',
   vus: VUS,
   iterations: VUS * CONTENTS_PER_VU,
   thresholds: {
@@ -45,9 +47,9 @@ export function setup(): SetupData {
 
   // 테스트에 필요한 콘텐츠 ID 수집 (VUS * CONTENTS_PER_VU 개)
   const contentIds: string[] = [];
-  let nextCursor: string | null = null;
+  let nextCursor: string | null = null; // 첫 페이지는 해당 정보들이 null
   let nextIdAfter: string | null = null;
-  const needed = VUS * CONTENTS_PER_VU;
+  const needed = VUS * CONTENTS_PER_VU; // 리뷰가 겹치지 않도록 VUS * CPV 만큼의 콘텐츠를 가져와야 함
 
   while (contentIds.length < needed) {
     const params = [
@@ -105,28 +107,41 @@ export default function (data: SetupData): void {
 
   randomThinkTime(0.5, 1.5);
 
-  // 2. 리뷰 생성
-  const createRes = createReview(
-    {
-      contentId,
-      text: `부하테스트 리뷰 - VU${exec.vu.idInTest} iter${iterIndex}`,
-      rating: Number((randomInt(0, 10) / 2).toFixed(1)), // 0.0 ~ 5.0, 0.5 단위
-    },
-    token,
-  );
-  const created = check(createRes, {
-    '리뷰 생성 성공': (r) => r !== null && typeof r?.id === 'string',
-  });
+  // 2. 리뷰 생성 (이전 실행에서 삭제되지 않은 리뷰가 남아 409가 날 수 있으므로 기존 리뷰 재사용)
+  const myEmail = config.loadTestAccount.email(vuIndex + 1);
+  const existingReview = listRes?.data.find((r) => r.author.email === myEmail);
 
-  if (!created || !createRes) {
-    return; // 생성 실패 시 이후 단계 스킵
+  let reviewId: string;
+  if (existingReview) {
+    reviewId = existingReview.id;
+  } else {
+    const createRes = createReview(
+      {
+        contentId,
+        text: `부하테스트 리뷰 - VU${exec.vu.idInTest} iter${iterIndex}`,
+        rating: Number((randomInt(0, 10) / 2).toFixed(1)),
+      },
+      token,
+    );
+    const created = check(createRes, {
+      '리뷰 생성 성공': (r) => r !== null && typeof r?.id === 'string',
+    });
+
+    if (!created || !createRes) {
+      // 409 등으로 CREATE 실패 → 전체 목록 페이지네이션으로 기존 리뷰 탐색
+      const found = findMyReview(contentId, myEmail, token);
+      if (!found) return;
+      reviewId = found.id;
+    } else {
+      reviewId = createRes.id;
+    }
   }
 
   randomThinkTime(0.5, 1.5);
 
   // 3. 리뷰 수정
   const updateRes = updateReview(
-    createRes.id,
+    reviewId,
     { text: `수정된 리뷰 - VU${exec.vu.idInTest}`, rating: 4.0 },
     token,
   );
@@ -137,7 +152,7 @@ export default function (data: SetupData): void {
   randomThinkTime(0.5, 1.5);
 
   // 4. 리뷰 삭제
-  const deleteRes = deleteReview(createRes.id, token);
+  const deleteRes = deleteReview(reviewId, token);
   check(deleteRes, {
     '리뷰 삭제 성공': (r) => r !== null && r.status === 204,
   });

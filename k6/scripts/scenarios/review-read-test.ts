@@ -22,6 +22,7 @@ const DURATION = __ENV.DURATION || '1m';
 const CONTENT_POOL = Number(__ENV.CONTENT_POOL || 50);
 
 export const options = {
+  setupTimeout: '180s',
   scenarios: {
     review_read: {
       executor: 'constant-vus',
