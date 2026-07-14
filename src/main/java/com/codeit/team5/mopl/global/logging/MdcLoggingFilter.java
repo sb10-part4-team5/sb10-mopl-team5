@@ -23,7 +23,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class MdcLoggingFilter extends OncePerRequestFilter {
 
-    private static final String HEALTH_CHECK_PATH = "/actuator/health";
+    private static final String ACTUATOR_PATH = "/actuator";
 
     @Override
     protected void doFilterInternal(
@@ -40,7 +40,8 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
             response.setHeader(MdcKey.REQUEST_ID_HEADER, requestId);
 
             String requestURI = request.getRequestURI();
-            if (!requestURI.equals(HEALTH_CHECK_PATH) && !requestURI.startsWith(HEALTH_CHECK_PATH + "/")) {
+            boolean isActuator = requestURI.equals(ACTUATOR_PATH) || requestURI.startsWith(ACTUATOR_PATH + "/");
+            if (!isActuator) {
                 log.info("{} {}", request.getMethod(), requestURI);
             }
 

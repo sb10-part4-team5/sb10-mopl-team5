@@ -43,6 +43,26 @@ export const config = {
       subChat: '/sub/contents/{id}/chat',
       subWatch: '/sub/contents/{id}/watch',
     },
+    follow: {
+      create: `${API}/follows`,
+      followedByMe: `${API}/follows/followed-by-me`,
+      count: `${API}/follows/count`,
+      detail: `${API}/follows/{followId}`,
+    },
+    conversation: {
+      list: `${API}/conversations`, // GET 목록 조회 / POST 생성-또는-조회 동일 경로
+      with: `${API}/conversations/with`,
+      detail: `${API}/conversations/{conversationId}`,
+    },
+    // 메시지 "전송"은 STOMP(/pub/conversations/{id}/direct-messages)로만 되어 있어 chat과 동일하게
+    // http-client로 호출 불가. 여기 있는 건 REST로 되는 목록 조회·읽음 처리뿐.
+    directMessage: {
+      list: `${API}/conversations/{conversationId}/direct-messages`,
+      read: `${API}/conversations/{conversationId}/direct-messages/{directMessageId}/read`,
+    },
+    user: {
+      detail: `${API}/users/{userId}`, // GET 조회 / PATCH 프로필 수정(multipart) 동일 경로
+    },
   },
 
   // 엔드포인트별 지표 분리용 태그
@@ -83,6 +103,26 @@ export const config = {
     },
     chat: {
       pubChat: 'STOMP /pub/contents/{id}/chat',
+    },
+    follow: {
+      create: 'POST /api/follows',
+      followedByMe: 'GET /api/follows/followed-by-me',
+      count: 'GET /api/follows/count',
+      delete: 'DELETE /api/follows/{id}',
+    },
+    conversation: {
+      create: 'POST /api/conversations',
+      list: 'GET /api/conversations',
+      with: 'GET /api/conversations/with',
+      detail: 'GET /api/conversations/{id}',
+    },
+    directMessage: {
+      list: 'GET /api/conversations/{id}/direct-messages',
+      read: 'POST /api/conversations/{id}/direct-messages/{msgId}/read',
+    },
+    user: {
+      detail: 'GET /api/users/{id}',
+      update: 'PATCH /api/users/{id}',
     },
   },
 

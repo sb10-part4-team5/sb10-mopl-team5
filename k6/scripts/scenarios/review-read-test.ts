@@ -50,21 +50,21 @@ export function setup(): SetupData {
   let nextIdAfter: string | null = null;
 
   while (contentIds.length < CONTENT_POOL) {
-    const params = [
+    const params: string = [
       `limit=100`,
       `sortDirection=${SortDirection.DESC}`,
       `sortBy=${ContentSortBy.CREATED_AT}`,
       nextCursor ? `cursor=${encodeURIComponent(nextCursor)}` : '',
-      nextIdAfter ? `idAfter=${nextIdAfter}` : '',
+      nextIdAfter ? `idAfter=${encodeURIComponent(nextIdAfter)}` : '',
     ].filter(Boolean).join('&');
 
-    const res = get<CursorResponse<ContentResponse>>(
+    const res: CursorResponse<ContentResponse> | null = get<CursorResponse<ContentResponse>>(
       `${config.endpoints.content.list}?${params}`,
       { token: tokens[0] },
     );
 
     if (!res || res.data.length === 0) break;
-    res.data.forEach((c) => contentIds.push(c.id));
+    res.data.forEach((c: ContentResponse) => contentIds.push(c.id));
     nextCursor = res.nextCursor;
     nextIdAfter = res.nextIdAfter;
     if (!res.hasNext) break;

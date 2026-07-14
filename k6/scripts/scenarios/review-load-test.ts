@@ -52,21 +52,21 @@ export function setup(): SetupData {
   const needed = VUS * CONTENTS_PER_VU; // 리뷰가 겹치지 않도록 VUS * CPV 만큼의 콘텐츠를 가져와야 함
 
   while (contentIds.length < needed) {
-    const params = [
+    const params: string = [
       `limit=100`,
       `sortDirection=${SortDirection.DESC}`,
       `sortBy=${ContentSortBy.CREATED_AT}`,
       nextCursor ? `cursor=${encodeURIComponent(nextCursor)}` : '',
-      nextIdAfter ? `idAfter=${nextIdAfter}` : '',
+      nextIdAfter ? `idAfter=${encodeURIComponent(nextIdAfter)}` : '',
     ].filter(Boolean).join('&');
 
-    const res = get<CursorResponse<ContentResponse>>(
+    const res: CursorResponse<ContentResponse> | null = get<CursorResponse<ContentResponse>>(
       `${config.endpoints.content.list}?${params}`,
       { token: tokens[0] },
     );
 
     if (!res || res.data.length === 0) break;
-    res.data.forEach((c) => contentIds.push(c.id));
+    res.data.forEach((c: ContentResponse) => contentIds.push(c.id));
 
     // 커서가 전진하지 않으면 중복 수집 방지
     if (res.nextCursor === nextCursor && res.nextIdAfter === nextIdAfter) {

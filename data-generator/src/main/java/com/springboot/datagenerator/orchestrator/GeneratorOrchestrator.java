@@ -1,7 +1,11 @@
 package com.springboot.datagenerator.orchestrator;
 
+import com.springboot.datagenerator.config.GeneratorProperties;
+import com.springboot.datagenerator.generator.BinaryContentGenerator;
 import com.springboot.datagenerator.generator.ContentGenerator;
 import com.springboot.datagenerator.generator.ContentTagGenerator;
+import com.springboot.datagenerator.generator.ConversationGenerator;
+import com.springboot.datagenerator.generator.DirectMessageGenerator;
 import com.springboot.datagenerator.generator.FollowGenerator;
 import com.springboot.datagenerator.generator.NotificationGenerator;
 import com.springboot.datagenerator.generator.PlaylistGenerator;
@@ -11,6 +15,7 @@ import com.springboot.datagenerator.generator.ReviewGenerator;
 import com.springboot.datagenerator.generator.TagGenerator;
 import com.springboot.datagenerator.generator.UserGenerator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +28,7 @@ import org.springframework.stereotype.Component;
 public class GeneratorOrchestrator {
 
     private final UserGenerator userGenerator;
+    private final BinaryContentGenerator binaryContentGenerator;
     private final ContentGenerator contentGenerator;
     private final TagGenerator tagGenerator;
     private final ContentTagGenerator contentTagGenerator;
@@ -32,12 +38,18 @@ public class GeneratorOrchestrator {
     private final PlaylistSubscriptionGenerator playlistSubscriptionGenerator;
     private final FollowGenerator followGenerator;
     private final NotificationGenerator notificationGenerator;
+    private final ConversationGenerator conversationGenerator;
+    private final DirectMessageGenerator directMessageGenerator;
+    private final GeneratorProperties properties;
     private final JdbcTemplate template;
 
     public void run() {
         truncate();
 
-        List<UUID> userIds = userGenerator.run();
+        int profileImageCount = properties.user() * properties.profileImagePercent() / 100;
+        List<UUID> profileImageIds = binaryContentGenerator.run(profileImageCount);
+
+        List<UUID> userIds = userGenerator.run(profileImageIds);
         List<UUID> contentIds = contentGenerator.run();
         List<UUID> tagIds = tagGenerator.run();
 
@@ -52,6 +64,9 @@ public class GeneratorOrchestrator {
         updateSubscriberCount();
         followGenerator.run(userIds);
         notificationGenerator.run(userIds);
+
+        Map<UUID, UUID[]> conversations = conversationGenerator.run(userIds);
+        directMessageGenerator.run(conversations);
     }
 
     private void updateSubscriberCount() {
@@ -89,6 +104,9 @@ public class GeneratorOrchestrator {
         log.info("Truncating existing data...");
         template.execute("""
             TRUNCATE TABLE
+                direct_messages,
+                conversations,
+                binary_contents,
                 follows,
                 playlist_subscriptions,
                 playlist_items,
