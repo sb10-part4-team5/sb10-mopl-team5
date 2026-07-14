@@ -2,6 +2,7 @@ import { check } from 'k6';
 import http from 'k6/http';
 import exec from 'k6/execution';
 import config from '../config.ts';
+import { fetchCsrfToken } from '../api/auth.api.ts';
 import { LoginResponse } from '../types/auth.type.ts';
 import { summaryHandler } from '../utils/reporter.ts';
 
@@ -11,7 +12,7 @@ const CSRF_COOKIE_NAME = 'XSRF-TOKEN';
 const CSRF_HEADER_NAME = 'X-XSRF-TOKEN';
 
 type SetupData = {
-  csrfTokens: string[];
+  csrfToken: string;
 };
 
 export const options = {
@@ -35,23 +36,6 @@ export const options = {
     ],
   },
 };
-
-function fetchCsrfToken(): string {
-  const res = http.get(config.endpoints.auth.csrfToken, {
-    tags: { name: config.tags.auth.csrfToken },
-  });
-
-  const cookies = http.cookieJar().cookiesForURL(config.baseUrl);
-  const token = cookies[CSRF_COOKIE_NAME]?.[0];
-
-  if (!token) {
-    throw new Error(
-        `CSRF 토큰을 쿠키에서 찾지 못했습니다. status=${res.status} body=${res.body}`,
-    );
-  }
-
-  return token;
-}
 
 function signInOnly(
     email: string,
@@ -97,36 +81,24 @@ function signInOnly(
 }
 
 export function setup(): SetupData {
-  const csrfTokens: string[] = [];
+  const csrfToken = fetchCsrfToken();
 
-  for (let i = 0; i < VUS; i++) {
-    csrfTokens.push(fetchCsrfToken());
-  }
+  console.log('[setup] CSRF 토큰 준비 완료');
 
-  if (csrfTokens.length !== VUS) {
-    throw new Error(
-        `[setup] CSRF 토큰 준비 실패: expected=${VUS}, actual=${csrfTokens.length}`,
-    );
-  }
-
-  console.log(`[setup] CSRF 토큰 ${csrfTokens.length}개 준비 완료`);
-
-  return { csrfTokens };
+  return { csrfToken };
 }
 
 export default function (data: SetupData): void {
-  if (data.csrfTokens.length === 0) {
+  if (!data.csrfToken) {
     throw new Error('[VU] 사용할 CSRF 토큰이 없습니다.');
   }
 
   const accountIndex = exec.vu.idInTest;
-  const csrfToken =
-      data.csrfTokens[(accountIndex - 1) % data.csrfTokens.length];
 
   const accessToken = signInOnly(
       config.loadTestAccount.email(accountIndex),
       config.loadTestAccount.password,
-      csrfToken,
+      data.csrfToken,
   );
 
   check(accessToken, {
