@@ -16,6 +16,10 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
             s.ratingSum   = CASE WHEN s.reviewCount + :countDelta = 0
                                  THEN 0.0
                                  ELSE s.ratingSum + :ratingDelta
+                            END,
+            s.averageRating = CASE WHEN s.reviewCount + :countDelta = 0
+                                 THEN 0.0
+                                 ELSE (s.ratingSum + :ratingDelta) / (s.reviewCount + :countDelta)
                             END
         WHERE s.id = :contentId
         """)
