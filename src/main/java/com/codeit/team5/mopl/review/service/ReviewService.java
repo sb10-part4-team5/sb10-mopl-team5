@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ReviewService {
 
+    private static final String REVIEW_COUNT_CACHE = "reviewCount";
     private static final int DEFAULT_LIMIT = 20;
     private static final Direction DEFAULT_DIRECTION = Direction.DESC;
     private static final ReviewSortBy DEFAULT_SORT_BY = ReviewSortBy.CREATED_AT;
@@ -46,9 +49,39 @@ public class ReviewService {
     private final ContentRepository contentRepository;
     private final ReviewMapper reviewMapper;
     private final ContentStatsRepository contentStatsRepository;
+    private final CacheManager cacheManager;
 
     private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
         contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
+    }
+
+    // 캐시에서 리뷰 개수를 조회
+    // Long→Integer 역직렬화 오류를 Number.longValue()로 안전하게 처리
+    private long getReviewCount(UUID contentId) {
+        Cache cache = cacheManager.getCache(REVIEW_COUNT_CACHE); // 리뷰 카운트 캐시
+        if (cache != null) {
+            // 캐시 값이 존재하고 숫자 타입이면 long으로 변환하여 반환
+            Cache.ValueWrapper wrapper = cache.get(contentId.toString());
+            if (wrapper != null && wrapper.get() instanceof Number n) {
+                return n.longValue();
+            }
+        }
+
+        // 캐싱된 값이 없으면 DB에서 조회한 후 캐시에 저장
+        long count = reviewRepository.countByContent_Id(contentId);
+        if (cache != null) {
+            cache.put(contentId.toString(), count);
+        }
+        return count;
+    }
+
+    // 리뷰 개수가 변경되었을 때 기존 캐시를 제거
+    // 다음 조회 시 최신 값을 DB에서 다시 조회하여 캐시를 갱신
+    private void evictReviewCount(UUID contentId) {
+        Cache cache = cacheManager.getCache(REVIEW_COUNT_CACHE);
+        if (cache != null) {
+            cache.evict(contentId.toString());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +126,7 @@ public class ReviewService {
             nextIdAfter = last.getId().toString();
         }
 
-        long totalCount = reviewRepository.countByContent_Id(contentId);
+        long totalCount = getReviewCount(contentId);
 
         List<ReviewResponse> data = page.stream()
             .map(reviewMapper::toDto)
@@ -118,6 +151,7 @@ public class ReviewService {
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
         reviewUpdateContentStat(request.contentId(), request.rating(), 1);
+        evictReviewCount(request.contentId());
         return reviewMapper.toDto(saved);
     }
 
@@ -149,6 +183,7 @@ public class ReviewService {
         reviewUpdateContentStat(review.getContentId(), -review.getRating(), -1);
         reviewRepository.delete(review);
         log.info("리뷰 삭제 완료: reviewId={}, authorId={}", reviewId, authorId);
+        evictReviewCount(review.getContentId());
     }
 
     private void validateCursorIdAfterPair(String cursor, UUID idAfter) {
