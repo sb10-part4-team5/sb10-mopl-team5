@@ -57,7 +57,7 @@ export function setup(): SetupData {
       `sortDirection=${SortDirection.DESC}`,
       `sortBy=${ContentSortBy.CREATED_AT}`,
       nextCursor ? `cursor=${encodeURIComponent(nextCursor)}` : '',
-      nextIdAfter ? `idAfter=${nextIdAfter}` : '',
+      nextIdAfter ? `idAfter=${encodeURIComponent(nextIdAfter)}` : '',
     ].filter(Boolean).join('&');
 
     const res: CursorResponse<ContentResponse> | null = get<CursorResponse<ContentResponse>>(

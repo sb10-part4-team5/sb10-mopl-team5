@@ -63,9 +63,17 @@ public class DirectMessageGenerator extends BaseGenerator {
                         readAt,
                         Timestamp.from(createdAt)
                     });
+
+                    // 대화방당 메시지 수가 늘어나도 한 배치가 dbBatchSize를 넘지 않도록 중간에 플러시
+                    if (rows.size() >= properties.dbBatchSize()) {
+                        template.batchUpdate(SQL, rows);
+                        rows.clear();
+                    }
                 }
             }
-            template.batchUpdate(SQL, rows);
+            if (!rows.isEmpty()) {
+                template.batchUpdate(SQL, rows);
+            }
         });
 
         log.info("Direct messages generated");

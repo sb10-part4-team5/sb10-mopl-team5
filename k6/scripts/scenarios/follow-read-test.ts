@@ -47,7 +47,10 @@ export function setup(): SetupData {
   }
   return accounts.map((account, i) => {
     const target = accounts[(i + 1) % accounts.length];
-    createFollow(account.token, target.userId);
+    const existing = getFollowedByMe(account.token, target.userId);
+    if (!existing && !createFollow(account.token, target.userId)) {
+      throw new Error(`[setup] 팔로우 관계 준비 실패 (account index=${i})`);
+    }
     return { ...account, targetUserId: target.userId };
   });
 }

@@ -192,6 +192,18 @@ class MdcLoggingFilterTest {
         }
 
         @Test
+        @DisplayName("/actuator 정확 일치 요청도 로그를 남기지 않기 성공")
+        void skipsExactActuatorPath() throws Exception {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            CapturingFilterChain chain = new CapturingFilterChain();
+
+            filter.doFilter(request, response, chain);
+
+            assertThat(appender.list).isEmpty();
+        }
+
+        @Test
         @DisplayName("헬스체크 경로가 아니면 로그를 남기기 성공")
         void logsNonHealthCheckPath() throws Exception {
             MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");

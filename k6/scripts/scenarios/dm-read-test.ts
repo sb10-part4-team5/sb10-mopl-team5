@@ -45,6 +45,14 @@ export function setup(): SetupData {
     throw new Error('[setup] 최소 2개 계정이 필요합니다 (TARGET_VUS>=2).');
   }
   return accounts.map((account, i) => {
+    // data-generator가 시딩한 대화방 중 메시지가 있는 걸 우선 쓴다. 새로 만든 대화방은
+    // 메시지가 0건이라 메시지 목록 조회가 빈 응답만 검증하게 되기 때문.
+    const list = getConversations(account.token, { limit: 100, sortDirection: SortDirection.DESC });
+    const withMessages = list?.data.find((c) => c.latestMessage !== null);
+    if (withMessages) {
+      return { ...account, conversationId: withMessages.id };
+    }
+
     const partner = accounts[(i + 1) % accounts.length];
     const conversation = createOrGetConversation(account.token, partner.userId);
     if (!conversation) {

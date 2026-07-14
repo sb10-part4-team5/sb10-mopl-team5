@@ -8,7 +8,7 @@ import exec from 'k6/execution';
 import config, { endpointThresholds, warmupLoadScenarios } from '../config.ts';
 import { createOrGetConversation } from '../api/dm.api.ts';
 import { summaryHandler } from '../utils/reporter.ts';
-import { randomThinkTime } from '../utils/random.ts';
+import { randomThinkTime, randomInt } from '../utils/random.ts';
 import { setupAuthWithProfile } from '../utils/setup.ts';
 
 const TARGET_VUS = Number(__ENV.TARGET_VUS || 20);
@@ -45,10 +45,16 @@ export function setup(): SetupData {
   return accounts;
 }
 
+// 상대를 고정하면 최초 1회만 생성되고 그 뒤로는 계속 같은 대화방을 조회하게 돼
+// "생성" 테스트가 사실상 "조회" 테스트로 바뀐다. 반복마다 상대를 무작위로 바꿔
+// 새로운 대화방 생성 경로를 계속 타도록 한다.
 export function run(data: SetupData): void {
   const myIndex = (exec.vu.idInTest - 1) % data.length;
   const me = data[myIndex];
-  const partner = data[(myIndex + 1) % data.length];
+
+  let partnerIndex = randomInt(0, data.length - 2);
+  if (partnerIndex >= myIndex) partnerIndex += 1;
+  const partner = data[partnerIndex];
 
   const conversation = createOrGetConversation(me.token, partner.userId);
   check(conversation, {

@@ -23,6 +23,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class MdcLoggingFilter extends OncePerRequestFilter {
 
+    private static final String EXCLUDED_LOG_PATH = "/actuator";
     private static final String EXCLUDED_LOG_PREFIX = "/actuator/";
 
     @Override
@@ -40,7 +41,8 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
             response.setHeader(MdcKey.REQUEST_ID_HEADER, requestId);
 
             String requestURI = request.getRequestURI();
-            if (!requestURI.startsWith(EXCLUDED_LOG_PREFIX)) {
+            boolean isActuator = requestURI.equals(EXCLUDED_LOG_PATH) || requestURI.startsWith(EXCLUDED_LOG_PREFIX);
+            if (!isActuator) {
                 log.info("{} {}", request.getMethod(), requestURI);
             }
 

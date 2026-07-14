@@ -53,8 +53,8 @@ export function setup(): SetupData {
   accounts.forEach((account, i) => {
     const target = accounts[(i + 1) % accounts.length];
     const existing = getFollowedByMe(account.token, target.userId);
-    if (existing) {
-      deleteFollow(account.token, existing.id);
+    if (existing && !deleteFollow(account.token, existing.id)) {
+      throw new Error(`[setup] 기존 팔로우 관계 정리 실패 (account index=${i})`);
     }
   });
   return accounts;
@@ -72,7 +72,8 @@ export function run(data: SetupData): void {
   });
 
   if (followed) {
-    deleteFollow(me.token, followed.id); // 정리용, 측정 대상 아님
+    const cleaned = deleteFollow(me.token, followed.id); // 정리용, 측정 대상 아님
+    check(cleaned, { '정리용 팔로우 취소 성공': (d) => d === true });
   }
 
   randomThinkTime(1, 3);

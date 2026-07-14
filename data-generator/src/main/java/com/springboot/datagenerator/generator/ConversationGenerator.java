@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
 import java.util.concurrent.Executor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -35,7 +36,8 @@ public class ConversationGenerator extends BaseGenerator {
     public Map<UUID, UUID[]> run(List<UUID> userIds) {
         log.info("Generating conversations ({} users × {} each)...", userIds.size(), properties.conversationPerUser());
 
-        Set<String> seenPairs = new HashSet<>();
+        record UuidPair(UUID p1, UUID p2) {}
+        Set<UuidPair> seenPairs = new HashSet<>();
         List<UUID[]> pairs = new ArrayList<>();
         for (int i = 0; i < userIds.size(); i++) {
             UUID user = userIds.get(i);
@@ -43,7 +45,7 @@ public class ConversationGenerator extends BaseGenerator {
             for (int idx : others) {
                 int actualIdx = idx >= i ? idx + 1 : idx;
                 UUID[] pair = sortedPair(user, userIds.get(actualIdx));
-                if (seenPairs.add(pair[0] + ":" + pair[1])) {
+                if (seenPairs.add(new UuidPair(pair[0], pair[1]))) {
                     pairs.add(pair);
                 }
             }

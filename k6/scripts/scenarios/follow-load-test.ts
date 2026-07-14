@@ -35,6 +35,7 @@ export const options = {
     ...endpointThresholds(config.tags.follow.create, ['p(95)<500'], 'load'),
     ...endpointThresholds(config.tags.follow.followedByMe, ['p(95)<300'], 'load'),
     ...endpointThresholds(config.tags.follow.count, ['p(95)<300'], 'load'),
+    ...endpointThresholds(config.tags.follow.delete, ['p(95)<500'], 'load'),
     ...endpointThresholds(config.tags.auth.csrfToken, ['p(95)<300']),
     ...endpointThresholds(config.tags.auth.signIn, ['p(95)<800']),
   },
@@ -55,8 +56,8 @@ export function setup(): SetupData {
   accounts.forEach((account, i) => {
     const target = accounts[(i + 1) % accounts.length];
     const existing = getFollowedByMe(account.token, target.userId);
-    if (existing) {
-      deleteFollow(account.token, existing.id);
+    if (existing && !deleteFollow(account.token, existing.id)) {
+      throw new Error(`[setup] 기존 팔로우 관계 정리 실패 (account index=${i})`);
     }
   });
   return accounts;
@@ -82,7 +83,8 @@ export function run(data: SetupData): void {
     check(count, { '팔로워 수 조회됨': (c) => c !== null && c >= 1 });
 
     // 다음 반복에서 같은 조합이 다시 팔로우될 수 있도록 정리 (중복 제약 회피)
-    deleteFollow(me.token, followed.id);
+    const cleaned = deleteFollow(me.token, followed.id);
+    check(cleaned, { '정리용 팔로우 취소 성공': (d) => d === true });
   }
 
   randomThinkTime(1, 3);
