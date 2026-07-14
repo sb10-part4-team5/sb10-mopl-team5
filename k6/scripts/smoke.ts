@@ -7,8 +7,9 @@ import exec from 'k6/execution';
 import config, { commonThresholds, ContentSortBy, SortDirection } from './config.ts';
 import { get } from './utils/http-client.ts';
 import { summaryHandler } from './utils/reporter.ts';
-import { CursorResponse, ContentResponse } from './types/content.type.ts';
-import { setupAuth } from './utils/setup.ts';
+import { loginByIndex } from './api/auth.api.ts';
+import { CursorResponse } from './types/global.type.ts';
+import { ContentResponse } from './types/content.type.ts';
 
 const VUS = Number(__ENV.VUS || 5);
 
