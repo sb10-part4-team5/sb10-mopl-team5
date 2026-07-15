@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @RequiredArgsConstructor
@@ -13,6 +14,7 @@ public class TagRepositoryImpl implements TagRepositoryCustom {
 
     private final EntityManager em;
 
+    @Transactional
     @Override
     public void insertIfAbsent(List<String> names) {
         if (names.isEmpty()) {

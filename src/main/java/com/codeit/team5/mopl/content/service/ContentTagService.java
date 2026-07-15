@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * {@link ContentService}가 관리자 콘텐츠 CRUD에서 사용하는 콘텐츠-태그 연결 로직을 전담하는 서비스.
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ContentTagService {
 
     private final TagRepository tagRepository;
@@ -44,6 +46,7 @@ public class ContentTagService {
      *
      * @param tagNames 정규화된 태그 이름 목록이어야 한다 ({@link #normalizeNames} 결과 등)
      */
+    @Transactional
     public void attachTags(Content content, List<String> tagNames) {
         Map<String, Tag> resolvedTags = findOrCreateTags(tagNames);
         tagNames.forEach(name -> content.addTag(ContentTag.create(content, resolvedTags.get(name))));
@@ -54,6 +57,7 @@ public class ContentTagService {
      *
      * @param requestedNames 정규화된 태그 이름 목록이어야 한다 ({@link #normalizeNames} 결과 등)
      */
+    @Transactional
     public void updateTags(Content content, List<String> requestedNames) {
         Set<String> currentNames = content.getContentTags().stream()
                 .map(ct -> ct.getTag().getName())
@@ -62,7 +66,7 @@ public class ContentTagService {
         Set<String> requestedSet = new HashSet<>(requestedNames);
         content.getContentTags().removeIf(ct -> !requestedSet.contains(ct.getTag().getName()));
 
-        List<String> toAdd = requestedNames.stream()
+        List<String> toAdd = requestedSet.stream()
                 .filter(name -> !currentNames.contains(name))
                 .toList();
 
@@ -72,12 +76,11 @@ public class ContentTagService {
     }
 
     private Map<String, Tag> findOrCreateTags(List<String> tagNames) {
-        List<String> uniqueNames = tagNames.stream().distinct().toList();
-
-        Map<String, Tag> existingTags = tagRepository.findByNameIn(uniqueNames).stream()
+        // tagNames는 호출부(attachTags/updateTags)에서 이미 normalizeNames로 distinct 처리된 목록이다.
+        Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
                 .collect(Collectors.toMap(Tag::getName, Function.identity(), (a, b) -> a, HashMap::new));
 
-        List<String> missingNames = uniqueNames.stream()
+        List<String> missingNames = tagNames.stream()
                 .filter(name -> !existingTags.containsKey(name))
                 .toList();
 

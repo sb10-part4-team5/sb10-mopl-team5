@@ -125,6 +125,9 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
     // 태그 정규화/해석 로직을 공유하지 않고 이 클래스 안에서 자체적으로 처리한다.
 
     private String normalizeTagName(String rawName) {
+        if (rawName == null) {
+            return null;
+        }
         String trimmed = rawName.trim();
         return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
     }
@@ -138,12 +141,11 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
     }
 
     private Map<String, Tag> findOrCreateTags(List<String> tagNames) {
-        List<String> uniqueNames = tagNames.stream().distinct().toList();
-
-        Map<String, Tag> existingTags = tagRepository.findByNameIn(uniqueNames).stream()
+        // tagNames는 호출부(write 내 normalizeTagNames)에서 이미 distinct 처리된 목록이다.
+        Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
                 .collect(Collectors.toMap(Tag::getName, Function.identity(), (a, b) -> a, HashMap::new));
 
-        List<String> missingNames = uniqueNames.stream()
+        List<String> missingNames = tagNames.stream()
                 .filter(name -> !existingTags.containsKey(name))
                 .toList();
 
