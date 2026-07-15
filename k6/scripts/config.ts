@@ -64,6 +64,10 @@ export const config = {
       list: `${API}/users`,
       detail: `${API}/users/{userId}`, // GET 조회 / PATCH 프로필 수정(multipart) 동일 경로
     },
+    notification: {
+      list: `${API}/notifications`,
+      detail: `${API}/notifications/{notificationId}`,
+    },
   },
 
   // 엔드포인트별 지표 분리용 태그
@@ -127,6 +131,10 @@ export const config = {
       emailExisting: 'GET /api/users (email-like-existing)',
       detail: 'GET /api/users/{id}',
       update: 'PATCH /api/users/{id}',
+    },
+    notification: {
+      list: 'GET /api/notifications',
+      markRead: 'DELETE /api/notifications/{notificationId}',
     },
   },
 
