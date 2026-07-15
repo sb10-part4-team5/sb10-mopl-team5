@@ -76,7 +76,9 @@ class ReviewControllerIntegrationTest {
     }
 
     private Review persistReview(Content content, User author, String text, double rating) {
-        return reviewRepository.saveAndFlush(Review.of(content, author, text, rating));
+        Review review = reviewRepository.saveAndFlush(Review.of(content, author, text, rating));
+        contentStatsRepository.applyStatDelta(content.getId(), rating, 1);
+        return review;
     }
 
     private Authentication authOf(UUID userId, String email) {
