@@ -31,17 +31,17 @@ export interface PlaylistCursorRequestParams {
   subscriberIdEqual?: string;
 }
 
-// k6 v0.40.0+부터 URLSearchParams API를 공식 지원하므로 표준 방식을 사용한다
+// k6 에서는 전역 URLSearchParams가 기본적으로 없거나 버전/환경에 따라 ReferenceError가 날 수 있으므로 수동으로 조립합니다.
 export function buildPlaylistQuery(params: PlaylistCursorRequestParams): string {
-  const searchParams = new URLSearchParams();
-  searchParams.set("limit", String(params.limit ?? 10));
-  searchParams.set("sortBy", params.sortBy ?? "updatedAt");
-  searchParams.set("sortDirection", params.sortDirection ?? "DESC");
-  if (params.cursor) searchParams.set("cursor", params.cursor);
-  if (params.idAfter) searchParams.set("idAfter", params.idAfter);
-  if (params.keywordLike) searchParams.set("keywordLike", params.keywordLike);
-  if (params.ownerIdEqual) searchParams.set("ownerIdEqual", params.ownerIdEqual);
-  if (params.subscriberIdEqual) searchParams.set("subscriberIdEqual", params.subscriberIdEqual);
-  return searchParams.toString();
+  const pairs: string[] = [];
+  pairs.push(`limit=${encodeURIComponent(String(params.limit ?? 10))}`);
+  pairs.push(`sortBy=${encodeURIComponent(params.sortBy ?? "updatedAt")}`);
+  pairs.push(`sortDirection=${encodeURIComponent(params.sortDirection ?? "DESC")}`);
+  if (params.cursor) pairs.push(`cursor=${encodeURIComponent(params.cursor)}`);
+  if (params.idAfter) pairs.push(`idAfter=${encodeURIComponent(params.idAfter)}`);
+  if (params.keywordLike) pairs.push(`keywordLike=${encodeURIComponent(params.keywordLike)}`);
+  if (params.ownerIdEqual) pairs.push(`ownerIdEqual=${encodeURIComponent(params.ownerIdEqual)}`);
+  if (params.subscriberIdEqual) pairs.push(`subscriberIdEqual=${encodeURIComponent(params.subscriberIdEqual)}`);
+  return pairs.join("&");
 }
 
