@@ -14,6 +14,7 @@ import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -123,7 +124,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
 
     private String normalizeTagName(String rawName) {
         String trimmed = rawName.trim();
-        return trimmed.isEmpty() ? null : trimmed.toLowerCase();
+        return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
     }
 
     private List<String> normalizeTagNames(List<String> rawTagNames) {
