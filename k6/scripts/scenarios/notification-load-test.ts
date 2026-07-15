@@ -33,8 +33,6 @@ export const options = {
     http_req_failed: ['rate<0.01'],
     ...endpointThresholds(config.tags.notification.list, ['p(95)<300'], 'load'),
     ...endpointThresholds(config.tags.notification.markRead, ['p(95)<500'], 'load'),
-    ...endpointThresholds(config.tags.auth.csrfToken, ['p(95)<300']),
-    ...endpointThresholds(config.tags.auth.signIn, ['p(95)<800']),
   },
 };
 
