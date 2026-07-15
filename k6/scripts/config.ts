@@ -13,6 +13,7 @@ export const config = {
     auth: {
       csrfToken: `${API}/auth/csrf-token`,
       signIn: `${API}/auth/sign-in`,
+      refresh: `${API}/auth/refresh`,
     },
     content: {
       list: `${API}/contents`,
@@ -75,6 +76,7 @@ export const config = {
     auth: {
       csrfToken: 'GET /api/auth/csrf-token',
       signIn: 'POST /api/auth/sign-in',
+      refresh: 'POST /api/auth/refresh',
     },
     content: {
       list: 'GET /api/contents',
