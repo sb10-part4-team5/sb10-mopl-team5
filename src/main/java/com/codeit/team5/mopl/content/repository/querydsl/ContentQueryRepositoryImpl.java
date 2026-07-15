@@ -115,17 +115,17 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
                 long cursorVal = Long.parseLong(cursor);
                 yield isAsc
                         ? stats.watcherCount.gt(cursorVal)
-                            .or(stats.watcherCount.eq(cursorVal).and(content.id.gt(id)))
+                            .or(stats.watcherCount.eq(cursorVal).and(stats.id.gt(id)))
                         : stats.watcherCount.lt(cursorVal)
-                            .or(stats.watcherCount.eq(cursorVal).and(content.id.lt(id)));
+                            .or(stats.watcherCount.eq(cursorVal).and(stats.id.lt(id)));
             }
             case RATE -> {
                 double cursorVal = Double.parseDouble(cursor);
                 yield isAsc
                         ? stats.averageRating.gt(cursorVal)
-                            .or(stats.averageRating.eq(cursorVal).and(content.id.gt(id)))
+                            .or(stats.averageRating.eq(cursorVal).and(stats.id.gt(id)))
                         : stats.averageRating.lt(cursorVal)
-                            .or(stats.averageRating.eq(cursorVal).and(content.id.lt(id)));
+                            .or(stats.averageRating.eq(cursorVal).and(stats.id.lt(id)));
             }
         };
         where.and(cursorCondition);
@@ -138,7 +138,10 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
             case WATCHER_COUNT -> isAsc ? stats.watcherCount.asc() : stats.watcherCount.desc();
             case RATE -> isAsc ? stats.averageRating.asc() : stats.averageRating.desc();
         };
-        OrderSpecifier<?> secondary = isAsc ? content.id.asc() : content.id.desc();
+        OrderSpecifier<?> secondary = switch (request.sortBy()) {
+            case CREATED_AT -> isAsc ? content.id.asc() : content.id.desc();
+            case WATCHER_COUNT, RATE -> isAsc ? stats.id.asc() : stats.id.desc();
+        };
         return new OrderSpecifier<?>[]{ primary, secondary };
     }
 }
