@@ -12,12 +12,14 @@ import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -105,7 +107,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 .toList());
 
         if (!allTagNames.isEmpty()) {
-            Map<String, Tag> existingTags = tagRepository.findOrCreateAllByName(allTagNames);
+            Map<String, Tag> existingTags = findOrCreateTags(allTagNames);
 
             deduplicatedItems.forEach(item -> item.tagNames().forEach(rawTagName -> {
                 String normalized = normalizeTagName(rawTagName);
@@ -133,5 +135,27 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
+    }
+
+    private Map<String, Tag> findOrCreateTags(List<String> tagNames) {
+        List<String> uniqueNames = tagNames.stream().distinct().toList();
+
+        Map<String, Tag> existingTags = tagRepository.findByNameIn(uniqueNames).stream()
+                .collect(Collectors.toMap(Tag::getName, Function.identity(), (a, b) -> a, HashMap::new));
+
+        List<String> missingNames = uniqueNames.stream()
+                .filter(name -> !existingTags.containsKey(name))
+                .toList();
+
+        if (!missingNames.isEmpty()) {
+            missingNames.forEach(Tag::create); // 이름 유효성만 검증 (엔티티 자체는 사용하지 않음)
+
+            tagRepository.insertIfAbsent(missingNames);
+
+            // 동시 요청이 먼저 삽입했을 수 있으므로 삽입을 시도한 이름 기준으로 다시 조회한다.
+            tagRepository.findByNameIn(missingNames).forEach(tag -> existingTags.put(tag.getName(), tag));
+        }
+
+        return existingTags;
     }
 }

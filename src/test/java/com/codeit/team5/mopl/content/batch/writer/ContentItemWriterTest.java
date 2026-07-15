@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
@@ -19,7 +20,6 @@ import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -229,19 +229,20 @@ class ContentItemWriterTest {
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findOrCreateAllByName(List.of("액션"))).willReturn(Map.of("액션", existingTag));
+        given(tagRepository.findByNameIn(List.of("액션"))).willReturn(List.of(existingTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
 
         // then
+        verify(tagRepository, never()).insertIfAbsent(anyList());
         assertThat(content.getContentTags())
                 .extracting(ContentTag::getTag)
                 .containsExactly(existingTag);
     }
 
     @Test
-    @DisplayName("존재하지 않는 태그면 리포지토리가 새로 생성해 돌려준 태그를 연결한다")
+    @DisplayName("존재하지 않는 태그면 새로 생성하여 저장한다")
     void write_newTag_createsAndSaves() throws Exception {
         // given
         Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
@@ -253,12 +254,14 @@ class ContentItemWriterTest {
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findOrCreateAllByName(List.of("드라마"))).willReturn(Map.of("드라마", newDramaTag));
+        // insertIfAbsent 전에는 아직 없고, insertIfAbsent 이후 재조회에서 발견되는 흐름을 순서대로 스텁한다.
+        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of(), List.of(newDramaTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
 
         // then
+        verify(tagRepository).insertIfAbsent(List.of("드라마"));
         assertThat(content.getContentTags())
                 .extracting(ct -> ct.getTag().getName())
                 .containsExactly("드라마");
@@ -279,8 +282,8 @@ class ContentItemWriterTest {
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findOrCreateAllByName(List.of("액션", "드라마")))
-                .willReturn(Map.of("액션", existingTag, "드라마", newDramaTag));
+        given(tagRepository.findByNameIn(List.of("액션", "드라마"))).willReturn(List.of(existingTag));
+        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of(newDramaTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
@@ -292,7 +295,7 @@ class ContentItemWriterTest {
     }
 
     @Test
-    @DisplayName("서로 다른 콘텐츠가 같은 신규 태그를 참조하면 한 번만 조회/생성 요청되어 공유된다")
+    @DisplayName("서로 다른 콘텐츠가 같은 신규 태그를 참조해도 한 번만 삽입 시도되어 공유된다")
     void write_duplicateNewTagAcrossItems_createsOnlyOnce() throws Exception {
         // given
         Content content1 = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
@@ -306,13 +309,13 @@ class ContentItemWriterTest {
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content1, content2));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findOrCreateAllByName(List.of("판타지"))).willReturn(Map.of("판타지", newFantasyTag));
+        given(tagRepository.findByNameIn(List.of("판타지"))).willReturn(List.of(), List.of(newFantasyTag));
 
         // when
         writer.write(new Chunk<>(List.of(item1, item2)));
 
         // then
-        verify(tagRepository).findOrCreateAllByName(List.of("판타지"));
+        verify(tagRepository).insertIfAbsent(List.of("판타지"));
         assertThat(content1.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("판타지");
         assertThat(content2.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("판타지");
     }
@@ -332,7 +335,8 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository, never()).findOrCreateAllByName(anyList());
+        verify(tagRepository, never()).findByNameIn(anyList());
+        verify(tagRepository, never()).insertIfAbsent(anyList());
     }
 
     @Test
@@ -350,7 +354,7 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository, never()).findOrCreateAllByName(anyList());
+        verify(tagRepository, never()).findByNameIn(anyList());
         assertThat(content.getContentTags()).isEmpty();
     }
 
@@ -366,13 +370,13 @@ class ContentItemWriterTest {
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findOrCreateAllByName(List.of("action"))).willReturn(Map.of("action", newActionTag));
+        given(tagRepository.findByNameIn(List.of("action"))).willReturn(List.of(), List.of(newActionTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository).findOrCreateAllByName(List.of("action"));
+        verify(tagRepository, times(2)).findByNameIn(List.of("action"));
         assertThat(content.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("action");
     }
 }

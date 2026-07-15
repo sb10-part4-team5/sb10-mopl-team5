@@ -12,7 +12,6 @@ import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -78,34 +77,86 @@ class ContentTagServiceTest {
     // --- attachTags ---
 
     @Test
-    @DisplayName("리포지토리가 돌려준 태그를 콘텐츠에 그대로 연결한다")
-    void attachTags_attachesTagsResolvedByRepository() {
+    @DisplayName("모두 존재하는 태그면 새로 생성하지 않고 콘텐츠에 그대로 연결한다")
+    void attachTags_allExisting_reusesWithoutInserting() {
         // given
         Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
         Tag actionTag = tagWithId("액션");
         Tag dramaTag = tagWithId("드라마");
-        given(tagRepository.findOrCreateAllByName(List.of("액션", "드라마")))
-                .willReturn(Map.of("액션", actionTag, "드라마", dramaTag));
+        given(tagRepository.findByNameIn(List.of("액션", "드라마"))).willReturn(List.of(actionTag, dramaTag));
 
         // when
         contentTagService.attachTags(content, List.of("액션", "드라마"));
 
         // then
+        verify(tagRepository, never()).insertIfAbsent(anyList());
         assertThat(tagNamesOf(content)).containsExactlyInAnyOrder("액션", "드라마");
     }
 
     @Test
-    @DisplayName("태그 이름 목록이 비어 있으면 아무 태그도 연결하지 않는다")
+    @DisplayName("존재하지 않는 태그는 새로 생성하여 콘텐츠에 연결한다")
+    void attachTags_allNew_createsAndAttaches() {
+        // given
+        Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
+        Tag newTag1 = tagWithId("새태그1");
+        Tag newTag2 = tagWithId("새태그2");
+        // insertIfAbsent 전에는 아직 없고, insertIfAbsent 이후 재조회에서 발견되는 흐름을 순서대로 스텁한다.
+        given(tagRepository.findByNameIn(List.of("새태그1", "새태그2")))
+                .willReturn(List.of(), List.of(newTag1, newTag2));
+
+        // when
+        contentTagService.attachTags(content, List.of("새태그1", "새태그2"));
+
+        // then
+        verify(tagRepository).insertIfAbsent(List.of("새태그1", "새태그2"));
+        assertThat(tagNamesOf(content)).containsExactlyInAnyOrder("새태그1", "새태그2");
+    }
+
+    @Test
+    @DisplayName("기존 태그와 신규 태그가 섞여 있으면 신규 태그만 삽입 시도하고 모두 연결한다")
+    void attachTags_mixedExistingAndNew_insertsOnlyNewOnes() {
+        // given
+        Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
+        Tag existingTag = tagWithId("액션");
+        Tag newDramaTag = tagWithId("드라마");
+        given(tagRepository.findByNameIn(List.of("액션", "드라마"))).willReturn(List.of(existingTag));
+        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of(newDramaTag));
+
+        // when
+        contentTagService.attachTags(content, List.of("액션", "드라마"));
+
+        // then
+        verify(tagRepository).insertIfAbsent(List.of("드라마"));
+        assertThat(tagNamesOf(content)).containsExactlyInAnyOrder("액션", "드라마");
+    }
+
+    @Test
+    @DisplayName("태그 이름 목록이 비어 있으면 삽입 시도 없이 아무 태그도 연결하지 않는다")
     void attachTags_emptyNames_attachesNothing() {
         // given
         Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
-        given(tagRepository.findOrCreateAllByName(List.of())).willReturn(Map.of());
+        given(tagRepository.findByNameIn(List.of())).willReturn(List.of());
 
         // when
         contentTagService.attachTags(content, List.of());
 
         // then
         assertThat(content.getContentTags()).isEmpty();
+        verify(tagRepository, never()).insertIfAbsent(anyList());
+    }
+
+    @Test
+    @DisplayName("중복된 태그 이름이 요청에 포함되어도 태그는 한 번만 삽입 시도된다")
+    void attachTags_duplicateNames_createsTagOnlyOnce() {
+        // given
+        Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
+        given(tagRepository.findByNameIn(List.of("액션"))).willReturn(List.of(), List.of(tagWithId("액션")));
+
+        // when
+        contentTagService.attachTags(content, List.of("액션", "액션"));
+
+        // then
+        verify(tagRepository).insertIfAbsent(List.of("액션"));
     }
 
     // --- updateTags ---
@@ -123,18 +174,19 @@ class ContentTagServiceTest {
         content.addTag(ContentTag.create(content, sfTag));      // 제거될 태그
 
         Tag comedyTag = tagWithId("코미디");
-        given(tagRepository.findOrCreateAllByName(List.of("코미디"))).willReturn(Map.of("코미디", comedyTag));
+        given(tagRepository.findByNameIn(List.of("코미디"))).willReturn(List.of(comedyTag));
 
         // when: 액션 유지 + 코미디 추가 (sf 제거)
         contentTagService.updateTags(content, List.of("액션", "코미디"));
 
-        // then: 추가할 태그만 리포지토리에 조회/생성 요청한다
-        verify(tagRepository).findOrCreateAllByName(List.of("코미디"));
+        // then: 추가할 태그만 조회하고, 삽입은 시도하지 않는다
+        verify(tagRepository).findByNameIn(List.of("코미디"));
+        verify(tagRepository, never()).insertIfAbsent(anyList());
         assertThat(tagNamesOf(content)).containsExactlyInAnyOrder("액션", "코미디");
     }
 
     @Test
-    @DisplayName("요청된 태그가 하나도 없으면 기존 태그를 모두 제거하고 리포지토리를 호출하지 않는다")
+    @DisplayName("요청된 태그가 하나도 없으면 기존 태그를 모두 제거하고 아무것도 조회하지 않는다")
     void updateTags_emptyRequest_removesAllExistingTags() {
         // given
         Content content = Content.createByAdmin(ContentType.MOVIE, "기존 제목", null);
@@ -145,7 +197,8 @@ class ContentTagServiceTest {
 
         // then
         assertThat(content.getContentTags()).isEmpty();
-        verify(tagRepository, never()).findOrCreateAllByName(anyList());
+        verify(tagRepository, never()).findByNameIn(anyList());
+        verify(tagRepository, never()).insertIfAbsent(anyList());
     }
 
     private Set<String> tagNamesOf(Content content) {
