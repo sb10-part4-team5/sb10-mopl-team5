@@ -79,6 +79,7 @@ export const options = {
   thresholds: {
     ...endpointThresholds(TAG, ['p(95)<500'], 'load'),
     [loadFailureMetric]: ['rate<0.01'],
+    'checks{scenario:load}': ['rate==1'],
   },
 };
 
