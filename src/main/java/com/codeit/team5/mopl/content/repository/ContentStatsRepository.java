@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID> {
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         UPDATE ContentStats s
         SET s.reviewCount = s.reviewCount + :countDelta,
