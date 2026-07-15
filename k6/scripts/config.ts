@@ -134,7 +134,7 @@ export const config = {
     },
     notification: {
       list: 'GET /api/notifications',
-      markRead: 'DELETE /api/notifications/{id}',
+      markRead: 'DELETE /api/notifications/{notificationId}',
     },
   },
 
