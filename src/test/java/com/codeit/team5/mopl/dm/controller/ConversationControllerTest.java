@@ -34,7 +34,7 @@ import com.codeit.team5.mopl.dm.service.ConversationService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.exception.GlobalExceptionHandler;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummary;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -109,7 +109,7 @@ class ConversationControllerTest {
         UUID currentUserId = UUID.randomUUID();
         UUID withUserId = UUID.randomUUID();
         UUID conversationId = UUID.randomUUID();
-        UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
+        UserSummary with = new UserSummary(withUserId, "상대방", null);
         ConversationResponse response = new ConversationResponse(conversationId, with, null, false);
         given(conversationService.getOrCreateConversation(eq(currentUserId), eq(withUserId))).willReturn(response);
 
@@ -131,7 +131,7 @@ class ConversationControllerTest {
         UUID currentUserId = UUID.randomUUID();
         UUID withUserId = UUID.randomUUID();
         UUID conversationId = UUID.randomUUID();
-        UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
+        UserSummary with = new UserSummary(withUserId, "상대방", null);
         DirectMessageResponse latestMsg = new DirectMessageResponse(
                 UUID.randomUUID(), conversationId, with, with, "안녕", Instant.now());
         ConversationResponse response = new ConversationResponse(conversationId, with, latestMsg, false);
@@ -165,7 +165,7 @@ class ConversationControllerTest {
         UUID currentUserId = UUID.randomUUID();
         UUID withUserId = UUID.randomUUID();
         UUID conversationId = UUID.randomUUID();
-        UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
+        UserSummary with = new UserSummary(withUserId, "상대방", null);
         ConversationResponse response = new ConversationResponse(conversationId, with, null, true);
         given(conversationService.getConversation(eq(currentUserId), eq(conversationId))).willReturn(response);
 
@@ -196,7 +196,7 @@ class ConversationControllerTest {
         UUID currentUserId = UUID.randomUUID();
         UUID withUserId = UUID.randomUUID();
         UUID conversationId = UUID.randomUUID();
-        UserSummaryResponse with = new UserSummaryResponse(withUserId, "상대방", null);
+        UserSummary with = new UserSummary(withUserId, "상대방", null);
         ConversationResponse response = new ConversationResponse(conversationId, with, null, false);
         given(conversationService.getConversationWith(eq(currentUserId), eq(withUserId))).willReturn(response);
 
@@ -214,7 +214,7 @@ class ConversationControllerTest {
     void getMyConversations_success() throws Exception {
         UUID currentUserId = UUID.randomUUID();
         UUID conversationId = UUID.randomUUID();
-        UserSummaryResponse with = new UserSummaryResponse(UUID.randomUUID(), "상대방", null);
+        UserSummary with = new UserSummary(UUID.randomUUID(), "상대방", null);
         ConversationResponse item = new ConversationResponse(conversationId, with, null, false);
         CursorResponse<ConversationResponse> response = new CursorResponse<>(
                 List.of(item), null, null, false, 1L, "createdAt", "DESCENDING");

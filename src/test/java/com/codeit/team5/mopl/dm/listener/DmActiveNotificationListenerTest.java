@@ -19,7 +19,7 @@ import com.codeit.team5.mopl.dm.event.DirectMessageBroadcastEvent;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.dm.provider.ActiveConversationChecker;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummary;
 
 @ExtendWith(MockitoExtension.class)
 class DmActiveNotificationListenerTest {
@@ -34,8 +34,8 @@ class DmActiveNotificationListenerTest {
     private DmActiveNotificationListener listener;
 
     private DirectMessageBroadcastEvent event(UUID receiverId) {
-        UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), "A", null);
-        UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "B", null);
+        UserSummary sender = new UserSummary(UUID.randomUUID(), "A", null);
+        UserSummary receiver = new UserSummary(receiverId, "B", null);
         DirectMessageResponse message = new DirectMessageResponse(
                 UUID.randomUUID(), UUID.randomUUID(), sender, receiver, "hi", Instant.now());
         return new DirectMessageBroadcastEvent(message, receiverId);

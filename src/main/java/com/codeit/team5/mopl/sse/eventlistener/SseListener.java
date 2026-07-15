@@ -48,7 +48,7 @@ public class SseListener {
     @EventListener
     public void onDirectMessageSse(DirectMessageSseEvent event) {
         DirectMessageResponse message = event.message();
-        sseSender.sendToUser(message.receiver().userId(),
+        sseSender.sendToUser(message.receiver().id(),
                 SseEmitter.event()
                         .id(message.id().toString())
                         .name("direct-messages")

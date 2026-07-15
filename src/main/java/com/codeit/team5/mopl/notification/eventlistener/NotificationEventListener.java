@@ -46,7 +46,7 @@ public class NotificationEventListener {
     public void onDirectMessageNotification(DirectMessageNotificationEvent event){
         DirectMessageResponse message = event.message();
         notificationService.create(new NotificationCreateCommand(
-                message.receiver().userId(), NotificationType.DIRECT_MESSAGE,
+                message.receiver().id(), NotificationType.DIRECT_MESSAGE,
                 "[DM] " + message.sender().name(),
                 StringUtils.truncate(message.content(), 50),
                 NotificationLevel.INFO));
