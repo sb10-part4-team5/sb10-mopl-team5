@@ -111,6 +111,10 @@ function hasRepresentativeFields(
 
   const first = body.data[0];
 
+  if (first == null || typeof first !== 'object') {
+    return false;
+  }
+
   return typeof first.id === 'string'
       && typeof first.email === 'string'
       && typeof first.role === 'string';
