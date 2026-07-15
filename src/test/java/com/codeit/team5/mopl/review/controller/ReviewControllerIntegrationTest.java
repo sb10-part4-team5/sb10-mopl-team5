@@ -25,6 +25,7 @@ import com.codeit.team5.mopl.review.repository.ReviewRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,9 @@ class ReviewControllerIntegrationTest {
     @Autowired
     private ReviewRepository reviewRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
     private User persistUser(String email) {
         return userRepository.saveAndFlush(User.create(email, "password", "테스터"));
     }
@@ -78,6 +82,7 @@ class ReviewControllerIntegrationTest {
     private Review persistReview(Content content, User author, String text, double rating) {
         Review review = reviewRepository.saveAndFlush(Review.of(content, author, text, rating));
         contentStatsRepository.applyStatDelta(content.getId(), rating, 1);
+        entityManager.clear();
         return review;
     }
 

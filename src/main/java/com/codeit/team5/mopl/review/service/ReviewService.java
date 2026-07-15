@@ -138,11 +138,12 @@ public class ReviewService {
         }
         double oldRating = review.getRating();
         review.update(request.text(), request.rating());
+        ReviewResponse response = reviewMapper.toDto(review);
         if(request.rating() != null){
             reviewUpdateContentStat(review.getContentId(), request.rating() - oldRating, 0);
         }
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
-        return reviewMapper.toDto(review);
+        return response;
     }
 
     @Transactional
