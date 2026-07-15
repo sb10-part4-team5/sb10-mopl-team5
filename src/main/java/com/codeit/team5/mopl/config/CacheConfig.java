@@ -40,7 +40,7 @@ public class CacheConfig {
     @Bean
     @Profile("test")  // test 프로필일 때만 로컬 캐시 사용
     public CacheManager testCacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager("reviewCount");
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         cacheManager.setCaffeine(Caffeine.newBuilder()
             .maximumSize(500)
             .expireAfterWrite(10, TimeUnit.MINUTES));
