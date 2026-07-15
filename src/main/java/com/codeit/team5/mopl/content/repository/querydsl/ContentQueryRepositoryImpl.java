@@ -35,7 +35,7 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
     public List<Content> findContents(ContentCursorRequest request, int fetchLimit) {
         return queryFactory
                 .selectFrom(content)
-                .leftJoin(content.stats, stats).fetchJoin()
+                .innerJoin(content.stats, stats).fetchJoin()
                 .leftJoin(content.thumbnail, thumbnail).fetchJoin()
                 .where(buildWhere(request))
                 .orderBy(buildOrder(request))
