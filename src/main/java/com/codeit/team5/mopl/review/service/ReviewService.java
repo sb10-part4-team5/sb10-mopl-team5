@@ -123,8 +123,9 @@ public class ReviewService {
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
+        ReviewResponse response = reviewMapper.toDto(saved);
         reviewUpdateContentStat(request.contentId(), request.rating(), 1);
-        return reviewMapper.toDto(saved);
+        return response;
     }
 
     @Transactional
