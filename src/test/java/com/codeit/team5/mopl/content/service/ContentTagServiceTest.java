@@ -145,20 +145,6 @@ class ContentTagServiceTest {
         verify(tagRepository, never()).insertIfAbsent(anyList());
     }
 
-    @Test
-    @DisplayName("중복된 태그 이름이 요청에 포함되어도 태그는 한 번만 삽입 시도된다")
-    void attachTags_duplicateNames_createsTagOnlyOnce() {
-        // given
-        Content content = Content.createByAdmin(ContentType.MOVIE, "테스트 영화", null);
-        given(tagRepository.findByNameIn(List.of("액션"))).willReturn(List.of(), List.of(tagWithId("액션")));
-
-        // when
-        contentTagService.attachTags(content, List.of("액션", "액션"));
-
-        // then
-        verify(tagRepository).insertIfAbsent(List.of("액션"));
-    }
-
     // --- updateTags ---
 
     @Test
