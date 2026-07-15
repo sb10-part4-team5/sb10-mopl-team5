@@ -81,8 +81,14 @@ function loginOncePerVu(): void {
 
 function logDebug(
     res: ReturnType<typeof http.post>,
-    previousTokenExists: boolean,
-    currentTokenExists: boolean,
+    diagnostics: {
+      previousTokenExists: boolean;
+      accessTokenExists: boolean;
+      userExists: boolean;
+      refreshCookieReturned: boolean;
+      refreshCookieInJar: boolean;
+      refreshTokenRotated: boolean;
+    },
 ): void {
   if (debugLogCount >= MAX_DEBUG_LOGS_PER_VU) {
     return;
@@ -90,21 +96,17 @@ function logDebug(
 
   debugLogCount += 1;
 
-  const responseBody = String(res.body ?? '');
-  const limitedBody =
-      responseBody.length > 500
-          ? `${responseBody.substring(0, 500)}...`
-          : responseBody;
-
   console.error(
       [
         '[refresh debug]',
         `vu=${exec.vu.idInTest}`,
         `status=${res.status}`,
-        `previousTokenExists=${previousTokenExists}`,
-        `currentTokenExists=${currentTokenExists}`,
-        `setCookie=${String(res.headers['Set-Cookie'] ?? '')}`,
-        `body=${limitedBody}`,
+        `previousTokenExists=${diagnostics.previousTokenExists}`,
+        `accessTokenExists=${diagnostics.accessTokenExists}`,
+        `userExists=${diagnostics.userExists}`,
+        `refreshCookieReturned=${diagnostics.refreshCookieReturned}`,
+        `refreshCookieInJar=${diagnostics.refreshCookieInJar}`,
+        `refreshTokenRotated=${diagnostics.refreshTokenRotated}`,
       ].join(' '),
   );
 }
@@ -186,11 +188,14 @@ export default function (): void {
   sleep(1);
 
   if (!succeeded) {
-    logDebug(
-        res,
-        previousRefreshToken !== null,
-        currentRefreshToken !== null,
-    );
+    logDebug(res, {
+      previousTokenExists: previousRefreshToken !== null,
+      accessTokenExists,
+      userExists,
+      refreshCookieReturned,
+      refreshCookieInJar,
+      refreshTokenRotated,
+    });
   }
 }
 
