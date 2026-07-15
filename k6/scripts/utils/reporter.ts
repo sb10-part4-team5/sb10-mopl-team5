@@ -17,7 +17,7 @@ function extractPerEndpoint(metrics: Record<string, any>) {
   for (const [key, value] of Object.entries(metrics)) {
     const braced = key.match(/^http_req_duration\{(.+)\}$/);
     if (!braced) continue;
-    const nameMatch = braced[1].match(/name:([^,]+)/);
+    const nameMatch = braced[1].match(/name:([^,}]+)/);
     if (!nameMatch) continue;
 
     const dur = value?.values ?? {};

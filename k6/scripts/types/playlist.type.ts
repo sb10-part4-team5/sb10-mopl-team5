@@ -21,9 +21,9 @@ export interface PlaylistResponse {
 export type PlaylistListResponse = CursorResponse<PlaylistResponse>;
 
 export interface PlaylistCursorRequestParams {
-  limit?: number;
-  sortDirection?: string;
-  sortBy?: string;
+  limit: number;
+  sortDirection: string;
+  sortBy: string;
   cursor?: string | null;
   idAfter?: string | null;
   keywordLike?: string;
@@ -31,16 +31,17 @@ export interface PlaylistCursorRequestParams {
   subscriberIdEqual?: string;
 }
 
+// k6 v0.40.0+부터 URLSearchParams API를 공식 지원하므로 표준 방식을 사용한다
 export function buildPlaylistQuery(params: PlaylistCursorRequestParams): string {
-  const parts: string[] = [
-    `limit=${params.limit ?? 10}`,
-    `sortBy=${params.sortBy ?? "updatedAt"}`,
-    `sortDirection=${params.sortDirection ?? "DESC"}`,
-  ];
-  if (params.cursor) parts.push(`cursor=${encodeURIComponent(params.cursor)}`);
-  if (params.idAfter) parts.push(`idAfter=${encodeURIComponent(params.idAfter)}`);
-  if (params.keywordLike) parts.push(`keywordLike=${encodeURIComponent(params.keywordLike)}`);
-  if (params.ownerIdEqual) parts.push(`ownerIdEqual=${encodeURIComponent(params.ownerIdEqual)}`);
-  if (params.subscriberIdEqual) parts.push(`subscriberIdEqual=${encodeURIComponent(params.subscriberIdEqual)}`);
-  return parts.join("&");
+  const searchParams = new URLSearchParams();
+  searchParams.set("limit", String(params.limit ?? 10));
+  searchParams.set("sortBy", params.sortBy ?? "updatedAt");
+  searchParams.set("sortDirection", params.sortDirection ?? "DESC");
+  if (params.cursor) searchParams.set("cursor", params.cursor);
+  if (params.idAfter) searchParams.set("idAfter", params.idAfter);
+  if (params.keywordLike) searchParams.set("keywordLike", params.keywordLike);
+  if (params.ownerIdEqual) searchParams.set("ownerIdEqual", params.ownerIdEqual);
+  if (params.subscriberIdEqual) searchParams.set("subscriberIdEqual", params.subscriberIdEqual);
+  return searchParams.toString();
 }
+

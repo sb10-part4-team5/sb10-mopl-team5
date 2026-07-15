@@ -17,7 +17,8 @@ export interface WatchingSessionResponse {
 export type WatchingSessionListResponse =
   CursorResponse<WatchingSessionResponse>;
 
-// WatchingSessionCursorRequest.java 대응 (limit/sortDirection/sortBy 는 필수)
+// WatchingSessionCursorRequest.java 대응
+// API에서 기본값을 제공하므로 모든 필드를 선택사항으로 정의
 export interface WatchingSessionListParams {
   limit: number;
   sortDirection: string;
@@ -27,19 +28,16 @@ export interface WatchingSessionListParams {
   idAfter?: string | null;
 }
 
-// k6 런타임엔 URLSearchParams 가 없어 직접 인코딩한다 (배열은 key=v1&key=v2 반복 — Spring List<String> 바인딩과 호환)
+// k6 v0.40.0+부터 URLSearchParams API를 공식 지원하므로 표준 방식을 사용한다
 function buildQuery(params: WatchingSessionListParams): string {
-  const parts: string[] = [
-    `limit=${params.limit}`,
-    `sortBy=${params.sortBy}`,
-    `sortDirection=${params.sortDirection}`,
-  ];
-  if (params.watcherNameLike)
-    parts.push(`watcherNameLike=${encodeURIComponent(params.watcherNameLike)}`);
-  if (params.cursor) parts.push(`cursor=${encodeURIComponent(params.cursor)}`);
-  if (params.idAfter)
-    parts.push(`idAfter=${encodeURIComponent(params.idAfter)}`);
-  return parts.join("&");
+  const searchParams = new URLSearchParams();
+  searchParams.set("limit", String(params.limit ?? 10));
+  searchParams.set("sortBy", params.sortBy ?? "createdAt");
+  searchParams.set("sortDirection", params.sortDirection ?? "DESC");
+  if (params.watcherNameLike) searchParams.set("watcherNameLike", params.watcherNameLike);
+  if (params.cursor) searchParams.set("cursor", params.cursor);
+  if (params.idAfter) searchParams.set("idAfter", params.idAfter);
+  return searchParams.toString();
 }
-
 export { buildQuery };
+

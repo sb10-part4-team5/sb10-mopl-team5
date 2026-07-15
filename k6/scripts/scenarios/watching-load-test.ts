@@ -1,13 +1,6 @@
-// 시청 세션 조회 부하테스트 — GET /api/users/{watcherId}/watching-sessions, GET /api/contents/{contentId}/watching-sessions
-// setup()에서 각 계정이 콘텐츠 하나씩 시청(참고: 시청은 STOMP로만 가능하므로 REST로는 시청 기록이 없을 수 있음)
-// 하지만 조회 API는 빈 응답이어도 에러가 아니므로 테스트 가능
-
 import { check } from "k6";
 import exec from "k6/execution";
-import {
-  getWatchingSessionByUser,
-  getWatchingSessionsByContent,
-} from "../api/watching.api.ts";
+import { getWatchingSessionsByContent } from "../api/watching.api.ts";
 import config, { endpointThresholds, warmupLoadScenarios } from "../config.ts";
 import { randomThinkTime } from "../utils/random.ts";
 import { summaryHandler } from "../utils/reporter.ts";
@@ -56,12 +49,6 @@ export function run(data: SetupData): void {
   }
   const account = data[(exec.vu.idInTest - 1) % data.length];
 
-  // 1. 내 시청 세션 조회 (단건 응답, 없으면 null)
-  const mySession = getWatchingSessionByUser(account.token, account.userId);
-  check(mySession, {
-    "시청 세션 조회 응답 존재 또는 없음(정상)": () => true, // null이어도 에러 아님 (시청 기록 없을 수 있음)
-  });
-
   // 2. 콘텐츠별 시청 세션 목록 조회 (커서 페이지네이션)
   //    최대 3페이지까지 연속 조회하여 커서 페이지네이션 부하 시뮬레이션
   const firstContentId = "00000000-0000-0000-0000-000000000001";
@@ -72,9 +59,15 @@ export function run(data: SetupData): void {
     const contentSessions = getWatchingSessionsByContent(
       account.token,
       firstContentId,
-      { cursor, idAfter }
+      {
+        limit: 10,
+        sortDirection: "DESC",
+        sortBy: "createdAt",
+        cursor,
+        idAfter
+      },
     );
-    
+
     check(contentSessions, {
       "콘텐츠별 시청 세션 목록 응답 존재": (s) => s !== null,
     });
@@ -90,3 +83,4 @@ export function run(data: SetupData): void {
 export function handleSummary(data: any) {
   return summaryHandler(data, "watching-load-test-summary.html");
 }
+

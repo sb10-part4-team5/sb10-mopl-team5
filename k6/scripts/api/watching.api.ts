@@ -1,5 +1,6 @@
 import config from "../config.ts";
 import {
+  WatchingSessionListParams,
   WatchingSessionListResponse,
   WatchingSessionResponse,
   buildQuery,
@@ -25,7 +26,7 @@ export function getWatchingSessionByUser(
 export function getWatchingSessionsByContent(
   token: string,
   contentId: string,
-  params?: Partial<import("../types/watching.type.ts").WatchingSessionListParams>,
+  params?: WatchingSessionListParams,
 ): WatchingSessionListResponse | null {
   const queryParams = buildQuery({
     limit: params?.limit ?? 10,
