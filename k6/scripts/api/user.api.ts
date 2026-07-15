@@ -1,9 +1,16 @@
-import http, { StructuredRequestBody } from 'k6/http';
+import http from 'k6/http';
+import type { StructuredRequestBody } from 'k6/http';
+
 import config from '../config.ts';
-import { CursorResponse } from '../types/global.type.ts';
-import { patchMultipart } from '../utils/http-client.ts';
-import { UserResponse, UserUpdateRequest } from '../types/user.type.ts';
-import { get } from '../utils/http-client.ts';
+import type { CursorResponse } from '../types/global.type.ts';
+import type {
+  UserResponse,
+  UserUpdateRequest,
+} from '../types/user.type.ts';
+import {
+  get,
+  patchMultipart,
+} from '../utils/http-client.ts';
 
 export interface UserListParams {
   limit: number;
@@ -25,21 +32,31 @@ function buildQuery(params: UserListParams): string {
     `sortBy=${encodeURIComponent(params.sortBy)}`,
     `sortDirection=${encodeURIComponent(params.sortDirection)}`,
   ];
-  if (params.emailLike) parts.push(`emailLike=${encodeURIComponent(params.emailLike)}`);
+
+  if (params.emailLike) {
+    parts.push(`emailLike=${encodeURIComponent(params.emailLike)}`);
+  }
+
   return parts.join('&');
 }
 
 export function getUsers(
-  token: string,
-  params: UserListParams,
-  tag: string,
+    token: string,
+    params: UserListParams,
+    tag: string,
 ): CursorResponse<UserResponse> | null {
   const url = `${config.endpoints.user.list}?${buildQuery(params)}`;
-  return get<CursorResponse<UserResponse>>(url, { token, tag });
+
+  return get<CursorResponse<UserResponse>>(url, {
+    token,
+    tag,
+  });
 }
 
-// PATCH /api/users/{userId} — multipart/form-data (request는 JSON 파트, image는 선택 파일)
-// request도 http.file()로 감싸야 k6가 multipart로 인코딩하고 Content-Type을 지정해줌
+// PATCH /api/users/{userId} — multipart/form-data
+// request는 JSON 파트이며 image는 선택적인 파일 파트다.
+// request도 http.file()로 감싸야 k6가 multipart/form-data로 인코딩하고
+// 각 파트의 Content-Type을 지정한다.
 export function updateProfile(
     token: string,
     userId: string,
@@ -47,12 +64,28 @@ export function updateProfile(
     image?: ProfileImage,
 ): UserResponse | null {
   const fields: StructuredRequestBody = {
-    request: http.file(JSON.stringify(request), '', 'application/json'),
+    request: http.file(
+        JSON.stringify(request),
+        '',
+        'application/json',
+    ),
   };
+
   if (image) {
-    fields.image = http.file(image.data, image.filename, image.contentType);
+    fields.image = http.file(
+        image.data,
+        image.filename,
+        image.contentType,
+    );
   }
 
-  const url = config.endpoints.user.detail.replace('{userId}', userId);
-  return patchMultipart<UserResponse>(url, fields, { token, tag: config.tags.user.update });
+  const url = config.endpoints.user.detail.replace(
+      '{userId}',
+      userId,
+  );
+
+  return patchMultipart<UserResponse>(url, fields, {
+    token,
+    tag: config.tags.user.update,
+  });
 }

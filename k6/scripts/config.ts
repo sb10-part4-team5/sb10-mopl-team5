@@ -61,6 +61,7 @@ export const config = {
       read: `${API}/conversations/{conversationId}/direct-messages/{directMessageId}/read`,
     },
     user: {
+      list: `${API}/users`,
       detail: `${API}/users/{userId}`, // GET 조회 / PATCH 프로필 수정(multipart) 동일 경로
     },
   },
@@ -121,6 +122,9 @@ export const config = {
       read: 'POST /api/conversations/{id}/direct-messages/{msgId}/read',
     },
     user: {
+      list: 'GET /api/users',
+      firstPage: 'GET /api/users (first-page)',
+      emailExisting: 'GET /api/users (email-like-existing)',
       detail: 'GET /api/users/{id}',
       update: 'PATCH /api/users/{id}',
     },
