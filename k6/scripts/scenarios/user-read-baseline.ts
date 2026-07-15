@@ -101,7 +101,11 @@ function buildParams(email?: string): UserListParams {
 function hasRepresentativeFields(
     body: CursorResponse<UserResponse> | null,
 ): boolean {
-  if (!body || body.data.length === 0) {
+  if (!body || !Array.isArray(body.data)) {
+    return false;
+  }
+
+  if (body.data.length === 0) {
     return true;
   }
 
