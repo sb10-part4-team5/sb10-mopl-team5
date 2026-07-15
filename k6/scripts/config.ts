@@ -99,8 +99,8 @@ export const config = {
       unsubscribe: 'DELETE /api/playlists/{id}/subscription',
     },
     watching: {
-      byUser: 'GET /api/users/{id}/watching-sessions',
-      byContent: 'GET /api/contents/{id}/watching-sessions',
+      byUser: 'GET /api/users/{watcherId}/watching-sessions',
+      byContent: 'GET /api/contents/{contentId}/watching-sessions',
     },
     chat: {
       pubChat: 'STOMP /pub/contents/{id}/chat',
