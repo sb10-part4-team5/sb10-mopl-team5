@@ -47,16 +47,6 @@ public class ReviewService {
     private final ReviewMapper reviewMapper;
     private final ContentStatsRepository contentStatsRepository;
 
-    private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
-        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
-    }
-
-    private long getReviewCount(UUID contentId) {
-        return contentStatsRepository.findById(contentId)
-            .map(s -> (long) s.getReviewCount())
-            .orElse(0L);
-    }
-
     @Transactional(readOnly = true)
     public CursorResponse<ReviewResponse> getReviews(ReviewGetRequest request) {
         UUID contentId = request.contentId();
@@ -171,5 +161,15 @@ public class ReviewService {
 
     private Double parseDoubleCursor(String cursor) {
         return (Double) ReviewSortBy.RATING.parse(cursor);
+    }
+
+    private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
+        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
+    }
+
+    private long getReviewCount(UUID contentId) {
+        return contentStatsRepository.findById(contentId)
+            .map(s -> (long) s.getReviewCount())
+            .orElse(0L);
     }
 }
