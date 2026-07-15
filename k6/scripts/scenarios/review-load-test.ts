@@ -14,7 +14,7 @@ import { get } from '../utils/http-client.ts';
 import { randomThinkTime, randomInt } from '../utils/random.ts';
 import { summaryHandler } from '../utils/reporter.ts';
 import { fetchCsrfToken } from '../api/auth.api.ts';
-import { setupAuth } from '../utils/setup.ts';
+import { setupAuthWithIds } from '../utils/setup.ts';
 
 import { getReviews, createReview, updateReview, deleteReview, findMyReview } from '../api/review.api.ts';
 
@@ -26,24 +26,36 @@ const CONTENTS_PER_VU = Number(__ENV.CONTENTS_PER_VU || 10);
 
 export const options = {
   setupTimeout: '180s',
-  vus: VUS,
-  iterations: VUS * CONTENTS_PER_VU,
+  scenarios: {
+    review_crud: {
+      executor: 'per-vu-iterations',
+      vus: VUS,
+      iterations: CONTENTS_PER_VU, // VU마다 정확히 CONTENTS_PER_VU번 실행 보장
+      maxDuration: '10m',
+    },
+  },
   thresholds: {
     ...commonThresholds,
     'http_req_duration{name:GET /api/reviews}': ['p(95)<500'],
     'http_req_duration{name:POST /api/reviews}': ['p(95)<800'],
     'http_req_duration{name:PATCH /api/reviews/{id}}': ['p(95)<800'],
     'http_req_duration{name:DELETE /api/reviews/{id}}': ['p(95)<800'],
+    // 엔드포인트별 요청 수 집계용 (reporter가 http_reqs sub-metric을 참조)
+    'http_reqs{name:GET /api/reviews}': ['count>=0'],
+    'http_reqs{name:POST /api/reviews}': ['count>=0'],
+    'http_reqs{name:PATCH /api/reviews/{id}}': ['count>=0'],
+    'http_reqs{name:DELETE /api/reviews/{id}}': ['count>=0'],
   },
 };
 
 interface SetupData {
   tokens: string[];
+  userIds: string[];
   contentIds: string[];
 }
 
 export function setup(): SetupData {
-  const tokens = setupAuth(VUS);
+  const { tokens, userIds } = setupAuthWithIds(VUS);
 
   // 테스트에 필요한 콘텐츠 ID 수집 (VUS * CONTENTS_PER_VU 개)
   const contentIds: string[] = [];
@@ -86,7 +98,7 @@ export function setup(): SetupData {
   }
 
   console.log(`[setup] 콘텐츠 ${contentIds.length}개 수집 완료`);
-  return { tokens, contentIds };
+  return { tokens, userIds, contentIds };
 }
 
 export default function (data: SetupData): void {
@@ -107,9 +119,11 @@ export default function (data: SetupData): void {
 
   randomThinkTime(0.5, 1.5);
 
-  // 2. 리뷰 생성 (이전 실행에서 삭제되지 않은 리뷰가 남아 409가 날 수 있으므로 기존 리뷰 재사용)
-  const myEmail = config.loadTestAccount.email(vuIndex + 1);
-  const existingReview = listRes?.data.find((r) => r.author.email === myEmail);
+  // 2. 리뷰 생성 (이전 실행에서 삭제되지 않은 리뷰가 남아 있을 수 있으므로 기존 리뷰 재사용)
+  const myUserId = data.userIds[vuIndex % data.userIds.length];
+  // 첫 페이지(limit=10)에서 빠르게 탐색, 없으면 전체 페이지네이션으로 사전 확인
+  const firstPageReview = listRes?.data.find((r) => r.author.userId === myUserId);
+  const existingReview = firstPageReview ?? findMyReview(contentId, myUserId, token);
 
   let reviewId: string;
   if (existingReview) {
@@ -127,14 +141,8 @@ export default function (data: SetupData): void {
       '리뷰 생성 성공': (r) => r !== null && typeof r?.id === 'string',
     });
 
-    if (!created || !createRes) {
-      // 409 등으로 CREATE 실패 → 전체 목록 페이지네이션으로 기존 리뷰 탐색
-      const found = findMyReview(contentId, myEmail, token);
-      if (!found) return;
-      reviewId = found.id;
-    } else {
-      reviewId = createRes.id;
-    }
+    if (!created || !createRes) return;
+    reviewId = createRes.id;
   }
 
   randomThinkTime(0.5, 1.5);

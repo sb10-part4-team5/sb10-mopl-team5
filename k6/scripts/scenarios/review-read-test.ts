@@ -34,6 +34,7 @@ export const options = {
     ...commonThresholds,
     // 쓰기 없는 조회 전용이므로 CRUD 혼합 시나리오(500ms)보다 기준을 타이트하게
     'http_req_duration{name:GET /api/reviews}': ['p(95)<300'],
+    'http_reqs{name:GET /api/reviews}': ['count>=0'],
   },
 };
 

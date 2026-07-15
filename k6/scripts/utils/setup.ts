@@ -1,4 +1,4 @@
-import { loginByIndex, loginByIndexWithProfile } from '../api/auth.api.ts';
+import {loginByIndex, loginByIndexWithProfile} from '../api/auth.api.ts';
 
 // 1번부터 targetVus 개 계정을 순차 로그인해 토큰 배열 반환
 export function setupAuth(targetVus: number): string[] {
@@ -11,6 +11,21 @@ export function setupAuth(targetVus: number): string[] {
   }
   console.log(`[setup] ${tokens.length}개 계정 로그인 완료`);
   return tokens;
+}
+
+interface AuthWithUserId {
+  tokens: string[];
+  userIds: string[];
+}
+
+// 1번부터 targetVus 개 계정을 순차 로그인해 토큰과 userId 배열을 반환
+export function setupAuthWithIds(targetVus: number): AuthWithUserId {
+  const accounts = setupAuthWithProfile(targetVus);
+
+  return {
+    tokens: accounts.map((account) => account.token),
+    userIds: accounts.map((account) => account.userId),
+  };
 }
 
 // 1번부터 targetVus 개 계정을 순차 로그인해 토큰+userId 배열 반환

@@ -47,10 +47,6 @@ public class ReviewService {
     private final ReviewMapper reviewMapper;
     private final ContentStatsRepository contentStatsRepository;
 
-    private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
-        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
-    }
-
     @Transactional(readOnly = true)
     public CursorResponse<ReviewResponse> getReviews(ReviewGetRequest request) {
         UUID contentId = request.contentId();
@@ -93,7 +89,7 @@ public class ReviewService {
             nextIdAfter = last.getId().toString();
         }
 
-        long totalCount = reviewRepository.countByContent_Id(contentId);
+        long totalCount = getReviewCount(contentId);
 
         List<ReviewResponse> data = page.stream()
             .map(reviewMapper::toDto)
@@ -117,8 +113,9 @@ public class ReviewService {
         Review saved = reviewRepository.save(Review.of(content, author, request.text(), request.rating()));
         log.info("리뷰 생성 완료: reviewId={}, contentId={}, authorId={}", saved.getId(), saved.getContentId(), authorId);
 
+        ReviewResponse response = reviewMapper.toDto(saved);
         reviewUpdateContentStat(request.contentId(), request.rating(), 1);
-        return reviewMapper.toDto(saved);
+        return response;
     }
 
     @Transactional
@@ -131,11 +128,12 @@ public class ReviewService {
         }
         double oldRating = review.getRating();
         review.update(request.text(), request.rating());
+        ReviewResponse response = reviewMapper.toDto(review);
         if(request.rating() != null){
             reviewUpdateContentStat(review.getContentId(), request.rating() - oldRating, 0);
         }
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
-        return reviewMapper.toDto(review);
+        return response;
     }
 
     @Transactional
@@ -163,5 +161,15 @@ public class ReviewService {
 
     private Double parseDoubleCursor(String cursor) {
         return (Double) ReviewSortBy.RATING.parse(cursor);
+    }
+
+    private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
+        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
+    }
+
+    private long getReviewCount(UUID contentId) {
+        return contentStatsRepository.findById(contentId)
+            .map(s -> (long) s.getReviewCount())
+            .orElse(0L);
     }
 }

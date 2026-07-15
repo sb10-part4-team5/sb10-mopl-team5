@@ -31,8 +31,8 @@ export function deleteReview(reviewId: string, token: string): RefinedResponse<R
   return del(url, { token, tag: config.tags.review.delete });
 }
 
-// 커서 페이지네이션으로 전체 목록을 순회하며 특정 이메일의 리뷰를 찾는다
-export function findMyReview(contentId: string, userEmail: string, token: string): ReviewResponse | null {
+// 커서 페이지네이션으로 전체 목록을 순회하며 특정 userId의 리뷰를 찾는다
+export function findMyReview(contentId: string, userId: string, token: string): ReviewResponse | null {
   let cursor: string | null = null;
   let idAfter: string | null = null;
 
@@ -47,7 +47,7 @@ export function findMyReview(contentId: string, userEmail: string, token: string
     );
 
     if (!res) return null;
-    const found = res.data.find((r) => r.author.email === userEmail);
+    const found = res.data.find((r) => r.author.userId === userId);
     if (found) return found;
     if (!res.hasNext || !res.nextCursor || !res.nextIdAfter) return null;
 
