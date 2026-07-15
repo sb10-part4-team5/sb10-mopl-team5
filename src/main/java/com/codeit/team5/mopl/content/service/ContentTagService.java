@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,7 +42,7 @@ public class ContentTagService {
      * @param tagNames 정규화된 태그 이름 목록이어야 한다 ({@link #normalizeNames} 결과 등)
      */
     public void attachTags(Content content, List<String> tagNames) {
-        Map<String, Tag> resolvedTags = findOrCreateTags(tagNames);
+        Map<String, Tag> resolvedTags = tagRepository.findOrCreateAllByName(tagNames);
         tagNames.forEach(name -> content.addTag(ContentTag.create(content, resolvedTags.get(name))));
     }
 
@@ -67,24 +66,6 @@ public class ContentTagService {
         if (!toAdd.isEmpty()) {
             attachTags(content, toAdd);
         }
-    }
-
-    private Map<String, Tag> findOrCreateTags(List<String> tagNames) {
-        List<String> uniqueNames = tagNames.stream().distinct().toList();
-
-        Map<String, Tag> existingTags = tagRepository.findByNameIn(uniqueNames).stream()
-                .collect(Collectors.toMap(Tag::getName, Function.identity()));
-
-        List<Tag> newTags = uniqueNames.stream()
-                .filter(name -> !existingTags.containsKey(name))
-                .map(Tag::create)
-                .toList();
-
-        if (!newTags.isEmpty()) {
-            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
-        }
-
-        return existingTags;
     }
 
     private static String normalize(String rawName) {

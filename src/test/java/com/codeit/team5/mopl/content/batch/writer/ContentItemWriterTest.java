@@ -19,13 +19,13 @@ import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.item.Chunk;
@@ -229,43 +229,36 @@ class ContentItemWriterTest {
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findByNameIn(List.of("액션"))).willReturn(List.of(existingTag));
+        given(tagRepository.findOrCreateAllByName(List.of("액션"))).willReturn(Map.of("액션", existingTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository, never()).saveAll(anyList());
         assertThat(content.getContentTags())
                 .extracting(ContentTag::getTag)
                 .containsExactly(existingTag);
     }
 
     @Test
-    @DisplayName("존재하지 않는 태그면 새로 생성하여 저장한다")
+    @DisplayName("존재하지 않는 태그면 리포지토리가 새로 생성해 돌려준 태그를 연결한다")
     void write_newTag_createsAndSaves() throws Exception {
         // given
         Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
                 ContentSource.TMDB, "1", null, "{}");
         ReflectionTestUtils.setField(content, "id", UUID.randomUUID());
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("드라마"));
+        Tag newDramaTag = Tag.create("드라마");
+        ReflectionTestUtils.setField(newDramaTag, "id", UUID.randomUUID());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of());
-        given(tagRepository.saveAll(anyList())).willAnswer(invocation -> {
-            List<Tag> newTags = invocation.getArgument(0);
-            newTags.forEach(tag -> ReflectionTestUtils.setField(tag, "id", UUID.randomUUID()));
-            return newTags;
-        });
+        given(tagRepository.findOrCreateAllByName(List.of("드라마"))).willReturn(Map.of("드라마", newDramaTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        ArgumentCaptor<List<Tag>> captor = ArgumentCaptor.forClass(List.class);
-        verify(tagRepository).saveAll(captor.capture());
-        assertThat(captor.getValue()).extracting(Tag::getName).containsExactly("드라마");
         assertThat(content.getContentTags())
                 .extracting(ct -> ct.getTag().getName())
                 .containsExactly("드라마");
@@ -281,15 +274,13 @@ class ContentItemWriterTest {
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("액션", "드라마"));
         Tag existingTag = Tag.create("액션");
         ReflectionTestUtils.setField(existingTag, "id", UUID.randomUUID());
+        Tag newDramaTag = Tag.create("드라마");
+        ReflectionTestUtils.setField(newDramaTag, "id", UUID.randomUUID());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findByNameIn(List.of("액션", "드라마"))).willReturn(List.of(existingTag));
-        given(tagRepository.saveAll(anyList())).willAnswer(invocation -> {
-            List<Tag> newTags = invocation.getArgument(0);
-            newTags.forEach(tag -> ReflectionTestUtils.setField(tag, "id", UUID.randomUUID()));
-            return newTags;
-        });
+        given(tagRepository.findOrCreateAllByName(List.of("액션", "드라마")))
+                .willReturn(Map.of("액션", existingTag, "드라마", newDramaTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
@@ -301,7 +292,7 @@ class ContentItemWriterTest {
     }
 
     @Test
-    @DisplayName("서로 다른 콘텐츠가 같은 신규 태그를 참조해도 한 번만 생성되어 공유된다")
+    @DisplayName("서로 다른 콘텐츠가 같은 신규 태그를 참조하면 한 번만 조회/생성 요청되어 공유된다")
     void write_duplicateNewTagAcrossItems_createsOnlyOnce() throws Exception {
         // given
         Content content1 = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
@@ -310,23 +301,18 @@ class ContentItemWriterTest {
                 ContentSource.TMDB, "2", null, "{}");
         ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of("판타지"));
         ContentWithMetaData item2 = new ContentWithMetaData(content2, null, List.of("판타지"));
+        Tag newFantasyTag = Tag.create("판타지");
+        ReflectionTestUtils.setField(newFantasyTag, "id", UUID.randomUUID());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content1, content2));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findByNameIn(List.of("판타지"))).willReturn(List.of());
-        given(tagRepository.saveAll(anyList())).willAnswer(invocation -> {
-            List<Tag> newTags = invocation.getArgument(0);
-            newTags.forEach(tag -> ReflectionTestUtils.setField(tag, "id", UUID.randomUUID()));
-            return newTags;
-        });
+        given(tagRepository.findOrCreateAllByName(List.of("판타지"))).willReturn(Map.of("판타지", newFantasyTag));
 
         // when
         writer.write(new Chunk<>(List.of(item1, item2)));
 
         // then
-        ArgumentCaptor<List<Tag>> captor = ArgumentCaptor.forClass(List.class);
-        verify(tagRepository).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(1);
+        verify(tagRepository).findOrCreateAllByName(List.of("판타지"));
         assertThat(content1.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("판타지");
         assertThat(content2.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("판타지");
     }
@@ -346,8 +332,7 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository, never()).findByNameIn(anyList());
-        verify(tagRepository, never()).saveAll(anyList());
+        verify(tagRepository, never()).findOrCreateAllByName(anyList());
     }
 
     @Test
@@ -365,7 +350,7 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository, never()).findByNameIn(anyList());
+        verify(tagRepository, never()).findOrCreateAllByName(anyList());
         assertThat(content.getContentTags()).isEmpty();
     }
 
@@ -376,21 +361,18 @@ class ContentItemWriterTest {
         Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
                 ContentSource.TMDB, "1", null, "{}");
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("  Action  "));
+        Tag newActionTag = Tag.create("action");
+        ReflectionTestUtils.setField(newActionTag, "id", UUID.randomUUID());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findByNameIn(List.of("action"))).willReturn(List.of());
-        given(tagRepository.saveAll(anyList())).willAnswer(invocation -> {
-            List<Tag> newTags = invocation.getArgument(0);
-            newTags.forEach(tag -> ReflectionTestUtils.setField(tag, "id", UUID.randomUUID()));
-            return newTags;
-        });
+        given(tagRepository.findOrCreateAllByName(List.of("action"))).willReturn(Map.of("action", newActionTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository).findByNameIn(List.of("action"));
+        verify(tagRepository).findOrCreateAllByName(List.of("action"));
         assertThat(content.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("action");
     }
 }

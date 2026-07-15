@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -105,7 +104,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 .toList());
 
         if (!allTagNames.isEmpty()) {
-            Map<String, Tag> existingTags = findOrCreateTags(allTagNames);
+            Map<String, Tag> existingTags = tagRepository.findOrCreateAllByName(allTagNames);
 
             deduplicatedItems.forEach(item -> item.tagNames().forEach(rawTagName -> {
                 String normalized = normalizeTagName(rawTagName);
@@ -133,23 +132,5 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-    }
-
-    private Map<String, Tag> findOrCreateTags(List<String> tagNames) {
-        List<String> uniqueNames = tagNames.stream().distinct().toList();
-
-        Map<String, Tag> existingTags = tagRepository.findByNameIn(uniqueNames).stream()
-                .collect(Collectors.toMap(Tag::getName, Function.identity()));
-
-        List<Tag> newTags = uniqueNames.stream()
-                .filter(name -> !existingTags.containsKey(name))
-                .map(Tag::create)
-                .toList();
-
-        if (!newTags.isEmpty()) {
-            tagRepository.saveAll(newTags).forEach(tag -> existingTags.put(tag.getName(), tag));
-        }
-
-        return existingTags;
     }
 }
