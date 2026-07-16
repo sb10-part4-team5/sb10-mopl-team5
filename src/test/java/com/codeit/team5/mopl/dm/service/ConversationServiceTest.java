@@ -22,7 +22,7 @@ import com.codeit.team5.mopl.dm.mapper.DirectMessageMapper;
 import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummary;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
@@ -87,7 +87,7 @@ class ConversationServiceTest {
         Conversation c1 = conversationOf(currentUser, userWithId("o1@mopl.com", "O1", UUID.randomUUID()));
         Conversation c2 = conversationOf(currentUser, userWithId("o2@mopl.com", "O2", UUID.randomUUID()));
         Conversation c3 = conversationOf(currentUser, userWithId("o3@mopl.com", "O3", UUID.randomUUID()));
-        UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
+        UserSummary summary = new UserSummary(UUID.randomUUID(), "O", null);
         CursorResponse<ConversationResponse> expected = new CursorResponse<>(
                 List.of(), null, null, true, 0L, "createdAt", "DESCENDING");
 
@@ -119,7 +119,7 @@ class ConversationServiceTest {
         UUID currentUserId = UUID.randomUUID();
         User currentUser = userWithId("me@mopl.com", "ME", currentUserId);
         Conversation c1 = conversationOf(currentUser, userWithId("o1@mopl.com", "O1", UUID.randomUUID()));
-        UserSummaryResponse summary = new UserSummaryResponse(UUID.randomUUID(), "O", null);
+        UserSummary summary = new UserSummary(UUID.randomUUID(), "O", null);
         CursorResponse<ConversationResponse> expected = new CursorResponse<>(
                 List.of(), null, null, false, 0L, "createdAt", "DESCENDING");
 
@@ -163,7 +163,7 @@ class ConversationServiceTest {
         UUID otherId = UUID.randomUUID();
         User currentUser = userWithId("a@mopl.com", "A", currentUserId);
         User otherUser = userWithId("b@mopl.com", "B", otherId);
-        UserSummaryResponse summary = new UserSummaryResponse(otherId, "B", null);
+        UserSummary summary = new UserSummary(otherId, "B", null);
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(userRepository.findById(otherId)).thenReturn(Optional.of(otherUser));
@@ -200,7 +200,7 @@ class ConversationServiceTest {
         User otherUser = userWithId("b@mopl.com", "B", otherId);
         Conversation existing = Conversation.create(currentUser, otherUser);
         ReflectionTestUtils.setField(existing, "id", UUID.randomUUID());
-        UserSummaryResponse summary = new UserSummaryResponse(otherId, "B", null);
+        UserSummary summary = new UserSummary(otherId, "B", null);
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(userRepository.findById(otherId)).thenReturn(Optional.of(otherUser));
@@ -312,7 +312,7 @@ class ConversationServiceTest {
         User otherUser = userWithId("b@mopl.com", "B", otherId);
         Conversation conversation = Conversation.create(currentUser, otherUser);
         ReflectionTestUtils.setField(conversation, "id", conversationId);
-        UserSummaryResponse summary = new UserSummaryResponse(otherId, "B", null);
+        UserSummary summary = new UserSummary(otherId, "B", null);
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
@@ -376,7 +376,7 @@ class ConversationServiceTest {
         User withUser = userWithId("b@mopl.com", "B", withUserId);
         Conversation conversation = Conversation.create(currentUser, withUser);
         ReflectionTestUtils.setField(conversation, "id", UUID.randomUUID());
-        UserSummaryResponse summary = new UserSummaryResponse(withUserId, "B", null);
+        UserSummary summary = new UserSummary(withUserId, "B", null);
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
         when(conversationRepository.findByParticipant1IdAndParticipant2Id(any(), any()))

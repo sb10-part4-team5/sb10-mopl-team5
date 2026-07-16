@@ -1,12 +1,12 @@
 package com.codeit.team5.mopl.review.dto.response;
 
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummary;
 import java.util.UUID;
 
 public record ReviewResponse(
     UUID id,
     UUID contentId,
-    UserSummaryResponse author,
+    UserSummary author,
     String text,
     Double rating
 ) {

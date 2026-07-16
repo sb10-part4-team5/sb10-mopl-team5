@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.dm.fixture;
 
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummary;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -15,8 +15,8 @@ public final class DirectMessageTestFixtures {
     }
 
     public static DirectMessageResponse dmMessage(UUID receiverId, String senderName, String content) {
-        UserSummaryResponse sender = new UserSummaryResponse(UUID.randomUUID(), senderName, null);
-        UserSummaryResponse receiver = new UserSummaryResponse(receiverId, "받는이", null);
+        UserSummary sender = new UserSummary(UUID.randomUUID(), senderName, null);
+        UserSummary receiver = new UserSummary(receiverId, "받는이", null);
         return new DirectMessageResponse(
                 UUID.randomUUID(), UUID.randomUUID(), sender, receiver, content, Instant.now());
     }
