@@ -441,7 +441,9 @@ class ContentRepositoryTest extends BaseRepositoryTest {
     private Content persistContentWithRating(String title, double ratingSum, int reviewCount) {
         Content content = persistAndFlush(Content.createByAdmin(ContentType.MOVIE, title, null));
         ContentStats stats = ContentStats.create(content);
-        stats.updateRating(ratingSum, reviewCount);
+        ReflectionTestUtils.setField(stats, "ratingSum", ratingSum);
+        ReflectionTestUtils.setField(stats, "reviewCount", reviewCount);
+        ReflectionTestUtils.setField(stats, "averageRating", reviewCount == 0 ? 0.0 : ratingSum / reviewCount);
         persistAndFlush(stats);
         content.attachStats(stats);
         return content;

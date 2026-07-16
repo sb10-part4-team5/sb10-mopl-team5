@@ -10,7 +10,6 @@ import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
-import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.exception.TooManyTagsException;
@@ -18,15 +17,8 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.tag.entity.Tag;
-import com.codeit.team5.mopl.tag.repository.TagRepository;
-import com.codeit.team5.mopl.tag.util.TagResolver;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,7 +39,7 @@ public class ContentService {
 
     private final ContentRepository contentRepository;
     private final ContentStatsRepository contentStatsRepository;
-    private final TagRepository tagRepository;
+    private final ContentTagService contentTagService;
     private final ContentMapper contentMapper;
     private final BinaryContentService binaryContentService;
 
@@ -70,7 +62,7 @@ public class ContentService {
                 request.description()
         ));
 
-        attachTags(content, request.tags());
+        contentTagService.attachTags(content, normalizeTagNames(request.tags()));
 
         ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
         content.attachStats(stats);
@@ -101,7 +93,7 @@ public class ContentService {
         List<String> tagNames = normalizeTagNames(request.tags());
 
         content.update(request.title(), request.description());
-        updateTags(content, tagNames);
+        contentTagService.updateTags(content, tagNames);
 
         if (thumbnail != null) {
             content.attachThumbnail(binaryContentService.saveCompleted(thumbnail));
@@ -155,35 +147,8 @@ public class ContentService {
         contentRepository.delete(content);
     }
 
-    private void attachTags(Content content, List<String> rawTagNames) {
-        List<String> tagNames = normalizeTagNames(rawTagNames);
-        insertTags(content, tagNames);
-    }
-
-    private void updateTags(Content content, List<String> requestedNames) {
-        Set<String> currentNames = content.getContentTags().stream()
-                .map(ct -> ct.getTag().getName())
-                .collect(Collectors.toSet());
-
-        Set<String> requestedSet = new HashSet<>(requestedNames);
-        content.getContentTags().removeIf(ct -> !requestedSet.contains(ct.getTag().getName()));
-
-        List<String> toAdd = requestedNames.stream()
-                .filter(name -> !currentNames.contains(name))
-                .toList();
-
-        if (!toAdd.isEmpty()) {
-            insertTags(content, toAdd);
-        }
-    }
-
-    private void insertTags(Content content, List<String> tagNames) {
-        Map<String, Tag> existingTags = TagResolver.resolve(tagNames, tagRepository);
-        tagNames.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
-    }
-
     private List<String> normalizeTagNames(List<String> rawTagNames) {
-        List<String> tagNames = TagResolver.normalizeNames(rawTagNames);
+        List<String> tagNames = contentTagService.normalizeNames(rawTagNames);
 
         if (tagNames.isEmpty()) throw new EmptyTagException();
         if (tagNames.size() > 10) throw new TooManyTagsException();

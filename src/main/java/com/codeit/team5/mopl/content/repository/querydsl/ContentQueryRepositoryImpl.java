@@ -11,8 +11,6 @@ import com.codeit.team5.mopl.tag.entity.QTag;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.CaseBuilder;
-import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
 import java.util.List;
@@ -21,8 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Repository;
 
-// TODO(통합 테스트): typeEqual/keywordLike/tagsIn 필터, createdAt/watcherCount/rate 커서 페이지네이션,
-//  hasNext 판별을 Testcontainers(PostgreSQL) 기반 @DataJpaTest로 검증 필요
 @Repository
 @RequiredArgsConstructor
 public class ContentQueryRepositoryImpl implements ContentQueryRepository {
@@ -39,7 +35,7 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
     public List<Content> findContents(ContentCursorRequest request, int fetchLimit) {
         return queryFactory
                 .selectFrom(content)
-                .leftJoin(content.stats, stats).fetchJoin()
+                .innerJoin(content.stats, stats).fetchJoin()
                 .leftJoin(content.thumbnail, thumbnail).fetchJoin()
                 .where(buildWhere(request))
                 .orderBy(buildOrder(request))
@@ -119,39 +115,33 @@ public class ContentQueryRepositoryImpl implements ContentQueryRepository {
                 long cursorVal = Long.parseLong(cursor);
                 yield isAsc
                         ? stats.watcherCount.gt(cursorVal)
-                            .or(stats.watcherCount.eq(cursorVal).and(content.id.gt(id)))
+                            .or(stats.watcherCount.eq(cursorVal).and(stats.id.gt(id)))
                         : stats.watcherCount.lt(cursorVal)
-                            .or(stats.watcherCount.eq(cursorVal).and(content.id.lt(id)));
+                            .or(stats.watcherCount.eq(cursorVal).and(stats.id.lt(id)));
             }
             case RATE -> {
                 double cursorVal = Double.parseDouble(cursor);
-                NumberExpression<Double> avgRating = averageRating();
                 yield isAsc
-                        ? avgRating.gt(cursorVal)
-                            .or(avgRating.eq(cursorVal).and(content.id.gt(id)))
-                        : avgRating.lt(cursorVal)
-                            .or(avgRating.eq(cursorVal).and(content.id.lt(id)));
+                        ? stats.averageRating.gt(cursorVal)
+                            .or(stats.averageRating.eq(cursorVal).and(stats.id.gt(id)))
+                        : stats.averageRating.lt(cursorVal)
+                            .or(stats.averageRating.eq(cursorVal).and(stats.id.lt(id)));
             }
         };
         where.and(cursorCondition);
     }
 
-    private NumberExpression<Double> averageRating() {
-        return new CaseBuilder()
-                .when(stats.reviewCount.eq(0))
-                .then(0.0)
-                .otherwise(stats.ratingSum.divide(stats.reviewCount.doubleValue()));
-    }
-
     private OrderSpecifier<?>[] buildOrder(ContentCursorRequest request) {
         boolean isAsc = request.sortDirection() == Direction.ASC;
-        NumberExpression<Double> avgRating = averageRating();
         OrderSpecifier<?> primary = switch (request.sortBy()) {
             case CREATED_AT -> isAsc ? content.createdAt.asc() : content.createdAt.desc();
             case WATCHER_COUNT -> isAsc ? stats.watcherCount.asc() : stats.watcherCount.desc();
-            case RATE -> isAsc ? avgRating.asc() : avgRating.desc();
+            case RATE -> isAsc ? stats.averageRating.asc() : stats.averageRating.desc();
         };
-        OrderSpecifier<?> secondary = isAsc ? content.id.asc() : content.id.desc();
+        OrderSpecifier<?> secondary = switch (request.sortBy()) {
+            case CREATED_AT -> isAsc ? content.id.asc() : content.id.desc();
+            case WATCHER_COUNT, RATE -> isAsc ? stats.id.asc() : stats.id.desc();
+        };
         return new OrderSpecifier<?>[]{ primary, secondary };
     }
 }

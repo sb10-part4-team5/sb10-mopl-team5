@@ -25,9 +25,6 @@ public interface ContentUtilsMapper {
 
     @Named("toAverageRating")
     default double toAverageRating(ContentStats stats) {
-        if (stats == null || stats.getReviewCount() == 0) {
-            return 0.0;
-        }
-        return stats.getRatingSum() / stats.getReviewCount();
+        return stats == null ? 0.0 : stats.getAverageRating();
     }
 }

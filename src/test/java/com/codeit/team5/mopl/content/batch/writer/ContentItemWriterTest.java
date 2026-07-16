@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
@@ -25,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.item.Chunk;
@@ -235,7 +235,7 @@ class ContentItemWriterTest {
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        verify(tagRepository, never()).saveAll(anyList());
+        verify(tagRepository, never()).insertIfAbsent(anyList());
         assertThat(content.getContentTags())
                 .extracting(ContentTag::getTag)
                 .containsExactly(existingTag);
@@ -249,23 +249,19 @@ class ContentItemWriterTest {
                 ContentSource.TMDB, "1", null, "{}");
         ReflectionTestUtils.setField(content, "id", UUID.randomUUID());
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("드라마"));
+        Tag newDramaTag = Tag.create("드라마");
+        ReflectionTestUtils.setField(newDramaTag, "id", UUID.randomUUID());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
-        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of());
-        given(tagRepository.saveAll(anyList())).willAnswer(invocation -> {
-            List<Tag> newTags = invocation.getArgument(0);
-            newTags.forEach(tag -> ReflectionTestUtils.setField(tag, "id", UUID.randomUUID()));
-            return newTags;
-        });
+        // insertIfAbsent 전에는 아직 없고, insertIfAbsent 이후 재조회에서 발견되는 흐름을 순서대로 스텁한다.
+        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of(), List.of(newDramaTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
 
         // then
-        ArgumentCaptor<List<Tag>> captor = ArgumentCaptor.forClass(List.class);
-        verify(tagRepository).saveAll(captor.capture());
-        assertThat(captor.getValue()).extracting(Tag::getName).containsExactly("드라마");
+        verify(tagRepository).insertIfAbsent(List.of("드라마"));
         assertThat(content.getContentTags())
                 .extracting(ct -> ct.getTag().getName())
                 .containsExactly("드라마");
@@ -281,15 +277,13 @@ class ContentItemWriterTest {
         ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("액션", "드라마"));
         Tag existingTag = Tag.create("액션");
         ReflectionTestUtils.setField(existingTag, "id", UUID.randomUUID());
+        Tag newDramaTag = Tag.create("드라마");
+        ReflectionTestUtils.setField(newDramaTag, "id", UUID.randomUUID());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
         given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
         given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
         given(tagRepository.findByNameIn(List.of("액션", "드라마"))).willReturn(List.of(existingTag));
-        given(tagRepository.saveAll(anyList())).willAnswer(invocation -> {
-            List<Tag> newTags = invocation.getArgument(0);
-            newTags.forEach(tag -> ReflectionTestUtils.setField(tag, "id", UUID.randomUUID()));
-            return newTags;
-        });
+        given(tagRepository.findByNameIn(List.of("드라마"))).willReturn(List.of(newDramaTag));
 
         // when
         writer.write(new Chunk<>(List.of(item)));
@@ -298,5 +292,91 @@ class ContentItemWriterTest {
         assertThat(content.getContentTags())
                 .extracting(ct -> ct.getTag().getName())
                 .containsExactlyInAnyOrder("액션", "드라마");
+    }
+
+    @Test
+    @DisplayName("서로 다른 콘텐츠가 같은 신규 태그를 참조해도 한 번만 삽입 시도되어 공유된다")
+    void write_duplicateNewTagAcrossItems_createsOnlyOnce() throws Exception {
+        // given
+        Content content1 = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        Content content2 = Content.createByExternalSource(ContentType.MOVIE, "영화2", "desc",
+                ContentSource.TMDB, "2", null, "{}");
+        ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of("판타지"));
+        ContentWithMetaData item2 = new ContentWithMetaData(content2, null, List.of("판타지"));
+        Tag newFantasyTag = Tag.create("판타지");
+        ReflectionTestUtils.setField(newFantasyTag, "id", UUID.randomUUID());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
+        given(contentRepository.saveAll(anyList())).willReturn(List.of(content1, content2));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+        given(tagRepository.findByNameIn(List.of("판타지"))).willReturn(List.of(), List.of(newFantasyTag));
+
+        // when
+        writer.write(new Chunk<>(List.of(item1, item2)));
+
+        // then
+        verify(tagRepository).insertIfAbsent(List.of("판타지"));
+        assertThat(content1.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("판타지");
+        assertThat(content2.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("판타지");
+    }
+
+    @Test
+    @DisplayName("모든 콘텐츠에 태그가 없으면 태그 저장소를 조회하지 않는다")
+    void write_noTagNames_skipsTagRepository() throws Exception {
+        // given
+        Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        ContentWithMetaData item = new ContentWithMetaData(content, null, List.of());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
+        given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+
+        // when
+        writer.write(new Chunk<>(List.of(item)));
+
+        // then
+        verify(tagRepository, never()).findByNameIn(anyList());
+        verify(tagRepository, never()).insertIfAbsent(anyList());
+    }
+
+    @Test
+    @DisplayName("공백뿐인 태그 이름은 무시되어 연결되지 않는다")
+    void write_blankTagNames_ignored() throws Exception {
+        // given
+        Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("   ", ""));
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
+        given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+
+        // when
+        writer.write(new Chunk<>(List.of(item)));
+
+        // then
+        verify(tagRepository, never()).findByNameIn(anyList());
+        assertThat(content.getContentTags()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("태그 이름은 앞뒤 공백 제거 및 소문자로 정규화되어 조회된다")
+    void write_tagNamesNormalizedBeforeLookup() throws Exception {
+        // given
+        Content content = Content.createByExternalSource(ContentType.MOVIE, "영화1", "desc",
+                ContentSource.TMDB, "1", null, "{}");
+        ContentWithMetaData item = new ContentWithMetaData(content, null, List.of("  Action  "));
+        Tag newActionTag = Tag.create("action");
+        ReflectionTestUtils.setField(newActionTag, "id", UUID.randomUUID());
+        given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
+        given(contentRepository.saveAll(anyList())).willReturn(List.of(content));
+        given(contentStatsRepository.saveAll(anyList())).willReturn(List.of());
+        given(tagRepository.findByNameIn(List.of("action"))).willReturn(List.of(), List.of(newActionTag));
+
+        // when
+        writer.write(new Chunk<>(List.of(item)));
+
+        // then
+        verify(tagRepository, times(2)).findByNameIn(List.of("action"));
+        assertThat(content.getContentTags()).extracting(ct -> ct.getTag().getName()).containsExactly("action");
     }
 }
