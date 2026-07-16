@@ -16,7 +16,12 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Configuration
 public class RedisConfig {
@@ -28,7 +33,7 @@ public class RedisConfig {
                 .build();
 
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(
-                        properties.getHost(), properties.getPort());
+                properties.getHost(), properties.getPort());
 
         if (properties.getPassword() != null && !properties.getPassword().isEmpty()) {
             config.setPassword(RedisPassword.of(properties.getPassword()));
@@ -42,17 +47,13 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // 직렬화 설정 - Spring Boot 3.x 호환 방식
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.activateDefaultTypingAsProperty(
-                mapper.getPolymorphicTypeValidator(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                "@class"
-        );
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
 
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
+        GenericJackson2JsonRedisSerializer serializer = redisJsonSerializer();
+        template.setValueSerializer(serializer);
+        template.setHashValueSerializer(serializer);
 
-        template.setDefaultSerializer(serializer);
         return template;
     }
 
@@ -60,7 +61,11 @@ public class RedisConfig {
     public CacheManager cacheManager(RedisConnectionFactory factory) {
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))  // 기본 TTL 10분
-                .disableCachingNullValues();       // null 값 캐싱 방지
+                .disableCachingNullValues()       // null 값 캐싱 방지
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                        new StringRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                        redisJsonSerializer()));
 
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(config)
@@ -69,5 +74,21 @@ public class RedisConfig {
                         "users", config.entryTtl(Duration.ofMinutes(5))
                 ))
                 .build();
+    }
+
+    private GenericJackson2JsonRedisSerializer redisJsonSerializer() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // 직렬화 설정
+        mapper.activateDefaultTyping(
+                mapper.getPolymorphicTypeValidator(),
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
+        );
+
+        return new GenericJackson2JsonRedisSerializer(mapper);
     }
 }
