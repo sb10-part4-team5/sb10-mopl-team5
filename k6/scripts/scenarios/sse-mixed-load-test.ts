@@ -121,28 +121,21 @@ export function holdSse(data: SetupData): void {
   sleep(1);
 }
 
-// 팔로우 생성/삭제를 반복해 SSE VU 계정으로 FOLLOWED 알림을 발생시킨다
-let currentFollowId: string | null = null;
-
+// 팔로우 생성 후 즉시 삭제해 FOLLOWED 알림을 발생시킨다.
+// 알림은 팔로우 생성 시점에 발행되므로 삭제해도 트리거에 영향 없고,
+// 이터레이션 내 self-clean으로 잔여 팔로우가 누적되지 않는다.
 export function triggerNotification(data: SetupData): void {
   const triggerIdx = (exec.vu.idInTest - 1) % data.triggerTokens.length;
   const token = data.triggerTokens[triggerIdx];
 
   // warmup-only 계정을 제외하고 SSE VU가 실제로 사용하는 계정만 알림 대상으로 삼는다
   const sseOnlyCount = Math.min(SSE_VUS, data.sseUserIds.length);
-  const randomTargetIdx = Math.floor(Math.random() * sseOnlyCount);
-  const targetId = data.sseUserIds[randomTargetIdx];
-
-  if (currentFollowId) {
-    deleteFollow(token, currentFollowId);
-    currentFollowId = null;
-    sleep(1);
-  }
+  const targetId = data.sseUserIds[triggerIdx % sseOnlyCount];
 
   let follow = createFollow(token, targetId);
 
   if (!follow) {
-    // 이미 팔로우 중(409 등)인 경우: 기존 팔로우를 찾아 삭제 후 재생성
+    // 이미 팔로우 중(409): 기존 팔로우를 삭제 후 재생성
     const existing = getFollowedByMe(token, targetId);
     if (existing) {
       deleteFollow(token, existing.id);
@@ -152,8 +145,10 @@ export function triggerNotification(data: SetupData): void {
   }
 
   check(follow, { '팔로우 생성 성공 (알림 트리거)': (r) => r !== null });
+
   if (follow) {
-    currentFollowId = follow.id;
+    sleep(1);
+    deleteFollow(token, follow.id);
   }
 
   randomThinkTime(2, 5);

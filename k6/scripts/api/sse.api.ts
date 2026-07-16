@@ -26,12 +26,16 @@ export function connectSse(
   });
 
   const timedOut = res.error_code === 1050; // 에러코드 1050 -> 타임아웃으로 연결 종료
-  const connected = res.status === 200; // 정상 응답 헤더(200 OK)를 받아 연결이 수립되어야만 성공
+  // k6가 SSE를 타임아웃으로 abort하면 res.status는 200이 아닌 0으로 집계되므로
+  // timedOut(정상 유지 후 종료)도 연결 성공으로 분류해야 한다
+  const connected = timedOut || res.status === 200;
 
   const body = typeof res.body === 'string' ? res.body : '';
-  // connect 이벤트와 notifications 이벤트를 구분해 파싱
-  const hasConnectEvent = body.includes('event: connect');
-  const missedNotificationCount = body.split('event: notifications').length - 1;
+  // Spring SseEmitter는 "event:name" 형식(콜론 뒤 공백 없음)으로 전송한다
+  // connect 이벤트: "data:connected" 라인으로 판별 (event 필드 공백 여부와 무관)
+  const hasConnectEvent = body.includes('data:connected') || body.includes('data: connected');
+  // notifications 이벤트 수: "event:notifications" 출현 횟수 카운트
+  const missedNotificationCount = body.split('event:notifications').length - 1;
 
   if (!connected) {
     console.error(
