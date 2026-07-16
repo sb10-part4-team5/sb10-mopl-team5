@@ -69,6 +69,9 @@ export const config = {
       list: `${API}/notifications`,
       detail: `${API}/notifications/{notificationId}`,
     },
+    sse: {
+      subscribe: `${API}/sse`,
+    },
   },
 
   // 엔드포인트별 지표 분리용 태그
@@ -137,6 +140,9 @@ export const config = {
     notification: {
       list: 'GET /api/notifications',
       markRead: 'DELETE /api/notifications/{notificationId}',
+    },
+    sse: {
+      subscribe: 'GET /api/sse',
     },
   },
 

@@ -11,7 +11,7 @@ function fmt(v: number | undefined, digits = 2): string {
 // 엔드포인트별(태그 name:...) 지표 추출 (해당 서브메트릭/thresholds 있을 때만)
 function extractPerEndpoint(metrics: Record<string, any>) {
   const rows: {
-    name: string; count: number; avg: number; p95: number; max: number; errorRate: number;
+    name: string; count: number; avg: number; p95: number; max: number; errorRate: number | null;
   }[] = [];
 
   for (const [key, value] of Object.entries(metrics)) {
@@ -30,7 +30,7 @@ function extractPerEndpoint(metrics: Record<string, any>) {
       avg: dur.avg ?? 0,
       p95: dur['p(95)'] ?? 0,
       max: dur.max ?? 0,
-      errorRate: (metrics[failKey]?.values?.rate ?? 0) * 100,
+      errorRate: metrics[failKey] ? (metrics[failKey].values?.rate ?? 0) * 100 : null,
     });
   }
   return rows.sort((a, b) => b.count - a.count);
@@ -45,8 +45,16 @@ export function generateReport(data: any): string {
   const iters = metrics.iterations?.values ?? {};
   const vusMax = metrics.vus_max?.values?.value ?? metrics.vus_max?.values?.max ?? 0;
 
-  const errorRate = (failed.rate ?? 0) * 100;
+  // sse_connection_failed Rate 메트릭이 있으면 연결 실패율로 에러율 대체
+  // (SSE는 타임아웃이 정상 종료라 http_req_failed 가 의미없음)
+  const sseFailedValues = metrics['sse_connection_failed']?.values;
+  const errorRate = sseFailedValues
+    ? (sseFailedValues.rate ?? 0) * 100
+    : (failed.rate ?? 0) * 100;
+
+  const errorLabel = sseFailedValues ? 'SSE 실패율' : '에러율';
   const checksRate = (checks.rate ?? 0) * 100;
+  const sseEventRate = metrics['sse_connect_event_received']?.values?.rate;
   const perEndpoint = extractPerEndpoint(metrics);
 
   const endpointRows = perEndpoint.length
@@ -57,7 +65,7 @@ export function generateReport(data: any): string {
           <td>${fmt(r.avg)}</td>
           <td>${fmt(r.p95)}</td>
           <td>${fmt(r.max)}</td>
-          <td class="${r.errorRate > 0 ? 'bad' : 'ok'}">${fmt(r.errorRate)}%</td>
+          <td class="${r.errorRate === null ? '' : r.errorRate > 0 ? 'bad' : 'ok'}">${r.errorRate === null ? '—' : fmt(r.errorRate) + '%'}</td>
         </tr>`).join('')
     : `<tr><td colspan="6" class="muted">엔드포인트별 지표가 없습니다.
          시나리오에서 요청에 tag(name)를 달고 thresholds(예: <code>http_req_duration{name:...}</code>)를
@@ -90,11 +98,13 @@ export function generateReport(data: any): string {
  <h1>🚀 MOPL 부하테스트 리포트</h1>
 
  <div class="cards">
-   <div class="card"><div class="label">최대 VU</div><div class="value">${vusMax}</div></div>
-   <div class="card"><div class="label">총 요청 수</div><div class="value">${reqs.count ?? 0}</div></div>
-   <div class="card"><div class="label">RPS</div><div class="value">${fmt(reqs.rate)}</div></div>
-   <div class="card"><div class="label">에러율</div><div class="value ${errorRate > 0 ? 'bad' : 'ok'}">${fmt(errorRate)}%</div></div>
-   <div class="card"><div class="label">체크 성공률</div><div class="value ${checksRate < 100 ? 'bad' : 'ok'}">${fmt(checksRate)}%</div></div>
+  <div class="card"><div class="label">최대 VU</div><div class="value">${vusMax}</div></div>
+  <div class="card"><div class="label">총 요청 수</div><div class="value">${reqs.count ?? 0}</div></div>
+  <div class="card"><div class="label">RPS</div><div class="value">${fmt(reqs.rate)}</div></div>
+  <div class="card"><div class="label">${errorLabel}</div><div class="value ${errorRate > 0 ? 'bad' : 'ok'}">${fmt(errorRate)}%</div></div> 
+  <div class="card"><div class="label">체크 성공률</div>
+  <div class="value ${checksRate < 100 ? 'bad' : 'ok'}">${fmt(checksRate)}%</div></div>
+   ${sseEventRate !== undefined ? `<div class="card"><div class="label">connect 이벤트 수신률</div><div class="value ${sseEventRate < 0.99 ? 'bad' : 'ok'}">${fmt(sseEventRate * 100)}%</div></div>` : ''}
  </div>
 
  <div class="cards">
