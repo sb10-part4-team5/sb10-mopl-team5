@@ -1,9 +1,15 @@
 package com.codeit.team5.mopl.global.infra.redis.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
 import java.util.Map;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -14,16 +20,12 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Configuration
+@EnableCaching
 public class RedisConfig {
 
     @Bean
@@ -40,21 +42,6 @@ public class RedisConfig {
         }
 
         return new LettuceConnectionFactory(config, clientConfig);
-    }
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
-
-        GenericJackson2JsonRedisSerializer serializer = redisJsonSerializer();
-        template.setValueSerializer(serializer);
-        template.setHashValueSerializer(serializer);
-
-        return template;
     }
 
     @Bean
@@ -79,15 +66,19 @@ public class RedisConfig {
     private GenericJackson2JsonRedisSerializer redisJsonSerializer() {
         ObjectMapper mapper = new ObjectMapper();
 
+        // Java 8 날짜/시간 모듈 등록 (Instant, LocalDateTime 처리용)
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // 직렬화 설정
-        mapper.activateDefaultTyping(
-                mapper.getPolymorphicTypeValidator(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
+        // Record 객체도 @class 정보를 남길 수 있도록 커스텀 Resolver 사용
+        PolymorphicTypeValidator ptv = mapper.getPolymorphicTypeValidator();
+        RecordSupportingTypeResolver typeResolver = new RecordSupportingTypeResolver(
+                ObjectMapper.DefaultTyping.NON_FINAL, ptv);
+        typeResolver.init(JsonTypeInfo.Id.CLASS, null);
+        typeResolver.inclusion(JsonTypeInfo.As.PROPERTY);
+        typeResolver.typeProperty("@class");
+
+        mapper.setDefaultTyping(typeResolver);
 
         return new GenericJackson2JsonRedisSerializer(mapper);
     }
