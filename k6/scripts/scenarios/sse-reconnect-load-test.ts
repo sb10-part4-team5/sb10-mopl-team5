@@ -23,13 +23,12 @@ const WARMUP_VUS = Number(__ENV.WARMUP_VUS || 5);
 const WARMUP_TIME = __ENV.WARMUP_TIME || '20s';
 const HOLD_DURATION = __ENV.HOLD_DURATION || '5s';
 
-const sseConnectionOk = new Rate('sse_connection_ok');
 const sseConnectionFailed = new Rate('sse_connection_failed');
 const sseConnectEventReceived = new Rate('sse_connect_event_received');
 
 interface SetupData {
   tokens: string[];
-  lastEventIds: (string | null)[];
+  lastEventIds: string[];
 }
 
 export const options = {
@@ -43,7 +42,6 @@ export const options = {
     warmupTime: WARMUP_TIME,
   }),
   thresholds: {
-    sse_connection_ok: ['rate>0.99'],
     sse_connection_failed: ['rate<0.01'],
     [`http_req_waiting{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)<500'],
     [`http_req_duration{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)>=0'],
@@ -55,15 +53,22 @@ export function setup(): SetupData {
   const tokens = setupAuth(TARGET_VUS + WARMUP_VUS);
 
   // 각 계정의 가장 오래된 알림 ID를 Last-Event-ID 후보로 수집
-  // (오래된 ID일수록 재연결 시 서버가 더 많은 missed event를 보냄)
-  const lastEventIds = tokens.map((token) => {
+  const validTokens: string[] = [];
+  const validLastEventIds: string[] = [];
+  tokens.forEach((token) => {
     const page = getNotifications(token, { limit: 1, sortDirection: 'ASCENDING' });
-    return page?.data?.[0]?.id ?? null;
+    const id = page?.data?.[0]?.id;
+    if (id) {
+      validTokens.push(token);
+      validLastEventIds.push(id);
+    }
   });
 
-  const withId = lastEventIds.filter((id) => id !== null).length;
-  console.log(`[setup] Last-Event-ID 확보: ${withId}/${tokens.length}개 계정`);
-  return { tokens, lastEventIds };
+  console.log(`[setup] Last-Event-ID 확보: ${validTokens.length}/${tokens.length}개 계정`);
+  if (validTokens.length === 0) {
+    throw new Error('Last-Event-ID를 확보할 수 있는 계정이 없어 테스트를 중단합니다.');
+  }
+  return { tokens: validTokens, lastEventIds: validLastEventIds };
 }
 
 export function run(data: SetupData): void {
@@ -73,7 +78,6 @@ export function run(data: SetupData): void {
 
   const result = connectSse(token, HOLD_DURATION, lastEventId);
 
-  sseConnectionOk.add(result.connected);
   sseConnectionFailed.add(!result.connected);
   sseConnectEventReceived.add(result.hasConnectEvent);
   check(result, {

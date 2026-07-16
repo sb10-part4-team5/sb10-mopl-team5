@@ -26,7 +26,7 @@ export function connectSse(
   });
 
   const timedOut = res.error_code === 1050; // 에러코드 1050 -> 타임아웃으로 연결 종료
-  const connected = res.status === 200 || timedOut; // 200 응답을 받거나 timedOut이 일어나면 연결 성공이라는 의미
+  const connected = res.status === 200; // 정상 응답 헤더(200 OK)를 받아 연결이 수립되어야만 성공
   // 타임아웃 시 k6가 수신한 부분 body를 반환하므로 초기 connect 이벤트 포함 여부 확인 가능
   const hasConnectEvent = typeof res.body === 'string' && res.body.includes('connected');
 

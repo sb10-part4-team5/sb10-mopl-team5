@@ -24,7 +24,6 @@ const WARMUP_TIME = __ENV.WARMUP_TIME || '20s';
 // VU당 SSE 연결 유지 시간. 늘릴수록 동시 연결 수가 올라가 서버 부하가 커진다.
 const HOLD_DURATION = __ENV.HOLD_DURATION || '5s';
 
-const sseConnectionOk = new Rate('sse_connection_ok');
 const sseConnectionFailed = new Rate('sse_connection_failed');
 const sseConnectEventReceived = new Rate('sse_connect_event_received');
 
@@ -40,7 +39,6 @@ export const options = {
   }),
   thresholds: {
     // http_req_failed 는 타임아웃도 실패로 집계하므로 SSE 에서는 사용하지 않는다.
-    sse_connection_ok: ['rate>0.99'],
     sse_connection_failed: ['rate<0.01'],
     // 연결 수립 지연 (첫 이벤트 수신까지 = TTFB): p95 500ms 이내
     [`http_req_waiting{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)<500'],
@@ -61,7 +59,6 @@ export function run(data: SetupData): void {
 
   const result = connectSse(token, HOLD_DURATION);
 
-  sseConnectionOk.add(result.connected);
   sseConnectionFailed.add(!result.connected);
   sseConnectEventReceived.add(result.hasConnectEvent);
   check(result, {

@@ -51,6 +51,8 @@ export function generateReport(data: any): string {
   const errorRate = sseFailedValues
     ? (sseFailedValues.rate ?? 0) * 100
     : (failed.rate ?? 0) * 100;
+
+  const errorLabel = sseFailedValues ? 'SSE 실패율' : '에러율';
   const checksRate = (checks.rate ?? 0) * 100;
   const sseEventRate = metrics['sse_connect_event_received']?.values?.rate;
   const perEndpoint = extractPerEndpoint(metrics);
@@ -96,11 +98,10 @@ export function generateReport(data: any): string {
  <h1>🚀 MOPL 부하테스트 리포트</h1>
 
  <div class="cards">
-   <div class="card"><div class="label">최대 VU</div><div class="value">${vusMax}</div></div>
-   <div class="card"><div class="label">총 요청 수</div><div class="value">${reqs.count ?? 0}</div></div>
-   <div class="card"><div class="label">RPS</div><div class="value">${fmt(reqs.rate)}</div></div>
-   <div class="card"><div class="label">에러율</div><div class="value ${errorRate > 0 ? 'bad' : 'ok'}">${fmt(errorRate)}%</div></div>
-   <div class="card"><div class="label">체크 성공률</div><div class="value ${checksRate < 100 ? 'bad' : 'ok'}">${fmt(checksRate)}%</div></div>
+  <div class="card"><div class="label">최대 VU</div><div class="value">${vusMax}</div></div>
+  <div class="card"><div class="label">총 요청 수</div><div class="value">${reqs.count ?? 0}</div></div>
+  <div class="card"><div class="label">RPS</div><div class="value">${fmt(reqs.rate)}</div></div>
+  <div class="card"><div class="label">${errorLabel}</div><div class="value ${errorRate > 0 ? 'bad' : 'ok'}">${fmt(errorRate)}%</div></div>   <div class="card"><div class="label">체크 성공률</div><div class="value ${checksRate < 100 ? 'bad' : 'ok'}">${fmt(checksRate)}%</div></div>
    ${sseEventRate !== undefined ? `<div class="card"><div class="label">connect 이벤트 수신률</div><div class="value ${sseEventRate < 0.99 ? 'bad' : 'ok'}">${fmt(sseEventRate * 100)}%</div></div>` : ''}
  </div>
 

@@ -25,7 +25,6 @@ const HOLD_TIME = __ENV.HOLD_TIME || '1m';
 const WARMUP_TIME = __ENV.WARMUP_TIME || '20s';
 const HOLD_DURATION = __ENV.HOLD_DURATION || '5s';
 
-const sseConnectionOk = new Rate('sse_connection_ok');
 const sseConnectionFailed = new Rate('sse_connection_failed');
 const sseConnectEventReceived = new Rate('sse_connect_event_received');
 
@@ -71,8 +70,8 @@ export const options = {
   },
   thresholds: {
     // 복합 부하(팔로우 트리거 + SSE 동시 실행) 특성상 단일 테스트보다 완화된 기준 적용
-    sse_connection_ok: ['rate>0.95'],
     sse_connection_failed: ['rate<0.05'],
+    sse_connect_event_received: ['rate>0.95'],
     [`http_req_waiting{name:${config.tags.sse.subscribe},scenario:sse}`]: ['p(95)<500'],
     [`http_req_duration{name:${config.tags.sse.subscribe},scenario:sse}`]: ['p(95)>=0'],
     [`http_reqs{name:${config.tags.sse.subscribe},scenario:sse}`]: ['count>=0'],
@@ -102,7 +101,6 @@ export function holdSse(data: SetupData): void {
 
   const result = connectSse(token, HOLD_DURATION);
 
-  sseConnectionOk.add(result.connected);
   sseConnectionFailed.add(!result.connected);
   sseConnectEventReceived.add(result.hasConnectEvent);
   check(result, {
@@ -135,8 +133,8 @@ export function triggerNotification(data: SetupData): void {
     return;
   }
 
-  // 트리거 VU마다 다른 SSE VU를 타깃으로 분산
-  const targetId = data.sseUserIds[triggerIdx % data.sseUserIds.length];
+  // 무작위로 타깃 SSE 유저를 선택해 모든 SSE VU에 부하를 고르게 분산
+  const targetId = data.sseUserIds[Math.floor(Math.random() * data.sseUserIds.length)];
 
   if (currentFollowId) {
     deleteFollow(token, currentFollowId);
