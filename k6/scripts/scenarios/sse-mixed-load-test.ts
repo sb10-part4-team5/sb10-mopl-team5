@@ -130,8 +130,7 @@ export function triggerNotification(data: SetupData): void {
 
   // warmup-only 계정을 제외하고 SSE VU가 실제로 사용하는 계정만 알림 대상으로 삼는다
   const sseOnlyCount = Math.min(SSE_VUS, data.sseUserIds.length);
-  const targetId = data.sseUserIds[triggerIdx % sseOnlyCount];
-
+  const targetId = data.sseUserIds[Math.floor(Math.random() * sseOnlyCount)];
   let follow = createFollow(token, targetId);
 
   if (!follow) {
