@@ -9,7 +9,10 @@ import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Repository;
@@ -24,17 +27,38 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
 
     @Override
     public List<Conversation> findMyConversations(UUID currentUserId, ConversationCursorRequest request) {
+        List<UUID> ids = findMyConversationIds(currentUserId, request);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, Conversation> conversationsById = fetchConversationsByIds(ids);
+        return ids.stream()
+                .map(conversationsById::get)
+                .toList();
+    }
+
+    private List<UUID> findMyConversationIds(UUID currentUserId, ConversationCursorRequest request) {
         int fetchLimit = request.limit() + 1;
         return queryFactory
+                .select(conversation.id)
+                .from(conversation)
+                .where(buildWhere(currentUserId, request))
+                .orderBy(buildOrder(request))
+                .limit(fetchLimit)
+                .fetch();
+    }
+
+    private Map<UUID, Conversation> fetchConversationsByIds(List<UUID> ids) {
+        List<Conversation> conversations = queryFactory
                 .selectFrom(conversation)
                 .join(conversation.participant1).fetchJoin()
                 .leftJoin(conversation.participant1.profileImage).fetchJoin()
                 .join(conversation.participant2).fetchJoin()
                 .leftJoin(conversation.participant2.profileImage).fetchJoin()
-                .where(buildWhere(currentUserId, request))
-                .orderBy(buildOrder(request))
-                .limit(fetchLimit)
+                .where(conversation.id.in(ids))
                 .fetch();
+        return conversations.stream()
+                .collect(Collectors.toMap(Conversation::getId, Function.identity()));
     }
 
     private BooleanBuilder buildWhere(UUID currentUserId, ConversationCursorRequest request) {
