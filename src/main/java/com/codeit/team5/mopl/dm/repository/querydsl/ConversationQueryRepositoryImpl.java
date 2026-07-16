@@ -10,6 +10,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,6 +35,7 @@ public class ConversationQueryRepositoryImpl implements ConversationQueryReposit
         Map<UUID, Conversation> conversationsById = fetchConversationsByIds(ids);
         return ids.stream()
                 .map(conversationsById::get)
+                .filter(Objects::nonNull)
                 .toList();
     }
 
