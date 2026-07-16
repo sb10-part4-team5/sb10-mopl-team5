@@ -350,7 +350,7 @@ class NotificationRepositoryTest {
 
         // When
         List<Notification> result =
-                notificationRepository.findMissedNotifications(receiverId, ref.getId());
+                notificationRepository.findMissedNotifications(receiverId, t0, ref.getId(), Limit.of(50));
 
         // Then: read는 제외, unread만 반환
         assertThat(result).extracting(Notification::getId)
@@ -390,7 +390,7 @@ class NotificationRepositoryTest {
 
         // When
         List<Notification> result =
-                notificationRepository.findMissedNotifications(receiverId, ref.getId());
+                notificationRepository.findMissedNotifications(receiverId, t0, ref.getId(), Limit.of(50));
 
         // Then: createdAt 오름차순(t1 → t2 → t3)이어야 한다
         assertThat(result).hasSize(3);
