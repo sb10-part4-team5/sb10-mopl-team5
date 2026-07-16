@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.global.infra.redis.config;
 
 import java.io.IOException;
 import java.util.Collection;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +14,18 @@ import com.fasterxml.jackson.databind.jsontype.impl.ClassNameIdResolver;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
 public class RecordSupportingTypeResolver extends ObjectMapper.DefaultTypeResolverBuilder {
+
+    public static ObjectMapper createRedisObjectMapper(ObjectMapper originalMapper) {
+        ObjectMapper mapper = originalMapper.copy();
+        PolymorphicTypeValidator ptv = mapper.getPolymorphicTypeValidator();
+        RecordSupportingTypeResolver typeResolver = new RecordSupportingTypeResolver(
+                ObjectMapper.DefaultTyping.NON_FINAL, ptv);
+        typeResolver.init(JsonTypeInfo.Id.CLASS, null);
+        typeResolver.inclusion(JsonTypeInfo.As.PROPERTY);
+        typeResolver.typeProperty("@class");
+        mapper.setDefaultTyping(typeResolver);
+        return mapper;
+    }
 
     public RecordSupportingTypeResolver(ObjectMapper.DefaultTyping typing, PolymorphicTypeValidator validator) {
         super(typing, validator);
