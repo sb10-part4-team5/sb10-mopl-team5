@@ -1,18 +1,18 @@
-// SSE 부하테스트 — GET /api/sse
-// 각 VU가 SSE 연결을 수립하고 HOLD_DURATION 동안 유지한다.
-// SSE는 타임아웃으로 연결 시간을 제어하므로 http_req_failed 대신
-// 커스텀 sse_connection_ok Rate 로 성공률을 측정한다.
-// 연결 수립 지연시간은 http_req_waiting (TTFB) 기준.
+// SSE 재연결 부하테스트 — Last-Event-ID 헤더를 이용한 재연결 시나리오
+// 각 VU가 자신의 미읽음 알림 ID를 Last-Event-ID로 사용해 재연결하고,
+// 서버가 missed notification을 포함한 응답을 보내는지 검증한다.
+// (SseService.sendMissedEvents → NotificationService.findMissedNotifications 경로 커버)
 
-// k6 run scripts/scenarios/sse-load-test.ts
-// # 동시 연결 수 조정: -e TARGET_VUS=50
-// # 연결 유지 시간 조정: -e HOLD_DURATION=10s
+// k6 run scripts/scenarios/sse-reconnect-load-test.ts
+// # 동시 연결 수 조정: -e TARGET_VUS=20
+// # 연결 유지 시간 조정: -e HOLD_DURATION=5s
 
 import { check, sleep } from 'k6';
 import exec from 'k6/execution';
 import { Rate } from 'k6/metrics';
 import config, { warmupLoadScenarios } from '../config.ts';
 import { connectSse } from '../api/sse.api.ts';
+import { getNotifications } from '../api/notification.api.ts';
 import { summaryHandler } from '../utils/reporter.ts';
 import { setupAuth } from '../utils/setup.ts';
 
@@ -21,12 +21,16 @@ const RAMP_TIME = __ENV.RAMP_TIME || '30s';
 const HOLD_TIME = __ENV.HOLD_TIME || '1m';
 const WARMUP_VUS = Number(__ENV.WARMUP_VUS || 5);
 const WARMUP_TIME = __ENV.WARMUP_TIME || '20s';
-// VU당 SSE 연결 유지 시간. 늘릴수록 동시 연결 수가 올라가 서버 부하가 커진다.
 const HOLD_DURATION = __ENV.HOLD_DURATION || '5s';
 
 const sseConnectionOk = new Rate('sse_connection_ok');
 const sseConnectionFailed = new Rate('sse_connection_failed');
 const sseConnectEventReceived = new Rate('sse_connect_event_received');
+
+interface SetupData {
+  tokens: string[];
+  lastEventIds: (string | null)[];
+}
 
 export const options = {
   noCookiesReset: true,
@@ -39,33 +43,41 @@ export const options = {
     warmupTime: WARMUP_TIME,
   }),
   thresholds: {
-    // http_req_failed 는 타임아웃도 실패로 집계하므로 SSE 에서는 사용하지 않는다.
     sse_connection_ok: ['rate>0.99'],
     sse_connection_failed: ['rate<0.01'],
-    // 연결 수립 지연 (첫 이벤트 수신까지 = TTFB): p95 500ms 이내
     [`http_req_waiting{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)<500'],
-    // 리포터 엔드포인트 테이블 표시를 위한 서브메트릭 생성 (항상 통과)
     [`http_req_duration{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)>=0'],
     [`http_reqs{name:${config.tags.sse.subscribe},scenario:load}`]: ['count>=0'],
   },
 };
 
-type SetupData = string[];
-
 export function setup(): SetupData {
-  return setupAuth(TARGET_VUS + WARMUP_VUS);
+  const tokens = setupAuth(TARGET_VUS + WARMUP_VUS);
+
+  // 각 계정의 가장 오래된 알림 ID를 Last-Event-ID 후보로 수집
+  // (오래된 ID일수록 재연결 시 서버가 더 많은 missed event를 보냄)
+  const lastEventIds = tokens.map((token) => {
+    const page = getNotifications(token, { limit: 1, sortDirection: 'ASCENDING' });
+    return page?.data?.[0]?.id ?? null;
+  });
+
+  const withId = lastEventIds.filter((id) => id !== null).length;
+  console.log(`[setup] Last-Event-ID 확보: ${withId}/${tokens.length}개 계정`);
+  return { tokens, lastEventIds };
 }
 
 export function run(data: SetupData): void {
-  const token = data[(exec.vu.idInTest - 1) % data.length];
+  const idx = (exec.vu.idInTest - 1) % data.tokens.length;
+  const token = data.tokens[idx];
+  const lastEventId = data.lastEventIds[idx] ?? undefined;
 
-  const result = connectSse(token, HOLD_DURATION);
+  const result = connectSse(token, HOLD_DURATION, lastEventId);
 
   sseConnectionOk.add(result.connected);
   sseConnectionFailed.add(!result.connected);
   sseConnectEventReceived.add(result.hasConnectEvent);
   check(result, {
-    'SSE 연결 수립 성공': (r) => r.connected,
+    'SSE 재연결 성공': (r) => r.connected,
     'connect 이벤트 수신': (r) => r.hasConnectEvent,
     '연결 수립 지연 500ms 이내': (r) => r.waitingMs < 500,
   });
@@ -74,5 +86,5 @@ export function run(data: SetupData): void {
 }
 
 export function handleSummary(data: any) {
-  return summaryHandler(data, 'sse-load-test-summary.html');
+  return summaryHandler(data, 'sse-reconnect-load-test-summary.html');
 }
