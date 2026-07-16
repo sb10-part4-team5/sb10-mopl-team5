@@ -26,6 +26,7 @@ const HOLD_DURATION = __ENV.HOLD_DURATION || '5s';
 
 const sseConnectionFailed = new Rate('sse_connection_failed');
 const sseConnectEventReceived = new Rate('sse_connect_event_received');
+const ssePrematureClose = new Rate('sse_premature_close');
 
 export const options = {
   noCookiesReset: true,
@@ -40,7 +41,9 @@ export const options = {
   thresholds: {
     // http_req_failed 는 타임아웃도 실패로 집계하므로 SSE 에서는 사용하지 않는다.
     sse_connection_failed: ['rate<0.01'],
-    // 연결 수립 지연 (첫 이벤트 수신까지 = TTFB): p95 500ms 이내
+    sse_connect_event_received: ['rate>0.99'],
+    // 서버가 HOLD_DURATION 이전에 연결을 끊는 조기 종료율
+    sse_premature_close: ['rate<0.01'],
     [`http_req_waiting{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)<500'],
     // 리포터 엔드포인트 테이블 표시를 위한 서브메트릭 생성 (항상 통과)
     [`http_req_duration{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)>=0'],
@@ -61,9 +64,12 @@ export function run(data: SetupData): void {
 
   sseConnectionFailed.add(!result.connected);
   sseConnectEventReceived.add(result.hasConnectEvent);
+  // connected이지만 timedOut이 아니면 서버가 HOLD_DURATION 이전에 연결을 끊은 것
+  ssePrematureClose.add(result.connected && !result.timedOut);
   check(result, {
     'SSE 연결 수립 성공': (r) => r.connected,
     'connect 이벤트 수신': (r) => r.hasConnectEvent,
+    '조기 종료 없음': (r) => !r.connected || r.timedOut,
     '연결 수립 지연 500ms 이내': (r) => r.waitingMs < 500,
   });
 

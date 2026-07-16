@@ -17,6 +17,12 @@ import { summaryHandler } from '../utils/reporter.ts';
 import { setupAuthWithIds } from '../utils/setup.ts';
 import { randomThinkTime } from '../utils/random.ts';
 
+// trigger는 SSE ramp가 완료된 뒤 시작해야 활성 연결이 확보된 상태에서 알림을 발생시킬 수 있다
+function addDurations(a: string, b: string): string {
+  const toSec = (s: string) => (s.endsWith('m') ? parseFloat(s) * 60 : parseFloat(s));
+  return `${toSec(a) + toSec(b)}s`;
+}
+
 const SSE_VUS = Number(__ENV.SSE_VUS || 15);
 const TRIGGER_VUS = Number(__ENV.TRIGGER_VUS || 10);
 const WARMUP_VUS = Number(__ENV.WARMUP_VUS || 5);
@@ -25,8 +31,14 @@ const HOLD_TIME = __ENV.HOLD_TIME || '1m';
 const WARMUP_TIME = __ENV.WARMUP_TIME || '20s';
 const HOLD_DURATION = __ENV.HOLD_DURATION || '5s';
 
+// warmup과 SSE가 같은 계정 풀을 공유: warmup은 SSE 계정 앞 WARMUP_VUS개를 재사용
+const SSE_POOL = Math.max(SSE_VUS, WARMUP_VUS);
+// trigger 시작: warmup + ramp 이후 → SSE VU가 모두 연결된 상태에서 부하를 가한다
+const TRIGGER_START_TIME = addDurations(WARMUP_TIME, RAMP_TIME);
+
 const sseConnectionFailed = new Rate('sse_connection_failed');
 const sseConnectEventReceived = new Rate('sse_connect_event_received');
+const ssePrematureClose = new Rate('sse_premature_close');
 
 interface SetupData {
   sseTokens: string[];
@@ -55,10 +67,10 @@ export const options = {
       ],
       exec: 'holdSse',
     },
-    // SSE 연결이 자리잡은 뒤 알림을 발생시켜 복합 부하를 가한다
+    // SSE ramp 완료 후 알림 트리거 시작 → 활성 SSE 연결에 확실히 알림을 전달
     trigger: {
       executor: 'ramping-vus',
-      startTime: WARMUP_TIME,
+      startTime: TRIGGER_START_TIME,
       startVUs: 0,
       stages: [
         { duration: RAMP_TIME, target: TRIGGER_VUS },
@@ -72,6 +84,8 @@ export const options = {
     // 복합 부하(팔로우 트리거 + SSE 동시 실행) 특성상 단일 테스트보다 완화된 기준 적용
     sse_connection_failed: ['rate<0.05'],
     sse_connect_event_received: ['rate>0.95'],
+    // 복합 부하 특성상 단일 테스트보다 완화된 조기 종료율 허용
+    sse_premature_close: ['rate<0.05'],
     [`http_req_waiting{name:${config.tags.sse.subscribe},scenario:sse}`]: ['p(95)<500'],
     [`http_req_duration{name:${config.tags.sse.subscribe},scenario:sse}`]: ['p(95)>=0'],
     [`http_reqs{name:${config.tags.sse.subscribe},scenario:sse}`]: ['count>=0'],
@@ -81,18 +95,12 @@ export const options = {
 };
 
 export function setup(): SetupData {
-  const total = setupAuthWithIds(SSE_VUS + WARMUP_VUS + TRIGGER_VUS);
-  const sseTokens = total.tokens.slice(0, SSE_VUS + WARMUP_VUS);
-  const sseUserIds = total.userIds.slice(0, SSE_VUS + WARMUP_VUS);
-  const triggerTokens = total.tokens.slice(SSE_VUS + WARMUP_VUS);
-
-  console.log(
-    `[setup] 전체=${total.tokens.length} sseTokens=${sseTokens.length} triggerTokens=${triggerTokens.length}`,
-  );
-  console.log(`[setup] sseTokens[0]=${sseTokens[0]?.slice(0, 20) ?? 'EMPTY'}`);
-  console.log(`[setup] triggerTokens[0]=${triggerTokens[0]?.slice(0, 20) ?? 'EMPTY'}`);
-
-  return { sseTokens, sseUserIds, triggerTokens };
+  const total = setupAuthWithIds(SSE_POOL + TRIGGER_VUS);
+  return {
+    sseTokens: total.tokens.slice(0, SSE_POOL),
+    sseUserIds: total.userIds.slice(0, SSE_POOL),
+    triggerTokens: total.tokens.slice(SSE_POOL),
+  };
 }
 
 export function holdSse(data: SetupData): void {
@@ -103,6 +111,7 @@ export function holdSse(data: SetupData): void {
 
   sseConnectionFailed.add(!result.connected);
   sseConnectEventReceived.add(result.hasConnectEvent);
+  ssePrematureClose.add(result.connected && !result.timedOut);
   check(result, {
     'SSE 연결 수립 성공': (r) => r.connected,
     'connect 이벤트 수신': (r) => r.hasConnectEvent,
@@ -116,25 +125,12 @@ export function holdSse(data: SetupData): void {
 let currentFollowId: string | null = null;
 
 export function triggerNotification(data: SetupData): void {
-  if (!data.triggerTokens?.length) {
-    console.error(
-      `[trigger] triggerTokens가 비어있음! sseTokens=${data.sseTokens?.length ?? 'undefined'}`,
-    );
-    return;
-  }
-
   const triggerIdx = (exec.vu.idInTest - 1) % data.triggerTokens.length;
   const token = data.triggerTokens[triggerIdx];
 
-  if (!token) {
-    console.error(
-      `[trigger] VU=${exec.vu.idInTest} triggerIdx=${triggerIdx} token이 없음! length=${data.triggerTokens.length}`,
-    );
-    return;
-  }
-
-  // 무작위로 타깃 SSE 유저를 선택해 모든 SSE VU에 부하를 고르게 분산
-  const targetId = data.sseUserIds[Math.floor(Math.random() * data.sseUserIds.length)];
+  // warmup-only 계정을 제외하고 SSE VU가 실제로 사용하는 계정만 알림 대상으로 삼는다
+  const sseOnlyCount = Math.min(SSE_VUS, data.sseUserIds.length);
+  const targetId = data.sseUserIds[triggerIdx % sseOnlyCount];
 
   if (currentFollowId) {
     deleteFollow(token, currentFollowId);

@@ -3,4 +3,5 @@ export interface SseConnectionResult {
   timedOut: boolean;
   waitingMs: number;
   hasConnectEvent: boolean;
+  missedNotificationCount: number;
 }

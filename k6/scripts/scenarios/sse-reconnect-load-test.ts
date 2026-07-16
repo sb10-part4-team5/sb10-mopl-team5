@@ -25,6 +25,8 @@ const HOLD_DURATION = __ENV.HOLD_DURATION || '5s';
 
 const sseConnectionFailed = new Rate('sse_connection_failed');
 const sseConnectEventReceived = new Rate('sse_connect_event_received');
+const sseMissedNotificationReceived = new Rate('sse_missed_notification_received');
+const ssePrematureClose = new Rate('sse_premature_close');
 
 interface SetupData {
   tokens: string[];
@@ -43,6 +45,10 @@ export const options = {
   }),
   thresholds: {
     sse_connection_failed: ['rate<0.01'],
+    sse_connect_event_received: ['rate>0.99'],
+    // Last-Event-ID 재연결 핵심 지표: missed notification이 실제로 전달되어야 한다
+    sse_missed_notification_received: ['rate>0.99'],
+    sse_premature_close: ['rate<0.01'],
     [`http_req_waiting{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)<500'],
     [`http_req_duration{name:${config.tags.sse.subscribe},scenario:load}`]: ['p(95)>=0'],
     [`http_reqs{name:${config.tags.sse.subscribe},scenario:load}`]: ['count>=0'],
@@ -52,15 +58,16 @@ export const options = {
 export function setup(): SetupData {
   const tokens = setupAuth(TARGET_VUS + WARMUP_VUS);
 
-  // 각 계정의 가장 오래된 알림 ID를 Last-Event-ID 후보로 수집
+  // 오래된 알림 2건을 조회해 첫 번째를 Last-Event-ID로, 두 번째 이후를 missed notification으로 활용
+  // 알림이 1건뿐인 계정은 재연결 후 받을 missed notification이 없으므로 제외한다
   const validTokens: string[] = [];
   const validLastEventIds: string[] = [];
   tokens.forEach((token) => {
-    const page = getNotifications(token, { limit: 1, sortDirection: 'ASCENDING' });
-    const id = page?.data?.[0]?.id;
-    if (id) {
+    const page = getNotifications(token, { limit: 2, sortDirection: 'ASCENDING' });
+    const items = page?.data ?? [];
+    if (items.length >= 2) {
       validTokens.push(token);
-      validLastEventIds.push(id);
+      validLastEventIds.push(items[0].id);
     }
   });
 
@@ -80,9 +87,13 @@ export function run(data: SetupData): void {
 
   sseConnectionFailed.add(!result.connected);
   sseConnectEventReceived.add(result.hasConnectEvent);
+  sseMissedNotificationReceived.add(result.missedNotificationCount > 0);
+  ssePrematureClose.add(result.connected && !result.timedOut);
   check(result, {
     'SSE 재연결 성공': (r) => r.connected,
     'connect 이벤트 수신': (r) => r.hasConnectEvent,
+    'missed notification 수신': (r) => r.missedNotificationCount > 0,
+    '조기 종료 없음': (r) => !r.connected || r.timedOut,
     '연결 수립 지연 500ms 이내': (r) => r.waitingMs < 500,
   });
 
