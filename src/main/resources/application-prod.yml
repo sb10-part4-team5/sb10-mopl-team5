@@ -46,25 +46,6 @@ spring:
   #     value-serializer: org.apache.kafka.common.serialization.StringSerializer
   #     acks: all
 
-# 콘텐츠 키워드 검색용 OpenSearch — 운영 도메인 미구축 상태.
-#
-# 검색 기능(#402) 배포 전까지는 없어도 되지만, 배포 시점엔 반드시 채워야 한다.
-# 주의: opensearch.uris의 기본값이 http://localhost:9200으로 하드코딩되어 있어서,
-# 이 설정을 비워둔 채 검색 기능을 배포하면 기동은 정상적으로 되고
-# 사용자가 키워드 검색을 하는 시점에야 connection refused로 터진다.
-#
-# 도메인 구축 시 배포 담당자와 확인할 것:
-#   1. AWS OpenSearch Service 도메인 생성 (엔진 3.5 — 로컬 opensearch-nori.Dockerfile과 버전 일치)
-#   2. nori(한국어 형태소 분석기)를 ZIP-PLUGIN 패키지로 도메인에 associate — 기본 탑재가 아님
-#   3. 인증 방식 결정 (아래 username/password 방식 또는 IAM)
-#
-# opensearch:
-#   uris: ${OPENSEARCH_URIS}
-#   username: ${OPENSEARCH_USERNAME}
-#   password: ${OPENSEARCH_PASSWORD}
-#   connection-timeout: 3s
-#   socket-timeout: 10s
-
 server:
   forward-headers-strategy: native
   tomcat:
