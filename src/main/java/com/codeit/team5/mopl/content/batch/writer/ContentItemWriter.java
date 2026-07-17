@@ -7,6 +7,7 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentTag;
+import com.codeit.team5.mopl.content.event.ContentUpsertedEvent;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
@@ -19,12 +20,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -35,6 +38,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
     private final ContentStatsRepository contentStatsRepository;
     private final BinaryContentRepository binaryContentRepository;
     private final TagRepository tagRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void write(Chunk<? extends ContentWithMetaData> chunk) {
@@ -117,6 +121,11 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
                 }
             }));
         }
+
+        List<UUID> savedIds = contents.stream()
+                .map(Content::getId)
+                .toList();
+        eventPublisher.publishEvent(new ContentUpsertedEvent(savedIds));
 
         log.info("[Batch] {}건 저장 완료 (청크 원본: {}건)", deduplicatedItems.size(), items.size());
     }

@@ -10,6 +10,8 @@ import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
+import com.codeit.team5.mopl.content.event.ContentDeletedEvent;
+import com.codeit.team5.mopl.content.event.ContentUpsertedEvent;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.exception.TooManyTagsException;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,8 +48,7 @@ public class ContentService {
     private final ContentMapper contentMapper;
     private final BinaryContentService binaryContentService;
     private final ContentCacheStore contentCacheStore;
-
-    private static final String SECONDARY_SORT_FIELD = "id";
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 관리자가 콘텐츠를 직접 생성한다.
@@ -73,7 +75,7 @@ public class ContentService {
         if (thumbnail != null) {
             content.attachThumbnail(binaryContentService.saveCompleted(thumbnail));
         }
-
+        eventPublisher.publishEvent(new ContentUpsertedEvent(List.of(content.getId())));
         return contentMapper.toDto(content);
     }
 
@@ -101,7 +103,7 @@ public class ContentService {
         if (thumbnail != null) {
             content.attachThumbnail(binaryContentService.saveCompleted(thumbnail));
         }
-
+        eventPublisher.publishEvent(new ContentUpsertedEvent(List.of(content.getId())));
         return contentMapper.toDto(content);
     }
 
@@ -154,6 +156,7 @@ public class ContentService {
             oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
         }
         contentRepository.delete(content);
+        eventPublisher.publishEvent(new ContentDeletedEvent(content.getId()));
     }
 
     private List<String> normalizeTagNames(List<String> rawTagNames) {

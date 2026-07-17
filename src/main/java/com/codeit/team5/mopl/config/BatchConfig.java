@@ -32,6 +32,7 @@ import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
@@ -59,6 +60,7 @@ public class BatchConfig {
     private final BinaryContentRepository binaryContentRepository;
     private final TagRepository tagRepository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ── 비동기 JobLauncher ───────────────────────────────
 
@@ -224,6 +226,6 @@ public class BatchConfig {
     @Bean
     public ContentItemWriter contentItemWriter() {
         return new ContentItemWriter(contentRepository, contentStatsRepository,
-                binaryContentRepository, tagRepository);
+                binaryContentRepository, tagRepository, eventPublisher);
     }
 }
