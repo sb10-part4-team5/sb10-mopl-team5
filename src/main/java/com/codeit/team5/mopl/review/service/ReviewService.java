@@ -5,6 +5,7 @@ import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.global.infra.redis.config.RedisCacheConfig;
 
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -26,6 +27,9 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
@@ -46,6 +50,7 @@ public class ReviewService {
     private final ContentRepository contentRepository;
     private final ReviewMapper reviewMapper;
     private final ContentStatsRepository contentStatsRepository;
+    private final CacheManager cacheManager;
 
     @Transactional(readOnly = true)
     public CursorResponse<ReviewResponse> getReviews(ReviewGetRequest request) {
@@ -100,6 +105,7 @@ public class ReviewService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = RedisCacheConfig.CONTENT_RATING_STATS_CACHE, key = "#request.contentId")
     public ReviewResponse createReview(UUID authorId, ReviewCreateRequest request) {
         Content content = contentRepository.findById(request.contentId())
             .orElseThrow(() -> new ContentNotFoundException(request.contentId()));
@@ -131,6 +137,7 @@ public class ReviewService {
         ReviewResponse response = reviewMapper.toDto(review);
         if(request.rating() != null){
             reviewUpdateContentStat(review.getContentId(), request.rating() - oldRating, 0);
+            evictRatingStatsCache(review.getContentId());
         }
         log.info("리뷰 수정 완료: reviewId={}, authorId={}", reviewId, authorId);
         return response;
@@ -146,6 +153,7 @@ public class ReviewService {
         }
         reviewUpdateContentStat(review.getContentId(), -review.getRating(), -1);
         reviewRepository.delete(review);
+        evictRatingStatsCache(review.getContentId());
         log.info("리뷰 삭제 완료: reviewId={}, authorId={}", reviewId, authorId);
     }
 
@@ -165,6 +173,13 @@ public class ReviewService {
 
     private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
         contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
+    }
+
+    private void evictRatingStatsCache(UUID contentId) {
+        Cache cache = cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE);
+        if (cache != null) {
+            cache.evict(contentId);
+        }
     }
 
     private long getReviewCount(UUID contentId) {

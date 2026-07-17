@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.global.infra.redis.config;
 
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
+import com.codeit.team5.mopl.content.store.ContentRatingStats;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.time.Duration;
 import java.util.Map;
@@ -22,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class RedisCacheConfig {
 
     public static final String CONTENT_LIST_CACHE = "content:list";
+    public static final String CONTENT_RATING_STATS_CACHE = "contentRatingStats";
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory factory, ObjectMapper objectMapper) {
@@ -39,6 +41,8 @@ public class RedisCacheConfig {
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(Map.of(
                         CONTENT_LIST_CACHE, typedConfig(objectMapper, contentListType)
+                                .entryTtl(Duration.ofMinutes(1)),
+                        CONTENT_RATING_STATS_CACHE, typedConfig(objectMapper, ContentRatingStats.class)
                                 .entryTtl(Duration.ofMinutes(1))
                 ))
                 .build();

@@ -17,6 +17,7 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.content.store.ContentCacheStore;
+import com.codeit.team5.mopl.content.store.ContentStatsCacheStore;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +46,7 @@ public class ContentService {
     private final ContentMapper contentMapper;
     private final BinaryContentService binaryContentService;
     private final ContentCacheStore contentCacheStore;
+    private final ContentStatsCacheStore contentStatsCacheStore;
 
     private static final String SECONDARY_SORT_FIELD = "id";
 
@@ -115,7 +117,7 @@ public class ContentService {
     public ContentResponse findById(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
-        return contentMapper.toDto(content);
+        return contentMapper.toDto(content, contentStatsCacheStore.getRatingStats(contentId));
     }
 
     /**

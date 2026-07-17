@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.mapper.util.ContentUtilsMapper;
+import com.codeit.team5.mopl.content.store.ContentRatingStats;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.util.List;
 import org.mapstruct.Mapper;
@@ -19,6 +20,17 @@ public interface ContentMapper {
     @Mapping(target = "watcherCount", source = "stats.watcherCount")
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
     ContentResponse toDto(Content content);
+
+    // toDto(Content, ContentRatingStats) default 메서드 추가
+    // 기존 MapStruct 매핑에서 watcherCount만 유지하고 나머지 stats를 캐시값으로 교체
+    default ContentResponse toDto(Content content, ContentRatingStats ratingStats) {
+        ContentResponse base = toDto(content);
+        return new ContentResponse(
+                base.id(), base.type(), base.title(), base.description(),
+                base.thumbnailUrl(), base.tags(),
+                ratingStats.averageRating(), ratingStats.reviewCount(), base.watcherCount()
+        );
+    }
 
     default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,
             long totalCount, ContentSortByType sortBy, Direction sortDirection) {
