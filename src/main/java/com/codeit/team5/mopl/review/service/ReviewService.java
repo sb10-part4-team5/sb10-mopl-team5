@@ -34,6 +34,8 @@ import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -105,7 +107,6 @@ public class ReviewService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = RedisCacheConfig.CONTENT_RATING_STATS_CACHE, key = "#request.contentId")
     public ReviewResponse createReview(UUID authorId, ReviewCreateRequest request) {
         Content content = contentRepository.findById(request.contentId())
             .orElseThrow(() -> new ContentNotFoundException(request.contentId()));
@@ -121,6 +122,7 @@ public class ReviewService {
 
         ReviewResponse response = reviewMapper.toDto(saved);
         reviewUpdateContentStat(request.contentId(), request.rating(), 1);
+        evictRatingStatsCache(request.contentId());
         return response;
     }
 
@@ -176,10 +178,16 @@ public class ReviewService {
     }
 
     private void evictRatingStatsCache(UUID contentId) {
-        Cache cache = cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE);
-        if (cache != null) {
-            cache.evict(contentId);
-        }
+        TransactionSynchronizationManager.registerSynchronization(
+            new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    Cache cache = cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE);
+                    if(cache != null){
+                        cache.evict(contentId);
+                    }
+                }
+            });
     }
 
     private long getReviewCount(UUID contentId) {

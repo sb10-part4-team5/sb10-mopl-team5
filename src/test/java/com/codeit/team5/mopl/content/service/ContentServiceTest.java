@@ -7,9 +7,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyList;
 
 import com.codeit.team5.mopl.binarycontent.dto.UploadedBinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
@@ -359,14 +361,18 @@ class ContentServiceTest {
                 Content.createByAdmin(ContentType.MOVIE, "영화1", null),
                 Content.createByAdmin(ContentType.MOVIE, "영화2", null)
         );
+        ContentResponse mappedResponse = new ContentResponse(
+                UUID.randomUUID(), ContentType.MOVIE, "영화", null, null, List.of(), 0.0, 0, 0L
+        );
         CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
                 List.of(), null, null, false, 2L, "createdAt", "DESCENDING"
         );
 
         when(contentRepository.findContents(request, 11)).thenReturn(contents);
         when(contentRepository.countContents(request)).thenReturn(2L);
-        when(contentMapper.toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC))
-                .thenReturn(expectedResponse);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(mappedResponse);
+        when(contentMapper.toCursor(eq(contents), anyList(), eq(false), eq(2L),
+                eq(ContentSortByType.CREATED_AT), eq(Sort.Direction.DESC))).thenReturn(expectedResponse);
 
         // when
         CursorResponse<ContentResponse> result = contentService.findContents(request);
@@ -375,7 +381,7 @@ class ContentServiceTest {
         assertThat(result).isSameAs(expectedResponse);
         verify(contentRepository).findContents(request, 11);
         verify(contentRepository).countContents(request);
-        verify(contentMapper).toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC);
+        verify(contentMapper, times(2)).toDto(any(Content.class));
         verifyNoInteractions(contentCacheStore);
     }
 
@@ -422,10 +428,15 @@ class ContentServiceTest {
                 List.of(), "cursor", "idAfter", true, 5L, "createdAt", "DESCENDING"
         );
 
+        ContentResponse mappedResponse = new ContentResponse(
+                UUID.randomUUID(), ContentType.MOVIE, "영화", null, null, List.of(), 0.0, 0, 0L
+        );
+
         when(contentRepository.findContents(request, limit + 1)).thenReturn(fetched);
         when(contentRepository.countContents(request)).thenReturn(5L);
-        when(contentMapper.toCursor(page, true, 5L, ContentSortByType.CREATED_AT, Sort.Direction.DESC))
-                .thenReturn(expectedResponse);
+        when(contentMapper.toDto(any(Content.class))).thenReturn(mappedResponse);
+        when(contentMapper.toCursor(eq(page), anyList(), eq(true), eq(5L),
+                eq(ContentSortByType.CREATED_AT), eq(Sort.Direction.DESC))).thenReturn(expectedResponse);
 
         // when
         CursorResponse<ContentResponse> result = contentService.findContents(request);
@@ -433,7 +444,8 @@ class ContentServiceTest {
         // then
         assertThat(result.hasNext()).isTrue();
         assertThat(result.nextCursor()).isEqualTo("cursor");
-        verify(contentMapper).toCursor(page, true, 5L, ContentSortByType.CREATED_AT, Sort.Direction.DESC);
+        verify(contentMapper).toCursor(eq(page), anyList(), eq(true), eq(5L),
+                eq(ContentSortByType.CREATED_AT), eq(Sort.Direction.DESC));
     }
 
     @Test
@@ -450,8 +462,8 @@ class ContentServiceTest {
 
         when(contentRepository.findContents(request, 21)).thenReturn(List.of());
         when(contentRepository.countContents(request)).thenReturn(0L);
-        when(contentMapper.toCursor(List.of(), false, 0L, ContentSortByType.CREATED_AT, Sort.Direction.DESC))
-                .thenReturn(expectedResponse);
+        when(contentMapper.toCursor(eq(List.of()), anyList(), eq(false), eq(0L),
+                eq(ContentSortByType.CREATED_AT), eq(Sort.Direction.DESC))).thenReturn(expectedResponse);
 
         // when
         CursorResponse<ContentResponse> result = contentService.findContents(request);
@@ -460,6 +472,7 @@ class ContentServiceTest {
         assertThat(result.data()).isEmpty();
         assertThat(result.totalCount()).isZero();
         assertThat(result.hasNext()).isFalse();
+        verifyNoInteractions(contentCacheStore);
     }
 
     // --- DELETE ---

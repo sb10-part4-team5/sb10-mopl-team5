@@ -6,12 +6,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.global.infra.redis.config.RedisCacheConfig;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -37,6 +39,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
 
@@ -61,6 +65,8 @@ class ReviewServiceTest {
     @Mock
     private ContentStatsRepository contentStatsRepository;
 
+    @Mock
+    private CacheManager cacheManager;
 
     @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 자르고 createdAt 기준 nextCursor를 채운다")
@@ -183,6 +189,7 @@ class ReviewServiceTest {
         User user = mock(User.class);
         Review saved = mock(Review.class);
         ReviewResponse response = mock(ReviewResponse.class);
+        Cache mockCache = mock(Cache.class);
 
         given(contentRepository.findById(contentId)).willReturn(Optional.of(content));
         given(userRepository.findById(authorId)).willReturn(Optional.of(user));
@@ -191,6 +198,7 @@ class ReviewServiceTest {
         given(saved.getId()).willReturn(UUID.randomUUID());
         given(saved.getContentId()).willReturn(contentId);
         given(reviewMapper.toDto(saved)).willReturn(response);
+        given(cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE)).willReturn(mockCache);
 
         // when
         ReviewResponse result = reviewService.createReview(authorId, request);
@@ -198,6 +206,7 @@ class ReviewServiceTest {
         // then
         assertThat(result).isEqualTo(response);
         verify(reviewRepository).save(any());
+        verify(mockCache).evict(contentId);
     }
 
     @Test
@@ -259,12 +268,14 @@ class ReviewServiceTest {
 
         Review review = mock(Review.class);
         ReviewResponse response = mock(ReviewResponse.class);
+        Cache mockCache = mock(Cache.class);
 
         given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
         given(review.getAuthorId()).willReturn(authorId);
         given(review.getRating()).willReturn(2.0);
         given(review.getContentId()).willReturn(contentId);
         given(reviewMapper.toDto(review)).willReturn(response);
+        given(cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE)).willReturn(mockCache);
 
         // when
         ReviewResponse result = reviewService.updateReview(reviewId, authorId, request);
@@ -272,6 +283,7 @@ class ReviewServiceTest {
         // then
         assertThat(result).isEqualTo(response);
         verify(review).update("수정된 내용", 3.0);
+        verify(mockCache).evict(contentId);
     }
 
     @Test
@@ -316,16 +328,20 @@ class ReviewServiceTest {
         UUID contentId = UUID.randomUUID();
 
         Review review = mock(Review.class);
+        Cache mockCache = mock(Cache.class);
+
         given(reviewRepository.findByIdWithAuthor(reviewId)).willReturn(Optional.of(review));
         given(review.getAuthorId()).willReturn(authorId);
         given(review.getRating()).willReturn(4.0);
         given(review.getContentId()).willReturn(contentId);
+        given(cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE)).willReturn(mockCache);
 
         // when
         reviewService.deleteReview(reviewId, authorId);
 
         // then
         verify(reviewRepository).delete(review);
+        verify(mockCache).evict(contentId);
     }
 
     @Test

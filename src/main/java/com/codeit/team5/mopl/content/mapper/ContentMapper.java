@@ -21,19 +21,17 @@ public interface ContentMapper {
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
     ContentResponse toDto(Content content);
 
-    // toDto(Content, ContentRatingStats) default 메서드 추가
-    // 기존 MapStruct 매핑에서 watcherCount만 유지하고 나머지 stats를 캐시값으로 교체
-    default ContentResponse toDto(Content content, ContentRatingStats ratingStats) {
-        ContentResponse base = toDto(content);
-        return new ContentResponse(
-                base.id(), base.type(), base.title(), base.description(),
-                base.thumbnailUrl(), base.tags(),
-                ratingStats.averageRating(), ratingStats.reviewCount(), base.watcherCount()
-        );
-    }
+    @Mapping(target = "tags", source = "content.contentTags", qualifiedByName = "toTagNames")
+    @Mapping(target = "thumbnailUrl", source = "content.thumbnail.url")
+    @Mapping(target = "watcherCount", source = "content.stats.watcherCount")
+    @Mapping(target = "averageRating", source = "ratingStats.averageRating")
+    @Mapping(target = "reviewCount", source = "ratingStats.reviewCount")
+    // 이름이 일치하는 id, type, title, description 필드는 content 객체에서 자동으로 매핑됩니다.
+    // watcherCount는 db 내 content.stat에서, rating,reviewCount는 캐싱된 ratingStars 에서 가져와 조합합니다.
+    ContentResponse toDto(Content content, ContentRatingStats ratingStats);
 
     default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,
-            long totalCount, ContentSortByType sortBy, Direction sortDirection) {
+        long totalCount, ContentSortByType sortBy, Direction sortDirection) {
         String nextCursor = null;
         String nextIdAfter = null;
         if (hasNext && !page.isEmpty()) {
@@ -48,6 +46,6 @@ public interface ContentMapper {
         List<ContentResponse> data = page.stream().map(this::toDto).toList();
         String direction = sortDirection == Direction.ASC ? "ASCENDING" : "DESCENDING";
         return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, totalCount,
-                sortBy.getValue(), direction);
+            sortBy.getValue(), direction);
     }
 }
