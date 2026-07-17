@@ -1,13 +1,14 @@
 package com.codeit.team5.mopl.auth.service;
 
-import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -20,29 +21,139 @@ public class RedisLoginSessionStore implements LoginSessionStore {
     private static final String SESSION_INDEX_KEY_PREFIX =
             "mopl:auth:login-session-index:";
 
+    /*
+     * 개별 세션 Key 저장과 사용자별 세션 인덱스 추가를
+     * 하나의 Redis 원자적 연산으로 처리한다.
+     *
+     * KEYS[1] = 개별 세션 Key
+     * KEYS[2] = 사용자별 세션 인덱스 Key
+     *
+     * ARGV[1] = sessionId
+     * ARGV[2] = expiresAt epoch milliseconds
+     */
+    private static final DefaultRedisScript<Long> SAVE_SCRIPT =
+            new DefaultRedisScript<>(
+                    """
+                    redis.call(
+                        'SET',
+                        KEYS[1],
+                        ARGV[1],
+                        'PXAT',
+                        ARGV[2]
+                    )
+
+                    redis.call(
+                        'ZADD',
+                        KEYS[2],
+                        ARGV[2],
+                        ARGV[1]
+                    )
+
+                    return 1
+                    """,
+                    Long.class
+            );
+
+    /*
+     * 개별 세션 Key의 만료 시각과 Sorted Set의 score를
+     * 하나의 Redis 원자적 연산으로 갱신한다.
+     *
+     * KEYS[1] = 개별 세션 Key
+     * KEYS[2] = 사용자별 세션 인덱스 Key
+     *
+     * ARGV[1] = sessionId
+     * ARGV[2] = 새로운 expiresAt epoch milliseconds
+     *
+     * 반환값:
+     * 1 = 세션이 존재하여 연장 성공
+     * 0 = 세션 Key가 존재하지 않음
+     */
+    private static final DefaultRedisScript<Long> EXTEND_SCRIPT =
+            new DefaultRedisScript<>(
+                    """
+                    if redis.call('EXISTS', KEYS[1]) == 0 then
+                        redis.call(
+                            'ZREM',
+                            KEYS[2],
+                            ARGV[1]
+                        )
+
+                        return 0
+                    end
+
+                    redis.call(
+                        'PEXPIREAT',
+                        KEYS[1],
+                        ARGV[2]
+                    )
+
+                    redis.call(
+                        'ZADD',
+                        KEYS[2],
+                        ARGV[2],
+                        ARGV[1]
+                    )
+
+                    return 1
+                    """,
+                    Long.class
+            );
+
+    /*
+     * 사용자별 세션 인덱스 조회, 개별 세션 Key 전체 삭제,
+     * 인덱스 Key 삭제를 하나의 Redis 원자적 연산으로 수행한다.
+     *
+     * KEYS[1] = 사용자별 세션 인덱스 Key
+     *
+     * ARGV[1] = 개별 세션 Key prefix
+     *
+     * 반환값:
+     * 삭제를 시도한 개별 세션 수
+     */
+    private static final DefaultRedisScript<Long> DELETE_BY_USER_SCRIPT =
+            new DefaultRedisScript<>(
+                    """
+                    local sessionIds =
+                        redis.call('ZRANGE', KEYS[1], 0, -1)
+
+                    for _, sessionId in ipairs(sessionIds) do
+                        redis.call(
+                            'DEL',
+                            ARGV[1] .. sessionId
+                        )
+                    end
+
+                    redis.call('DEL', KEYS[1])
+
+                    return #sessionIds
+                    """,
+                    Long.class
+            );
+
     private final StringRedisTemplate redisTemplate;
 
     @Override
     public UUID save(UUID userId, Instant expiresAt) {
-        Duration ttl = calculateTtl(expiresAt);
+        validateExpiresAt(expiresAt);
+
         UUID sessionId = UUID.randomUUID();
 
         String sessionKey = sessionKey(userId, sessionId);
         String indexKey = sessionIndexKey(userId);
+        String expiresAtMillis = String.valueOf(expiresAt.toEpochMilli());
 
-        // 세션 하나를 독립적인 키로 저장한다.
-        redisTemplate.opsForValue().set(
-                sessionKey,
+        Long result = redisTemplate.execute(
+                SAVE_SCRIPT,
+                List.of(sessionKey, indexKey),
                 sessionId.toString(),
-                ttl
+                expiresAtMillis
         );
 
-        // 사용자별 세션 인덱스에 만료 시각을 score로 저장한다.
-        redisTemplate.opsForZSet().add(
-                indexKey,
-                sessionId.toString(),
-                expiresAt.toEpochMilli()
-        );
+        if (!Long.valueOf(1L).equals(result)) {
+            throw new IllegalStateException(
+                    "로그인 세션 저장에 실패했습니다."
+            );
+        }
 
         return sessionId;
     }
@@ -62,19 +173,27 @@ public class RedisLoginSessionStore implements LoginSessionStore {
                 return Optional.empty();
             }
 
-            String sessionIdValue = sessionIds.iterator().next();
-            UUID sessionId = UUID.fromString(sessionIdValue);
+            String sessionIdValue =
+                    sessionIds.iterator().next();
 
-            if (redisTemplate.hasKey(sessionKey(userId, sessionId))) {
+            UUID sessionId =
+                    parseSessionId(
+                            indexKey,
+                            sessionIdValue
+                    );
+
+            if (Boolean.TRUE.equals(
+                    redisTemplate.hasKey(
+                            sessionKey(userId, sessionId)
+                    )
+            )) {
                 return Optional.of(sessionId);
             }
 
-            /*
-             * 세션 키는 TTL로 이미 제거됐지만 인덱스 멤버가 남아 있는 경우
-             * stale member를 제거하고 다음 세션을 조회한다.
-             */
-            redisTemplate.opsForZSet()
-                    .remove(indexKey, sessionIdValue);
+            redisTemplate.opsForZSet().remove(
+                    indexKey,
+                    sessionIdValue
+            );
         }
     }
 
@@ -83,7 +202,7 @@ public class RedisLoginSessionStore implements LoginSessionStore {
             UUID userId,
             Instant expiresAt
     ) {
-        Duration ttl = calculateTtl(expiresAt);
+        validateExpiresAt(expiresAt);
 
         Optional<UUID> currentSessionId =
                 findCurrentSessionId(userId);
@@ -93,63 +212,54 @@ public class RedisLoginSessionStore implements LoginSessionStore {
         }
 
         UUID sessionId = currentSessionId.get();
-        String sessionKey = sessionKey(userId, sessionId);
 
-        Boolean extended = redisTemplate.expire(sessionKey, ttl);
+        Long result = redisTemplate.execute(
+                EXTEND_SCRIPT,
+                List.of(
+                        sessionKey(userId, sessionId),
+                        sessionIndexKey(userId)
+                ),
+                sessionId.toString(),
+                String.valueOf(expiresAt.toEpochMilli())
+        );
 
-        if (!Boolean.TRUE.equals(extended)) {
-            /*
-             * findCurrentSessionId() 이후 세션이 로그아웃 또는 만료되어
-             * 사라진 경우 인덱스에서도 제거한다.
-             */
-            redisTemplate.opsForZSet().remove(
-                    sessionIndexKey(userId),
-                    sessionId.toString()
-            );
-
+        if (!Long.valueOf(1L).equals(result)) {
             return Optional.empty();
         }
-
-        redisTemplate.opsForZSet().add(
-                sessionIndexKey(userId),
-                sessionId.toString(),
-                expiresAt.toEpochMilli()
-        );
 
         return Optional.of(sessionId);
     }
 
     @Override
-    public boolean isValid(UUID userId, UUID sessionId) {
-        return redisTemplate.hasKey(sessionKey(userId, sessionId));
+    public boolean isValid(
+            UUID userId,
+            UUID sessionId
+    ) {
+        return Boolean.TRUE.equals(
+                redisTemplate.hasKey(
+                        sessionKey(userId, sessionId)
+                )
+        );
     }
 
     @Override
     public void deleteByUserId(UUID userId) {
         String indexKey = sessionIndexKey(userId);
 
-        Set<String> sessionIds =
-                redisTemplate.opsForZSet().range(indexKey, 0, -1);
-
-        if (sessionIds != null && !sessionIds.isEmpty()) {
-            List<String> sessionKeys = sessionIds.stream()
-                    .map(UUID::fromString)
-                    .map(sessionId -> sessionKey(userId, sessionId))
-                    .toList();
-
-            redisTemplate.delete(sessionKeys);
-        }
-
-        redisTemplate.delete(indexKey);
+        redisTemplate.execute(
+                DELETE_BY_USER_SCRIPT,
+                Collections.singletonList(indexKey),
+                sessionKeyPrefix(userId)
+        );
     }
 
     @Override
     public void deleteExpiredSessions() {
         /*
-         * 개별 세션 키는 Redis TTL에 의해 자동 삭제된다.
+         * 개별 세션 Key는 Redis TTL에 의해 자동으로 제거된다.
          *
-         * 사용자별 Sorted Set 인덱스의 만료 멤버는 사용자 세션을 조회할 때
-         * removeExpiredIndexEntries()에서 지연 정리한다.
+         * 사용자별 Sorted Set의 만료 member는
+         * findCurrentSessionId() 호출 시 지연 정리한다.
          */
     }
 
@@ -161,29 +271,47 @@ public class RedisLoginSessionStore implements LoginSessionStore {
         );
     }
 
-    private String sessionKey(UUID userId, UUID sessionId) {
+    private UUID parseSessionId(
+            String indexKey,
+            String sessionIdValue
+    ) {
+        try {
+            return UUID.fromString(sessionIdValue);
+        } catch (IllegalArgumentException exception) {
+            redisTemplate.opsForZSet().remove(
+                    indexKey,
+                    sessionIdValue
+            );
+
+            throw new IllegalStateException(
+                    "유효하지 않은 로그인 세션 식별자가 저장되어 있습니다.",
+                    exception
+            );
+        }
+    }
+
+    private String sessionKey(
+            UUID userId,
+            UUID sessionId
+    ) {
+        return sessionKeyPrefix(userId) + sessionId;
+    }
+
+    private String sessionKeyPrefix(UUID userId) {
         return SESSION_KEY_PREFIX
                 + userId
-                + ":"
-                + sessionId;
+                + ":";
     }
 
     private String sessionIndexKey(UUID userId) {
         return SESSION_INDEX_KEY_PREFIX + userId;
     }
 
-    private Duration calculateTtl(Instant expiresAt) {
-        Duration ttl = Duration.between(
-                Instant.now(),
-                expiresAt
-        );
-
-        if (ttl.isZero() || ttl.isNegative()) {
+    private void validateExpiresAt(Instant expiresAt) {
+        if (!expiresAt.isAfter(Instant.now())) {
             throw new IllegalArgumentException(
                     "로그인 세션 만료 시각은 현재 시각보다 이후여야 합니다."
             );
         }
-
-        return ttl;
     }
 }
