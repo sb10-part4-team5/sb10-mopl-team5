@@ -21,6 +21,7 @@ public interface ContentMapper {
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
     ContentResponse toDto(Content content);
 
+    @Mapping(target = "contentId", source = "id")
     @Mapping(target = "tags", source = "contentTags", qualifiedByName = "toTagNames")
     @Mapping(target = "averageRating", source = "stats", qualifiedByName = "toAverageRating")
     @Mapping(target = "reviewCount", source = "stats.reviewCount")

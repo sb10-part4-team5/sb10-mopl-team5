@@ -25,6 +25,11 @@ public class ContentDocument {
     @Id
     private String id;
 
+    // @Id는 ES의 _id 메타데이터로 매핑돼 정렬에 쓸 수 없다.
+    // 커서 페이지네이션의 tiebreaker로 정렬해야 하므로 같은 값을 일반 필드로 한 벌 더 둔다.
+    @Field(type = FieldType.Keyword)
+    private String contentId;
+
     @Field(type = FieldType.Keyword)
     private ContentType type;
 
