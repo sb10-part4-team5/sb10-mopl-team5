@@ -6,7 +6,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.codeit.team5.mopl.global.infra.redis.config.RecordSupportingTypeResolver;
 
 public abstract class RedisRepository<T> {
 
@@ -16,10 +15,8 @@ public abstract class RedisRepository<T> {
         this.redisTemplate = new RedisTemplate<>();
         this.redisTemplate.setConnectionFactory(connectionFactory);
         this.redisTemplate.setKeySerializer(new StringRedisSerializer());
-        
-        ObjectMapper mapper = RecordSupportingTypeResolver.createRedisObjectMapper(objectMapper);
 
-        Jackson2JsonRedisSerializer<T> serializer = new Jackson2JsonRedisSerializer<>(mapper, clazz);
+        Jackson2JsonRedisSerializer<T> serializer = new Jackson2JsonRedisSerializer<>(objectMapper, clazz);
         this.redisTemplate.setValueSerializer(serializer);
         this.redisTemplate.afterPropertiesSet();
     }

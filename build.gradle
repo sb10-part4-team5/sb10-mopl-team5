@@ -65,6 +65,7 @@ dependencies {
     implementation 'org.springframework:spring-aspects'
     implementation 'org.springframework.modulith:spring-modulith-starter-jpa'
     implementation 'org.springframework.modulith:spring-modulith-starter-core'
+    implementation 'org.springframework.modulith:spring-modulith-events-kafka'
 
     // OAuth2
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
