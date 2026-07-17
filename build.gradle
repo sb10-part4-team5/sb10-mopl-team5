@@ -39,6 +39,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.1'
 
+    // Search
+    implementation 'org.opensearch.client:spring-data-opensearch-starter:1.8.2'
+
     // Cache
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'com.github.ben-manes.caffeine:caffeine'
