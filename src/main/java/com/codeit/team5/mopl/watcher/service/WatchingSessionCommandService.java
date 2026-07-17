@@ -1,13 +1,14 @@
 package com.codeit.team5.mopl.watcher.service;
 
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
-import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
 import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
@@ -40,17 +41,21 @@ public class WatchingSessionCommandService {
         if (!userRepository.existsById(watcherId)) {
             throw new WatchingSessionUserNotFoundException(watcherId);
         }
-        Content content = contentRepository.getReferenceById(contentId);
-        User user = userRepository.getReferenceById(watcherId);
-        repository.save(WatchingSession.of(user, content));
+        repository.save(new WatchingSession(watcherId, contentId, Instant.now()));
         eventPublisher.publishEvent(new WatcherJoinedEvent(contentId, watcherId));
     }
 
+    @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
     public void left(UUID contentId, UUID watcherId) {
         if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
             return;
         }
-        repository.deleteByContentIdAndWatcherIdDirectly(contentId, watcherId);
+        repository.deleteByContentIdAndWatcherId(contentId, watcherId);
         eventPublisher.publishEvent(new WatcherLeftEvent(contentId));
+    }
+
+    @Retryable(maxAttempts = 3,backoff = @Backoff(delay = 1000))
+    public void clearContentSessions(UUID contentId) {
+        repository.deleteAllByContentId(contentId);
     }
 }
