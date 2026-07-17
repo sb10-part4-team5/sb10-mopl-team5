@@ -84,6 +84,12 @@ variable "opensearch_master_password" {
   sensitive   = true
 }
 
+variable "redis_auth_token" {
+  description = "Redis AUTH 토큰 (terraform.tfvars 에 작성, 16자 이상, '@'/'\"'/'/' 제외)"
+  type        = string
+  sensitive   = true
+}
+
 variable "team_members" {
   description = "SSM 접근 권한을 줄 팀원 IAM 사용자명 목록 (사용자는 코드로 생성, 액세스 키는 각자 콘솔에서 발급)"
   type        = list(string)

@@ -23,23 +23,28 @@ resource "aws_security_group" "redis" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [aws_vpc.mopl.cidr_block]
   }
 
   tags = { Name = "mopl-redis-sg" }
 }
 
-resource "aws_elasticache_cluster" "mopl" {
-  cluster_id           = "mopl-redis"
+resource "aws_elasticache_replication_group" "mopl" {
+  replication_group_id = "mopl-redis"
+  description          = "mopl Redis (single node)"
   engine               = "redis"
   engine_version       = "7.1"
   node_type            = "cache.t3.micro"
-  num_cache_nodes      = 1
+  num_cache_clusters   = 1
   port                 = 6379
   parameter_group_name = "default.redis7"
 
   subnet_group_name  = aws_elasticache_subnet_group.mopl.name
   security_group_ids = [aws_security_group.redis.id]
+
+  transit_encryption_enabled = true
+  at_rest_encryption_enabled = true
+  auth_token                 = var.redis_auth_token
 
   apply_immediately = true
 
@@ -47,9 +52,9 @@ resource "aws_elasticache_cluster" "mopl" {
 }
 
 output "redis_host" {
-  value = aws_elasticache_cluster.mopl.cache_nodes[0].address
+  value = aws_elasticache_replication_group.mopl.primary_endpoint_address
 }
 
 output "redis_port" {
-  value = aws_elasticache_cluster.mopl.cache_nodes[0].port
+  value = aws_elasticache_replication_group.mopl.port
 }

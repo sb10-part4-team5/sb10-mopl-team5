@@ -18,10 +18,11 @@ resource "aws_security_group" "opensearch" {
   }
 
   egress {
+    description = "to within VPC"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [aws_vpc.mopl.cidr_block]
   }
 
   tags = { Name = "mopl-opensearch-sg" }

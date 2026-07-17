@@ -5,14 +5,6 @@ resource "aws_security_group" "msk" {
   vpc_id      = aws_vpc.mopl.id
 
   ingress {
-    description = "Kafka PLAINTEXT from within VPC"
-    from_port   = 9092
-    to_port     = 9092
-    protocol    = "tcp"
-    cidr_blocks = [aws_vpc.mopl.cidr_block]
-  }
-
-  ingress {
     description = "Kafka TLS from within VPC"
     from_port   = 9094
     to_port     = 9094
@@ -24,7 +16,7 @@ resource "aws_security_group" "msk" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [aws_vpc.mopl.cidr_block]
   }
 
   tags = { Name = "mopl-msk-sg" }
@@ -49,8 +41,8 @@ resource "aws_msk_cluster" "mopl" {
 
   encryption_info {
     encryption_in_transit {
-      client_broker = "TLS_PLAINTEXT"
-      in_cluster    = false
+      client_broker = "TLS"
+      in_cluster    = true
     }
   }
 
