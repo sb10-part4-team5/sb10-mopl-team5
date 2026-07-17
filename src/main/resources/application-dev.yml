@@ -46,6 +46,9 @@ spring:
     resources:
       static-locations: classpath:/static/, file:./uploads/
 
+opensearch:
+  uris: http://localhost:9200
+
 mopl:
   storage:
     local:

@@ -74,9 +74,30 @@ services:
       - prometheus
     restart: unless-stopped
 
+  opensearch:
+    build:
+      context: .
+      dockerfile: opensearch-nori.Dockerfile
+    image: mopl-opensearch:3.5.0   # nori 플러그인 포함 (opensearch-nori.Dockerfile)
+    container_name: mopl-opensearch
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"   # 로컬 개발용. 운영에서는 인증/TLS 필요
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-data:
   redis-data:
   kafka-data:
+  opensearch-data:
   prometheus-data:
   grafana-data:
