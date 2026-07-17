@@ -11,22 +11,35 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.exception.RefreshTokenSaveException;
 import com.codeit.team5.mopl.auth.support.RefreshTokenHasher;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.test.context.ActiveProfiles;
 
+@SpringBootTest
+@ActiveProfiles("test")
+@Import(TestcontainersConfiguration.class)
 @ExtendWith(MockitoExtension.class)
 class RedisRefreshTokenStoreTest {
 
@@ -40,8 +53,31 @@ class RedisRefreshTokenStoreTest {
     @Mock
     private RefreshTokenHasher refreshTokenHasher;
 
-    @InjectMocks
     private RedisRefreshTokenStore refreshTokenStore;
+
+    @Autowired
+    private StringRedisTemplate integrationRedisTemplate;
+
+    @Autowired
+    private RefreshTokenHasher integrationRefreshTokenHasher;
+
+    private final Set<UUID> integrationUserIds = new HashSet<>();
+
+    @BeforeEach
+    void setUpUnitTarget() {
+        refreshTokenStore = new RedisRefreshTokenStore(
+                redisTemplate,
+                refreshTokenHasher
+        );
+    }
+
+    @AfterEach
+    void cleanUpIntegrationKeys() {
+        integrationUserIds.stream()
+                .map(RedisRefreshTokenStoreTest::createKey)
+                .forEach(integrationRedisTemplate::delete);
+        integrationUserIds.clear();
+    }
 
     @Test
     @DisplayName("리프레시 토큰을 해시해 올바른 인자로 저장 Script를 실행한다")
@@ -451,6 +487,161 @@ class RedisRefreshTokenStoreTest {
         verifyNoInteractions(redisTemplate);
     }
 
+    @Test
+    @DisplayName("실제 Redis에서 새 토큰 저장 시 기존 토큰을 제거하고 하나만 유지한다")
+    void save_existingToken_replacesWithSingleActiveTokenInRedis() {
+        // Given
+        UUID userId = integrationUserId();
+        String firstToken = "first-integration-token";
+        String secondToken = "second-integration-token";
+        Instant expiresAt = Instant.now().plusSeconds(600);
+        RedisRefreshTokenStore integrationStore = integrationStore();
+
+        // When
+        integrationStore.save(userId, firstToken, expiresAt);
+        boolean firstInitiallyValid =
+                integrationStore.existsValidToken(userId, firstToken);
+        integrationStore.save(userId, secondToken, expiresAt);
+
+        // Then
+        assertThat(firstInitiallyValid).isTrue();
+        assertThat(integrationStore.existsValidToken(userId, firstToken)).isFalse();
+        assertThat(integrationStore.existsValidToken(userId, secondToken)).isTrue();
+        assertThat(integrationRedisTemplate.opsForZSet().zCard(createKey(userId)))
+                .isEqualTo(1L);
+
+        Long ttlMillis = integrationRedisTemplate.getExpire(
+                createKey(userId),
+                java.util.concurrent.TimeUnit.MILLISECONDS
+        );
+        assertThat(ttlMillis).isNotNull();
+        assertThat(ttlMillis).isPositive();
+        assertThat(ttlMillis).isLessThanOrEqualTo(600_000L);
+        assertThat(ttlMillis).isGreaterThan(540_000L);
+    }
+
+    @Test
+    @DisplayName("실제 Redis에서 토큰 회전 시 기존 토큰을 제거하고 새 토큰 하나만 유지한다")
+    void rotateIfValid_existingToken_replacesWithSingleNewTokenInRedis() {
+        // Given
+        UUID userId = integrationUserId();
+        String oldToken = "old-integration-token";
+        String newToken = "new-integration-token";
+        RedisRefreshTokenStore integrationStore = integrationStore();
+        integrationStore.save(userId, oldToken, Instant.now().plusSeconds(600));
+
+        // When
+        boolean result = integrationStore.rotateIfValid(
+                userId,
+                oldToken,
+                newToken,
+                Instant.now().plusSeconds(900)
+        );
+
+        // Then
+        assertThat(result).isTrue();
+        assertThat(integrationStore.existsValidToken(userId, oldToken)).isFalse();
+        assertThat(integrationStore.existsValidToken(userId, newToken)).isTrue();
+        assertThat(integrationRedisTemplate.opsForZSet().zCard(createKey(userId)))
+                .isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("실제 Redis에서 토큰 회전 시 예상하지 못한 다른 토큰도 모두 제거한다")
+    void rotateIfValid_multipleExistingTokens_removesAllExceptNewTokenInRedis() {
+        // Given
+        UUID userId = integrationUserId();
+        String oldToken = "old-direct-token";
+        String otherToken = "other-direct-token";
+        String newToken = "new-direct-token";
+        String oldTokenHash = integrationRefreshTokenHasher.hash(oldToken);
+        String otherTokenHash = integrationRefreshTokenHasher.hash(otherToken);
+        String key = createKey(userId);
+        double expiresAt = Instant.now().plusSeconds(600).toEpochMilli();
+        integrationRedisTemplate.opsForZSet().add(key, oldTokenHash, expiresAt);
+        integrationRedisTemplate.opsForZSet().add(key, otherTokenHash, expiresAt);
+
+        // When
+        boolean result = integrationStore().rotateIfValid(
+                userId,
+                oldToken,
+                newToken,
+                Instant.now().plusSeconds(900)
+        );
+
+        // Then
+        String newTokenHash = integrationRefreshTokenHasher.hash(newToken);
+        assertThat(result).isTrue();
+        assertThat(integrationRedisTemplate.opsForZSet().zCard(key)).isEqualTo(1L);
+        assertThat(integrationRedisTemplate.opsForZSet().score(key, oldTokenHash))
+                .isNull();
+        assertThat(integrationRedisTemplate.opsForZSet().score(key, otherTokenHash))
+                .isNull();
+        assertThat(integrationRedisTemplate.opsForZSet().score(key, newTokenHash))
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("실제 Lua Script는 잘못된 만료 시각에서 기존 토큰을 보존한다")
+    void luaScripts_invalidExpiration_rejectWithoutDeletingExistingToken() {
+        // Given
+        UUID userId = integrationUserId();
+        String key = createKey(userId);
+        String oldTokenHash = integrationRefreshTokenHasher.hash("boundary-old-token");
+        long now = Instant.now().toEpochMilli();
+        integrationRedisTemplate.opsForZSet().add(
+                key,
+                oldTokenHash,
+                Instant.now().plusSeconds(600).toEpochMilli()
+        );
+
+        // When
+        Long saveResult = integrationRedisTemplate.execute(
+                integrationScript("redis/refresh-token/save.lua"),
+                List.of(key),
+                Long.toString(now),
+                integrationRefreshTokenHasher.hash("expired-new-token"),
+                Long.toString(now)
+        );
+        Long rotateResult = integrationRedisTemplate.execute(
+                integrationScript("redis/refresh-token/rotate-if-valid.lua"),
+                List.of(key),
+                Long.toString(now),
+                oldTokenHash,
+                integrationRefreshTokenHasher.hash("invalid-rotation-token"),
+                Long.toString(now)
+        );
+
+        // Then
+        assertThat(saveResult).isZero();
+        assertThat(rotateResult).isZero();
+        assertThat(integrationRedisTemplate.opsForZSet().zCard(key)).isEqualTo(1L);
+        assertThat(integrationRedisTemplate.opsForZSet().score(key, oldTokenHash))
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("실제 Redis에서 만료 토큰 조회 시 false를 반환하고 member를 지연 정리한다")
+    void existsValidToken_expiredMember_returnsFalseAndRemovesMemberInRedis() {
+        // Given
+        UUID userId = integrationUserId();
+        String rawToken = "expired-integration-token";
+        String tokenHash = integrationRefreshTokenHasher.hash(rawToken);
+        String key = createKey(userId);
+        integrationRedisTemplate.opsForZSet().add(
+                key,
+                tokenHash,
+                Instant.now().minusSeconds(600).toEpochMilli()
+        );
+
+        // When
+        boolean result = integrationStore().existsValidToken(userId, rawToken);
+
+        // Then
+        assertThat(result).isFalse();
+        assertThat(integrationRedisTemplate.opsForZSet().zCard(key)).isZero();
+    }
+
     private void stubScriptResult(Long result) {
         when(redisTemplate.execute(
                 any(RedisScript.class),
@@ -471,6 +662,26 @@ class RedisRefreshTokenStoreTest {
                 "new-token",
                 Instant.now().plusSeconds(600)
         );
+    }
+
+    private RedisRefreshTokenStore integrationStore() {
+        return new RedisRefreshTokenStore(
+                integrationRedisTemplate,
+                integrationRefreshTokenHasher
+        );
+    }
+
+    private UUID integrationUserId() {
+        UUID userId = UUID.randomUUID();
+        integrationUserIds.add(userId);
+        return userId;
+    }
+
+    private DefaultRedisScript<Long> integrationScript(String path) {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setLocation(new ClassPathResource(path));
+        script.setResultType(Long.class);
+        return script;
     }
 
     private ScriptExecution captureExecution(int argumentCount) {

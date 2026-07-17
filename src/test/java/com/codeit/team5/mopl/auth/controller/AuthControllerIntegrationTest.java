@@ -21,6 +21,8 @@ import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -77,10 +79,12 @@ class AuthControllerIntegrationTest {
     @MockitoBean
     private JavaMailSender mailSender;
 
+    private final Set<UUID> createdUserIds = new HashSet<>();
+
     @AfterEach
     void cleanUp() {
-        userRepository.findAll()
-                .forEach(user -> refreshTokenStore.deleteByUserId(user.getId()));
+        createdUserIds.forEach(refreshTokenStore::deleteByUserId);
+        createdUserIds.clear();
         temporaryPasswordRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -407,7 +411,8 @@ class AuthControllerIntegrationTest {
 
     private SignInRequest saveLoginUser(String email, String rawPassword) {
         User user = User.create(email, passwordEncoder.encode(rawPassword), "사용자");
-        userRepository.saveAndFlush(user);
+        User savedUser = userRepository.saveAndFlush(user);
+        createdUserIds.add(savedUser.getId());
         return new SignInRequest(email, rawPassword);
     }
 
