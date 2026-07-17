@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -14,6 +15,7 @@ import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.global.infra.redis.config.RedisCacheConfig;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.review.contant.ReviewSortBy;
 import com.codeit.team5.mopl.review.dto.request.ReviewCreateRequest;
@@ -36,12 +38,16 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,6 +70,9 @@ class ReviewServiceTest {
 
     @Mock
     private ContentStatsRepository contentStatsRepository;
+
+    @Mock
+    private CacheManager cacheManager;
 
     @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 자르고 createdAt 기준 nextCursor를 채운다")
@@ -371,5 +380,79 @@ class ReviewServiceTest {
         // when & then
         assertThatThrownBy(() -> reviewService.deleteReview(reviewId, authorId))
             .isInstanceOf(ReviewForbiddenException.class);
+    }
+
+    @Test
+    @DisplayName("트랜잭션 커밋 후 캐시가 존재하면 evict한다")
+    void evictRatingStatsCache_afterCommit_evictsCache() {
+        // given
+        UUID authorId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
+        ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋아요", 4.5);
+
+        Content content = mock(Content.class);
+        User user = mock(User.class);
+        Review saved = mock(Review.class);
+
+        given(contentRepository.findById(contentId)).willReturn(Optional.of(content));
+        given(userRepository.findById(authorId)).willReturn(Optional.of(user));
+        given(reviewRepository.existsByContent_IdAndAuthor_Id(contentId, authorId)).willReturn(false);
+        given(reviewRepository.save(any())).willReturn(saved);
+        given(saved.getId()).willReturn(UUID.randomUUID());
+        given(saved.getContentId()).willReturn(contentId);
+        given(reviewMapper.toDto(saved)).willReturn(mock(ReviewResponse.class));
+
+        Cache mockCache = mock(Cache.class);
+        given(cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE)).willReturn(mockCache);
+
+        ArgumentCaptor<TransactionSynchronization> captor =
+                ArgumentCaptor.forClass(TransactionSynchronization.class);
+
+        // when
+        try (MockedStatic<TransactionSynchronizationManager> txMgr =
+                mockStatic(TransactionSynchronizationManager.class)) {
+            reviewService.createReview(authorId, request);
+            txMgr.verify(() -> TransactionSynchronizationManager.registerSynchronization(captor.capture()));
+        }
+        captor.getValue().afterCommit();
+
+        // then
+        verify(mockCache).evict(contentId);
+    }
+
+    @Test
+    @DisplayName("트랜잭션 커밋 후 캐시가 null이면 evict를 호출하지 않는다")
+    void evictRatingStatsCache_afterCommit_cacheNull_skipsEvict() {
+        // given
+        UUID authorId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
+        ReviewCreateRequest request = new ReviewCreateRequest(contentId, "좋아요", 4.5);
+
+        Content content = mock(Content.class);
+        User user = mock(User.class);
+        Review saved = mock(Review.class);
+
+        given(contentRepository.findById(contentId)).willReturn(Optional.of(content));
+        given(userRepository.findById(authorId)).willReturn(Optional.of(user));
+        given(reviewRepository.existsByContent_IdAndAuthor_Id(contentId, authorId)).willReturn(false);
+        given(reviewRepository.save(any())).willReturn(saved);
+        given(saved.getId()).willReturn(UUID.randomUUID());
+        given(saved.getContentId()).willReturn(contentId);
+        given(reviewMapper.toDto(saved)).willReturn(mock(ReviewResponse.class));
+        given(cacheManager.getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE)).willReturn(null);
+
+        ArgumentCaptor<TransactionSynchronization> captor =
+                ArgumentCaptor.forClass(TransactionSynchronization.class);
+
+        // when
+        try (MockedStatic<TransactionSynchronizationManager> txMgr =
+                mockStatic(TransactionSynchronizationManager.class)) {
+            reviewService.createReview(authorId, request);
+            txMgr.verify(() -> TransactionSynchronizationManager.registerSynchronization(captor.capture()));
+        }
+        captor.getValue().afterCommit();
+
+        // then: cache가 null이므로 evict 호출 없이 정상 종료
+        verify(cacheManager).getCache(RedisCacheConfig.CONTENT_RATING_STATS_CACHE);
     }
 }
