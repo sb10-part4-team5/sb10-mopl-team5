@@ -32,7 +32,7 @@ spring:
       port: 6379
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: localhost:29092
     consumer:
       group-id: mopl-dev
       auto-offset-reset: earliest
