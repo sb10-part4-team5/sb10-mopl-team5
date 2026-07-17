@@ -38,7 +38,7 @@ public class RedisCacheConfig {
                 .build();
     }
 
-    // 캐시 이름마다 반환 타입을 명시해 @class 없이 순수 JSON으로 저장합니다.
+    // 캐시 이름마다 반환 타입을 명시해 JSON으로 저장합니다.
     RedisCacheConfiguration typedConfig(ObjectMapper mapper, Class<?> type) {
         return typedConfig(mapper, mapper.getTypeFactory().constructType(type));
     }
