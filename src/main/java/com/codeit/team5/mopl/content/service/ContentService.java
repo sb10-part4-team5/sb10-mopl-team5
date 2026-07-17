@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -109,6 +110,7 @@ public class ContentService {
      * @return 콘텐츠 응답 DTO (stats, tags 포함)
      * @throws ContentNotFoundException 콘텐츠가 존재하지 않을 때
      */
+    @Cacheable(cacheNames = "content", key = "#contentId")
     public ContentResponse findById(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
