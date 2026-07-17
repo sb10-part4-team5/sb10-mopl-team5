@@ -306,11 +306,14 @@ class NotificationServiceTest {
         // given
         UUID receiverId = UUID.randomUUID();
         UUID lastEventId = UUID.randomUUID();
+        Instant createdAt = Instant.now();
         Notification notification = mock(Notification.class);
         NotificationPayload payload = mock(NotificationPayload.class);
+        given(notification.getCreatedAt()).willReturn(createdAt);
+        given(notification.getId()).willReturn(lastEventId);
         given(notificationRepository.findByIdAndReceiverId(lastEventId, receiverId))
                 .willReturn(Optional.of(notification));
-        given(notificationRepository.findMissedNotifications(receiverId, lastEventId))
+        given(notificationRepository.findMissedNotifications(receiverId, createdAt, lastEventId, Limit.of(50)))
                 .willReturn(List.of(notification));
         given(notificationMapper.toPayload(notification)).willReturn(payload);
 

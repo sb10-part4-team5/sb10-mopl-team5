@@ -36,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class NotificationService implements MissedNotificationProvider {
 
+    private static final int MISSED_NOTIFICATION_LIMIT = 50; // 미수신 알림 가져올 개수
     private static final String SORT_BY_CREATED_AT = "createdAt";
     private static final String SORT_ASCENDING = "ASCENDING";
     private static final String SORT_DESCENDING = "DESCENDING";
@@ -136,16 +137,17 @@ public class NotificationService implements MissedNotificationProvider {
 
     // SSE 재연결 시 미수신 일반 알림 조회
     public List<NotificationPayload> findMissedNotifications(UUID receiverId, UUID lastEventId) {
-        validateLastEventId(receiverId, lastEventId);
-
-        return notificationRepository.findMissedNotifications(receiverId, lastEventId).stream()
+        Notification ref = validateLastEventId(receiverId, lastEventId);
+        return notificationRepository.findMissedNotifications(
+                        receiverId, ref.getCreatedAt(), ref.getId(), Limit.of(MISSED_NOTIFICATION_LIMIT))
+                .stream()
                 .map(notificationMapper::toPayload)
                 .toList();
     }
 
-    // Last-Event-ID 유효성 검증
-    private void validateLastEventId(UUID receiverId, UUID lastEventId) {
-        notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
+    // Last-Event-ID 유효성 검증 후 기준 알림 반환
+    private Notification validateLastEventId(UUID receiverId, UUID lastEventId) {
+        return notificationRepository.findByIdAndReceiverId(lastEventId, receiverId)
                 .orElseThrow(() -> new InvalidLastEventIdException(lastEventId.toString()));
     }
 

@@ -61,19 +61,11 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
     }
 
     @Override
-    public List<Notification> findMissedNotifications(UUID receiverId, UUID lastEventId) {
+    public List<Notification> findMissedNotifications(UUID receiverId, Instant afterCreatedAt, UUID afterId, Limit limit) {
         QNotification n = QNotification.notification;
 
-        Notification ref = queryFactory.selectFrom(n)
-            .where(n.id.eq(lastEventId).and(n.receiverId.eq(receiverId)))
-            .fetchOne();
-
-        if (ref == null) {
-            return List.of();
-        }
-
-        BooleanExpression afterCursor = n.createdAt.gt(ref.getCreatedAt())
-            .or(n.createdAt.eq(ref.getCreatedAt()).and(n.id.gt(ref.getId())));
+        BooleanExpression afterCursor = n.createdAt.gt(afterCreatedAt)
+            .or(n.createdAt.eq(afterCreatedAt).and(n.id.gt(afterId)));
 
         return queryFactory.selectFrom(n)
             .where(
@@ -81,6 +73,7 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
                 n.isRead.isFalse(),
                 afterCursor)
             .orderBy(n.createdAt.asc(), n.id.asc())
+            .limit(limit.max())
             .fetch();
     }
 
