@@ -411,14 +411,12 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("리프레시 토큰 회전에 실패하면 세션 만료 시간을 연장한 뒤 토큰 재발급에 실패한다")
+    @DisplayName("리프레시 토큰 회전에 실패하면 세션을 연장하지 않고 토큰 재발급에 실패한다")
     void refresh_rotateIfValidFalse_throwsException() {
         // Given
         UUID userId = UUID.randomUUID();
         String refreshToken = "refresh-token";
-        String newAccessToken = "new-access-token";
         String newRefreshToken = "new-refresh-token";
-        UUID sessionId = UUID.randomUUID();
         User user = User.create("user@example.com", "encoded-password", "사용자");
         ReflectionTestUtils.setField(user, "id", userId);
         UserResponse userResponse = new UserResponse(
@@ -434,14 +432,6 @@ class AuthServiceTest {
         when(jwtTokenizer.getRefreshUserId(refreshToken)).thenReturn(userId);
         when(userRepository.findWithProfileImageById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
-        when(authSessionService.extendCurrentSession(eq(userId), any(Instant.class))).thenReturn(sessionId);
-        when(jwtTokenizer.generateAccessToken(
-                userId.toString(),
-                user.getEmail(),
-                user.getRole().name(),
-                sessionId.toString()
-        ))
-                .thenReturn(newAccessToken);
         when(jwtTokenizer.generateRefreshToken(userId.toString())).thenReturn(newRefreshToken);
         when(jwtProperties.refreshTokenExpirationMinutes()).thenReturn(420L);
         when(refreshTokenStore.rotateIfValid(
@@ -456,12 +446,21 @@ class AuthServiceTest {
                 .isInstanceOf(RefreshTokenInvalidException.class)
                 .hasMessage("Invalid refresh token");
 
-        verify(authSessionService).extendCurrentSession(eq(userId), any(Instant.class));
         verify(refreshTokenStore).rotateIfValid(
                 eq(userId),
                 eq(refreshToken),
                 eq(newRefreshToken),
                 any(Instant.class)
+        );
+        verify(authSessionService, never()).extendCurrentSession(
+                eq(userId),
+                any(Instant.class)
+        );
+        verify(jwtTokenizer, never()).generateAccessToken(
+                any(),
+                any(),
+                any(),
+                any()
         );
         verify(refreshTokenStore, never()).existsValidToken(any(), any());
         verify(refreshTokenStore, never()).save(any(), any(), any());
