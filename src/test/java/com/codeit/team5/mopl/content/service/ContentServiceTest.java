@@ -29,6 +29,7 @@ import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.content.store.ContentCacheStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +64,9 @@ class ContentServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private ContentCacheStore contentCacheStore;
 
     @InjectMocks
     private ContentService contentService;
@@ -346,10 +350,10 @@ class ContentServiceTest {
     @Test
     @DisplayName("다음 페이지가 없는 경우 hasNext=false로 커서 응답을 반환한다")
     void findContents_noNextPage_success() {
-        // given
+        // given: limit이 첫 페이지 캐시 기본값(20)이 아니므로 캐시를 타지 않고 DB를 직접 조회한다
         ContentCursorRequest request = new ContentCursorRequest(
                 null, null, null, null, null,
-                20, Sort.Direction.DESC, ContentSortByType.CREATED_AT
+                10, Sort.Direction.DESC, ContentSortByType.CREATED_AT
         );
         List<Content> contents = List.of(
                 Content.createByAdmin(ContentType.MOVIE, "영화1", null),
@@ -359,7 +363,7 @@ class ContentServiceTest {
                 List.of(), null, null, false, 2L, "createdAt", "DESCENDING"
         );
 
-        when(contentRepository.findContents(request, 21)).thenReturn(contents);
+        when(contentRepository.findContents(request, 11)).thenReturn(contents);
         when(contentRepository.countContents(request)).thenReturn(2L);
         when(contentMapper.toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC))
                 .thenReturn(expectedResponse);
@@ -369,9 +373,34 @@ class ContentServiceTest {
 
         // then
         assertThat(result).isSameAs(expectedResponse);
-        verify(contentRepository).findContents(request, 21);
+        verify(contentRepository).findContents(request, 11);
         verify(contentRepository).countContents(request);
         verify(contentMapper).toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC);
+        verifyNoInteractions(contentCacheStore);
+    }
+
+    @Test
+    @DisplayName("필터·커서 없이 기본 limit으로 첫 페이지를 조회하면 캐시 스토어에 위임한다")
+    void findContents_cacheableFirstPage_delegatesToCacheStore() {
+        // given
+        ContentCursorRequest request = new ContentCursorRequest(
+                null, null, null, null, null,
+                ContentCacheStore.FIRST_PAGE_LIMIT, Sort.Direction.DESC, ContentSortByType.WATCHER_COUNT
+        );
+        CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
+                List.of(), null, null, false, 0L, "watcherCount", "DESCENDING"
+        );
+
+        when(contentCacheStore.getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC))
+                .thenReturn(expectedResponse);
+
+        // when
+        CursorResponse<ContentResponse> result = contentService.findContents(request);
+
+        // then
+        assertThat(result).isSameAs(expectedResponse);
+        verify(contentCacheStore).getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC);
+        verifyNoInteractions(contentRepository, contentMapper);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.codeit.team5.mopl.global.infra.redis.config;
 
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.time.Duration;
 import java.util.Map;
 import org.springframework.cache.CacheManager;
@@ -20,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @EnableCaching
 public class RedisCacheConfig {
 
+    public static final String CONTENT_LIST_CACHE = "content:list";
+
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory factory, ObjectMapper objectMapper) {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
@@ -29,11 +32,14 @@ public class RedisCacheConfig {
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(
                         new StringRedisSerializer()));
 
+        JavaType contentListType = objectMapper.getTypeFactory()
+                .constructParametricType(CursorResponse.class, ContentResponse.class);
+
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(Map.of(
-                        "content", typedConfig(objectMapper, ContentResponse.class)
-                                .entryTtl(Duration.ofMinutes(5))
+                        CONTENT_LIST_CACHE, typedConfig(objectMapper, contentListType)
+                                .entryTtl(Duration.ofMinutes(1))
                 ))
                 .build();
     }

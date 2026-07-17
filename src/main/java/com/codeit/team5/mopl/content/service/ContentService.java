@@ -16,14 +16,15 @@ import com.codeit.team5.mopl.content.exception.TooManyTagsException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.content.store.ContentCacheStore;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /**
  * 관리자가 직접 등록하는 콘텐츠의 CRUD를 담당하는 서비스.
@@ -43,6 +44,7 @@ public class ContentService {
     private final ContentTagService contentTagService;
     private final ContentMapper contentMapper;
     private final BinaryContentService binaryContentService;
+    private final ContentCacheStore contentCacheStore;
 
     private static final String SECONDARY_SORT_FIELD = "id";
 
@@ -110,7 +112,6 @@ public class ContentService {
      * @return 콘텐츠 응답 DTO (stats, tags 포함)
      * @throws ContentNotFoundException 콘텐츠가 존재하지 않을 때
      */
-    @Cacheable(cacheNames = "content", key = "#contentId")
     public ContentResponse findById(UUID contentId) {
         Content content = contentRepository.findWithStatsAndTagsById(contentId)
                 .orElseThrow(() -> new ContentNotFoundException(contentId));
@@ -120,10 +121,16 @@ public class ContentService {
     /**
      * 커서 기반 페이지네이션으로 콘텐츠 목록을 조회한다.
      *
+     * <p>필터·커서 없이 기본 limit으로 첫 페이지를 조회하는 경우는 {@link ContentCacheStore}의
+     * 캐시(짧은 TTL)를 태우고, 그 외(필터/커서 있음)는 항상 DB에서 직접 조회한다.</p>
+     *
      * @param request 커서·정렬·필터·limit 조건
      * @return 커서 응답 (콘텐츠 목록, hasNext, totalCount 포함)
      */
     public CursorResponse<ContentResponse> findContents(ContentCursorRequest request) {
+        if (isCacheableFirstPage(request)) {
+            return contentCacheStore.getFirstPage(request.sortBy(), request.sortDirection());
+        }
         int fetchLimit = request.limit() + 1;
         List<Content> fetched = contentRepository.findContents(request, fetchLimit);
         boolean hasNext = fetched.size() > request.limit();
@@ -155,6 +162,15 @@ public class ContentService {
         if (tagNames.isEmpty()) throw new EmptyTagException();
         if (tagNames.size() > 10) throw new TooManyTagsException();
         return tagNames;
+    }
+
+    private boolean isCacheableFirstPage(ContentCursorRequest request) {
+        return request.cursor() == null
+                && request.idAfter() == null
+                && request.typeEqual() == null
+                && !StringUtils.hasText(request.keywordLike())
+                && (request.tagsIn() == null || request.tagsIn().isEmpty())
+                && request.limit() == ContentCacheStore.FIRST_PAGE_LIMIT;
     }
 
 }
