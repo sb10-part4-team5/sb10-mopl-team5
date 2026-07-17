@@ -47,7 +47,11 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
         { name = "KAKAO_CLIENT_SECRET", value = var.kakao_client_secret },
         { name = "JDK_JAVA_OPTIONS", value = "-XX:MaxRAMPercentage=35.0 -XX:InitialRAMPercentage=20.0 -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseG1GC" },
-        { name = "COOKIE_SIGNATURE_SECRET_KEY", value = var.cookie_signature_secret_key }
+        { name = "COOKIE_SIGNATURE_SECRET_KEY", value = var.cookie_signature_secret_key },
+        # Redis/MSK 검증 후 destroy함 — 실제 운영 전환 시 주석 해제
+        # { name = "REDIS_HOST", value = aws_elasticache_cluster.mopl.cache_nodes[0].address },
+        # { name = "REDIS_PORT", value = tostring(aws_elasticache_cluster.mopl.cache_nodes[0].port) },
+        # { name = "KAFKA_BOOTSTRAP_SERVERS", value = aws_msk_cluster.mopl.bootstrap_brokers_tls }
       ]
 
       # 로테이션 설정 없으면 json-file 로그가 무제한으로 커져 디스크/메모리 압박 유발

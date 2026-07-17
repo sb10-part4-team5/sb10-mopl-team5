@@ -3,13 +3,6 @@ spring:
     activate:
       on-profile: prod
 
-  # Redis/Kafka 인프라 미구축 상태 — autoconfig 비활성
-  # (추가 시: 아래 exclude 제거 + data.redis/kafka 설정 주석 해제)
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
-
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -26,25 +19,26 @@ spring:
         show_sql: false
         format_sql: false
 
-  # Redis/Kafka 추가 시 주석 해제 (+ 위 autoconfigure.exclude 제거)
-  # data:
-  #   redis:
-  #     host: ${REDIS_HOST}
-  #     port: ${REDIS_PORT:6379}
-  #     password: ${REDIS_PASSWORD:}
-  #     timeout: 3000ms
-  #
-  # kafka:
-  #   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-  #   consumer:
-  #     group-id: ${KAFKA_CONSUMER_GROUP:mopl-prod}
-  #     auto-offset-reset: latest
-  #     key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  #     value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  #   producer:
-  #     key-serializer: org.apache.kafka.common.serialization.StringSerializer
-  #     value-serializer: org.apache.kafka.common.serialization.StringSerializer
-  #     acks: all
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    properties:
+      security.protocol: SSL
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:mopl-prod}
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+      acks: all
 
 server:
   forward-headers-strategy: native
