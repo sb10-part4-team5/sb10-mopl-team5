@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -32,6 +31,8 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.content.store.ContentCacheStore;
+import com.codeit.team5.mopl.content.store.ContentRatingStats;
+import com.codeit.team5.mopl.content.store.ContentStatsCacheStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -69,6 +70,9 @@ class ContentServiceTest {
 
     @Mock
     private ContentCacheStore contentCacheStore;
+
+    @Mock
+    private ContentStatsCacheStore contentStatsCacheStore;
 
     @InjectMocks
     private ContentService contentService;
@@ -322,8 +326,11 @@ class ContentServiceTest {
                 null, List.of("액션"), 4.5, 10, 100L
         );
 
+        ContentRatingStats ratingStats = new ContentRatingStats(10, 4.5);
+
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
-        when(contentMapper.toDto(content)).thenReturn(expectedResponse);
+        when(contentStatsCacheStore.getRatingStats(contentId)).thenReturn(ratingStats);
+        when(contentMapper.toDto(content, ratingStats)).thenReturn(expectedResponse);
 
         // when
         ContentResponse result = contentService.findById(contentId);
@@ -331,7 +338,8 @@ class ContentServiceTest {
         // then
         assertThat(result).isSameAs(expectedResponse);
         verify(contentRepository).findWithStatsAndTagsById(contentId);
-        verify(contentMapper).toDto(content);
+        verify(contentStatsCacheStore).getRatingStats(contentId);
+        verify(contentMapper).toDto(content, ratingStats);
     }
 
     @Test
@@ -361,16 +369,19 @@ class ContentServiceTest {
                 Content.createByAdmin(ContentType.MOVIE, "영화1", null),
                 Content.createByAdmin(ContentType.MOVIE, "영화2", null)
         );
-        ContentResponse mappedResponse = new ContentResponse(
-                UUID.randomUUID(), ContentType.MOVIE, "영화", null, null, List.of(), 0.0, 0, 0L
-        );
         CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
                 List.of(), null, null, false, 2L, "createdAt", "DESCENDING"
         );
 
+        ContentRatingStats ratingStats = new ContentRatingStats(0, 0.0);
+        ContentResponse mappedResponse = new ContentResponse(
+                UUID.randomUUID(), ContentType.MOVIE, "영화", null, null, List.of(), 0.0, 0, 0L
+        );
+
         when(contentRepository.findContents(request, 11)).thenReturn(contents);
         when(contentRepository.countContents(request)).thenReturn(2L);
-        when(contentMapper.toDto(any(Content.class))).thenReturn(mappedResponse);
+        when(contentStatsCacheStore.getRatingStats(any())).thenReturn(ratingStats);
+        when(contentMapper.toDto(any(Content.class), eq(ratingStats))).thenReturn(mappedResponse);
         when(contentMapper.toCursor(eq(contents), anyList(), eq(false), eq(2L),
                 eq(ContentSortByType.CREATED_AT), eq(Sort.Direction.DESC))).thenReturn(expectedResponse);
 
@@ -381,7 +392,6 @@ class ContentServiceTest {
         assertThat(result).isSameAs(expectedResponse);
         verify(contentRepository).findContents(request, 11);
         verify(contentRepository).countContents(request);
-        verify(contentMapper, times(2)).toDto(any(Content.class));
         verifyNoInteractions(contentCacheStore);
     }
 
@@ -428,13 +438,15 @@ class ContentServiceTest {
                 List.of(), "cursor", "idAfter", true, 5L, "createdAt", "DESCENDING"
         );
 
+        ContentRatingStats ratingStats = new ContentRatingStats(0, 0.0);
         ContentResponse mappedResponse = new ContentResponse(
                 UUID.randomUUID(), ContentType.MOVIE, "영화", null, null, List.of(), 0.0, 0, 0L
         );
 
         when(contentRepository.findContents(request, limit + 1)).thenReturn(fetched);
         when(contentRepository.countContents(request)).thenReturn(5L);
-        when(contentMapper.toDto(any(Content.class))).thenReturn(mappedResponse);
+        when(contentStatsCacheStore.getRatingStats(any())).thenReturn(ratingStats);
+        when(contentMapper.toDto(any(Content.class), eq(ratingStats))).thenReturn(mappedResponse);
         when(contentMapper.toCursor(eq(page), anyList(), eq(true), eq(5L),
                 eq(ContentSortByType.CREATED_AT), eq(Sort.Direction.DESC))).thenReturn(expectedResponse);
 

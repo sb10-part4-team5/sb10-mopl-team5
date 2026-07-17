@@ -138,7 +138,10 @@ public class ContentService {
         boolean hasNext = fetched.size() > request.limit();
         List<Content> page = hasNext ? fetched.subList(0, request.limit()) : fetched;
         long totalCount = contentRepository.countContents(request);
-        return contentMapper.toCursor(page, hasNext, totalCount, request.sortBy(), request.sortDirection());
+        List<ContentResponse> data = page.stream()
+                .map(c -> contentMapper.toDto(c, contentStatsCacheStore.getRatingStats(c.getId())))
+                .toList();
+        return contentMapper.toCursor(page, data, hasNext, totalCount, request.sortBy(), request.sortDirection());
     }
 
     /**

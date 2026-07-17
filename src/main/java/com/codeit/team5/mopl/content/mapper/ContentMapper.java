@@ -32,6 +32,12 @@ public interface ContentMapper {
 
     default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,
         long totalCount, ContentSortByType sortBy, Direction sortDirection) {
+        List<ContentResponse> data = page.stream().map(this::toDto).toList();
+        return toCursor(page, data, hasNext, totalCount, sortBy, sortDirection);
+    }
+
+    default CursorResponse<ContentResponse> toCursor(List<Content> page, List<ContentResponse> data,
+            boolean hasNext, long totalCount, ContentSortByType sortBy, Direction sortDirection) {
         String nextCursor = null;
         String nextIdAfter = null;
         if (hasNext && !page.isEmpty()) {
@@ -43,9 +49,8 @@ public interface ContentMapper {
             };
             nextIdAfter = last.getId().toString();
         }
-        List<ContentResponse> data = page.stream().map(this::toDto).toList();
         String direction = sortDirection == Direction.ASC ? "ASCENDING" : "DESCENDING";
         return new CursorResponse<>(data, nextCursor, nextIdAfter, hasNext, totalCount,
-            sortBy.getValue(), direction);
+                sortBy.getValue(), direction);
     }
 }
