@@ -15,7 +15,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-@Component
+//@Component
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class DbRefreshTokenStore implements RefreshTokenStore {

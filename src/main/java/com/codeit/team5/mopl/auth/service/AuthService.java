@@ -37,16 +37,29 @@ public class AuthService {
 
         UUID userId = jwtTokenizer.getRefreshUserId(refreshToken);
 
-        // refreshToken 안의 userId가 DB에 없다는 뜻이라서 인증 실패로 처리
         User user = userRepository.findWithProfileImageById(userId)
-                .orElseThrow(() -> new RefreshTokenInvalidException(
-                        "Invalid refresh token: user not found - userId=" + userId));
+                .orElseThrow(() ->
+                        new RefreshTokenInvalidException("Invalid refresh token"));
 
         UserResponse userDto = userMapper.toDto(user);
 
-        Instant expiredAt = calculateExpiresAt();
+        Instant expiresAt = calculateExpiresAt();
 
-        UUID sessionId = authSessionService.extendCurrentSession(userId, expiredAt);
+        String newRefreshToken =
+                jwtTokenizer.generateRefreshToken(user.getId().toString());
+
+        // 기존 토큰의 검증과 교체가 성공한 뒤에만 로그인 세션 만료 시간을 연장한다.
+        if (!refreshTokenStore.rotateIfValid(
+                userId,
+                refreshToken,
+                newRefreshToken,
+                expiresAt
+        )) {
+            throw new RefreshTokenInvalidException("Invalid refresh token");
+        }
+
+        UUID sessionId =
+                authSessionService.extendCurrentSession(userId, expiresAt);
 
         String newAccessToken = jwtTokenizer.generateAccessToken(
                 user.getId().toString(),
@@ -54,17 +67,9 @@ public class AuthService {
                 user.getRole().name(),
                 sessionId.toString()
         );
-        String newRefreshToken = jwtTokenizer.generateRefreshToken(user.getId().toString());
-        if (!refreshTokenStore.rotateIfValid(
-                userId,
-                refreshToken,
-                newRefreshToken,
-                expiredAt
-        )) {
-            throw new RefreshTokenInvalidException("Invalid refresh token");
-        }
 
-        JwtResponse jwtResponse = authMapper.toJwtResponse(userDto, newAccessToken);
+        JwtResponse jwtResponse =
+                authMapper.toJwtResponse(userDto, newAccessToken);
 
         return authMapper.toAuthPayload(jwtResponse, newRefreshToken);
     }
