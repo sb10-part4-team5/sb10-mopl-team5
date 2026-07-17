@@ -7,8 +7,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,112 +22,27 @@ public class RedisLoginSessionStore implements LoginSessionStore {
     private static final String SESSION_INDEX_KEY_PREFIX =
             "mopl:auth:login-session-index:";
 
-    /*
-     * 개별 세션 Key 저장과 사용자별 세션 인덱스 추가를
-     * 하나의 Redis 원자적 연산으로 처리한다.
-     *
-     * KEYS[1] = 개별 세션 Key
-     * KEYS[2] = 사용자별 세션 인덱스 Key
-     *
-     * ARGV[1] = sessionId
-     * ARGV[2] = expiresAt epoch milliseconds
-     */
-    private static final DefaultRedisScript<Long> SAVE_SCRIPT =
-            new DefaultRedisScript<>(
-                    """
-                    redis.call(
-                        'SET',
-                        KEYS[1],
-                        ARGV[1],
-                        'PXAT',
-                        ARGV[2]
-                    )
-
-                    redis.call(
-                        'ZADD',
-                        KEYS[2],
-                        ARGV[2],
-                        ARGV[1]
-                    )
-
-                    return 1
-                    """,
+    private static final RedisScript<Long> SAVE_SCRIPT =
+            RedisScript.of(
+                    new ClassPathResource(
+                            "redis/login-session/save.lua"
+                    ),
                     Long.class
             );
 
-    /*
-     * 개별 세션 Key의 만료 시각과 Sorted Set의 score를
-     * 하나의 Redis 원자적 연산으로 갱신한다.
-     *
-     * KEYS[1] = 개별 세션 Key
-     * KEYS[2] = 사용자별 세션 인덱스 Key
-     *
-     * ARGV[1] = sessionId
-     * ARGV[2] = 새로운 expiresAt epoch milliseconds
-     *
-     * 반환값:
-     * 1 = 세션이 존재하여 연장 성공
-     * 0 = 세션 Key가 존재하지 않음
-     */
-    private static final DefaultRedisScript<Long> EXTEND_SCRIPT =
-            new DefaultRedisScript<>(
-                    """
-                    if redis.call('EXISTS', KEYS[1]) == 0 then
-                        redis.call(
-                            'ZREM',
-                            KEYS[2],
-                            ARGV[1]
-                        )
-
-                        return 0
-                    end
-
-                    redis.call(
-                        'PEXPIREAT',
-                        KEYS[1],
-                        ARGV[2]
-                    )
-
-                    redis.call(
-                        'ZADD',
-                        KEYS[2],
-                        ARGV[2],
-                        ARGV[1]
-                    )
-
-                    return 1
-                    """,
+    private static final RedisScript<Long> EXTEND_SCRIPT =
+            RedisScript.of(
+                    new ClassPathResource(
+                            "redis/login-session/extend.lua"
+                    ),
                     Long.class
             );
 
-    /*
-     * 사용자별 세션 인덱스 조회, 개별 세션 Key 전체 삭제,
-     * 인덱스 Key 삭제를 하나의 Redis 원자적 연산으로 수행한다.
-     *
-     * KEYS[1] = 사용자별 세션 인덱스 Key
-     *
-     * ARGV[1] = 개별 세션 Key prefix
-     *
-     * 반환값:
-     * 삭제를 시도한 개별 세션 수
-     */
-    private static final DefaultRedisScript<Long> DELETE_BY_USER_SCRIPT =
-            new DefaultRedisScript<>(
-                    """
-                    local sessionIds =
-                        redis.call('ZRANGE', KEYS[1], 0, -1)
-
-                    for _, sessionId in ipairs(sessionIds) do
-                        redis.call(
-                            'DEL',
-                            ARGV[1] .. sessionId
-                        )
-                    end
-
-                    redis.call('DEL', KEYS[1])
-
-                    return #sessionIds
-                    """,
+    private static final RedisScript<Long> DELETE_BY_USER_SCRIPT =
+            RedisScript.of(
+                    new ClassPathResource(
+                            "redis/login-session/delete-by-user.lua"
+                    ),
                     Long.class
             );
 
@@ -256,10 +172,14 @@ public class RedisLoginSessionStore implements LoginSessionStore {
     @Override
     public void deleteExpiredSessions() {
         /*
-         * 개별 세션 Key는 Redis TTL에 의해 자동으로 제거된다.
+         * 개별 세션 Key는 자체 TTL에 의해 자동으로 제거된다.
          *
-         * 사용자별 Sorted Set의 만료 member는
-         * findCurrentSessionId() 호출 시 지연 정리한다.
+         * 사용자별 Sorted Set 인덱스 Key도 Lua Script에서
+         * 해당 사용자의 가장 늦은 세션 만료 시각에 맞춰 TTL을 설정하므로,
+         * 모든 세션이 만료되면 자동으로 제거된다.
+         *
+         * 조회 시에는 removeExpiredIndexEntries()를 통해
+         * 아직 인덱스에 남아 있는 만료 member를 추가로 지연 정리한다.
          */
     }
 
