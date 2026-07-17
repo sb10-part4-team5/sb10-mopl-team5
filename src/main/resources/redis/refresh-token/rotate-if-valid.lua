@@ -1,5 +1,5 @@
--- 기존 리프레시 토큰이 유효한 경우에만 기존 토큰을 제거하고
--- 새 리프레시 토큰을 저장한다.
+-- 기존 리프레시 토큰이 유효한 경우에만 기존 토큰을 폐기하고
+-- 새 리프레시 토큰 하나만 저장한다.
 --
 -- KEYS[1]: 사용자별 리프레시 토큰 키
 --
@@ -23,7 +23,6 @@ if newExpiresAt <= now then
     return 0
 end
 
--- 잘못된 호출로 동일한 토큰을 다시 저장하는 것을 방지한다.
 if oldTokenHash == newTokenHash then
     return 0
 end
@@ -31,32 +30,20 @@ end
 -- 만료된 토큰을 먼저 정리한다.
 redis.call('ZREMRANGEBYSCORE', key, '-inf', now)
 
--- 만료 토큰은 위에서 제거되었으므로, 존재 여부만 확인하면 된다.
+-- 기존 토큰이 현재 유효한지 확인한다.
 local oldExpiresAt = redis.call('ZSCORE', key, oldTokenHash)
 
 if not oldExpiresAt then
     return 0
 end
 
--- 사용된 기존 토큰만 제거한다.
--- 같은 사용자의 다른 리프레시 토큰은 유지된다.
-redis.call('ZREM', key, oldTokenHash)
+-- 사용자에게 저장된 기존 토큰을 모두 폐기한다.
+redis.call('DEL', key)
 
--- 새 토큰을 저장한다.
+-- 새 토큰 하나만 저장한다.
 redis.call('ZADD', key, newExpiresAt, newTokenHash)
 
--- 사용자에게 남아 있는 토큰 중 가장 늦은 만료 시각을 구한다.
-local latest = redis.call(
-    'ZRANGE',
-    key,
-    -1,
-    -1,
-    'WITHSCORES'
-)
-
--- 사용자별 키의 만료 시각을 가장 늦은 토큰에 맞춘다.
-if #latest >= 2 then
-    redis.call('PEXPIREAT', key, tonumber(latest[2]))
-end
+-- 저장된 유일한 토큰의 만료 시각에 키 만료 시각을 맞춘다.
+redis.call('PEXPIREAT', key, newExpiresAt)
 
 return 1

@@ -149,14 +149,13 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
     @Override
     public void deleteExpiredTokens() {
         /*
-         * 개별 토큰의 만료 시각은 Sorted Set score로 관리한다.
+         * 사용자별로 하나의 활성 리프레시 토큰만 저장한다.
          *
-         * save, existsValidToken, rotateIfValid 호출 시
-         * ZREMRANGEBYSCORE를 통해 만료된 member를 지연 정리한다.
+         * save와 rotateIfValid 호출 시 저장된 토큰의 expiresAt을 기준으로
+         * 사용자별 Redis 키에 PEXPIREAT을 설정한다.
          *
-         * 사용자별 키는 가장 늦게 만료되는 토큰의 expiresAt을 기준으로
-         * PEXPIREAT이 설정된다. 모든 토큰이 만료되면 Redis가 해당 키를
-         * 자동으로 제거하므로 전체 키를 SCAN하지 않는다.
+         * 토큰이 만료되면 Redis가 해당 키를 자동으로 제거하므로
+         * 전체 키를 SCAN하는 별도의 만료 정리는 수행하지 않는다.
          */
     }
 
