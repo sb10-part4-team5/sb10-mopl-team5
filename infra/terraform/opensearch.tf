@@ -29,7 +29,7 @@ resource "aws_security_group" "opensearch" {
 
 resource "aws_opensearch_domain" "mopl" {
   domain_name    = "mopl-search"
-  engine_version = "OpenSearch_2.15"
+  engine_version = "OpenSearch_3.5"
 
   cluster_config {
     instance_type            = "t3.small.search"
@@ -49,6 +49,29 @@ resource "aws_opensearch_domain" "mopl" {
     security_group_ids = [aws_security_group.opensearch.id]
   }
 
+  # FGAC(advanced_security_options)는 저장 데이터 암호화 + 노드 간 암호화가 선행 조건
+  encrypt_at_rest {
+    enabled = true
+  }
+
+  node_to_node_encryption {
+    enabled = true
+  }
+
+  domain_endpoint_options {
+    enforce_https = true
+  }
+
+  advanced_security_options {
+    enabled                        = true
+    internal_user_database_enabled = true
+
+    master_user_options {
+      master_user_name     = var.opensearch_master_username
+      master_user_password = var.opensearch_master_password
+    }
+  }
+
   access_policies = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -62,6 +85,12 @@ resource "aws_opensearch_domain" "mopl" {
   tags = { Name = "mopl-opensearch" }
 
   depends_on = [aws_iam_service_linked_role.opensearch]
+}
+
+# nori(한국어 형태소 분석) 플러그인 연결 — OpenSearch_3.5용 AWS 제공 패키지
+resource "aws_opensearch_package_association" "nori" {
+  package_id  = "G259293935"
+  domain_name = aws_opensearch_domain.mopl.domain_name
 }
 
 output "opensearch_endpoint" {
