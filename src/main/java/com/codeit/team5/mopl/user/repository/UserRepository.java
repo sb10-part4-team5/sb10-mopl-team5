@@ -3,6 +3,8 @@ package com.codeit.team5.mopl.user.repository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.querydsl.UserQueryRepository;
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,4 +27,7 @@ public interface UserRepository extends JpaRepository<User, UUID>, UserQueryRepo
     // 프로필 이미지를 fetch join으로 함께 조회 (update 시 N+1 방지)
     @Query("select u from User u left join fetch u.profileImage where u.id = :id")
     Optional<User> findWithProfileImageById(@Param("id") UUID id);
+
+    @Query("select u from User u left join fetch u.profileImage where u.id in :ids")
+    List<User> findWithProfileImageByIdIn(@Param("ids") Collection<UUID> ids);
 }
