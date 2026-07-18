@@ -1,6 +1,8 @@
 package com.codeit.team5.mopl.content.repository;
 
 import com.codeit.team5.mopl.content.entity.ContentStats;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -20,7 +22,8 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
             s.averageRating = CASE WHEN s.reviewCount + :countDelta = 0
                                  THEN 0.0
                                  ELSE (s.ratingSum + :ratingDelta) / (s.reviewCount + :countDelta)
-                            END
+                            END,
+            s.updatedAt = CURRENT_TIMESTAMP
         WHERE s.id = :contentId
         """)
     void applyStatDelta(
@@ -30,10 +33,23 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
     );
 
     @Modifying
-    @Query("update ContentStats s set s.watcherCount = s.watcherCount - 1 where s.id = :id and s.watcherCount > 0")
+    @Query("""
+        update ContentStats s
+        set s.watcherCount = s.watcherCount - 1,
+            s.updatedAt = CURRENT_TIMESTAMP
+        where s.id = :id and s.watcherCount > 0
+        """)
     void decreaseWatcherCountById(UUID id);
 
     @Modifying
-    @Query("update ContentStats s set s.watcherCount = s.watcherCount + 1 where s.id = :id")
+    @Query("""
+        update ContentStats s
+        set s.watcherCount = s.watcherCount + 1,
+            s.updatedAt = CURRENT_TIMESTAMP
+        where s.id = :id
+        """)
     void increaseWatcherCountById(UUID id);
+
+    @Query("SELECT s.id FROM ContentStats s WHERE s.updatedAt > :since")
+    List<UUID> findIdsUpdatedAfter(@Param("since") Instant since);
 }

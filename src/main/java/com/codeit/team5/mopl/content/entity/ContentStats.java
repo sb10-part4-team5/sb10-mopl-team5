@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,6 +40,9 @@ public class ContentStats {
     @Column(nullable = false)
     private double averageRating;
 
+    @Column(nullable = false)
+    private Instant updatedAt;
+
     public static ContentStats create(Content content) {
         ContentStats stats = new ContentStats();
         stats.content = content;
@@ -46,6 +50,7 @@ public class ContentStats {
         stats.ratingSum = 0.0;
         stats.watcherCount = 0;
         stats.averageRating = 0.0;
+        stats.updatedAt = Instant.now();
         return stats;
     }
 }
