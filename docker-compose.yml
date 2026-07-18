@@ -93,6 +93,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      # 플러그인이 20개 넘게 로드돼 기동이 오래 걸린다. 이 기간의 실패는 retries로 세지 않는다.
+      start_period: 120s
 
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:3.5.0
