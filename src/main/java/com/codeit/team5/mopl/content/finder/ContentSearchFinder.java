@@ -1,10 +1,9 @@
-package com.codeit.team5.mopl.content.store;
+package com.codeit.team5.mopl.content.finder;
 
 import com.codeit.team5.mopl.content.document.ContentDocument;
 import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
-import com.codeit.team5.mopl.content.entity.ContentType;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.time.Instant;
@@ -23,12 +22,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * 키워드 검색을 OpenSearch로 완결한다. 매칭·필터·정렬·커서를 전부 ES에서 처리하고
+ * 키워드 검색을 OpenSearch에서 조회한다. 매칭·필터·정렬·커서를 전부 처리하고
  * {@link ContentResponse}로 바로 반환한다.
  */
 @Component
 @RequiredArgsConstructor
-public class ContentSearchStore {
+public class ContentSearchFinder {
 
     private static final String TIEBREAKER_FIELD = "contentId";
 

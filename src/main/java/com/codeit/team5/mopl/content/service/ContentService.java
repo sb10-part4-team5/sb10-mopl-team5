@@ -18,8 +18,8 @@ import com.codeit.team5.mopl.content.exception.TooManyTagsException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
-import com.codeit.team5.mopl.content.store.ContentCacheStore;
-import com.codeit.team5.mopl.content.store.ContentSearchStore;
+import com.codeit.team5.mopl.content.finder.ContentCacheFinder;
+import com.codeit.team5.mopl.content.finder.ContentSearchFinder;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.util.List;
 import java.util.UUID;
@@ -48,8 +48,8 @@ public class ContentService {
     private final ContentTagService contentTagService;
     private final ContentMapper contentMapper;
     private final BinaryContentService binaryContentService;
-    private final ContentCacheStore contentCacheStore;
-    private final ContentSearchStore contentSearchStore;
+    private final ContentCacheFinder contentCacheFinder;
+    private final ContentSearchFinder contentSearchFinder;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -125,18 +125,18 @@ public class ContentService {
     /**
      * 커서 기반 페이지네이션으로 콘텐츠 목록을 조회한다.
      *
-     * <p>키워드가 있으면 {@link ContentSearchStore}(OpenSearch)로 완결한다. 키워드 없이
-     * 필터·커서 없는 기본 첫 페이지는 {@link ContentCacheStore} 캐시를 태우고, 그 외는 DB에서 조회한다.</p>
+     * <p>키워드가 있으면 {@link ContentSearchFinder}(OpenSearch)로 완결한다. 키워드 없이
+     * 필터·커서 없는 기본 첫 페이지는 {@link ContentCacheFinder} 캐시를 태우고, 그 외는 DB에서 조회한다.</p>
      *
      * @param request 커서·정렬·필터·limit 조건
      * @return 커서 응답 (콘텐츠 목록, hasNext, totalCount 포함)
      */
     public CursorResponse<ContentResponse> findContents(ContentCursorRequest request) {
         if (StringUtils.hasText(request.keywordLike())) {
-            return contentSearchStore.search(request);
+            return contentSearchFinder.search(request);
         }
         if (isCacheableFirstPage(request)) {
-            return contentCacheStore.getFirstPage(request.sortBy(), request.sortDirection());
+            return contentCacheFinder.getFirstPage(request.sortBy(), request.sortDirection());
         }
         int fetchLimit = request.limit() + 1;
         List<Content> fetched = contentRepository.findContents(request, fetchLimit);
@@ -178,7 +178,7 @@ public class ContentService {
                 && request.typeEqual() == null
                 && !StringUtils.hasText(request.keywordLike())
                 && (request.tagsIn() == null || request.tagsIn().isEmpty())
-                && request.limit() == ContentCacheStore.FIRST_PAGE_LIMIT;
+                && request.limit() == ContentCacheFinder.FIRST_PAGE_LIMIT;
     }
 
 }

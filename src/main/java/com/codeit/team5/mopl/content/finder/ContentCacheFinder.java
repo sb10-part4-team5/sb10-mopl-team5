@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.content.store;
+package com.codeit.team5.mopl.content.finder;
 
 import static com.codeit.team5.mopl.global.infra.redis.config.RedisCacheConfig.CONTENT_LIST_CACHE;
 
@@ -8,7 +8,6 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
-import com.codeit.team5.mopl.content.service.ContentService;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class ContentCacheStore {
+public class ContentCacheFinder {
 
     public static final int FIRST_PAGE_LIMIT = 20;
 

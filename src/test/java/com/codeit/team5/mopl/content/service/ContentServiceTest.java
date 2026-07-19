@@ -29,7 +29,7 @@ import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
-import com.codeit.team5.mopl.content.store.ContentCacheStore;
+import com.codeit.team5.mopl.content.finder.ContentCacheFinder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -66,7 +66,7 @@ class ContentServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private ContentCacheStore contentCacheStore;
+    private ContentCacheFinder contentCacheFinder;
 
     @InjectMocks
     private ContentService contentService;
@@ -376,7 +376,7 @@ class ContentServiceTest {
         verify(contentRepository).findContents(request, 11);
         verify(contentRepository).countContents(request);
         verify(contentMapper).toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC);
-        verifyNoInteractions(contentCacheStore);
+        verifyNoInteractions(contentCacheFinder);
     }
 
     @Test
@@ -385,13 +385,13 @@ class ContentServiceTest {
         // given
         ContentCursorRequest request = new ContentCursorRequest(
                 null, null, null, null, null,
-                ContentCacheStore.FIRST_PAGE_LIMIT, Sort.Direction.DESC, ContentSortByType.WATCHER_COUNT
+                ContentCacheFinder.FIRST_PAGE_LIMIT, Sort.Direction.DESC, ContentSortByType.WATCHER_COUNT
         );
         CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
                 List.of(), null, null, false, 0L, "watcherCount", "DESCENDING"
         );
 
-        when(contentCacheStore.getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC))
+        when(contentCacheFinder.getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC))
                 .thenReturn(expectedResponse);
 
         // when
@@ -399,7 +399,7 @@ class ContentServiceTest {
 
         // then
         assertThat(result).isSameAs(expectedResponse);
-        verify(contentCacheStore).getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC);
+        verify(contentCacheFinder).getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC);
         verifyNoInteractions(contentRepository, contentMapper);
     }
 
