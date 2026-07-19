@@ -12,9 +12,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
-import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
+import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.user.dto.request.UserRegisterRequest;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
 import com.codeit.team5.mopl.user.dto.request.UserUpdateRequest;
@@ -23,6 +23,7 @@ import com.codeit.team5.mopl.user.entity.UserRole;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,10 +65,16 @@ class UserControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
+    private RefreshTokenStore refreshTokenStore;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @AfterEach
+    void cleanUpRefreshTokens() {
+        userRepository.findAll()
+                .forEach(user -> refreshTokenStore.deleteByUserId(user.getId()));
+    }
 
     @Test
     @DisplayName("회원가입에 성공하고 사용자가 데이터베이스에 저장된다")
@@ -385,11 +392,21 @@ class UserControllerIntegrationTest {
         // Given
         SignInRequest adminRequest = saveLoginUser("role-admin@example.com", "password1", UserRole.ADMIN, false);
         User target = saveUser("role-target@example.com", "password1", UserRole.USER, false);
-        login(new SignInRequest(target.getEmail(), "password1"));
-
-        assertThat(refreshTokenRepository.findByUser_Id(target.getId())).isPresent();
+        MvcResult targetLoginResult = mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", target.getEmail())
+                        .param("password", "password1"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String targetRefreshToken =
+                targetLoginResult.getResponse().getCookie("REFRESH_TOKEN").getValue();
 
         String adminAccessToken = login(adminRequest);
+        assertThat(refreshTokenStore.existsValidToken(
+                target.getId(),
+                targetRefreshToken
+        )).isTrue();
         String requestJson = """
                 {
                   "role": "ADMIN"
@@ -406,7 +423,10 @@ class UserControllerIntegrationTest {
 
         User updated = userRepository.findById(target.getId()).orElseThrow();
         assertThat(updated.getRole()).isEqualTo(UserRole.ADMIN);
-        assertThat(refreshTokenRepository.findByUser_Id(target.getId())).isEmpty();
+        assertThat(refreshTokenStore.existsValidToken(
+                target.getId(),
+                targetRefreshToken
+        )).isFalse();
     }
 
     @Test
@@ -510,11 +530,21 @@ class UserControllerIntegrationTest {
         // Given
         SignInRequest adminRequest = saveLoginUser("lock-admin@example.com", "password1", UserRole.ADMIN, false);
         User target = saveUser("lock-target@example.com", "password1", UserRole.USER, false);
-        login(new SignInRequest(target.getEmail(), "password1"));
-
-        assertThat(refreshTokenRepository.findByUser_Id(target.getId())).isPresent();
+        MvcResult targetLoginResult = mockMvc.perform(post("/api/auth/sign-in")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", target.getEmail())
+                        .param("password", "password1"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String targetRefreshToken =
+                targetLoginResult.getResponse().getCookie("REFRESH_TOKEN").getValue();
 
         String adminAccessToken = login(adminRequest);
+        assertThat(refreshTokenStore.existsValidToken(
+                target.getId(),
+                targetRefreshToken
+        )).isTrue();
 
         // When & Then
         mockMvc.perform(patch("/api/users/{userId}/locked", target.getId())
@@ -530,7 +560,10 @@ class UserControllerIntegrationTest {
 
         User updated = userRepository.findById(target.getId()).orElseThrow();
         assertThat(updated.isLocked()).isTrue();
-        assertThat(refreshTokenRepository.findByUser_Id(target.getId())).isEmpty();
+        assertThat(refreshTokenStore.existsValidToken(
+                target.getId(),
+                targetRefreshToken
+        )).isFalse();
     }
 
     @Test
