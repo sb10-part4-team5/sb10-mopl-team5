@@ -27,6 +27,9 @@ public class ContentElasticsearchListener {
     @Async("outboxEventWorker")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(ContentUpsertedEvent event) {
+        if (event.contentIds() == null || event.contentIds().isEmpty()) {
+            return;
+        }
         List<Content> contents = contentRepository.findAllWithStatsAndTagsByIdIn(event.contentIds());
         List<ContentDocument> documents = contents.stream()
                 .map(contentMapper::toDocument)

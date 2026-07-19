@@ -77,6 +77,32 @@ class ContentElasticsearchListenerTest {
     }
 
     @Test
+    @DisplayName("contentIds가 비어있으면 조회 자체를 시도하지 않고 건너뛴다")
+    void handle_upsertedEvent_skipsWhenContentIdsEmpty() {
+        // given
+        ContentUpsertedEvent event = new ContentUpsertedEvent(List.of());
+
+        // when
+        listener.handle(event);
+
+        // then
+        verifyNoInteractions(contentRepository, contentDocumentRepository);
+    }
+
+    @Test
+    @DisplayName("contentIds가 null이면 조회 자체를 시도하지 않고 건너뛴다")
+    void handle_upsertedEvent_skipsWhenContentIdsNull() {
+        // given
+        ContentUpsertedEvent event = new ContentUpsertedEvent(null);
+
+        // when
+        listener.handle(event);
+
+        // then
+        verifyNoInteractions(contentRepository, contentDocumentRepository);
+    }
+
+    @Test
     @DisplayName("삭제 이벤트를 받으면 해당 문서를 색인에서 제거한다")
     void handle_deletedEvent_deletesDocument() {
         // given
