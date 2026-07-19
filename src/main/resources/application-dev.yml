@@ -65,4 +65,4 @@ logging:
     com.codeit.team5.mopl: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
-    org.apache.http.wire: DEBUG
+    org.opensearch.client.RestClient: DEBUG

@@ -111,6 +111,8 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy 'jacocoTestReport'
+    // ElasticsearchRepository 빈 생성 시 실제 OpenSearch에 인덱스 생성을 시도하는 걸 막는다.
+    environment 'SPRING_DATA_ELASTICSEARCH_SKIP_REPOSITORY_INIT', 'true'
 }
 
 jacoco {
