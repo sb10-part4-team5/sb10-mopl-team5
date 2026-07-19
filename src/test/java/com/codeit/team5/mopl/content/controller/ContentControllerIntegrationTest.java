@@ -9,18 +9,27 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContent;
 import com.codeit.team5.mopl.binarycontent.entity.BinaryContentUploadStatus;
 import com.codeit.team5.mopl.binarycontent.repository.BinaryContentRepository;
 import com.codeit.team5.mopl.content.dto.request.ContentCreateRequest;
+import com.codeit.team5.mopl.content.dto.request.ContentCursorRequest;
 import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
+import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
+import com.codeit.team5.mopl.content.entity.ContentSortByType;
 import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.finder.ContentSearchFinder;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.support.security.IntegrationTestSecuritySupport;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
@@ -32,15 +41,18 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +66,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>썸네일 업로드(S3) 경로는 이 컨트롤러 통합 테스트에서 다루지 않는다.
  * ({@code UserControllerIntegrationTest}와 동일한 컨벤션 — 이미지 업로드/스토리지 검증은 서비스 레벨
  * 통합 테스트의 책임으로 분리한다.)</p>
+ *
+ * <p>키워드 검색(OpenSearch)은 실제 클러스터 대신 {@link ContentSearchFinder}를 목킹해서 검증한다.
+ * 자세한 이유는 해당 필드 선언부 주석 참고.</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -79,6 +94,14 @@ class ContentControllerIntegrationTest {
 
     @Autowired
     private BinaryContentRepository binaryContentRepository;
+
+    // 실제 OpenSearch를 Testcontainers로 띄우는 걸 시도했으나(커스텀 nori 이미지 빌드,
+    // OpenSearchConnectionDetails 수동 등록, 인덱스 부트스트랩까지 필요) 설정 난이도가 높고
+    // 컨텍스트 로딩 자체가 실패해 목킹으로 대체했다. 매칭·정렬·커서 등 검색 로직 자체는
+    // ContentSearchFinderTest(단위 테스트, ElasticsearchOperations 목)에서 검증한다.
+    // TODO: 필요해지면 OpenSearch Testcontainers 재도입 검토.
+    @MockitoBean
+    private ContentSearchFinder contentSearchFinder;
 
     // --- 인증 헬퍼 ---
 
@@ -327,12 +350,18 @@ class ContentControllerIntegrationTest {
     class GetContents {
 
         @Test
-        @DisplayName("타입·키워드 필터로 조회하면 조건에 맞는 콘텐츠만 반환한다")
+        @DisplayName("키워드가 있으면 검색 파인더에 위임하고 그 결과를 그대로 반환한다")
         void list_withFilters() throws Exception {
-            // given
-            persistContent(ContentType.MOVIE, "어벤져스", "히어로", "액션");
-            persistContent(ContentType.MOVIE, "인터스텔라", "우주", "sf");
-            persistContent(ContentType.TV_SERIES, "어벤져스 드라마", null, "액션");
+            // given: 실제 OpenSearch 대신 ContentSearchFinder를 목킹한다.
+            // 검색 자체(매칭·정렬·커서)는 ContentSearchFinderTest에서 검증하고,
+            // 여기서는 HTTP 파라미터가 ContentCursorRequest로 정확히 바인딩되어
+            // 검색 파인더로 위임되고 그 응답이 그대로 직렬화되는지만 확인한다.
+            ContentResponse avengers = new ContentResponse(
+                    UUID.randomUUID(), ContentType.MOVIE, "어벤져스", "히어로",
+                    null, List.of("액션"), 0.0, 0, 0);
+            CursorResponse<ContentResponse> searchResult = new CursorResponse<>(
+                    List.of(avengers), null, null, false, 1L, "createdAt", "DESCENDING");
+            when(contentSearchFinder.search(any(ContentCursorRequest.class))).thenReturn(searchResult);
 
             // when & then
             mockMvc.perform(get("/api/contents")
@@ -349,6 +378,14 @@ class ContentControllerIntegrationTest {
                     .andExpect(jsonPath("$.hasNext").value(false))
                     .andExpect(jsonPath("$.sortBy").value("createdAt"))
                     .andExpect(jsonPath("$.sortDirection").value("DESCENDING"));
+
+            ArgumentCaptor<ContentCursorRequest> requestCaptor = ArgumentCaptor.forClass(ContentCursorRequest.class);
+            verify(contentSearchFinder).search(requestCaptor.capture());
+            ContentCursorRequest usedRequest = requestCaptor.getValue();
+            assertThat(usedRequest.typeEqual()).isEqualTo(ContentType.MOVIE);
+            assertThat(usedRequest.keywordLike()).isEqualTo("어벤져스");
+            assertThat(usedRequest.sortBy()).isEqualTo(ContentSortByType.CREATED_AT);
+            assertThat(usedRequest.sortDirection()).isEqualTo(Sort.Direction.DESC);
         }
 
         @Test
