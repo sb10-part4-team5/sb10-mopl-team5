@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.item.Chunk;
@@ -63,6 +64,8 @@ class ContentItemWriterTest {
                 ContentSource.TMDB, "1", null, "{}");
         Content content2 = Content.createByExternalSource(ContentType.MOVIE, "영화2", "desc",
                 ContentSource.TMDB, "2", null, "{}");
+        ReflectionTestUtils.setField(content1, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(content2, "id", UUID.randomUUID());
         ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of());
         ContentWithMetaData item2 = new ContentWithMetaData(content2, null, List.of());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
@@ -75,7 +78,10 @@ class ContentItemWriterTest {
         // then
         verify(contentRepository).saveAll(anyList());
         verify(contentStatsRepository).saveAll(anyList());
-        verify(eventPublisher).publishEvent(any(ContentUpsertedEvent.class));
+
+        ArgumentCaptor<ContentUpsertedEvent> eventCaptor = ArgumentCaptor.forClass(ContentUpsertedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().contentIds()).containsExactly(content1.getId(), content2.getId());
     }
 
     @Test

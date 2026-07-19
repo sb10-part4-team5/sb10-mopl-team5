@@ -8,6 +8,7 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.opensearch.data.client.orhlc.NativeSearchQueryBuilder;
 import org.opensearch.index.query.BoolQueryBuilder;
@@ -94,7 +95,7 @@ public class ContentSearchFinder {
         return tags.stream()
                 .map(String::trim)
                 .filter(tag -> !tag.isEmpty())
-                .map(String::toLowerCase)
+                .map(tag -> tag.toLowerCase(Locale.ROOT))
                 .toList();
     }
 
