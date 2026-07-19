@@ -1,6 +1,6 @@
 package com.codeit.team5.mopl.auth.service;
 
-import com.codeit.team5.mopl.auth.exception.RefreshTokenSaveException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenStoreException;
 import com.codeit.team5.mopl.auth.support.RefreshTokenHasher;
 import java.time.Instant;
 import java.util.List;
@@ -65,14 +65,12 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
             );
 
             if (!isSuccess(result)) {
-                throw new RefreshTokenSaveException(
-                        new IllegalStateException(
-                                "Refresh token expiration time has already passed"
-                        )
+                throw new RefreshTokenStoreException(
+                        "리프레시 토큰 저장에 실패했습니다."
                 );
             }
         } catch (DataAccessException e) {
-            throw new RefreshTokenSaveException(e);
+            throw new RefreshTokenStoreException(e);
         }
     }
 
@@ -90,14 +88,18 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
         String key = createKey(requiredUserId);
         String tokenHash = refreshTokenHasher.hash(requiredRawToken);
 
-        Long result = redisTemplate.execute(
-                EXISTS_VALID_SCRIPT,
-                List.of(key),
-                Long.toString(now.toEpochMilli()),
-                tokenHash
-        );
+        try {
+            Long result = redisTemplate.execute(
+                    EXISTS_VALID_SCRIPT,
+                    List.of(key),
+                    Long.toString(now.toEpochMilli()),
+                    tokenHash
+            );
 
-        return isSuccess(result);
+            return isSuccess(result);
+        } catch (DataAccessException e) {
+            throw new RefreshTokenStoreException(e);
+        }
     }
 
     @Override
@@ -126,16 +128,20 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
         String oldTokenHash = refreshTokenHasher.hash(requiredOldToken);
         String newTokenHash = refreshTokenHasher.hash(requiredNewToken);
 
-        Long result = redisTemplate.execute(
-                ROTATE_IF_VALID_SCRIPT,
-                List.of(key),
-                Long.toString(now.toEpochMilli()),
-                oldTokenHash,
-                newTokenHash,
-                Long.toString(requiredExpiresAt.toEpochMilli())
-        );
+        try {
+            Long result = redisTemplate.execute(
+                    ROTATE_IF_VALID_SCRIPT,
+                    List.of(key),
+                    Long.toString(now.toEpochMilli()),
+                    oldTokenHash,
+                    newTokenHash,
+                    Long.toString(requiredExpiresAt.toEpochMilli())
+            );
 
-        return isSuccess(result);
+            return isSuccess(result);
+        } catch (DataAccessException e) {
+            throw new RefreshTokenStoreException(e);
+        }
     }
 
     @Override
@@ -143,7 +149,11 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
         UUID requiredUserId =
                 Objects.requireNonNull(userId, "userId must not be null");
 
-        redisTemplate.delete(createKey(requiredUserId));
+        try {
+            redisTemplate.delete(createKey(requiredUserId));
+        } catch (DataAccessException e) {
+            throw new RefreshTokenStoreException(e);
+        }
     }
 
     @Override

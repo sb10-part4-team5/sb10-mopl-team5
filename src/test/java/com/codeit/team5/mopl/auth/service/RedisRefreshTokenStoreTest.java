@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -12,7 +13,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codeit.team5.mopl.TestcontainersConfiguration;
-import com.codeit.team5.mopl.auth.exception.RefreshTokenSaveException;
+import com.codeit.team5.mopl.auth.exception.RefreshTokenStoreException;
 import com.codeit.team5.mopl.auth.support.RefreshTokenHasher;
 import java.time.Instant;
 import java.util.HashSet;
@@ -35,6 +36,7 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
@@ -107,23 +109,31 @@ class RedisRefreshTokenStoreTest {
     }
 
     @Test
-    @DisplayName("저장 Script가 0을 반환하면 RefreshTokenSaveException을 던진다")
-    void save_scriptReturnsZero_throwsRefreshTokenSaveException() {
+    @DisplayName("저장 Script가 0을 반환하면 RefreshTokenStoreException을 던진다")
+    void save_scriptReturnsZero_throwsRefreshTokenStoreException() {
         // Given
         when(refreshTokenHasher.hash(RAW_TOKEN)).thenReturn(TOKEN_HASH);
         stubScriptResult(0L);
 
         // When & Then
-        assertThatThrownBy(() -> refreshTokenStore.save(
-                UUID.randomUUID(),
-                RAW_TOKEN,
-                Instant.now().plusSeconds(600)
-        )).isInstanceOf(RefreshTokenSaveException.class);
+        RefreshTokenStoreException exception = catchThrowableOfType(
+                () -> refreshTokenStore.save(
+                        UUID.randomUUID(),
+                        RAW_TOKEN,
+                        Instant.now().plusSeconds(600)
+                ),
+                RefreshTokenStoreException.class
+        );
+        assertThat(exception.getMessage())
+                .isEqualTo("리프레시 토큰 저장에 실패했습니다.");
+        assertThat(exception.getStatus())
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(exception.getCause()).isNull();
     }
 
     @Test
-    @DisplayName("Redis 저장 중 DataAccessException이 발생하면 RefreshTokenSaveException으로 변환한다")
-    void save_redisFailure_throwsRefreshTokenSaveException() {
+    @DisplayName("Redis 저장 중 DataAccessException이 발생하면 RefreshTokenStoreException으로 변환한다")
+    void save_redisFailure_throwsRefreshTokenStoreException() {
         // Given
         DataAccessResourceFailureException redisException =
                 new DataAccessResourceFailureException("Redis unavailable");
@@ -137,13 +147,19 @@ class RedisRefreshTokenStoreTest {
         )).thenThrow(redisException);
 
         // When & Then
-        assertThatThrownBy(() -> refreshTokenStore.save(
-                UUID.randomUUID(),
-                RAW_TOKEN,
-                Instant.now().plusSeconds(600)
-        ))
-                .isInstanceOf(RefreshTokenSaveException.class)
-                .hasCause(redisException);
+        RefreshTokenStoreException exception = catchThrowableOfType(
+                () -> refreshTokenStore.save(
+                        UUID.randomUUID(),
+                        RAW_TOKEN,
+                        Instant.now().plusSeconds(600)
+                ),
+                RefreshTokenStoreException.class
+        );
+        assertThat(exception.getMessage())
+                .isEqualTo("리프레시 토큰 저장소 처리 중 오류가 발생했습니다.");
+        assertThat(exception.getStatus())
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(exception.getCause()).isSameAs(redisException);
     }
 
     @Test
@@ -251,8 +267,8 @@ class RedisRefreshTokenStoreTest {
     }
 
     @Test
-    @DisplayName("유효 토큰 조회 중 DataAccessException이 발생하면 그대로 전파한다")
-    void existsValidToken_redisFailure_propagatesException() {
+    @DisplayName("유효 토큰 조회 중 DataAccessException이 발생하면 RefreshTokenStoreException으로 변환한다")
+    void existsValidToken_redisFailure_throwsRefreshTokenStoreException() {
         // Given
         DataAccessResourceFailureException redisException =
                 new DataAccessResourceFailureException("Redis unavailable");
@@ -265,9 +281,15 @@ class RedisRefreshTokenStoreTest {
         )).thenThrow(redisException);
 
         // When & Then
-        assertThatThrownBy(
-                () -> refreshTokenStore.existsValidToken(UUID.randomUUID(), RAW_TOKEN)
-        ).isSameAs(redisException);
+        RefreshTokenStoreException exception = catchThrowableOfType(
+                () -> refreshTokenStore.existsValidToken(UUID.randomUUID(), RAW_TOKEN),
+                RefreshTokenStoreException.class
+        );
+        assertThat(exception.getMessage())
+                .isEqualTo("리프레시 토큰 저장소 처리 중 오류가 발생했습니다.");
+        assertThat(exception.getStatus())
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(exception.getCause()).isSameAs(redisException);
     }
 
     @Test
@@ -380,8 +402,8 @@ class RedisRefreshTokenStoreTest {
     }
 
     @Test
-    @DisplayName("토큰 회전 중 DataAccessException이 발생하면 그대로 전파한다")
-    void rotateIfValid_redisFailure_propagatesException() {
+    @DisplayName("토큰 회전 중 DataAccessException이 발생하면 RefreshTokenStoreException으로 변환한다")
+    void rotateIfValid_redisFailure_throwsRefreshTokenStoreException() {
         // Given
         DataAccessResourceFailureException redisException =
                 new DataAccessResourceFailureException("Redis unavailable");
@@ -396,7 +418,15 @@ class RedisRefreshTokenStoreTest {
         )).thenThrow(redisException);
 
         // When & Then
-        assertThatThrownBy(this::rotateWithValidArguments).isSameAs(redisException);
+        RefreshTokenStoreException exception = catchThrowableOfType(
+                this::rotateWithValidArguments,
+                RefreshTokenStoreException.class
+        );
+        assertThat(exception.getMessage())
+                .isEqualTo("리프레시 토큰 저장소 처리 중 오류가 발생했습니다.");
+        assertThat(exception.getStatus())
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(exception.getCause()).isSameAs(redisException);
     }
 
     @Test
