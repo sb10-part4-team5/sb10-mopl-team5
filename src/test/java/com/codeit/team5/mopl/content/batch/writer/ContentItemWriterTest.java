@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.item.Chunk;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,13 +43,15 @@ class ContentItemWriterTest {
     private BinaryContentRepository binaryContentRepository;
     @Mock
     private TagRepository tagRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private ContentItemWriter writer;
 
     @BeforeEach
     void setUp() {
         writer = new ContentItemWriter(contentRepository, contentStatsRepository,
-                binaryContentRepository, tagRepository);
+                binaryContentRepository, tagRepository, eventPublisher);
     }
 
     @Test

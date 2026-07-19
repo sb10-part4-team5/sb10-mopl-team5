@@ -30,6 +30,7 @@ import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.content.finder.ContentCacheFinder;
+import com.codeit.team5.mopl.content.finder.ContentSearchFinder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -67,6 +68,9 @@ class ContentServiceTest {
 
     @Mock
     private ContentCacheFinder contentCacheFinder;
+
+    @Mock
+    private ContentSearchFinder contentSearchFinder;
 
     @InjectMocks
     private ContentService contentService;
@@ -376,7 +380,30 @@ class ContentServiceTest {
         verify(contentRepository).findContents(request, 11);
         verify(contentRepository).countContents(request);
         verify(contentMapper).toCursor(contents, false, 2L, ContentSortByType.CREATED_AT, Sort.Direction.DESC);
-        verifyNoInteractions(contentCacheFinder);
+        verifyNoInteractions(contentCacheFinder, contentSearchFinder);
+    }
+
+    @Test
+    @DisplayName("키워드가 있으면 검색 파인더에 위임한다")
+    void findContents_keywordSearch_delegatesToSearchFinder() {
+        // given
+        ContentCursorRequest request = new ContentCursorRequest(
+                null, "영화", null, null, null,
+                20, Sort.Direction.DESC, ContentSortByType.WATCHER_COUNT
+        );
+        CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
+                List.of(), null, null, false, 0L, "watcherCount", "DESCENDING"
+        );
+
+        when(contentSearchFinder.search(request)).thenReturn(expectedResponse);
+
+        // when
+        CursorResponse<ContentResponse> result = contentService.findContents(request);
+
+        // then
+        assertThat(result).isSameAs(expectedResponse);
+        verify(contentSearchFinder).search(request);
+        verifyNoInteractions(contentRepository, contentMapper, contentCacheFinder);
     }
 
     @Test
@@ -400,7 +427,7 @@ class ContentServiceTest {
         // then
         assertThat(result).isSameAs(expectedResponse);
         verify(contentCacheFinder).getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC);
-        verifyNoInteractions(contentRepository, contentMapper);
+        verifyNoInteractions(contentRepository, contentMapper, contentSearchFinder);
     }
 
     @Test
@@ -439,9 +466,9 @@ class ContentServiceTest {
     @Test
     @DisplayName("조회 결과가 없으면 빈 목록과 totalCount=0을 반환한다")
     void findContents_emptyResult() {
-        // given
+        // given: 키워드 없이 타입 필터만 있어 캐시 첫 페이지 조건(isCacheableFirstPage)에서 제외되고 DB로 직접 조회한다
         ContentCursorRequest request = new ContentCursorRequest(
-                ContentType.MOVIE, "존재하지않는키워드", null, null, null,
+                ContentType.MOVIE, null, null, null, null,
                 20, Sort.Direction.DESC, ContentSortByType.CREATED_AT
         );
         CursorResponse<ContentResponse> expectedResponse = new CursorResponse<>(
