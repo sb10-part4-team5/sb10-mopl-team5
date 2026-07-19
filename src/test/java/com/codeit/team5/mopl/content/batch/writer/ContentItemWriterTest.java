@@ -15,6 +15,7 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.event.ContentUpsertedEvent;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
@@ -74,6 +75,7 @@ class ContentItemWriterTest {
         // then
         verify(contentRepository).saveAll(anyList());
         verify(contentStatsRepository).saveAll(anyList());
+        verify(eventPublisher).publishEvent(any(ContentUpsertedEvent.class));
     }
 
     @Test
@@ -129,6 +131,7 @@ class ContentItemWriterTest {
         // then
         verify(contentRepository, never()).findExternalIdsBySourceAndExternalIdIn(any(), anyList());
         verify(contentRepository, never()).saveAll(anyList());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -151,6 +154,7 @@ class ContentItemWriterTest {
         verify(contentRepository, never()).saveAll(anyList());
         verify(contentStatsRepository, never()).saveAll(anyList());
         verify(binaryContentRepository, never()).saveAll(anyList());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

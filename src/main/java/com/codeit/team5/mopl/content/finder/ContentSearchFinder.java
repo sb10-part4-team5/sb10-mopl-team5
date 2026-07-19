@@ -91,7 +91,11 @@ public class ContentSearchFinder {
     }
 
     private List<String> normalizeTags(List<String> tags) {
-        return tags.stream().map(String::trim).map(String::toLowerCase).toList();
+        return tags.stream()
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .map(String::toLowerCase)
+                .toList();
     }
 
     private List<Object> toSearchAfter(ContentCursorRequest request) {

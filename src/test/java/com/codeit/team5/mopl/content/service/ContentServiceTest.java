@@ -155,7 +155,11 @@ class ContentServiceTest {
         // then
         assertThat(result).isSameAs(expectedResponse);
         verifyNoInteractions(binaryContentService);
-        verify(eventPublisher).publishEvent(any(ContentUpsertedEvent.class));
+
+        ArgumentCaptor<Content> contentCaptor = ArgumentCaptor.forClass(Content.class);
+        verify(contentRepository).save(contentCaptor.capture());
+        Content savedContent = contentCaptor.getValue();
+        verify(eventPublisher).publishEvent(new ContentUpsertedEvent(List.of(savedContent.getId())));
     }
 
     @Test

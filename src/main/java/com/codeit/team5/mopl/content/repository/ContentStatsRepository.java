@@ -50,6 +50,6 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
         """)
     void increaseWatcherCountById(UUID id);
 
-    @Query("SELECT s.id FROM ContentStats s WHERE s.updatedAt > :since")
+    @Query("SELECT s.id FROM ContentStats s WHERE s.updatedAt >= :since")
     List<UUID> findIdsUpdatedAfter(@Param("since") Instant since);
 }

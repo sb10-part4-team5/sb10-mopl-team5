@@ -32,7 +32,6 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.Query;
 
-@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 class ContentSearchFinderTest {
 
@@ -58,6 +57,7 @@ class ContentSearchFinderTest {
         ContentResponse response1 = contentResponse("영화1");
         ContentResponse response2 = contentResponse("영화2");
 
+        @SuppressWarnings("unchecked")
         SearchHits<ContentDocument> hits = mock(SearchHits.class);
         when(hits.getSearchHits()).thenReturn(List.of(
                 hitOf(document1, 10L, "id-1"),
@@ -96,6 +96,7 @@ class ContentSearchFinderTest {
         ContentDocument document3 = contentDocument("id-3", "영화3");
         Instant lastCreatedAt = Instant.parse("2026-07-01T00:00:00Z");
 
+        @SuppressWarnings("unchecked")
         SearchHits<ContentDocument> hits = mock(SearchHits.class);
         when(hits.getSearchHits()).thenReturn(List.of(
                 hitOf(document1, 1_800_000_000_000L, "id-1"),
@@ -129,6 +130,7 @@ class ContentSearchFinderTest {
         ContentDocument document1 = contentDocument("id-1", "영화1");
         ContentDocument document2 = contentDocument("id-2", "영화2");
 
+        @SuppressWarnings("unchecked")
         SearchHits<ContentDocument> hits = mock(SearchHits.class);
         when(hits.getSearchHits()).thenReturn(List.of(
                 hitOf(document1, 100L, "id-1"),
@@ -155,6 +157,7 @@ class ContentSearchFinderTest {
                 null, "영화", null, "2026-07-01T00:00:00Z", "id-1",
                 2, Sort.Direction.DESC, ContentSortByType.CREATED_AT
         );
+        @SuppressWarnings("unchecked")
         SearchHits<ContentDocument> hits = mock(SearchHits.class);
         when(hits.getSearchHits()).thenReturn(List.of());
         when(hits.getTotalHits()).thenReturn(0L);
