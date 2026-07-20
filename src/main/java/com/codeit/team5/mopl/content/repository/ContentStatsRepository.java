@@ -23,32 +23,33 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
                                  THEN 0.0
                                  ELSE (s.ratingSum + :ratingDelta) / (s.reviewCount + :countDelta)
                             END,
-            s.updatedAt = CURRENT_TIMESTAMP
+            s.updatedAt = :updatedAt
         WHERE s.id = :contentId
         """)
     void applyStatDelta(
         @Param("contentId") UUID contentId,
         @Param("ratingDelta") double ratingDelta,
-        @Param("countDelta") int countDelta
+        @Param("countDelta") int countDelta,
+        @Param("updatedAt") Instant updatedAt
     );
 
     @Modifying
     @Query("""
         update ContentStats s
         set s.watcherCount = s.watcherCount - 1,
-            s.updatedAt = CURRENT_TIMESTAMP
+            s.updatedAt = :updatedAt
         where s.id = :id and s.watcherCount > 0
         """)
-    void decreaseWatcherCountById(UUID id);
+    void decreaseWatcherCountById(@Param("id") UUID id, @Param("updatedAt") Instant updatedAt);
 
     @Modifying
     @Query("""
         update ContentStats s
         set s.watcherCount = s.watcherCount + 1,
-            s.updatedAt = CURRENT_TIMESTAMP
+            s.updatedAt = :updatedAt
         where s.id = :id
         """)
-    void increaseWatcherCountById(UUID id);
+    void increaseWatcherCountById(@Param("id") UUID id, @Param("updatedAt") Instant updatedAt);
 
     @Query("SELECT s.id FROM ContentStats s WHERE s.updatedAt >= :since")
     List<UUID> findIdsUpdatedAfter(@Param("since") Instant since);
