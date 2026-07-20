@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.global.web.ws.stomp.config;
+package com.codeit.team5.mopl.global.infra.redis.config;
 
 import com.codeit.team5.mopl.global.async.MdcTaskDecorator;
 import java.util.concurrent.Executor;
@@ -9,14 +9,14 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @EnableAsync
 @Configuration
-class StompAsyncConfig {
+public class RedisMessageListenerAsyncConfig {
 
-    @Bean("stompWorker")
-    public Executor stompWorker(ThreadPoolTaskExecutorBuilder builder) {
+    @Bean("redisMessageWorker")
+    public Executor redisMessageWorker(ThreadPoolTaskExecutorBuilder builder) {
         return builder.corePoolSize(10)
                 .maxPoolSize(30)
                 .queueCapacity(20)
-                .threadNamePrefix("stomp-Async-")
+                .threadNamePrefix("redis-message-listener-async-")
                 .taskDecorator(new MdcTaskDecorator())
                 .build();
     }
