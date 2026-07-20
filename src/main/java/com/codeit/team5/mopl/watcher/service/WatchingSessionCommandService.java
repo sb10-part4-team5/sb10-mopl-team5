@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@Transactional
 @RequiredArgsConstructor
 @ExecutionTracer(verbose = true)
 public class WatchingSessionCommandService {
@@ -31,6 +30,7 @@ public class WatchingSessionCommandService {
     private final ContentRepository contentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional
     public void join(UUID contentId, UUID watcherId) {
         if (repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
             return;
@@ -45,6 +45,7 @@ public class WatchingSessionCommandService {
         eventPublisher.publishEvent(new WatcherJoinedEvent(contentId, watcherId));
     }
 
+    @Transactional
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
     public void left(UUID contentId, UUID watcherId) {
         if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {

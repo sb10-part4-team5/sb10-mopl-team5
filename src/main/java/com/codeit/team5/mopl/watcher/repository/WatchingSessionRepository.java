@@ -10,7 +10,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import org.springframework.data.domain.Range;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations.TypedTuple;
 import org.springframework.stereotype.Repository;
@@ -71,11 +75,13 @@ public class WatchingSessionRepository extends RedisRepository<WatchingSession> 
      * 단건 Key 조회 없이 바로 객체를 생성할 수 있습니다.
      */
     public List<WatchingSession> findWatchingSessionsByContentId(UUID contentId, int limit,
-            Double maxScore) {
+            Range<Double> scoreRange) {
         String sortedSetKey = String.format(CONTENT_WATCHERS_KEY, contentId);
 
+        double minScore = scoreRange.getLowerBound().getValue().orElse(Double.MIN_VALUE);
+        double maxScore = scoreRange.getUpperBound().getValue().orElse(Double.MAX_VALUE);
         Set<TypedTuple<String>> members = stringRedisTemplate.opsForZSet()
-                .reverseRangeByScoreWithScores(sortedSetKey, 0.0, maxScore, 0, limit);
+                .reverseRangeByScoreWithScores(sortedSetKey, minScore, maxScore, 0, limit);
 
         if (members == null || members.isEmpty()) {
             return Collections.emptyList();
@@ -106,9 +112,24 @@ public class WatchingSessionRepository extends RedisRepository<WatchingSession> 
      * 일정 시간이 지난 세션들을 ZSet에서 일괄 정리합니다.
      */
     public void cleanupOldSessions(long thresholdMillis) {
-        Set<String> keys = stringRedisTemplate.keys(String.format(CONTENT_WATCHERS_KEY, "*"));
-        keys.forEach(key -> stringRedisTemplate.opsForZSet()
-                .removeRangeByScore(key, 0, thresholdMillis));
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(String.format(CONTENT_WATCHERS_KEY, "*"))
+                .count(100) // 한 번에 가져올 키의 개수 (배치 사이즈)
+                .build();
+
+        stringRedisTemplate.execute((RedisConnection connection) -> {
+            try (Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
+                while (cursor.hasNext()) {
+                    byte[] key = cursor.next();
+                    // opsForZSet() 호출 시 새로운 커넥션을 가져와 데드락이 발생할 수 있으므로, 
+                    // 현재 커넥션의 zSetCommands()를 직접 사용하여 처리합니다.
+                    connection.zSetCommands().zRemRangeByScore(key, 0, thresholdMillis);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Redis scan error during cleanupOldSessions", e);
+            }
+            return null;
+        });
     }
 
     /**
@@ -117,13 +138,13 @@ public class WatchingSessionRepository extends RedisRepository<WatchingSession> 
     public void deleteAllByContentId(UUID contentId) {
         String sortedSetKey = String.format(CONTENT_WATCHERS_KEY, contentId);
         Set<String> members = stringRedisTemplate.opsForZSet().range(sortedSetKey, 0, -1);
-        if (members == null || members.isEmpty()) {
-            stringRedisTemplate.delete(sortedSetKey);
+        stringRedisTemplate.delete(sortedSetKey);
+        if (members != null && !members.isEmpty()) {
+            List<String> singleKeys = members.stream()
+                    .map(watcherId -> WATCHER_SESSION_KEY + watcherId)
+                    .toList();
+            stringRedisTemplate.delete(singleKeys);
         }
-        List<String> singleKeys = members.stream()
-                .map(watcherId -> WATCHER_SESSION_KEY + watcherId)
-                .toList();
-        stringRedisTemplate.delete(singleKeys);
     }
 
     private WatchingSession getWatchingSession(UUID contentId,

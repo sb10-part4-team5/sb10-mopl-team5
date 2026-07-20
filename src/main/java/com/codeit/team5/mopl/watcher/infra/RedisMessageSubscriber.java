@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.watcher.infra;
 
+import java.nio.charset.StandardCharsets;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
@@ -22,7 +23,7 @@ public class RedisMessageSubscriber implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
-            String body = new String(message.getBody());
+            String body = new String(message.getBody(), StandardCharsets.UTF_8);
             WatchingSessionRedisMessage redisMessage = objectMapper.readValue(body, WatchingSessionRedisMessage.class);
             payloadSender.send(redisMessage.contentId(), redisMessage.payload());
             log.debug("Received and sent watching session message for content: {}", redisMessage.contentId());

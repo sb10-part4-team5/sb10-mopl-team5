@@ -1,11 +1,13 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.store;
 
-import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,8 +42,16 @@ public class WebSocketSessionStore {
         String key = getKey(userId);
         try {
             String value = objectMapper.writeValueAsString(stompDestination);
-            stringRedisTemplate.opsForHash().put(key, subscriptionId, value);
-            stringRedisTemplate.expire(key, TTL_HOURS, TimeUnit.HOURS);
+            stringRedisTemplate.executePipelined(new SessionCallback<Object>() {
+                @Override
+                public <K, V> Object execute(RedisOperations<K, V> operations) {
+                    @SuppressWarnings("unchecked")
+                    RedisOperations<String, String> ops = (RedisOperations<String, String>) operations;
+                    ops.opsForHash().put(key, subscriptionId, value);
+                    ops.expire(key, TTL_HOURS, TimeUnit.HOURS);
+                    return null;
+                }
+            });
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize StompDestination", e);
         }
@@ -49,8 +59,16 @@ public class WebSocketSessionStore {
 
     public void unsubscribe(UUID userId, String subscriptionId) {
         String key = getKey(userId);
-        stringRedisTemplate.opsForHash().delete(key, subscriptionId);
-        stringRedisTemplate.expire(key, TTL_HOURS, TimeUnit.HOURS);
+        stringRedisTemplate.executePipelined(new SessionCallback<Object>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> operations) {
+                @SuppressWarnings("unchecked")
+                RedisOperations<String, String> ops = (RedisOperations<String, String>) operations;
+                ops.opsForHash().delete(key, subscriptionId);
+                ops.expire(key, TTL_HOURS, TimeUnit.HOURS);
+                return null;
+            }
+        });
     }
 
     public void disconnect(UUID userId) {
@@ -86,14 +104,14 @@ public class WebSocketSessionStore {
         }).toList();
     }
 
-    public record StompDestination(String destinationPattern, UUID targetId) implements Serializable {
+    public record StompDestination(String destinationPattern, UUID targetId) {
 
-        @com.fasterxml.jackson.annotation.JsonIgnore
+        @JsonIgnore
         public String getPattern() {
             return destinationPattern.replace("{id}", "*");
         }
 
-        @com.fasterxml.jackson.annotation.JsonIgnore
+        @JsonIgnore
         public String getResolvedDestination() {
             return this.destinationPattern.replace("{id}", this.targetId.toString());
         }

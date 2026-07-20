@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Range;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,12 +51,13 @@ public class WatchingSessionQueryService {
     public CursorResponse<WatchingSessionResponse> findCursorByContentId(UUID contentId,
             WatchingSessionCursorRequest request) {
 
-        Double maxScore = request.cursor() != null ? (double) request.cursor().toEpochMilli()
-                : Double.MAX_VALUE;
+        Range<Double> scoreRange = request.cursor() != null
+                ? Range.rightOpen(0.0, (double) request.cursor().toEpochMilli())
+                : Range.closed(0.0, Double.MAX_VALUE);
         int fetchLimit = request.limit() + 1;
 
         List<WatchingSession> sessions = repository.findWatchingSessionsByContentId(contentId,
-                fetchLimit, maxScore);
+                fetchLimit, scoreRange);
 
         boolean hasNext = sessions.size() > request.limit();
         List<WatchingSession> resultSessions =
