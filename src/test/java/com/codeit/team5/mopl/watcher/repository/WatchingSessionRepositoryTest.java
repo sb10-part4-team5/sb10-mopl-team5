@@ -76,18 +76,17 @@ class WatchingSessionRepositoryTest {
         assertThat(result).isEmpty();
     }
 
-    @Test
+        @Test
     @DisplayName("findWatchingSessionsByContentId - 커서를 이용해 이전 시점의 세션들을 조회한다")
-    void findWatchingSessionsByContentId_cursor_success() throws InterruptedException {
+    void findWatchingSessionsByContentId_cursor_success() {
         UUID contentId = UUID.randomUUID();
+        Instant now = Instant.now();
 
-        // 3개의 세션을 시간차를 두고 저장 (score가 다르게 저장됨)
-        repository.save(new WatchingSession(UUID.randomUUID(), contentId, Instant.now().minusSeconds(30)));
-        Thread.sleep(5);
-        repository.save(new WatchingSession(UUID.randomUUID(), contentId, Instant.now().minusSeconds(20)));
-        Thread.sleep(5);
+        // 3개의 세션을 명시적인 Timestamp로 저장 (score가 다르게 저장됨)
+        repository.save(new WatchingSession(UUID.randomUUID(), contentId, now.minusSeconds(30)));
+        repository.save(new WatchingSession(UUID.randomUUID(), contentId, now.minusSeconds(20)));
 
-        Instant lastTime = Instant.now().minusSeconds(10);
+        Instant lastTime = now.minusSeconds(10);
         WatchingSession lastSession = new WatchingSession(UUID.randomUUID(), contentId, lastTime);
         repository.save(lastSession);
 
