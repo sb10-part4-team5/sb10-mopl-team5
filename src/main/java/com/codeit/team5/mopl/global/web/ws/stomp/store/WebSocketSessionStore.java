@@ -6,13 +6,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.StringRedisConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class WebSocketSessionStore {
 
@@ -42,32 +44,25 @@ public class WebSocketSessionStore {
         String key = getKey(userId);
         try {
             String value = objectMapper.writeValueAsString(stompDestination);
-            stringRedisTemplate.executePipelined(new SessionCallback<Object>() {
-                @Override
-                public <K, V> Object execute(RedisOperations<K, V> operations) {
-                    @SuppressWarnings("unchecked")
-                    RedisOperations<String, String> ops = (RedisOperations<String, String>) operations;
-                    ops.opsForHash().put(key, subscriptionId, value);
-                    ops.expire(key, TTL_HOURS, TimeUnit.HOURS);
-                    return null;
-                }
+            stringRedisTemplate.executePipelined((RedisConnection connection) -> {
+                StringRedisConnection stringConn = (StringRedisConnection) connection;
+                stringConn.hSet(key, subscriptionId, value);
+                stringConn.expire(key, TTL_HOURS * 3600); // expire in seconds
+                return null;
             });
         } catch (JsonProcessingException e) {
+            log.error("Failed to serialize StompDestination", e);
             throw new RuntimeException("Failed to serialize StompDestination", e);
         }
     }
 
     public void unsubscribe(UUID userId, String subscriptionId) {
         String key = getKey(userId);
-        stringRedisTemplate.executePipelined(new SessionCallback<Object>() {
-            @Override
-            public <K, V> Object execute(RedisOperations<K, V> operations) {
-                @SuppressWarnings("unchecked")
-                RedisOperations<String, String> ops = (RedisOperations<String, String>) operations;
-                ops.opsForHash().delete(key, subscriptionId);
-                ops.expire(key, TTL_HOURS, TimeUnit.HOURS);
-                return null;
-            }
+        stringRedisTemplate.executePipelined((RedisConnection connection) -> {
+            StringRedisConnection stringConn = (StringRedisConnection) connection;
+            stringConn.hDel(key, subscriptionId);
+            stringConn.expire(key, TTL_HOURS * 3600); // expire in seconds
+            return null;
         });
     }
 
@@ -83,6 +78,7 @@ public class WebSocketSessionStore {
         try {
             return Optional.of(objectMapper.readValue(value.toString(), StompDestination.class));
         } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize StompDestination", e);
             throw new RuntimeException("Failed to deserialize StompDestination", e);
         }
     }
@@ -99,9 +95,10 @@ public class WebSocketSessionStore {
             try {
                 return objectMapper.readValue(v.toString(), StompDestination.class);
             } catch (JsonProcessingException e) {
-                throw new RuntimeException("Failed to deserialize StompDestination", e);
+                log.warn("Failed to deserialize StompDestination for key={}, skipping entry", getKey(userId), e);
+                return null;
             }
-        }).toList();
+        }).filter(java.util.Objects::nonNull).toList();
     }
 
     public record StompDestination(String destinationPattern, UUID targetId) {

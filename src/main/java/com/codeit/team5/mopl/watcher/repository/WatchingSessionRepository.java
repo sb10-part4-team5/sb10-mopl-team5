@@ -50,6 +50,13 @@ public class WatchingSessionRepository {
      */
     public void save(WatchingSession session) {
         String singleKey = WATCHER_SESSION_KEY + session.watcherId();
+        
+        WatchingSession existing = redisTemplate.opsForValue().get(singleKey);
+        if (existing != null && !existing.contentId().equals(session.contentId())) {
+            String oldSortedSetKey = String.format(CONTENT_WATCHERS_KEY, existing.contentId());
+            stringRedisTemplate.opsForZSet().remove(oldSortedSetKey, session.watcherId().toString());
+        }
+
         String sortedSetKey = String.format(CONTENT_WATCHERS_KEY, session.contentId());
 
         // 단건 저장 (Value 형태) - 12시간 TTL 부여
@@ -69,7 +76,10 @@ public class WatchingSessionRepository {
         String singleKey = WATCHER_SESSION_KEY + watcherId;
         String sortedSetKey = String.format(CONTENT_WATCHERS_KEY, contentId);
 
-        redisTemplate.delete(singleKey);
+        WatchingSession existing = redisTemplate.opsForValue().get(singleKey);
+        if (existing != null && existing.contentId().equals(contentId)) {
+            redisTemplate.delete(singleKey);
+        }
 
         stringRedisTemplate.opsForZSet().remove(sortedSetKey, watcherId.toString());
     }
@@ -90,10 +100,27 @@ public class WatchingSessionRepository {
             Range<Double> scoreRange) {
         String sortedSetKey = String.format(CONTENT_WATCHERS_KEY, contentId);
 
-        double minScore = scoreRange.getLowerBound().getValue().orElse(Double.MIN_VALUE);
-        double maxScore = scoreRange.getUpperBound().getValue().orElse(Double.MAX_VALUE);
-        Set<TypedTuple<String>> members = stringRedisTemplate.opsForZSet()
-                .reverseRangeByScoreWithScores(sortedSetKey, minScore, maxScore, 0, limit);
+        Set<TypedTuple<String>> members = stringRedisTemplate.execute((RedisConnection connection) -> {
+            byte[] rawKey = stringRedisTemplate.getStringSerializer().serialize(sortedSetKey);
+            Set<org.springframework.data.redis.connection.zset.Tuple> tuples = 
+                connection.zSetCommands().zRevRangeByScoreWithScores(
+                    rawKey, 
+                    scoreRange, 
+                    org.springframework.data.redis.connection.RedisZSetCommands.Limit.limit().count(limit)
+                );
+                
+            if (tuples == null) {
+                return Collections.<TypedTuple<String>>emptySet();
+            }
+            
+            Set<TypedTuple<String>> result = tuples.stream()
+                    .map(tuple -> new org.springframework.data.redis.core.DefaultTypedTuple<>(
+                            stringRedisTemplate.getStringSerializer().deserialize(tuple.getValue()),
+                            tuple.getScore()
+                    ))
+                    .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+            return result;
+        });
 
         if (members == null || members.isEmpty()) {
             return Collections.emptyList();

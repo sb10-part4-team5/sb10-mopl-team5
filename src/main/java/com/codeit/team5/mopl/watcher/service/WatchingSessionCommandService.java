@@ -45,15 +45,14 @@ public class WatchingSessionCommandService {
         eventPublisher.publishEvent(new WatcherJoinedEvent(contentId, watcherId));
     }
 
-    @Transactional
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
-    public void left(UUID contentId, UUID watcherId) {
-        if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
-            return;
+        public void left(UUID contentId, UUID watcherId) {
+            if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
+                return;
+            }
+            repository.deleteByContentIdAndWatcherId(contentId, watcherId);
+            eventPublisher.publishEvent(new WatcherLeftEvent(contentId));
         }
-        repository.deleteByContentIdAndWatcherId(contentId, watcherId);
-        eventPublisher.publishEvent(new WatcherLeftEvent(contentId));
-    }
 
     @Retryable(maxAttempts = 3,backoff = @Backoff(delay = 1000))
     public void clearContentSessions(UUID contentId) {

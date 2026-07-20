@@ -94,6 +94,10 @@ public class WatchingSessionQueryService {
 
         WatchingSessionResponse response = findByWatcherId(watcherId);
         long watcherCount = repository.countByContentId(session.contentId());
+        
+        if (status == WatcherStatus.LEAVE) {
+            watcherCount = Math.max(0, watcherCount - 1);
+        }
 
         return new WatchingSessionPayload(status, response, watcherCount);
     }
