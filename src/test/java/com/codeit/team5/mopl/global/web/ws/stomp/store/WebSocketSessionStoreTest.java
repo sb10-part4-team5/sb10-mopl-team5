@@ -1,9 +1,7 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.store;
 
 import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -11,14 +9,26 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.data.redis.DataRedisTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.codeit.team5.mopl.TestcontainersConfiguration;
 
+@DataRedisTest
+@Import({TestcontainersConfiguration.class, WebSocketSessionStore.class, JacksonAutoConfiguration.class})
 class WebSocketSessionStoreTest {
 
+    @Autowired
     private WebSocketSessionStore store;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     @BeforeEach
     void setUp() {
-        store = new WebSocketSessionStore();
+        stringRedisTemplate.getConnectionFactory().getConnection().flushAll();
     }
 
     @Test
@@ -31,7 +41,10 @@ class WebSocketSessionStoreTest {
         store.connect(email);
 
         // then
+        // Redis 구현에서는 connect만으로 빈 Map이 눈에 띄게 추가되진 않지만,
+        // 키가 생성되거나 TTL이 갱신되어야 하며 구독 목록은 비어있어야 함
         assertThat(store.getDestination(email, "sub-1")).isEmpty();
+        assertThat(store.getAllDestination(email)).isEmpty();
     }
 
     @Test
@@ -82,6 +95,7 @@ class WebSocketSessionStoreTest {
 
         // then
         assertThat(store.getDestination(email, "sub-1")).isEmpty();
+        assertThat(store.getAllDestination(email)).isEmpty();
     }
 
     @Test
@@ -132,7 +146,7 @@ class WebSocketSessionStoreTest {
 
         // then
         for (int i = 0; i < threadCount; i++) {
-            assertThat(store.getDestination(email, "sub-" + i).get().destinationPattern())
+            assertThat(store.getDestination(email, "sub-" + i).get().getResolvedDestination())
                     .isEqualTo("/topic/content/" + email);
         }
     }
