@@ -55,7 +55,7 @@ public class NotificationService implements MissedNotificationProvider {
         Notification saved = notificationRepository.save(notification);
         NotificationPayload payload = notificationMapper.toPayload(saved);
         NotificationResponse response = notificationMapper.toResponse(saved);
-        log.info("알림 생성됨: type={}", command.type());
+        log.debug("알림 생성됨: type={}", command.type());
 
         publisher.publishEvent(new NotificationCreatedEvent(payload));
 

@@ -37,8 +37,7 @@ public class SseListener {
     )
     public void onNotificationCreated(NotificationCreatedEvent event) {
         NotificationPayload payload = event.notificationPayload();
-        log.info("Kafka Listener 진입");
-        log.info("[SSE] Kafka 메시지 수신: receiverId={}, type={}", payload.receiverId(), payload.type());
+        //log.debug("[SSE] Kafka 메시지 수신: receiverId={}, type={}", payload.receiverId(), payload.type());
         sseSender.sendToUser(payload.receiverId(),
                 SseEmitter.event()
                         .id(payload.id().toString())
