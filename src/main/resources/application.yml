@@ -1,6 +1,7 @@
 spring:
   application:
     name: mopl
+    instance-id: ${random.uuid}
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   batch:
