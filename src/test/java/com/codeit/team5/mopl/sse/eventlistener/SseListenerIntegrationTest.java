@@ -28,7 +28,9 @@ import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.event.NotificationsBatchCreatedEvent;
 import com.codeit.team5.mopl.sse.emitter.SseEmitterStore;
+import java.util.List;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -90,6 +92,50 @@ class SseListenerIntegrationTest {
         assertThatNoException().isThrownBy(() ->
                 tx.executeWithoutResult(status ->
                         publisher.publishEvent(new NotificationCreatedEvent(notificationPayload(receiverId)))));
+    }
+
+    // ===== NotificationsBatchCreatedEvent =====
+
+    @Test
+    @DisplayName("트랜잭션 커밋 후 NotificationsBatchCreatedEvent → 각 Emitter에 이벤트를 전송한다")
+    void onNotificationBatchCreated_sendsToAll_afterCommit() throws Exception {
+        // given
+        UUID receiverId1 = UUID.randomUUID();
+        UUID receiverId2 = UUID.randomUUID();
+        SseEmitter mockEmitter1 = mock(SseEmitter.class);
+        SseEmitter mockEmitter2 = mock(SseEmitter.class);
+        emitterStore.save(receiverId1, mockEmitter1);
+        emitterStore.save(receiverId2, mockEmitter2);
+
+        List<NotificationPayload> payloads = List.of(
+                notificationPayload(receiverId1),
+                notificationPayload(receiverId2));
+
+        // when
+        tx.executeWithoutResult(status ->
+                publisher.publishEvent(new NotificationsBatchCreatedEvent(payloads)));
+
+        // then
+        verify(mockEmitter1, timeout(5000)).send(any(SseEmitter.SseEventBuilder.class));
+        verify(mockEmitter2, timeout(5000)).send(any(SseEmitter.SseEventBuilder.class));
+    }
+
+    @Test
+    @DisplayName("트랜잭션 롤백 시 NotificationsBatchCreatedEvent → Emitter에 이벤트를 전송하지 않는다")
+    void onNotificationBatchCreated_doesNotSend_whenRollback() throws Exception {
+        // given
+        UUID receiverId = UUID.randomUUID();
+        SseEmitter mockEmitter = mock(SseEmitter.class);
+        emitterStore.save(receiverId, mockEmitter);
+
+        // when
+        tx.executeWithoutResult(status -> {
+            publisher.publishEvent(new NotificationsBatchCreatedEvent(List.of(notificationPayload(receiverId))));
+            status.setRollbackOnly();
+        });
+
+        // then
+        verify(mockEmitter, after(500).never()).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     // ===== 비활성 DM SSE =====
