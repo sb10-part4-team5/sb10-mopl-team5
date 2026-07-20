@@ -37,10 +37,9 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
         { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
         { name = "JDK_JAVA_OPTIONS", value = "-XX:MaxRAMPercentage=35.0 -XX:InitialRAMPercentage=20.0 -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseG1GC" },
-        # Redis/MSK 검증 후 destroy함 — 실제 운영 전환 시 주석 해제
-        # { name = "REDIS_HOST", value = aws_elasticache_replication_group.mopl.primary_endpoint_address },
-        # { name = "REDIS_PORT", value = tostring(aws_elasticache_replication_group.mopl.port) },
-        # { name = "KAFKA_BOOTSTRAP_SERVERS", value = aws_msk_cluster.mopl.bootstrap_brokers_tls }
+        { name = "REDIS_HOST", value = aws_elasticache_replication_group.mopl.primary_endpoint_address },
+        { name = "REDIS_PORT", value = tostring(aws_elasticache_replication_group.mopl.port) },
+        { name = "KAFKA_BOOTSTRAP_SERVERS", value = aws_msk_cluster.mopl.bootstrap_brokers_tls }
       ]
 
       secrets = [
@@ -54,8 +53,8 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "COOKIE_SIGNATURE_SECRET_KEY", valueFrom = aws_ssm_parameter.cookie_signature_secret_key.arn },
         { name = "TMDB_ACCESS_TOKEN", valueFrom = aws_ssm_parameter.tmdb_access_token.arn },
         { name = "TMDB_API_KEY", valueFrom = aws_ssm_parameter.tmdb_api_key.arn },
-        { name = "SPORTS_DB_API_KEY", valueFrom = aws_ssm_parameter.sports_db_api_key.arn }
-        # REDIS_PASSWORD도 Redis 연동 활성화 시 여기에 추가 (aws_ssm_parameter.redis_auth_token.arn)
+        { name = "SPORTS_DB_API_KEY", valueFrom = aws_ssm_parameter.sports_db_api_key.arn },
+        { name = "REDIS_PASSWORD", valueFrom = aws_ssm_parameter.redis_auth_token.arn }
       ]
 
       # 로테이션 설정 없으면 json-file 로그가 무제한으로 커져 디스크/메모리 압박 유발
