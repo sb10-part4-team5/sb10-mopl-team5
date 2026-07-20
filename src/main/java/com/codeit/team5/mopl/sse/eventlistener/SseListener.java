@@ -5,6 +5,7 @@ import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.global.infra.kafka.topic.KafkaTopics;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
 import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+import com.codeit.team5.mopl.notification.event.NotificationsBatchCreatedEvent;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,12 +37,28 @@ public class SseListener {
     )
     public void onNotificationCreated(NotificationCreatedEvent event) {
         NotificationPayload payload = event.notificationPayload();
+        log.info("Kafka Listener 진입");
         log.info("[SSE] Kafka 메시지 수신: receiverId={}, type={}", payload.receiverId(), payload.type());
         sseSender.sendToUser(payload.receiverId(),
                 SseEmitter.event()
                         .id(payload.id().toString())
                         .name("notifications")
                         .data(payload));
+    }
+
+    @KafkaListener(
+        topics = KafkaTopics.NOTIFICATION_SSE,
+        groupId = "sse-${spring.application.instance-id}", // 현재 인스턴스의 group id
+        properties = {"auto.offset.reset=latest"}
+    )
+    public void onNotificationBatchCreated(NotificationsBatchCreatedEvent event) {
+        for(NotificationPayload payload : event.payloads()){
+            sseSender.sendToUser(payload.receiverId(),
+                SseEmitter.event()
+                    .id(payload.id().toString())
+                    .name("notifications")
+                    .data(payload));
+        }
     }
 
     // 비활성 대화에 DM이 도착하면 SSE "direct-messages" 이벤트로 전송 (알림 저장과 독립)
