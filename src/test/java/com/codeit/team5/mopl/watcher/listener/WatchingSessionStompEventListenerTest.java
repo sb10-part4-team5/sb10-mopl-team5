@@ -217,4 +217,40 @@ class WatchingSessionStompEventListenerTest {
         // then
         verifyNoInteractions(redisTemplate);
     }
+
+    @Test
+    @DisplayName("publishToRedis - ObjectMapper 예외 발생시 에러 로깅하고 정상 흐름 유지")
+    void publishToRedis_Exception() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+        Principal mockPrincipal = mock(Principal.class);
+        when(mockPrincipal.getName()).thenReturn(userId.toString());
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.DISCONNECT);
+        accessor.setUser(mockPrincipal);
+
+        StompDestination dest2 = mock(StompDestination.class);
+        when(dest2.getPattern()).thenReturn(StompConstants.SUB_WATCHING_CONTENT.replace("{id}", "*"));
+        when(dest2.targetId()).thenReturn(UUID.randomUUID());
+
+        List<StompDestination> destinations = List.of(dest2);
+        when(sessionStore.getAllDestination(userId)).thenReturn(destinations);
+
+        WatchingSessionPayload payload = mock(WatchingSessionPayload.class);
+        when(queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE))
+                .thenReturn(payload);
+        when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON error"));
+
+        Message<byte[]> message =
+                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+        SessionDisconnectEvent event =
+                new SessionDisconnectEvent(this, message, "session-id", null);
+
+        // when
+        listener.handle(event);
+
+        // then
+        verifyNoInteractions(redisTemplate);
+        verify(sessionStore).disconnect(userId);
+    }
 }

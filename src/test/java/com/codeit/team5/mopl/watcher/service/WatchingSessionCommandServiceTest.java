@@ -137,6 +137,36 @@ class WatchingSessionCommandServiceTest {
         verify(eventPublisher, never()).publishEvent(any(WatcherLeftEvent.class));
     }
 
+    @Test
+    @DisplayName("clearContentSessions_성공")
+    void clearContentSessions_성공() {
+        // given
+        UUID contentId = UUID.randomUUID();
+
+        // when
+        service.clearContentSessions(contentId);
+
+        // then
+        verify(repository).deleteAllByContentId(contentId);
+    }
+
+    @Test
+    @DisplayName("이미 세션이 존재할 때 세션 생성 시 조기 종료")
+    void join_AlreadyExists() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        UUID watcherId = UUID.randomUUID();
+
+        when(repository.existsByContentIdAndWatcherId(contentId, watcherId)).thenReturn(true);
+
+        // when
+        service.join(contentId, watcherId);
+
+        // then
+        verify(contentRepository, never()).existsById(any());
+        verify(repository, never()).save(any());
+    }
+
     private User createDummyUser(String email) {
         User user = User.create(email, "password", "testName");
         ReflectionTestUtils.setField(user, "id", UUID.randomUUID());

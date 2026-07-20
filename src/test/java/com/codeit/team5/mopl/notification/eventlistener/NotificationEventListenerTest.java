@@ -218,4 +218,22 @@ class NotificationEventListenerTest {
         // then
         verify(notificationService, never()).createAll(any());
     }
+
+    @Test
+    @DisplayName("시청 중인 콘텐츠가 존재하지 않으면 알림을 생성하지 않고 종료한다")
+    void onWatchingSessionCreated_returnsWhenContentNotFound() {
+        // given
+        UUID watcherUserId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
+        WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherUserId);
+        
+        when(contentRepository.findById(contentId)).thenReturn(Optional.empty());
+
+        // when
+        notificationEventListener.onWatchingSessionCreated(event);
+
+        // then
+        verify(notificationService, never()).createAll(any());
+        verify(userRepository, never()).findById(any());
+    }
 }

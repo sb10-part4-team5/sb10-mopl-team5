@@ -181,4 +181,26 @@ class WatchingSessionRepositoryTest {
         assertThat(repository.findByWatcherId(watcherId3)).isPresent();
         assertThat(repository.countByContentId(contentId2)).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("findWatchingSessionsByContentId - 세션이 없을 경우 빈 리스트 반환")
+    void findWatchingSessionsByContentId_Empty() {
+        List<WatchingSession> result = repository.findWatchingSessionsByContentId(UUID.randomUUID(), 10, Range.closed(0.0, 100.0));
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("existsByContentIdAndWatcherId - 존재하지 않을 경우 false 반환")
+    void existsByContentIdAndWatcherId_False() {
+        boolean exists = repository.existsByContentIdAndWatcherId(UUID.randomUUID(), UUID.randomUUID());
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @DisplayName("deleteAllByContentId - ZSet이 비어있을 경우 정상 처리")
+    void deleteAllByContentId_Empty() {
+        UUID contentId = UUID.randomUUID();
+        repository.deleteAllByContentId(contentId);
+        assertThat(repository.countByContentId(contentId)).isEqualTo(0);
+    }
 }
