@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import com.codeit.team5.mopl.watcher.constant.WatcherRedisConstants;
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore;
 import com.codeit.team5.mopl.global.web.ws.stomp.store.WebSocketSessionStore.StompDestination;
@@ -91,7 +92,7 @@ class WatchingSessionStompEventListenerTest {
         verify(sessionStore).getAllDestination(userId);
         verify(queryService).getWatchingSessionPayload(userId, WatcherStatus.LEAVE);
         verify(commandService).left(any(UUID.class), eq(userId));
-        verify(redisTemplate).convertAndSend(eq("watching-session-topic"), eq("dummy_json"));
+        verify(redisTemplate).convertAndSend(eq(WatcherRedisConstants.WATCHING_SESSION_TOPIC), eq("dummy_json"));
         verify(sessionStore).disconnect(userId);
     }
 
@@ -187,7 +188,7 @@ class WatchingSessionStompEventListenerTest {
         listener.handle(event);
 
         // then
-        verify(redisTemplate).convertAndSend(eq("watching-session-topic"), eq("dummy_json"));
+        verify(redisTemplate).convertAndSend(eq(WatcherRedisConstants.WATCHING_SESSION_TOPIC), eq("dummy_json"));
         assertThat(accessor.getSessionAttributes()).doesNotContainKey(key);
     }
 

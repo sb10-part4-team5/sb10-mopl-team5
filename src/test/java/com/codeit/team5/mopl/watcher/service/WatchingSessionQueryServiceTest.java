@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Range;
 import org.springframework.data.domain.Sort;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
@@ -108,7 +109,7 @@ class WatchingSessionQueryServiceTest {
         when(user.getId()).thenReturn(watcherId);
         Content content = mock(Content.class);
 
-        when(repository.findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Double.MAX_VALUE)))
+        when(repository.findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.closed(0.0, Double.MAX_VALUE))))
                 .thenReturn(sessions);
         when(userRepository.findWithProfileImageByIdIn(any(Set.class))).thenReturn(List.of(user));
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
@@ -122,7 +123,7 @@ class WatchingSessionQueryServiceTest {
 
         // then
         assertThat(result).isNotNull();
-        verify(repository).findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Double.MAX_VALUE));
+        verify(repository).findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.closed(0.0, Double.MAX_VALUE)));
     }
 
     @Test
@@ -145,7 +146,7 @@ class WatchingSessionQueryServiceTest {
 
         double expectedMaxScore = (double) cursorTime.toEpochMilli();
 
-        when(repository.findWatchingSessionsByContentId(eq(contentId), eq(11), eq(expectedMaxScore)))
+        when(repository.findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.rightOpen(0.0, expectedMaxScore))))
                 .thenReturn(sessions);
         when(userRepository.findWithProfileImageByIdIn(any(Set.class))).thenReturn(List.of(user));
         when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
@@ -159,7 +160,7 @@ class WatchingSessionQueryServiceTest {
 
         // then
         assertThat(result).isNotNull();
-        verify(repository).findWatchingSessionsByContentId(eq(contentId), eq(11), eq(expectedMaxScore));
+        verify(repository).findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.rightOpen(0.0, expectedMaxScore)));
     }
 
     // --- READ (ensureWatchingContent) ---

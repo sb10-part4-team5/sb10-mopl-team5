@@ -1,7 +1,7 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.store;
 
-import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.data.redis.DataRedisTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 
@@ -28,7 +29,10 @@ class WebSocketSessionStoreTest {
 
     @BeforeEach
     void setUp() {
-        stringRedisTemplate.getConnectionFactory().getConnection().flushAll();
+        stringRedisTemplate.execute((RedisConnection connection) -> {
+            connection.serverCommands().flushAll();
+            return null;
+        });
     }
 
     @Test
@@ -55,7 +59,8 @@ class WebSocketSessionStoreTest {
         store.connect(email);
 
         UUID targetId = UUID.randomUUID();
-        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
+        WebSocketSessionStore.StompDestination dest =
+                new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
         // when
         store.subscribe(email, "sub-1", dest);
 
@@ -70,7 +75,8 @@ class WebSocketSessionStoreTest {
         UUID email = UUID.randomUUID();
         store.connect(email);
         UUID targetId = UUID.randomUUID();
-        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
+        WebSocketSessionStore.StompDestination dest =
+                new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
         store.subscribe(email, "sub-1", dest);
 
         // when
@@ -87,7 +93,8 @@ class WebSocketSessionStoreTest {
         UUID email = UUID.randomUUID();
         store.connect(email);
         UUID targetId = UUID.randomUUID();
-        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
+        WebSocketSessionStore.StompDestination dest =
+                new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
         store.subscribe(email, "sub-1", dest);
 
         // when
@@ -105,7 +112,8 @@ class WebSocketSessionStoreTest {
         UUID email = UUID.randomUUID();
         store.connect(email);
         UUID targetId = UUID.randomUUID();
-        WebSocketSessionStore.StompDestination dest = new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
+        WebSocketSessionStore.StompDestination dest =
+                new WebSocketSessionStore.StompDestination("/topic/content/{id}", targetId);
         store.subscribe(email, "sub-1", dest);
 
         // when
@@ -132,7 +140,8 @@ class WebSocketSessionStoreTest {
                 final int index = i;
                 executorService.submit(() -> {
                     try {
-                        store.subscribe(email, "sub-" + index, new WebSocketSessionStore.StompDestination("/topic/content/{id}", email));
+                        store.subscribe(email, "sub-" + index,
+                                new WebSocketSessionStore.StompDestination("/topic/content/{id}", email));
                     } finally {
                         latch.countDown();
                     }
