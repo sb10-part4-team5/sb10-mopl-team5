@@ -19,14 +19,14 @@ public class OutboxScheduler {
     private final CompletedEventPublications completedEvents;
 
     @Scheduled(fixedDelay = 60 * 1000)
-    @SchedulerLock(name = "outboxRetryIncompleteEvents", lockAtMostFor = "2m", lockAtLeastFor = "10s")
+    @SchedulerLock(name = "outboxRetryIncompleteEvents", lockAtMostFor = "2m", lockAtLeastFor = "50s")
     public void retryIncompleteEvents() {
         incompleteEvents.resubmitIncompletePublications(
                 publication -> publication.getEvent() instanceof RetryableOutboxEvent);
     }
 
     @Scheduled(cron = "0 0 1 * * *")
-    @SchedulerLock(name = "outboxCleanupCompletedEvents", lockAtMostFor = "30m")
+    @SchedulerLock(name = "outboxCleanupCompletedEvents", lockAtMostFor = "30m", lockAtLeastFor = "5m")
     public void cleanUpCompletedEvents() {
         completedEvents.deletePublicationsOlderThan(Duration.ofDays(7));
     }
