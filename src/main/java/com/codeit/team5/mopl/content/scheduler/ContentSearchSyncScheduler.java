@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -50,6 +51,7 @@ public class ContentSearchSyncScheduler {
     private Instant lastSyncedAt = Instant.EPOCH;
 
     @Scheduled(fixedDelay = 5 * 60 * 1000)
+    @SchedulerLock(name = "contentSearchSync", lockAtMostFor = "10m")
     public void syncUpdatedStats() {
         // 조회 이전 시각을 기준으로 잡아야, 조회하는 동안 들어온 변경을 다음 주기가 다시 가져간다.
         Instant syncStartedAt = Instant.now().minus(Duration.ofSeconds(30));
