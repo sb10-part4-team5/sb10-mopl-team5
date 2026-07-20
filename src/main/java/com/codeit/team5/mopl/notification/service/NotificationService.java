@@ -59,7 +59,6 @@ public class NotificationService implements MissedNotificationProvider {
 
         publisher.publishEvent(new NotificationCreatedEvent(payload));
 
-
         return response;
     }
 
