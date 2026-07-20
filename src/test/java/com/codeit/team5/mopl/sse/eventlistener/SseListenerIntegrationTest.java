@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import java.time.Instant;
@@ -62,7 +61,8 @@ class SseListenerIntegrationTest {
         tx.executeWithoutResult(status ->
                 publisher.publishEvent(new NotificationCreatedEvent(payload)));
 
-        verify(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
+        // @Externalized → Kafka → @KafkaListener 비동기 흐름이므로 timeout으로 대기
+        verify(mockEmitter, timeout(5000)).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     @Test
@@ -78,7 +78,8 @@ class SseListenerIntegrationTest {
             status.setRollbackOnly();
         });
 
-        verify(mockEmitter, never()).send(any(SseEmitter.SseEventBuilder.class));
+        // 롤백 시 Modulith가 Kafka에 발행하지 않으므로 일정 시간 후에도 미전송이어야 함
+        verify(mockEmitter, after(2000).never()).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     @Test

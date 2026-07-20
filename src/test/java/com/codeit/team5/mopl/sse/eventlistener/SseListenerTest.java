@@ -8,9 +8,10 @@ import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
+import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
+
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import java.time.Instant;
 import java.util.UUID;

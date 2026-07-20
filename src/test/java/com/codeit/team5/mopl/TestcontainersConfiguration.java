@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.kafka.ConfluentKafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -22,9 +23,9 @@ public class TestcontainersConfiguration {
         return new RedisContainer(DockerImageName.parse("redis:7"));
     }
 
-    // @Bean
-    // @ServiceConnection
-    // public ConfluentKafkaContainer kafkaContainer() {
-    // return new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
-    // }
+    @Bean
+    @ServiceConnection
+    public ConfluentKafkaContainer kafkaContainer() {
+        return new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
+    }
 }

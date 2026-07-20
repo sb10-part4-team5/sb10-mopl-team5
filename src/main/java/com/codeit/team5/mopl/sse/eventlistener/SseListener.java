@@ -4,6 +4,7 @@ import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageSseEvent;
 import com.codeit.team5.mopl.global.infra.kafka.topic.KafkaTopics;
 import com.codeit.team5.mopl.notification.dto.NotificationPayload;
+import com.codeit.team5.mopl.notification.event.NotificationCreatedEvent;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,17 +23,16 @@ public class SseListener {
 
     // Kafka의 NOTIFICATION_SSE 토픽을 구독하는 리스너
     // 각 인스턴스가 고유한 groupId를 사용하므로 모든 인스턴스가 동일한 이벤트를 consume한다.
-    // Value는 JsonDeserializer를 사용해 JSON 데이터를 NotificationPayload 객체로 역직렬화한다.
-    // 보안을 위해 com.codeit.qteam5.mopl.* 패키지의 클래스만 역직렬화를 허용한다.
+    // Spring Modulith @Externalized는 NotificationCreatedEvent 전체를 JSON 바이트로 직렬화한다.
+    // ByteArrayDeserializer(yml 기본값)로 byte[]를 받고, JsonMessageConverter가 메서드
+    // 파라미터 타입(NotificationCreatedEvent)을 추론해 역직렬화한다.
+    // JsonDeserializer를 properties로 명시하면 JsonMessageConverter와 이중 변환 충돌 발생.
     @KafkaListener(
             topics = KafkaTopics.NOTIFICATION_SSE,
-            groupId = "sse-${spring.application.instance-id}", // 현재 인스턴스의 group id
-            properties = {
-                "value.deserializer=org.springframework.kafka.support.serializer.JsonDeserializer",
-                "spring.json.trusted.packages=com.codeit.team5.mopl.*"
-            }
+            groupId = "sse-${spring.application.instance-id}" // 현재 인스턴스의 group id
     )
-    public void onNotificationCreated(NotificationPayload payload) {
+    public void onNotificationCreated(NotificationCreatedEvent event) {
+        NotificationPayload payload = event.notificationPayload();
         sseSender.sendToUser(payload.receiverId(),
                 SseEmitter.event()
                         .id(payload.id().toString())
