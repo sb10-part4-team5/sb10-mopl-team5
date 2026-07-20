@@ -1,8 +1,3 @@
-# OpenSearch 서비스 연결 역할 (VPC 도메인 생성 전 필요)
-resource "aws_iam_service_linked_role" "opensearch" {
-  aws_service_name = "opensearchservice.amazonaws.com"
-}
-
 # OpenSearch 방화벽
 resource "aws_security_group" "opensearch" {
   name        = "mopl-opensearch-sg"
@@ -60,7 +55,8 @@ resource "aws_opensearch_domain" "mopl" {
   }
 
   domain_endpoint_options {
-    enforce_https = true
+    enforce_https       = true
+    tls_security_policy = "Policy-Min-TLS-1-2-2019-07"
   }
 
   advanced_security_options {
@@ -84,8 +80,6 @@ resource "aws_opensearch_domain" "mopl" {
   })
 
   tags = { Name = "mopl-opensearch" }
-
-  depends_on = [aws_iam_service_linked_role.opensearch]
 }
 
 # nori(한국어 형태소 분석) 플러그인 연결 — OpenSearch_3.5용 AWS 제공 패키지
