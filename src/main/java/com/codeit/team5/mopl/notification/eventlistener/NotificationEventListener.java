@@ -9,8 +9,6 @@ import com.codeit.team5.mopl.notification.dto.request.NotificationBatchCreateCom
 import com.codeit.team5.mopl.notification.dto.request.NotificationCreateCommand;
 import com.codeit.team5.mopl.notification.entity.NotificationLevel;
 import com.codeit.team5.mopl.notification.entity.NotificationType;
-import com.codeit.team5.mopl.notification.exception.NotificationContentNotFoundException;
-import com.codeit.team5.mopl.notification.exception.NotificationUserNotFoundException;
 import com.codeit.team5.mopl.notification.service.NotificationService;
 import com.codeit.team5.mopl.playlist.event.PlaylistContentAddEvent;
 import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
@@ -21,7 +19,6 @@ import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -110,12 +107,12 @@ public class NotificationEventListener {
     public void onWatchingSessionCreated(WatcherJoinedEvent event){
         Optional<Content> content = contentRepository.findById(event.contentId());
         if (content.isEmpty()) {
-            log.error(new NotificationContentNotFoundException(event.contentId()).toString());
+            log.warn("Content not found for id: {}", event.contentId());
             return;
         }
         Optional<User> watcher = userRepository.findById(event.watcherId());
         if (watcher.isEmpty()) {
-            log.error(new NotificationUserNotFoundException(event.watcherId()).toString());
+            log.warn("User not found for id: {}", event.watcherId());
             return;
         }
         List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(watcher.get().getId());
