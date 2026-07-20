@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.content.mapper;
 
+import com.codeit.team5.mopl.content.document.ContentDocument;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSortByType;
@@ -19,6 +20,16 @@ public interface ContentMapper {
     @Mapping(target = "watcherCount", source = "stats.watcherCount")
     @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
     ContentResponse toDto(Content content);
+
+    ContentResponse toDto(ContentDocument document);
+
+    @Mapping(target = "contentId", source = "id")
+    @Mapping(target = "tags", source = "contentTags", qualifiedByName = "toTagNames")
+    @Mapping(target = "averageRating", source = "stats", qualifiedByName = "toAverageRating")
+    @Mapping(target = "reviewCount", source = "stats.reviewCount")
+    @Mapping(target = "watcherCount", source = "stats.watcherCount")
+    @Mapping(target = "thumbnailUrl", source = "thumbnail.url")
+    ContentDocument toDocument(Content content);
 
     default CursorResponse<ContentResponse> toCursor(List<Content> page, boolean hasNext,
             long totalCount, ContentSortByType sortBy, Direction sortDirection) {

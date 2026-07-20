@@ -164,7 +164,7 @@ public class ReviewService {
     }
 
     private void reviewUpdateContentStat(UUID contentId, double ratingDelta, int countDelta) {
-        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta);
+        contentStatsRepository.applyStatDelta(contentId, ratingDelta, countDelta, Instant.now());
     }
 
     private long getReviewCount(UUID contentId) {

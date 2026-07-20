@@ -1,4 +1,4 @@
-package com.codeit.team5.mopl.content.store;
+package com.codeit.team5.mopl.content.finder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,7 +30,7 @@ import org.springframework.data.domain.Sort;
  * 실제 캐싱 동작 자체는 Redis가 붙는 통합 테스트에서 확인해야 한다.
  */
 @ExtendWith(MockitoExtension.class)
-class ContentCacheStoreTest {
+class ContentCacheFinderTest {
 
     @Mock
     private ContentRepository contentRepository;
@@ -39,7 +39,7 @@ class ContentCacheStoreTest {
     private ContentMapper contentMapper;
 
     @InjectMocks
-    private ContentCacheStore contentCacheStore;
+    private ContentCacheFinder contentCacheFinder;
 
     @Test
     @DisplayName("첫 페이지 조회 시 필터 없이 limit=20 고정 조건으로 DB를 조회한다")
@@ -61,7 +61,7 @@ class ContentCacheStoreTest {
 
         // when
         CursorResponse<ContentResponse> result =
-                contentCacheStore.getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC);
+                contentCacheFinder.getFirstPage(ContentSortByType.WATCHER_COUNT, Sort.Direction.DESC);
 
         // then
         assertThat(result).isSameAs(expected);
@@ -74,7 +74,7 @@ class ContentCacheStoreTest {
         assertThat(usedRequest.tagsIn()).isNull();
         assertThat(usedRequest.cursor()).isNull();
         assertThat(usedRequest.idAfter()).isNull();
-        assertThat(usedRequest.limit()).isEqualTo(ContentCacheStore.FIRST_PAGE_LIMIT);
+        assertThat(usedRequest.limit()).isEqualTo(ContentCacheFinder.FIRST_PAGE_LIMIT);
         assertThat(usedRequest.sortBy()).isEqualTo(ContentSortByType.WATCHER_COUNT);
         assertThat(usedRequest.sortDirection()).isEqualTo(Sort.Direction.DESC);
     }

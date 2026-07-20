@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
 import com.codeit.team5.mopl.watcher.event.WatcherLeftEvent;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -17,11 +18,11 @@ public class ContentStatsEventListener {
 
     @EventListener
     public void handle(WatcherJoinedEvent event) {
-        statsRepository.increaseWatcherCountById(event.contentId());
+        statsRepository.increaseWatcherCountById(event.contentId(), Instant.now());
     }
 
     @EventListener
     public void handle(WatcherLeftEvent event) {
-        statsRepository.decreaseWatcherCountById(event.contentId());
+        statsRepository.decreaseWatcherCountById(event.contentId(), Instant.now());
     }
 }

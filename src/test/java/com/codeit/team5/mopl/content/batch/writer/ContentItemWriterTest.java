@@ -15,6 +15,7 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentTag;
 import com.codeit.team5.mopl.content.entity.ContentType;
+import com.codeit.team5.mopl.content.event.ContentUpsertedEvent;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
@@ -26,9 +27,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.item.Chunk;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,13 +45,15 @@ class ContentItemWriterTest {
     private BinaryContentRepository binaryContentRepository;
     @Mock
     private TagRepository tagRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private ContentItemWriter writer;
 
     @BeforeEach
     void setUp() {
         writer = new ContentItemWriter(contentRepository, contentStatsRepository,
-                binaryContentRepository, tagRepository);
+                binaryContentRepository, tagRepository, eventPublisher);
     }
 
     @Test
@@ -59,6 +64,8 @@ class ContentItemWriterTest {
                 ContentSource.TMDB, "1", null, "{}");
         Content content2 = Content.createByExternalSource(ContentType.MOVIE, "영화2", "desc",
                 ContentSource.TMDB, "2", null, "{}");
+        ReflectionTestUtils.setField(content1, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(content2, "id", UUID.randomUUID());
         ContentWithMetaData item1 = new ContentWithMetaData(content1, null, List.of());
         ContentWithMetaData item2 = new ContentWithMetaData(content2, null, List.of());
         given(contentRepository.findExternalIdsBySourceAndExternalIdIn(any(), anyList())).willReturn(Set.of());
@@ -71,6 +78,10 @@ class ContentItemWriterTest {
         // then
         verify(contentRepository).saveAll(anyList());
         verify(contentStatsRepository).saveAll(anyList());
+
+        ArgumentCaptor<ContentUpsertedEvent> eventCaptor = ArgumentCaptor.forClass(ContentUpsertedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().contentIds()).containsExactly(content1.getId(), content2.getId());
     }
 
     @Test
@@ -126,6 +137,7 @@ class ContentItemWriterTest {
         // then
         verify(contentRepository, never()).findExternalIdsBySourceAndExternalIdIn(any(), anyList());
         verify(contentRepository, never()).saveAll(anyList());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -148,6 +160,7 @@ class ContentItemWriterTest {
         verify(contentRepository, never()).saveAll(anyList());
         verify(contentStatsRepository, never()).saveAll(anyList());
         verify(binaryContentRepository, never()).saveAll(anyList());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

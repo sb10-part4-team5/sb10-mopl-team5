@@ -46,6 +46,9 @@ spring:
     resources:
       static-locations: classpath:/static/, file:./uploads/
 
+opensearch:
+  uris: http://localhost:9200
+
 mopl:
   storage:
     local:
@@ -62,3 +65,4 @@ logging:
     com.codeit.team5.mopl: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
+    org.opensearch.client.RestClient: DEBUG
