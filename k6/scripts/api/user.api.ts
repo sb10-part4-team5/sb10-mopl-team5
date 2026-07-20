@@ -40,6 +40,22 @@ function buildQuery(params: UserListParams): string {
   return parts.join('&');
 }
 
+export function getUser(
+    token: string,
+    userId: string,
+    tag: string = config.tags.user.detail,
+): UserResponse | null {
+  const url = config.endpoints.user.detail.replace(
+      '{userId}',
+      userId,
+  );
+
+  return get<UserResponse>(url, {
+    token,
+    tag,
+  });
+}
+
 export function getUsers(
     token: string,
     params: UserListParams,
