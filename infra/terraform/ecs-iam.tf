@@ -52,7 +52,7 @@ resource "aws_iam_role_policy_attachment" "task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Alloy 컨테이너가 SSM에서 Grafana 토큰을 읽기 위한 권한
+# 컨테이너가 SSM에서 시크릿(Grafana 토큰 + 앱 시크릿)을 읽기 위한 권한
 resource "aws_iam_role_policy" "task_execution_ssm" {
   name = "mopl-task-execution-ssm"
   role = aws_iam_role.task_execution.id
@@ -60,9 +60,23 @@ resource "aws_iam_role_policy" "task_execution_ssm" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["ssm:GetParameters"]
-      Resource = [aws_ssm_parameter.grafana_token.arn]
+      Effect = "Allow"
+      Action = ["ssm:GetParameters"]
+      Resource = [
+        aws_ssm_parameter.grafana_token.arn,
+        aws_ssm_parameter.db_password.arn,
+        aws_ssm_parameter.mail_password.arn,
+        aws_ssm_parameter.jwt_access_secret_key.arn,
+        aws_ssm_parameter.jwt_refresh_secret_key.arn,
+        aws_ssm_parameter.admin_password.arn,
+        aws_ssm_parameter.google_client_secret.arn,
+        aws_ssm_parameter.kakao_client_secret.arn,
+        aws_ssm_parameter.cookie_signature_secret_key.arn,
+        aws_ssm_parameter.tmdb_access_token.arn,
+        aws_ssm_parameter.tmdb_api_key.arn,
+        aws_ssm_parameter.sports_db_api_key.arn,
+        aws_ssm_parameter.redis_auth_token.arn
+      ]
     }]
   })
 }
@@ -91,8 +105,8 @@ resource "aws_iam_role_policy" "task_s3" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+      Effect = "Allow"
+      Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
       Resource = [
         "arn:aws:s3:::${var.s3_bucket}/thumbnails/*",
         "arn:aws:s3:::${var.s3_bucket}/profiles/*"

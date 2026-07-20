@@ -4,7 +4,7 @@ resource "aws_ecs_task_definition" "mopl" {
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
   cpu                      = "1024" # 1 vCPU (t3.micro 2048 unit 중 50%)
-  memory                   = "768" # MB (t3.micro 1GB 중 시스템 여유)
+  memory                   = "768"  # MB (t3.micro 1GB 중 시스템 여유)
   execution_role_arn       = aws_iam_role.task_execution.arn
   task_role_arn            = aws_iam_role.task.arn
 
@@ -26,28 +26,35 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
         { name = "DB_URL", value = "jdbc:postgresql://${aws_db_instance.mopl.address}:5432/mopl" },
         { name = "DB_USERNAME", value = var.db_username },
-        { name = "DB_PASSWORD", value = var.db_password },
         { name = "S3_BUCKET", value = var.s3_bucket },
         { name = "AWS_REGION", value = var.aws_region },
         { name = "CDN_BASE_URL", value = "https://${var.cdn_domain}" },
         { name = "MAIL_HOST", value = var.mail_host },
         { name = "MAIL_PORT", value = var.mail_port },
         { name = "MAIL_USERNAME", value = var.mail_username },
-        { name = "MAIL_PASSWORD", value = var.mail_password },
-        { name = "JWT_ACCESS_SECRET_KEY", value = var.jwt_access_secret_key },
-        { name = "JWT_REFRESH_SECRET_KEY", value = var.jwt_refresh_secret_key },
         { name = "ADMIN_EMAIL", value = var.admin_email },
-        { name = "ADMIN_PASSWORD", value = var.admin_password },
         { name = "ADMIN_NAME", value = var.admin_name },
-        { name = "TMDB_ACCESS_TOKEN", value = var.tmdb_access_token },
-        { name = "TMDB_API_KEY", value = var.tmdb_api_key },
-        { name = "SPORTS_DB_API_KEY", value = var.sports_db_api_key },
         { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
-        { name = "GOOGLE_CLIENT_SECRET", value = var.google_client_secret },
         { name = "KAKAO_CLIENT_ID", value = var.kakao_client_id },
-        { name = "KAKAO_CLIENT_SECRET", value = var.kakao_client_secret },
         { name = "JDK_JAVA_OPTIONS", value = "-XX:MaxRAMPercentage=35.0 -XX:InitialRAMPercentage=20.0 -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseG1GC" },
-        { name = "COOKIE_SIGNATURE_SECRET_KEY", value = var.cookie_signature_secret_key }
+        { name = "REDIS_HOST", value = aws_elasticache_replication_group.mopl.primary_endpoint_address },
+        { name = "REDIS_PORT", value = tostring(aws_elasticache_replication_group.mopl.port) },
+        { name = "KAFKA_BOOTSTRAP_SERVERS", value = aws_msk_cluster.mopl.bootstrap_brokers_tls }
+      ]
+
+      secrets = [
+        { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.db_password.arn },
+        { name = "MAIL_PASSWORD", valueFrom = aws_ssm_parameter.mail_password.arn },
+        { name = "JWT_ACCESS_SECRET_KEY", valueFrom = aws_ssm_parameter.jwt_access_secret_key.arn },
+        { name = "JWT_REFRESH_SECRET_KEY", valueFrom = aws_ssm_parameter.jwt_refresh_secret_key.arn },
+        { name = "ADMIN_PASSWORD", valueFrom = aws_ssm_parameter.admin_password.arn },
+        { name = "GOOGLE_CLIENT_SECRET", valueFrom = aws_ssm_parameter.google_client_secret.arn },
+        { name = "KAKAO_CLIENT_SECRET", valueFrom = aws_ssm_parameter.kakao_client_secret.arn },
+        { name = "COOKIE_SIGNATURE_SECRET_KEY", valueFrom = aws_ssm_parameter.cookie_signature_secret_key.arn },
+        { name = "TMDB_ACCESS_TOKEN", valueFrom = aws_ssm_parameter.tmdb_access_token.arn },
+        { name = "TMDB_API_KEY", valueFrom = aws_ssm_parameter.tmdb_api_key.arn },
+        { name = "SPORTS_DB_API_KEY", valueFrom = aws_ssm_parameter.sports_db_api_key.arn },
+        { name = "REDIS_PASSWORD", valueFrom = aws_ssm_parameter.redis_auth_token.arn }
       ]
 
       # 로테이션 설정 없으면 json-file 로그가 무제한으로 커져 디스크/메모리 압박 유발
@@ -126,11 +133,11 @@ resource "aws_ecs_task_definition" "mopl" {
 
 # Service — Task를 desired_count 만큼 실행/유지 + ALB 연결
 resource "aws_ecs_service" "mopl" {
-  name            = var.ecs_service
-  cluster         = aws_ecs_cluster.mopl.id
-  task_definition = aws_ecs_task_definition.mopl.arn
-  desired_count                      = 1 # 나중에 2로 확장 가능
-  health_check_grace_period_seconds  = 180
+  name                              = var.ecs_service
+  cluster                           = aws_ecs_cluster.mopl.id
+  task_definition                   = aws_ecs_task_definition.mopl.arn
+  desired_count                     = 1 # 나중에 2로 확장 가능
+  health_check_grace_period_seconds = 180
 
   load_balancer {
     target_group_arn = aws_lb_target_group.mopl.arn
