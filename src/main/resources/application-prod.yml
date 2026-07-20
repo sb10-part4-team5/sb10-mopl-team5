@@ -3,12 +3,6 @@ spring:
     activate:
       on-profile: prod
 
-  # Redis 인프라 미구축 상태 — autoconfig 비활성
-  # (추가 시: 아래 exclude 제거 + data.redis 설정 주석 해제)
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
