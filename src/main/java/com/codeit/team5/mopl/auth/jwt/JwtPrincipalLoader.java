@@ -1,9 +1,8 @@
 package com.codeit.team5.mopl.auth.jwt;
 
+import com.codeit.team5.mopl.auth.jwt.cache.AuthUserCacheStore;
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,29 +11,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class JwtPrincipalLoader {
 
-    private static final String AUTH_USER_LOOKUP_TIMER =
-            "auth.user.lookup";
-
-    private final MoplUserDetailsService userDetailsService;
-    private final MeterRegistry meterRegistry;
+    private final AuthUserCacheStore authUserCacheStore;
 
     public MoplUserDetails loadByUserId(UUID userId) {
-        Timer.Sample sample = Timer.start(meterRegistry);
-        String result = "success";
+        AuthUser authUser = authUserCacheStore.getByUserId(userId);
 
-        try {
-            return (MoplUserDetails) userDetailsService.loadUserById(userId);
-        } catch (RuntimeException e) {
-            result = "failure";
-            throw e;
-        } finally {
-            sample.stop(
-                    meterRegistry.timer(
-                            AUTH_USER_LOOKUP_TIMER,
-                            "source", "db",
-                            "result", result
-                    )
-            );
-        }
+        return MoplUserDetails.forJwt(authUser);
     }
 }

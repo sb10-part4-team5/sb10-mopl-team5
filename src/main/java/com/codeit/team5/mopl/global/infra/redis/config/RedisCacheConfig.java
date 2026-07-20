@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.global.infra.redis.config;
 
+import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import java.time.Duration;
@@ -22,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class RedisCacheConfig {
 
     public static final String CONTENT_LIST_CACHE = "content:list";
+    public static final String AUTH_USER_CACHE = "auth:user";
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory factory, ObjectMapper objectMapper) {
@@ -38,8 +40,13 @@ public class RedisCacheConfig {
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(Map.of(
-                        CONTENT_LIST_CACHE, typedConfig(objectMapper, contentListType)
-                                .entryTtl(Duration.ofMinutes(1))
+                        CONTENT_LIST_CACHE,
+                        typedConfig(objectMapper, contentListType)
+                                .entryTtl(Duration.ofMinutes(1)),
+
+                        AUTH_USER_CACHE,
+                        typedConfig(objectMapper, AuthUser.class)
+                                .entryTtl(Duration.ofMinutes(5))
                 ))
                 .build();
     }
