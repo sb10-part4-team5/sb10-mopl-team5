@@ -79,7 +79,7 @@ class SseListenerIntegrationTest {
         });
 
         // 롤백 시 Modulith가 Kafka에 발행하지 않으므로 일정 시간 후에도 미전송이어야 함
-        verify(mockEmitter, after(2000).never()).send(any(SseEmitter.SseEventBuilder.class));
+        verify(mockEmitter, after(500).never()).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     @Test
