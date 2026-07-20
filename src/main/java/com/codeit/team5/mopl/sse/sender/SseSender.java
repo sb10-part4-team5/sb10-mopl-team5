@@ -23,10 +23,10 @@ public class SseSender {
     public void sendToUser(UUID userId, SseEmitter.SseEventBuilder event) {
         SseEmitter emitter = emitterStore.get(userId); // userId를 통해 emitterStore에서 꺼내오기
         if (emitter == null) {
-            log.info("[SSE] emitter 없음 — userId={}가 SSE 미연결 상태", userId);
+            log.debug("[SSE] emitter 없음 — userId={}가 SSE 미연결 상태", userId);
             return;
         }
-        log.info("[SSE] emitter 발견, 이벤트 전송 시도: userId={}", userId);
+        log.debug("[SSE] emitter 발견, 이벤트 전송 시도: userId={}", userId);
         send(userId, emitter, event);
     }
 
