@@ -208,8 +208,8 @@ class NotificationEventListenerTest {
         UUID watcherUserId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
         WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherUserId);
-        
-        when(contentRepository.findById(contentId)).thenReturn(Optional.empty());
+        Content mockContent = mock(Content.class);
+        when(contentRepository.findById(contentId)).thenReturn(Optional.of(mockContent));
         when(userRepository.findById(watcherUserId)).thenReturn(Optional.empty());
 
         // when
