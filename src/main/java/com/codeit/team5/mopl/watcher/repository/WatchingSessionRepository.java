@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.watcher.repository;
 
-import com.codeit.team5.mopl.global.infra.redis.repository.RedisRepository;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -17,20 +16,33 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations.TypedTuple;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class WatchingSessionRepository extends RedisRepository<WatchingSession> {
+public class WatchingSessionRepository {
 
     private static final String WATCHER_SESSION_KEY = "watcher:session:";
     private static final String CONTENT_WATCHERS_KEY = "content:%s:watchers";
 
     private final StringRedisTemplate stringRedisTemplate;
+    private final RedisTemplate<String, WatchingSession> redisTemplate;
 
     public WatchingSessionRepository(RedisConnectionFactory connectionFactory,
             ObjectMapper objectMapper, StringRedisTemplate stringRedisTemplate) {
-        super(connectionFactory, objectMapper, WatchingSession.class);
         this.stringRedisTemplate = stringRedisTemplate;
+        
+        this.redisTemplate = new RedisTemplate<>();
+        this.redisTemplate.setConnectionFactory(connectionFactory);
+        this.redisTemplate.setKeySerializer(new StringRedisSerializer());
+        
+        Jackson2JsonRedisSerializer<WatchingSession> serializer = 
+                new Jackson2JsonRedisSerializer<>(objectMapper, WatchingSession.class);
+        
+        this.redisTemplate.setValueSerializer(serializer);
+        this.redisTemplate.afterPropertiesSet();
     }
 
     /**
@@ -41,7 +53,7 @@ public class WatchingSessionRepository extends RedisRepository<WatchingSession> 
         String sortedSetKey = String.format(CONTENT_WATCHERS_KEY, session.contentId());
 
         // 단건 저장 (Value 형태) - 12시간 TTL 부여
-        super.set(singleKey, session, 12, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(singleKey, session, 12, TimeUnit.HOURS);
 
         // 페이징용 Sorted Set 저장 (Member: watcherId.toString(), Score: createdAt timestamp)
         Instant createdAt = session.createdAt();
@@ -57,7 +69,7 @@ public class WatchingSessionRepository extends RedisRepository<WatchingSession> 
         String singleKey = WATCHER_SESSION_KEY + watcherId;
         String sortedSetKey = String.format(CONTENT_WATCHERS_KEY, contentId);
 
-        super.delete(singleKey);
+        redisTemplate.delete(singleKey);
 
         stringRedisTemplate.opsForZSet().remove(sortedSetKey, watcherId.toString());
     }
@@ -67,7 +79,7 @@ public class WatchingSessionRepository extends RedisRepository<WatchingSession> 
      */
     public Optional<WatchingSession> findByWatcherId(UUID watcherId) {
         String singleKey = WATCHER_SESSION_KEY + watcherId;
-        return super.get(singleKey);
+        return Optional.ofNullable(redisTemplate.opsForValue().get(singleKey));
     }
 
     /**
