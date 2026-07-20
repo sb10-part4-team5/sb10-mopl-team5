@@ -31,7 +31,7 @@ public class SseListener {
     // SSE는 실시간 전달만 필요하므로 재시작 시 과거 이력을 재처리하지 않도록 latest 고정.
     // (earliest이면 재시작마다 새 UUID 그룹이 offset 0부터 읽어 신규 메시지 처리가 지연됨)
     @KafkaListener(
-            topics = KafkaTopics.NOTIFICATION_SSE,
+            topics = KafkaTopics.NOTIFICATION_CREATED_SSE,
             groupId = "sse-${spring.application.instance-id}", // 현재 인스턴스의 group id
             properties = {"auto.offset.reset=latest"}
     )
@@ -46,7 +46,7 @@ public class SseListener {
     }
 
     @KafkaListener(
-        topics = KafkaTopics.NOTIFICATION_SSE,
+        topics = KafkaTopics.NOTIFICATION_BATCH_CREATED_SSE,
         groupId = "sse-${spring.application.instance-id}", // 현재 인스턴스의 group id
         properties = {"auto.offset.reset=latest"}
     )
