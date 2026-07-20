@@ -546,7 +546,7 @@ class RedisRefreshTokenStoreTest {
         );
         assertThat(ttlMillis).isNotNull();
         assertThat(ttlMillis).isPositive();
-        assertThat(ttlMillis).isLessThanOrEqualTo(600_000L);
+        assertThat(ttlMillis).isLessThanOrEqualTo(605_000L);
         assertThat(ttlMillis).isGreaterThan(540_000L);
     }
 

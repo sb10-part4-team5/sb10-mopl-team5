@@ -16,8 +16,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OutboxScheduler {
 
-    private final List<Class<?>> targetEvents = List.of(UserLockedEvent.class,
-            WatcherLeftEvent.class, WatcherJoinedEvent.class);
     private final IncompleteEventPublications incompleteEvents;
     private final CompletedEventPublications completedEvents;
 
@@ -25,8 +23,6 @@ public class OutboxScheduler {
     public void retryIncompleteEvents() {
         incompleteEvents.resubmitIncompletePublications(
                 publication -> publication.getEvent() instanceof RetryableOutboxEvent);
-        incompleteEvents.resubmitIncompletePublications(
-                publication -> targetEvents.contains(publication.getEvent().getClass()));
     }
 
     @Scheduled(cron = "0 0 1 * * *")
