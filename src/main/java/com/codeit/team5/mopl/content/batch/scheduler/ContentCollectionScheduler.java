@@ -21,20 +21,20 @@ public class ContentCollectionScheduler {
     private final Job tmdbMovieJob;
     private final Job tmdbTvSeriesJob;
     private final Job sportsDbDayJob;
-
-    @Value("${tmdb.batch.daily-end-page}")
-    private int dailyEndPage;
+    private final int dailyEndPage;
 
     public ContentCollectionScheduler(
             @Qualifier("asyncJobLauncher") JobLauncher asyncJobLauncher,
             @Qualifier("tmdbMovieJob") Job tmdbMovieJob,
             @Qualifier("tmdbTvSeriesJob") Job tmdbTvSeriesJob,
-            @Qualifier("sportsDbDayJob") Job sportsDbDayJob
+            @Qualifier("sportsDbDayJob") Job sportsDbDayJob,
+            @Value("${tmdb.batch.daily-end-page}") int dailyEndPage
     ) {
         this.asyncJobLauncher = asyncJobLauncher;
         this.tmdbMovieJob = tmdbMovieJob;
         this.tmdbTvSeriesJob = tmdbTvSeriesJob;
         this.sportsDbDayJob = sportsDbDayJob;
+        this.dailyEndPage = dailyEndPage;
     }
 
     // asyncJobLauncher는 잡을 던지자마자 반환돼 락 보유 시간이 실제 수집 시간을 반영하지 못한다.

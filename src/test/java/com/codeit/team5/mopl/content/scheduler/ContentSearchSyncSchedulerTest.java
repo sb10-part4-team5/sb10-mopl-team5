@@ -1,10 +1,12 @@
 package com.codeit.team5.mopl.content.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -126,5 +128,29 @@ class ContentSearchSyncSchedulerTest {
         verifyNoInteractions(contentDocumentRepository);
         verifyNoInteractions(contentMapper);
         verify(syncCursorRepository).updateSyncedAt(eq(CURSOR_NAME), any());
+    }
+
+    @Test
+    @DisplayName("색인 저장 중 예외가 발생하면 커서를 갱신하지 않고 예외를 전파한다")
+    void saveFails_doesNotAdvanceCursorAndPropagatesException() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        Content content = mock(Content.class);
+        ContentDocument document = mock(ContentDocument.class);
+
+        given(syncCursorRepository.findSyncedAt(CURSOR_NAME)).willReturn(Instant.EPOCH);
+        given(contentStatsRepository.findIdsUpdatedAfter(any())).willReturn(List.of(contentId));
+        given(contentRepository.findAllWithStatsAndTagsByIdIn(List.of(contentId)))
+                .willReturn(List.of(content));
+        given(contentMapper.toDocument(content)).willReturn(document);
+        given(contentDocumentRepository.saveAll(List.of(document)))
+                .willThrow(new RuntimeException("OpenSearch 저장 실패"));
+
+        // when & then
+        assertThatThrownBy(() -> scheduler.syncUpdatedStats())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("OpenSearch 저장 실패");
+
+        verify(syncCursorRepository, never()).updateSyncedAt(any(), any());
     }
 }

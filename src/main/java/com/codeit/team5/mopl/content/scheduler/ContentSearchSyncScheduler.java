@@ -73,6 +73,5 @@ public class ContentSearchSyncScheduler {
 
         // 색인에 성공했을 때만 커서를 옮긴다. 예외가 나면 다음 주기가 같은 구간을 다시 처리한다.
         syncCursorRepository.updateSyncedAt(CURSOR_NAME, syncStartedAt);
-        log.debug("검색 인덱스 통계 동기화 완료: {}건", contents.size());
     }
 }

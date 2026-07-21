@@ -21,7 +21,6 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ContentCollectionSchedulerTest {
@@ -47,8 +46,8 @@ class ContentCollectionSchedulerTest {
 
     @BeforeEach
     void setUp() {
-        scheduler = new ContentCollectionScheduler(asyncJobLauncher, tmdbMovieJob, tmdbTvSeriesJob, sportsDbDayJob);
-        ReflectionTestUtils.setField(scheduler, "dailyEndPage", DAILY_END_PAGE);
+        scheduler = new ContentCollectionScheduler(
+                asyncJobLauncher, tmdbMovieJob, tmdbTvSeriesJob, sportsDbDayJob, DAILY_END_PAGE);
     }
 
     @Test
