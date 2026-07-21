@@ -20,13 +20,15 @@ public class ContentStatsEventListener {
     private final ContentStatsRepository statsRepository;
 
     @Async("outboxEventWorker")
-    @EventListener
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(WatcherJoinedEvent event) {
         statsRepository.increaseWatcherCountById(event.contentId(), Instant.now());
     }
 
     @Async("outboxEventWorker")
-    @EventListener
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(WatcherLeftEvent event) {
         statsRepository.decreaseWatcherCountById(event.contentId(), Instant.now());
     }

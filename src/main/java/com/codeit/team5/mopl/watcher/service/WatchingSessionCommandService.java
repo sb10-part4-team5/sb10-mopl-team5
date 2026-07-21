@@ -30,6 +30,7 @@ public class WatchingSessionCommandService {
     private final ContentRepository contentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional
     public void join(UUID contentId, UUID watcherId) {
         if (repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
             return;
@@ -45,13 +46,14 @@ public class WatchingSessionCommandService {
     }
 
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
-        public void left(UUID contentId, UUID watcherId) {
-            if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
-                return;
-            }
-            repository.deleteByContentIdAndWatcherId(contentId, watcherId);
-            eventPublisher.publishEvent(new WatcherLeftEvent(contentId));
+    @Transactional
+    public void left(UUID contentId, UUID watcherId) {
+        if (!repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
+            return;
         }
+        repository.deleteByContentIdAndWatcherId(contentId, watcherId);
+        eventPublisher.publishEvent(new WatcherLeftEvent(contentId));
+    }
 
     @Retryable(maxAttempts = 3,backoff = @Backoff(delay = 1000))
     public void clearContentSessions(UUID contentId) {
