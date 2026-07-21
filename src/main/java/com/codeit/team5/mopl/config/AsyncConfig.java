@@ -53,7 +53,7 @@ public class AsyncConfig {
     public ThreadPoolTaskExecutor notificationBatchSseExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(4);
+        executor.setMaxPoolSize(100);
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("notif-batch-sse-");
         executor.setTaskDecorator(new MdcTaskDecorator());
