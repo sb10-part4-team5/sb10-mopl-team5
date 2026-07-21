@@ -32,8 +32,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ContentSearchSyncSchedulerTest {
 
-    private static final String CURSOR_NAME = "contentSearchSync";
-
     @Mock
     private ContentStatsRepository contentStatsRepository;
 
@@ -56,11 +54,11 @@ class ContentSearchSyncSchedulerTest {
     private ArgumentCaptor<Instant> syncedAtCaptor;
 
     @Test
-    @DisplayName("DB에 저장된 커서를 그대로 조회 기준으로 사용한다")
+    @DisplayName("저장된 커서를 그대로 조회 기준으로 사용한다")
     void usesPersistedCursorAsQueryBound() {
         // given
         Instant persistedCursor = Instant.parse("2020-01-01T00:00:00Z");
-        given(syncCursorRepository.findSyncedAt(CURSOR_NAME)).willReturn(persistedCursor);
+        given(syncCursorRepository.findSyncedAt()).willReturn(persistedCursor);
         given(contentStatsRepository.findIdsUpdatedAfter(any())).willReturn(List.of());
 
         // when
@@ -74,14 +72,14 @@ class ContentSearchSyncSchedulerTest {
     @DisplayName("변경된 통계가 없으면 색인 갱신 없이 커서만 갱신한다")
     void noUpdates_skipsIndexingButAdvancesCursor() {
         // given
-        given(syncCursorRepository.findSyncedAt(CURSOR_NAME)).willReturn(Instant.EPOCH);
+        given(syncCursorRepository.findSyncedAt()).willReturn(Instant.EPOCH);
         given(contentStatsRepository.findIdsUpdatedAfter(any())).willReturn(List.of());
 
         // when
         scheduler.syncUpdatedStats();
 
         // then
-        verify(syncCursorRepository).updateSyncedAt(eq(CURSOR_NAME), syncedAtCaptor.capture());
+        verify(syncCursorRepository).updateSyncedAt(syncedAtCaptor.capture());
         assertThat(syncedAtCaptor.getValue()).isAfter(Instant.EPOCH);
 
         verifyNoInteractions(contentRepository);
@@ -97,7 +95,7 @@ class ContentSearchSyncSchedulerTest {
         Content content = mock(Content.class);
         ContentDocument document = mock(ContentDocument.class);
 
-        given(syncCursorRepository.findSyncedAt(CURSOR_NAME)).willReturn(Instant.EPOCH);
+        given(syncCursorRepository.findSyncedAt()).willReturn(Instant.EPOCH);
         given(contentStatsRepository.findIdsUpdatedAfter(any())).willReturn(List.of(contentId));
         given(contentRepository.findAllWithStatsAndTagsByIdIn(List.of(contentId)))
                 .willReturn(List.of(content));
@@ -108,7 +106,7 @@ class ContentSearchSyncSchedulerTest {
 
         // then
         verify(contentDocumentRepository).saveAll(List.of(document));
-        verify(syncCursorRepository).updateSyncedAt(eq(CURSOR_NAME), any());
+        verify(syncCursorRepository).updateSyncedAt(any());
     }
 
     @Test
@@ -116,7 +114,7 @@ class ContentSearchSyncSchedulerTest {
     void reFetchEmpty_skipsSaveButAdvancesCursor() {
         // given
         UUID contentId = UUID.randomUUID();
-        given(syncCursorRepository.findSyncedAt(CURSOR_NAME)).willReturn(Instant.EPOCH);
+        given(syncCursorRepository.findSyncedAt()).willReturn(Instant.EPOCH);
         given(contentStatsRepository.findIdsUpdatedAfter(any())).willReturn(List.of(contentId));
         given(contentRepository.findAllWithStatsAndTagsByIdIn(List.of(contentId)))
                 .willReturn(List.of());
@@ -127,7 +125,7 @@ class ContentSearchSyncSchedulerTest {
         // then
         verifyNoInteractions(contentDocumentRepository);
         verifyNoInteractions(contentMapper);
-        verify(syncCursorRepository).updateSyncedAt(eq(CURSOR_NAME), any());
+        verify(syncCursorRepository).updateSyncedAt(any());
     }
 
     @Test
@@ -138,7 +136,7 @@ class ContentSearchSyncSchedulerTest {
         Content content = mock(Content.class);
         ContentDocument document = mock(ContentDocument.class);
 
-        given(syncCursorRepository.findSyncedAt(CURSOR_NAME)).willReturn(Instant.EPOCH);
+        given(syncCursorRepository.findSyncedAt()).willReturn(Instant.EPOCH);
         given(contentStatsRepository.findIdsUpdatedAfter(any())).willReturn(List.of(contentId));
         given(contentRepository.findAllWithStatsAndTagsByIdIn(List.of(contentId)))
                 .willReturn(List.of(content));
@@ -151,6 +149,6 @@ class ContentSearchSyncSchedulerTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("OpenSearch 저장 실패");
 
-        verify(syncCursorRepository, never()).updateSyncedAt(any(), any());
+        verify(syncCursorRepository, never()).updateSyncedAt(any());
     }
 }
