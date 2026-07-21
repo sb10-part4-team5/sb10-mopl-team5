@@ -1,10 +1,8 @@
 package com.codeit.team5.mopl.global.outbox.scheduler;
 
 import com.codeit.team5.mopl.global.outbox.event.RetryableOutboxEvent;
-import com.codeit.team5.mopl.user.event.UserLockedEvent;
-import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
-import com.codeit.team5.mopl.watcher.event.WatcherLeftEvent;
 import java.time.Duration;
+import lombok.RequiredArgsConstructor;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.modulith.events.CompletedEventPublications;
 import org.springframework.modulith.events.IncompleteEventPublications;
