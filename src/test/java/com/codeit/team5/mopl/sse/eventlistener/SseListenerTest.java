@@ -3,6 +3,7 @@ package com.codeit.team5.mopl.sse.eventlistener;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -43,8 +44,8 @@ class SseListenerTest {
     @BeforeEach
     void setUp() {
         // executor mock이 제출된 Runnable을 테스트 스레드에서 즉시 실행하도록 설정
-        doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
-                .when(notificationBatchSseExecutor).execute(any());
+        lenient().doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
+            .when(notificationBatchSseExecutor).execute(any());
     }
 
     @Test
