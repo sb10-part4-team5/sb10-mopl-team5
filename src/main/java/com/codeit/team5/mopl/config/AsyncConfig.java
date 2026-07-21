@@ -50,6 +50,20 @@ public class AsyncConfig {
     }
 
     @Bean
+    public ThreadPoolTaskExecutor notificationBatchSseExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("notif-batch-sse-");
+        executor.setTaskDecorator(new MdcTaskDecorator());
+        // 큐가 가득 차면 Kafka consumer 스레드가 직접 실행 → 자연스러운 back-pressure
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
+
+    @Bean
     public ThreadPoolTaskExecutor dmEventExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);

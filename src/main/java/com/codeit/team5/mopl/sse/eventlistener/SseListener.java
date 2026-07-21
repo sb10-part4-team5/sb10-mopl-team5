@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class SseListener {
 
     private final SseSender sseSender;
+    private final ThreadPoolTaskExecutor notificationBatchSseExecutor;
 
     // Kafka의 NOTIFICATION_SSE 토픽을 구독하는 리스너
     // 각 인스턴스가 고유한 groupId를 사용하므로 모든 인스턴스가 동일한 이벤트를 consume한다.
@@ -51,12 +53,14 @@ public class SseListener {
         properties = {"auto.offset.reset=latest"}
     )
     public void onNotificationBatchCreated(NotificationsBatchCreatedEvent event) {
-        for(NotificationPayload payload : event.payloads()){
-            sseSender.sendToUser(payload.receiverId(),
-                SseEmitter.event()
-                    .id(payload.id().toString())
-                    .name("notifications")
-                    .data(payload));
+        // @Async는 KafkaListener에 적용되지 않으므로 executor에 직접 제출하여 consumer 스레드를 즉시 해방한다.
+        for (NotificationPayload payload : event.payloads()) {
+            notificationBatchSseExecutor.execute(() ->
+                sseSender.sendToUser(payload.receiverId(),
+                    SseEmitter.event()
+                        .id(payload.id().toString())
+                        .name("notifications")
+                        .data(payload)));
         }
     }
 

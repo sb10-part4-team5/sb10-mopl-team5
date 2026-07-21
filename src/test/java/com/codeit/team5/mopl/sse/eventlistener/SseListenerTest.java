@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.sse.eventlistener;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -17,12 +18,14 @@ import com.codeit.team5.mopl.sse.sender.SseSender;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,8 +34,18 @@ class SseListenerTest {
     @Mock
     private SseSender sseSender;
 
+    @Mock
+    private ThreadPoolTaskExecutor notificationBatchSseExecutor;
+
     @InjectMocks
     private SseListener listener;
+
+    @BeforeEach
+    void setUp() {
+        // executor mock이 제출된 Runnable을 테스트 스레드에서 즉시 실행하도록 설정
+        doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
+                .when(notificationBatchSseExecutor).execute(any());
+    }
 
     @Test
     @DisplayName("NotificationCreatedEvent 발생 시 수신자에게 notifications 이벤트를 전송한다")
