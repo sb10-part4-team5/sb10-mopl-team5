@@ -36,7 +36,7 @@ class OutboxSchedulerTest {
     private ArgumentCaptor<Predicate<EventPublication>> predicateCaptor;
 
     @Test
-    @DisplayName("retryIncompleteEvents 호출 시 UserLockedEvent 타입의 미완료 이벤트만 필터링하여 재시도한다")
+    @DisplayName("retryIncompleteEvents 호출 시 RetryableOutboxEvent 타입의 미완료 이벤트만 필터링하여 재시도한다")
     void retryIncompleteEvents() {
         // when
         scheduler.retryIncompleteEvents();

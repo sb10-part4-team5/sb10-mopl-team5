@@ -1,26 +1,29 @@
 package com.codeit.team5.mopl.watcher.service;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.UUID;
-import org.springframework.data.domain.Limit;
-import org.springframework.data.domain.ScrollPosition;
-import org.springframework.data.domain.ScrollPosition.Direction;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Window;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.global.logging.log.ExecutionTracer;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
 import com.codeit.team5.mopl.watcher.dto.request.WatchingSessionCursorRequest;
 import com.codeit.team5.mopl.watcher.dto.response.WatchingSessionResponse;
 import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionContentNotFoundException;
 import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
+import com.codeit.team5.mopl.watcher.exception.WatchingSessionUserNotFoundException;
 import com.codeit.team5.mopl.watcher.mapper.entity.WatchingSessionMapper;
 import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Range;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
@@ -28,24 +31,54 @@ import lombok.RequiredArgsConstructor;
 @ExecutionTracer
 public class WatchingSessionQueryService {
 
-    private final String secondarySortBy = "id";
     private final WatchingSessionRepository repository;
+    private final UserRepository userRepository;
+    private final ContentRepository contentRepository;
     private final WatchingSessionMapper mapper;
 
     public WatchingSessionResponse findByWatcherId(UUID watcherId) {
-        return repository.findByWatcherId(watcherId).map(mapper::toDto).orElse(null);
+        WatchingSession session = repository.findByWatcherId(watcherId).orElse(null);
+        if (session == null) {
+            return null;
+        }
+        User user = userRepository.findWithProfileImageById(session.watcherId())
+                .orElseThrow(() -> new WatchingSessionUserNotFoundException(session.watcherId()));
+        Content content = contentRepository.findWithStatsAndTagsById(session.contentId())
+                .orElseThrow(() -> new WatchingSessionContentNotFoundException(session.contentId()));
+        return mapper.toDto(session, user, content);
     }
 
     public CursorResponse<WatchingSessionResponse> findCursorByContentId(UUID contentId,
             WatchingSessionCursorRequest request) {
-        Sort.Direction direction = request.sortDirection();
-        String sortBy = request.sortBy();
-        Sort sort = Sort.by(direction, sortBy).and(Sort.by(direction, secondarySortBy));
-        ScrollPosition scrollPosition = createScrollPosition(request);
-        Window<WatchingSession> result = repository.findByContentId(contentId, scrollPosition,
-                Limit.of(request.limit()), sort);
+
+        Range<Double> scoreRange = request.cursor() != null
+                ? Range.rightOpen(0.0, (double) request.cursor().toEpochMilli())
+                : Range.closed(0.0, Double.MAX_VALUE);
+        int fetchLimit = request.limit() + 1;
+
+        List<WatchingSession> sessions = repository.findWatchingSessionsByContentId(contentId,
+                fetchLimit, scoreRange);
+
+        boolean hasNext = sessions.size() > request.limit();
+        List<WatchingSession> resultSessions =
+                hasNext ? sessions.subList(0, request.limit()) : sessions;
+        Map<UUID, WatchingSession> sessionMap = resultSessions.stream()
+                .collect(Collectors.toMap(WatchingSession::watcherId, w -> w));
+
+        Map<UUID, User> userMap = userRepository.findWithProfileImageByIdIn(sessionMap.keySet())
+                .stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        Content content = contentRepository.findWithStatsAndTagsById(contentId)
+                .orElseThrow(() -> new WatchingSessionContentNotFoundException(contentId));
+
+        List<WatchingSessionResponse> data = resultSessions.stream()
+                .filter(session -> userMap.containsKey(session.watcherId()))
+                .map(session -> mapper.toDto(session, userMap.get(session.watcherId()), content))
+                .toList();
         Long totalCount = repository.countByContentId(contentId);
-        return mapper.toCursor(result, totalCount, sortBy, direction);
+        return mapper.toCursor(data, hasNext, totalCount, request.sortBy(),
+                request.sortDirection().toString());
     }
 
     public void ensureWatchingContent(UUID contentId, UUID watcherId) {
@@ -58,16 +91,14 @@ public class WatchingSessionQueryService {
     public WatchingSessionPayload getWatchingSessionPayload(UUID watcherId, WatcherStatus status) {
         WatchingSession session = repository.findByWatcherId(watcherId).orElseThrow(
                 () -> new WatchingSessionNotFoundException(Map.of("watcherId", watcherId)));
-        return mapper.toPayload(session, status);
-    }
 
-    private ScrollPosition createScrollPosition(WatchingSessionCursorRequest request) {
-        Instant cursor = request.cursor();
-        UUID idAfter = request.idAfter();
-        if (cursor == null || idAfter == null) {
-            return ScrollPosition.keyset();
+        WatchingSessionResponse response = findByWatcherId(watcherId);
+        long watcherCount = repository.countByContentId(session.contentId());
+        
+        if (status == WatcherStatus.LEAVE) {
+            watcherCount = Math.max(0, watcherCount - 1);
         }
-        Map<String, Object> keyset = Map.of(request.sortBy(), cursor, secondarySortBy, idAfter);
-        return ScrollPosition.of(keyset, Direction.FORWARD);
+
+        return new WatchingSessionPayload(status, response, watcherCount);
     }
 }

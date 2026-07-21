@@ -550,6 +550,8 @@ class ContentServiceTest {
         // then
         assertThat(thumbnail.getUploadStatus()).isEqualTo(BinaryContentUploadStatus.DELETED);
         verify(contentRepository).delete(content);
+        verify(eventPublisher).publishEvent(any(com.codeit.team5.mopl.content.event.ContentDeletedEvent.class));
+        verifyNoInteractions(binaryContentService);
     }
 
     @Test

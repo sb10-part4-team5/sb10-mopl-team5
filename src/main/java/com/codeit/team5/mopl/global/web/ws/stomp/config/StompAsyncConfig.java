@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.global.web.ws.stomp.config;
 
+import com.codeit.team5.mopl.global.async.MdcTaskDecorator;
 import java.util.concurrent.Executor;
 import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +17,7 @@ class StompAsyncConfig {
                 .maxPoolSize(30)
                 .queueCapacity(20)
                 .threadNamePrefix("stomp-Async-")
+                .taskDecorator(new MdcTaskDecorator())
                 .build();
     }
 }

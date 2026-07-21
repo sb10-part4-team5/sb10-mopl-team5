@@ -544,10 +544,10 @@ class RedisRefreshTokenStoreTest {
                 createKey(userId),
                 java.util.concurrent.TimeUnit.MILLISECONDS
         );
+        long expectedTtl = expiresAt.toEpochMilli() - Instant.now().toEpochMilli();
         assertThat(ttlMillis).isNotNull();
         assertThat(ttlMillis).isPositive();
-        assertThat(ttlMillis).isLessThanOrEqualTo(600_000L);
-        assertThat(ttlMillis).isGreaterThan(540_000L);
+        assertThat(ttlMillis).isCloseTo(expectedTtl, org.assertj.core.data.Offset.offset(2000L));
     }
 
     @Test

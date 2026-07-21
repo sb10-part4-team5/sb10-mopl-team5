@@ -59,19 +59,15 @@ class WatchingSessionCommandServiceTest {
         User user = createDummyUser("test@test.com");
         UUID watcherId = user.getId();
         Content content = createDummyContent(contentId);
-        WatchingSession session = createDummySession(user, content);
 
         when(contentRepository.existsById(contentId)).thenReturn(true);
         when(userRepository.existsById(watcherId)).thenReturn(true);
-        when(userRepository.getReferenceById(watcherId)).thenReturn(user);
-        when(contentRepository.getReferenceById(contentId)).thenReturn(content);
-        when(repository.save(any(WatchingSession.class))).thenReturn(session);
+
 
         // when
         service.join(contentId, watcherId);
 
         // then
-
         verify(repository).save(any(WatchingSession.class));
         verify(eventPublisher).publishEvent(any(WatcherJoinedEvent.class));
     }
@@ -114,18 +110,14 @@ class WatchingSessionCommandServiceTest {
         UUID contentId = UUID.randomUUID();
         User user = createDummyUser("test@test.com");
         ReflectionTestUtils.setField(user, "id", watcherId);
-        Content content = createDummyContent(contentId);
-        WatchingSession session = createDummySession(user, content);
 
         when(repository.existsByContentIdAndWatcherId(contentId, watcherId)).thenReturn(true);
-
 
         // when
         service.left(contentId, watcherId);
 
         // then
-
-        verify(repository).deleteByContentIdAndWatcherIdDirectly(contentId, watcherId);
+        verify(repository).deleteByContentIdAndWatcherId(contentId, watcherId);
         verify(eventPublisher).publishEvent(any(WatcherLeftEvent.class));
     }
 
@@ -141,9 +133,38 @@ class WatchingSessionCommandServiceTest {
         service.left(contentId, watcherId);
 
         // then
-        verify(repository, never()).deleteByContentIdAndWatcherIdDirectly(contentId, watcherId);
+        verify(repository, never()).deleteByContentIdAndWatcherId(contentId, watcherId);
         verify(eventPublisher, never()).publishEvent(any(WatcherLeftEvent.class));
+    }
 
+    @Test
+    @DisplayName("clearContentSessions_성공")
+    void clearContentSessions_성공() {
+        // given
+        UUID contentId = UUID.randomUUID();
+
+        // when
+        service.clearContentSessions(contentId);
+
+        // then
+        verify(repository).deleteAllByContentId(contentId);
+    }
+
+    @Test
+    @DisplayName("이미 세션이 존재할 때 세션 생성 시 조기 종료")
+    void join_AlreadyExists() {
+        // given
+        UUID contentId = UUID.randomUUID();
+        UUID watcherId = UUID.randomUUID();
+
+        when(repository.existsByContentIdAndWatcherId(contentId, watcherId)).thenReturn(true);
+
+        // when
+        service.join(contentId, watcherId);
+
+        // then
+        verify(contentRepository, never()).existsById(any());
+        verify(repository, never()).save(any());
     }
 
     private User createDummyUser(String email) {
@@ -157,11 +178,5 @@ class WatchingSessionCommandServiceTest {
                 ContentSource.TMDB, "ext-id-123", null, null);
         ReflectionTestUtils.setField(content, "id", id);
         return content;
-    }
-
-    private WatchingSession createDummySession(User user, Content content) {
-        WatchingSession session = WatchingSession.of(user, content);
-        ReflectionTestUtils.setField(session, "id", UUID.randomUUID());
-        return session;
     }
 }
