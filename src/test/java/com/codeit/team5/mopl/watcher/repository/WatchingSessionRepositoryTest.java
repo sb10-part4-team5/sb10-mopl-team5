@@ -76,7 +76,7 @@ class WatchingSessionRepositoryTest {
         assertThat(result).isEmpty();
     }
 
-        @Test
+    @Test
     @DisplayName("findWatchingSessionsByContentId - 커서를 이용해 이전 시점의 세션들을 조회한다")
     void findWatchingSessionsByContentId_cursor_success() {
         UUID contentId = UUID.randomUUID();

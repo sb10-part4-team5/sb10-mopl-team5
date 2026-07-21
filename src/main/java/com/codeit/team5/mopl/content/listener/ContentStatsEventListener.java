@@ -5,6 +5,7 @@ import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
 import com.codeit.team5.mopl.watcher.event.WatcherLeftEvent;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -19,15 +20,13 @@ public class ContentStatsEventListener {
     private final ContentStatsRepository statsRepository;
 
     @Async("outboxEventWorker")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @TransactionalEventListener
+    @EventListener
     public void handle(WatcherJoinedEvent event) {
         statsRepository.increaseWatcherCountById(event.contentId(), Instant.now());
     }
 
     @Async("outboxEventWorker")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @TransactionalEventListener
+    @EventListener
     public void handle(WatcherLeftEvent event) {
         statsRepository.decreaseWatcherCountById(event.contentId(), Instant.now());
     }

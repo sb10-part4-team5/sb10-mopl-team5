@@ -103,7 +103,7 @@ public class NotificationEventListener {
     // 시청 시작과 리스너 실행 사이에 follow/unfollow가 발생하면 결과가 달라질 수 있으나,
     // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onWatchingSessionCreated(WatcherJoinedEvent event){
         Optional<Content> content = contentRepository.findById(event.contentId());
         if (content.isEmpty()) {

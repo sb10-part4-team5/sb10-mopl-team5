@@ -30,7 +30,6 @@ public class WatchingSessionCommandService {
     private final ContentRepository contentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional
     public void join(UUID contentId, UUID watcherId) {
         if (repository.existsByContentIdAndWatcherId(contentId, watcherId)) {
             return;
