@@ -48,6 +48,7 @@ public class RedisCacheConfig {
                         typedConfig(objectMapper, AuthUser.class)
                                 .entryTtl(Duration.ofMinutes(5))
                 ))
+                .enableStatistics()     // 캐시 히트율 확인
                 .build();
     }
 
