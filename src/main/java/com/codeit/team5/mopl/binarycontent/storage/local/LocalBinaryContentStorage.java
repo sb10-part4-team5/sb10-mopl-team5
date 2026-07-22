@@ -31,6 +31,11 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
     }
 
     @Override
+    public String extractKey(String url) {
+        return BinaryContentStorage.keyFromUrl(url, baseUrl);
+    }
+
+    @Override
     public void store(String key, byte[] bytes, String contentType) {
         Path destination = uploadDir.resolve(key);
         try {

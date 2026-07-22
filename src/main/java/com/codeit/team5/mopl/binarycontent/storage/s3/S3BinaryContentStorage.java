@@ -27,11 +27,20 @@ public class S3BinaryContentStorage implements BinaryContentStorage {
 
     @Override
     public String toUrl(String key) {
+        return normalizedBaseUrl() + "/" + key;
+    }
+
+    @Override
+    public String extractKey(String url) {
+        return BinaryContentStorage.keyFromUrl(url, properties.cdnBaseUrl());
+    }
+
+    private String normalizedBaseUrl() {
         String baseUrl = properties.cdnBaseUrl();
         if (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
-        return baseUrl + "/" + key;
+        return baseUrl;
     }
 
     @Override
