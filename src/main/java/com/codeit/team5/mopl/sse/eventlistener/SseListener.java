@@ -9,9 +9,7 @@ import com.codeit.team5.mopl.notification.event.NotificationsBatchCreatedEvent;
 import com.codeit.team5.mopl.sse.sender.SseSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -65,8 +63,11 @@ public class SseListener {
     }
 
     // 비활성 대화에 DM이 도착하면 SSE "direct-messages" 이벤트로 전송 (알림 저장과 독립)
-    @Async("dmEventExecutor")
-    @EventListener
+    @KafkaListener(
+            topics = KafkaTopics.DIRECT_MESSAGE_SSE,
+            groupId = "sse-${spring.application.instance-id}",
+            properties = {"auto.offset.reset=latest"}
+    )
     public void onDirectMessageSse(DirectMessageSseEvent event) {
         DirectMessageResponse message = event.message();
         sseSender.sendToUser(message.receiver().id(),

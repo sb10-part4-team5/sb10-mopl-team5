@@ -39,7 +39,9 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "JDK_JAVA_OPTIONS", value = "-XX:MaxRAMPercentage=35.0 -XX:InitialRAMPercentage=20.0 -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseG1GC" },
         { name = "REDIS_HOST", value = aws_elasticache_replication_group.mopl.primary_endpoint_address },
         { name = "REDIS_PORT", value = tostring(aws_elasticache_replication_group.mopl.port) },
-        { name = "KAFKA_BOOTSTRAP_SERVERS", value = aws_msk_cluster.mopl.bootstrap_brokers_tls }
+        { name = "KAFKA_BOOTSTRAP_SERVERS", value = aws_msk_cluster.mopl.bootstrap_brokers_tls },
+        { name = "OPENSEARCH_URIS", value = "https://${aws_opensearch_domain.mopl.endpoint}" },
+        { name = "OPENSEARCH_USERNAME", value = var.opensearch_master_username }
       ]
 
       secrets = [
@@ -54,7 +56,8 @@ resource "aws_ecs_task_definition" "mopl" {
         { name = "TMDB_ACCESS_TOKEN", valueFrom = aws_ssm_parameter.tmdb_access_token.arn },
         { name = "TMDB_API_KEY", valueFrom = aws_ssm_parameter.tmdb_api_key.arn },
         { name = "SPORTS_DB_API_KEY", valueFrom = aws_ssm_parameter.sports_db_api_key.arn },
-        { name = "REDIS_PASSWORD", valueFrom = aws_ssm_parameter.redis_auth_token.arn }
+        { name = "REDIS_PASSWORD", valueFrom = aws_ssm_parameter.redis_auth_token.arn },
+        { name = "OPENSEARCH_PASSWORD", valueFrom = aws_ssm_parameter.opensearch_master_password.arn }
       ]
 
       # 로테이션 설정 없으면 json-file 로그가 무제한으로 커져 디스크/메모리 압박 유발
