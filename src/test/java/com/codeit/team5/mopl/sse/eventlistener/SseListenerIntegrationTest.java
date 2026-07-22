@@ -147,7 +147,8 @@ class SseListenerIntegrationTest {
         SseEmitter mockEmitter = mock(SseEmitter.class);
         emitterStore.save(receiverId, mockEmitter);
 
-        publisher.publishEvent(new DirectMessageSseEvent(dmMessage(receiverId)));
+        tx.executeWithoutResult(status ->
+                publisher.publishEvent(new DirectMessageSseEvent(dmMessage(receiverId))));
 
         verify(mockEmitter, timeout(2000)).send(any(SseEmitter.SseEventBuilder.class));
     }
