@@ -2,6 +2,7 @@ package com.codeit.team5.mopl.binarycontent.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -22,10 +23,13 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class BinaryContentCleanupServiceTest {
+
+    private static final int CHUNK_SIZE = 500;
 
     @Mock
     private BinaryContentRepository binaryContentRepository;
@@ -42,7 +46,8 @@ class BinaryContentCleanupServiceTest {
         // given
         BinaryContent a = deleted("http://cdn/profiles/a.png");
         BinaryContent b = deleted("http://cdn/profiles/b.png");
-        when(binaryContentRepository.findByUploadStatus(BinaryContentUploadStatus.DELETED))
+        when(binaryContentRepository.findByUploadStatus(
+                eq(BinaryContentUploadStatus.DELETED), any(Pageable.class)))
                 .thenReturn(List.of(a, b));
         when(binaryContentStorage.extractKey("http://cdn/profiles/a.png"))
                 .thenReturn("profiles/a.png");
@@ -50,7 +55,7 @@ class BinaryContentCleanupServiceTest {
                 .thenReturn("profiles/b.png");
 
         // when
-        int deleted = binaryContentCleanupService.cleanUp();
+        int deleted = binaryContentCleanupService.cleanUp(CHUNK_SIZE);
 
         // then
         assertThat(deleted).isEqualTo(2);
@@ -58,8 +63,8 @@ class BinaryContentCleanupServiceTest {
         InOrder inOrder = inOrder(binaryContentStorage, binaryContentRepository);
         inOrder.verify(binaryContentStorage).delete("profiles/a.png");
         inOrder.verify(binaryContentRepository).delete(a);
-        verify(binaryContentStorage).delete("profiles/b.png");
-        verify(binaryContentRepository).delete(b);
+        inOrder.verify(binaryContentStorage).delete("profiles/b.png");
+        inOrder.verify(binaryContentRepository).delete(b);
     }
 
     @Test
@@ -68,7 +73,8 @@ class BinaryContentCleanupServiceTest {
         // given
         BinaryContent failing = deleted("http://cdn/profiles/fail.png");
         BinaryContent ok = deleted("http://cdn/profiles/ok.png");
-        when(binaryContentRepository.findByUploadStatus(BinaryContentUploadStatus.DELETED))
+        when(binaryContentRepository.findByUploadStatus(
+                eq(BinaryContentUploadStatus.DELETED), any(Pageable.class)))
                 .thenReturn(List.of(failing, ok));
         when(binaryContentStorage.extractKey("http://cdn/profiles/fail.png"))
                 .thenReturn("profiles/fail.png");
@@ -78,7 +84,7 @@ class BinaryContentCleanupServiceTest {
                 .when(binaryContentStorage).delete("profiles/fail.png");
 
         // when
-        int deleted = binaryContentCleanupService.cleanUp();
+        int deleted = binaryContentCleanupService.cleanUp(CHUNK_SIZE);
 
         // then
         assertThat(deleted).isEqualTo(1);
@@ -92,11 +98,12 @@ class BinaryContentCleanupServiceTest {
     @DisplayName("정리 대상이 없으면 스토리지/DB 삭제를 전혀 호출하지 않는다")
     void cleanUp_noTargets() {
         // given
-        when(binaryContentRepository.findByUploadStatus(BinaryContentUploadStatus.DELETED))
+        when(binaryContentRepository.findByUploadStatus(
+                eq(BinaryContentUploadStatus.DELETED), any(Pageable.class)))
                 .thenReturn(List.of());
 
         // when
-        int deleted = binaryContentCleanupService.cleanUp();
+        int deleted = binaryContentCleanupService.cleanUp(CHUNK_SIZE);
 
         // then
         assertThat(deleted).isZero();

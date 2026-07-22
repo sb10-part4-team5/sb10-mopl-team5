@@ -7,6 +7,8 @@ import com.codeit.team5.mopl.binarycontent.storage.BinaryContentStorage;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,9 +19,11 @@ public class BinaryContentCleanupService {
     private final BinaryContentRepository binaryContentRepository;
     private final BinaryContentStorage binaryContentStorage;
 
-    public int cleanUp() {
-        List<BinaryContent> targets =
-                binaryContentRepository.findByUploadStatus(BinaryContentUploadStatus.DELETED);
+    public int cleanUp(int limit) {
+        // createdAt + id 로 안정 정렬해 오래된 것부터 결정적으로 처리한다.
+        List<BinaryContent> targets = binaryContentRepository.findByUploadStatus(
+                BinaryContentUploadStatus.DELETED,
+                PageRequest.of(0, limit, Sort.by("createdAt", "id")));
         int deleted = 0;
         for (BinaryContent target : targets) {
             if (deleteOne(target)) {
