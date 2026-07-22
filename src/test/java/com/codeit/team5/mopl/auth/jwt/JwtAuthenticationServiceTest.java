@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.codeit.team5.mopl.auth.exception.JwtInvalidException;
 import com.codeit.team5.mopl.auth.security.details.AuthUser;
 import com.codeit.team5.mopl.auth.security.details.MoplUserDetails;
-import com.codeit.team5.mopl.auth.security.details.MoplUserDetailsService;
 import com.codeit.team5.mopl.auth.service.AuthSessionService;
 import com.codeit.team5.mopl.auth.support.MoplAccountStatusChecker;
 import io.jsonwebtoken.Claims;
@@ -33,7 +32,7 @@ class JwtAuthenticationServiceTest {
     private JwtTokenizer jwtTokenizer;
 
     @Mock
-    private MoplUserDetailsService userDetailsService;
+    private JwtPrincipalLoader jwtPrincipalLoader;
 
     @Mock
     private MoplAccountStatusChecker moplAccountStatusChecker;
@@ -67,7 +66,7 @@ class JwtAuthenticationServiceTest {
         given(claims.getSubject()).willReturn(userId.toString());
         given(claims.get("sessionId")).willReturn(sessionId.toString());
         given(authSessionService.isValidSession(userId, sessionId)).willReturn(true);
-        given(userDetailsService.loadUserById(userId)).willReturn(principal);
+        given(jwtPrincipalLoader.loadByUserId(userId)).willReturn(principal);
 
         // When
         Authentication authentication = jwtAuthenticationService.getAuthentication(accessToken);
@@ -79,7 +78,7 @@ class JwtAuthenticationServiceTest {
                 .extracting("authority")
                 .containsExactly("ROLE_USER");
         verify(authSessionService).isValidSession(userId, sessionId);
-        verify(userDetailsService).loadUserById(userId);
+        verify(jwtPrincipalLoader).loadByUserId(userId);
         verify(moplAccountStatusChecker).check(principal);
     }
 
@@ -96,7 +95,11 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token subject");
-        verifyNoInteractions(authSessionService, userDetailsService);
+        verifyNoInteractions(
+                authSessionService,
+                jwtPrincipalLoader,
+                moplAccountStatusChecker
+        );
     }
 
     @Test
@@ -112,7 +115,11 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token subject");
-        verifyNoInteractions(authSessionService, userDetailsService);
+        verifyNoInteractions(
+                authSessionService,
+                jwtPrincipalLoader,
+                moplAccountStatusChecker
+        );
     }
 
     @Test
@@ -128,7 +135,11 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token subject");
-        verifyNoInteractions(authSessionService, userDetailsService);
+        verifyNoInteractions(
+                authSessionService,
+                jwtPrincipalLoader,
+                moplAccountStatusChecker
+        );
     }
 
     @Test
@@ -146,7 +157,11 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token sessionId");
-        verifyNoInteractions(authSessionService, userDetailsService);
+        verifyNoInteractions(
+                authSessionService,
+                jwtPrincipalLoader,
+                moplAccountStatusChecker
+        );
     }
 
     @Test
@@ -164,7 +179,11 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token sessionId");
-        verifyNoInteractions(authSessionService, userDetailsService);
+        verifyNoInteractions(
+                authSessionService,
+                jwtPrincipalLoader,
+                moplAccountStatusChecker
+        );
     }
 
     @Test
@@ -182,7 +201,11 @@ class JwtAuthenticationServiceTest {
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid token sessionId");
-        verifyNoInteractions(authSessionService, userDetailsService);
+        verifyNoInteractions(
+                authSessionService,
+                jwtPrincipalLoader,
+                moplAccountStatusChecker
+        );
     }
 
     @Test
@@ -203,7 +226,7 @@ class JwtAuthenticationServiceTest {
                 .isInstanceOf(JwtInvalidException.class)
                 .hasMessage("Invalid login session");
         verify(authSessionService).isValidSession(userId, sessionId);
-        verifyNoInteractions(userDetailsService);
+        verifyNoInteractions(jwtPrincipalLoader, moplAccountStatusChecker);
     }
 
     @Test
@@ -223,7 +246,7 @@ class JwtAuthenticationServiceTest {
         given(claims.getSubject()).willReturn(userId.toString());
         given(claims.get("sessionId")).willReturn(sessionId.toString());
         given(authSessionService.isValidSession(userId, sessionId)).willReturn(true);
-        given(userDetailsService.loadUserById(userId)).willReturn(principal);
+        given(jwtPrincipalLoader.loadByUserId(userId)).willReturn(principal);
         doThrow(new LockedException("잠긴 계정입니다."))
                 .when(moplAccountStatusChecker)
                 .check(principal);
@@ -233,7 +256,7 @@ class JwtAuthenticationServiceTest {
                 .isInstanceOf(LockedException.class)
                 .hasMessage("잠긴 계정입니다.");
         verify(authSessionService).isValidSession(userId, sessionId);
-        verify(userDetailsService).loadUserById(userId);
+        verify(jwtPrincipalLoader).loadByUserId(userId);
         verify(moplAccountStatusChecker).check(principal);
     }
 
@@ -248,6 +271,10 @@ class JwtAuthenticationServiceTest {
         // When & Then
         assertThatThrownBy(() -> jwtAuthenticationService.getAuthentication(accessToken))
                 .isSameAs(exception);
-        verifyNoInteractions(authSessionService, userDetailsService);
+        verifyNoInteractions(
+                authSessionService,
+                jwtPrincipalLoader,
+                moplAccountStatusChecker
+        );
     }
 }

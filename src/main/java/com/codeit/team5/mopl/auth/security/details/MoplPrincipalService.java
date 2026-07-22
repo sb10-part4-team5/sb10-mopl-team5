@@ -43,6 +43,13 @@ public class MoplPrincipalService {
         return authUserMapper.toAuthUserWithPassword(user);
     }
 
+    public AuthUser loadAuthUserById(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidCredentialsException(userId));
+
+        return authUserMapper.toAuthUser(user);
+    }
+
     @Transactional
     public AuthUser getOrCreateAuthUser(OAuthUserInfo oauthUserInfo) {
         return socialAccountRepository
