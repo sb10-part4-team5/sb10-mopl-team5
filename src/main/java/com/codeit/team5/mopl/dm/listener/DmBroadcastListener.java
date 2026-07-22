@@ -26,7 +26,7 @@ public class DmBroadcastListener {
     // 메시지 저장 커밋 후에만 구독자에게 전송 (저장-전송 정합성 보장)
     // REQUIRES_NEW: 재발행 경로(OutboxScheduler)에서도 AFTER_COMMIT 리스너가 호출되도록 보장
     @Async("dmEventExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDirectMessageBroadcast(DirectMessageBroadcastEvent event) {
         try {

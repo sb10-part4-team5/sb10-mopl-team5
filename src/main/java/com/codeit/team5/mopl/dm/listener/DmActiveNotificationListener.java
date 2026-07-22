@@ -24,7 +24,7 @@ public class DmActiveNotificationListener {
     // AFTER_COMMIT 리스너에서 호출되므로, DirectMessageSseEvent의 Kafka 외부화(커밋 훅 기반)가
     // 실제로 트리거되려면 활성 트랜잭션이 필요해 REQUIRES_NEW로 새 물리 트랜잭션을 보장한다.
     @Async("dmEventExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDirectMessageBroadcast(DirectMessageBroadcastEvent event) {
         if (!activeConversationChecker.isViewing(event.message().conversationId(), event.receiverId())) {

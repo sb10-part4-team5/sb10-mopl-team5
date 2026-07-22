@@ -154,6 +154,22 @@ class SseListenerIntegrationTest {
     }
 
     @Test
+    @DisplayName("트랜잭션 롤백 시 DM SSE 미전송 성공")
+    void onDirectMessageSse_doesNotSend_whenRollback() throws Exception {
+        UUID receiverId = UUID.randomUUID();
+        SseEmitter mockEmitter = mock(SseEmitter.class);
+        emitterStore.save(receiverId, mockEmitter);
+
+        tx.executeWithoutResult(status -> {
+            publisher.publishEvent(new DirectMessageSseEvent(dmMessage(receiverId)));
+            status.setRollbackOnly();
+        });
+
+        // 롤백 시 Modulith가 Kafka에 발행하지 않으므로 일정 시간 후에도 미전송이어야 함
+        verify(mockEmitter, after(500).never()).send(any(SseEmitter.SseEventBuilder.class));
+    }
+
+    @Test
     @DisplayName("트랜잭션 커밋 후 비활성 수신자에게 DM SSE 전송 성공")
     void directMessageBroadcast_commit_sendsToInactiveReceiver_success() throws Exception {
         UUID receiverId = UUID.randomUUID();
