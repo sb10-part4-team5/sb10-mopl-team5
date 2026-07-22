@@ -71,3 +71,9 @@ resource "aws_ssm_parameter" "redis_auth_token" {
   type  = "SecureString"
   value = var.redis_auth_token
 }
+
+resource "aws_ssm_parameter" "opensearch_master_password" {
+  name  = "/mopl/app/opensearch-master-password"
+  type  = "SecureString"
+  value = var.opensearch_master_password
+}

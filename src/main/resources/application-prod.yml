@@ -42,14 +42,12 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
       acks: all
 
-# 콘텐츠 검색용 OpenSearch — 검색 기능(#402) 착수 시 값 채울 것
-# opensearch.uris 기본값이 localhost:9200이라, 비워두면 기동은 되지만 검색 시점에 connection refused
-# opensearch:
-#   uris: ${OPENSEARCH_URIS}
-#   username: ${OPENSEARCH_USERNAME}
-#   password: ${OPENSEARCH_PASSWORD}
-#   connection-timeout: 3s
-#   socket-timeout: 10s
+opensearch:
+  uris: ${OPENSEARCH_URIS}
+  username: ${OPENSEARCH_USERNAME}
+  password: ${OPENSEARCH_PASSWORD}
+  connection-timeout: 3s
+  socket-timeout: 10s
 
 server:
   forward-headers-strategy: native

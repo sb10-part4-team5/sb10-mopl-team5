@@ -75,7 +75,8 @@ resource "aws_iam_role_policy" "task_execution_ssm" {
         aws_ssm_parameter.tmdb_access_token.arn,
         aws_ssm_parameter.tmdb_api_key.arn,
         aws_ssm_parameter.sports_db_api_key.arn,
-        aws_ssm_parameter.redis_auth_token.arn
+        aws_ssm_parameter.redis_auth_token.arn,
+        aws_ssm_parameter.opensearch_master_password.arn
       ]
     }]
   })
