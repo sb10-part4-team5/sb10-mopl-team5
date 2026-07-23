@@ -1,5 +1,7 @@
 package com.codeit.team5.mopl.watcher.command.unsubscribe;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -73,7 +75,7 @@ class WatchingContentUnsubscribeInboundChannelTest {
         WatchingSessionPayload payload =
                 new WatchingSessionPayload(WatcherStatus.LEAVE, fakeResponse, 4L);
 
-        when(queryService.getWatchingSessionPayload(testUserId, WatcherStatus.LEAVE))
+        when(queryService.getWatchingSessionPayload(any(UUID.class), eq(testUserId), eq(WatcherStatus.LEAVE)))
                 .thenReturn(payload);
 
         // When

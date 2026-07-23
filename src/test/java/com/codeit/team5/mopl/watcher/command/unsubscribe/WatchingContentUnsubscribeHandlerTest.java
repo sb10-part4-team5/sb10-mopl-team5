@@ -49,7 +49,7 @@ class WatchingContentUnsubscribeHandlerTest {
         WatchingSessionPayload payload =
                 new WatchingSessionPayload(WatcherStatus.LEAVE, response, watchCount);
 
-        given(queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE))
+        given(queryService.getWatchingSessionPayload(contentId, userId, WatcherStatus.LEAVE))
                 .willReturn(payload);
         when(sessionStore.getDestination(userId, subscriptionId)).thenReturn(java.util.Optional.of(
                 new WebSocketSessionStore.StompDestination("/sub/contents/{id}/watch", contentId)));

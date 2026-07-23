@@ -210,7 +210,7 @@ class WatchingSessionQueryServiceTest {
         when(repository.countByContentId(contentId)).thenReturn(5L);
 
         // when
-        WatchingSessionPayload result = service.getWatchingSessionPayload(watcherId, status);
+        WatchingSessionPayload result = service.getWatchingSessionPayload(contentId, watcherId, status);
 
         // then
         assertThat(result).isNotNull();
@@ -224,12 +224,30 @@ class WatchingSessionQueryServiceTest {
     void getWatchingSessionPayload_NotFound_예외발생() {
         // given
         UUID watcherId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
         WatcherStatus status = WatcherStatus.JOIN;
 
         when(repository.findByWatcherId(watcherId)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> service.getWatchingSessionPayload(watcherId, status))
+        assertThatThrownBy(() -> service.getWatchingSessionPayload(contentId, watcherId, status))
+                .isInstanceOf(WatchingSessionNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("세션의 컨텐츠 ID가 요청한 컨텐츠 ID와 다를 경우 예외 발생")
+    void getWatchingSessionPayload_InvalidContentId_예외발생() {
+        // given
+        UUID watcherId = UUID.randomUUID();
+        UUID actualContentId = UUID.randomUUID();
+        UUID requestedContentId = UUID.randomUUID();
+        WatcherStatus status = WatcherStatus.JOIN;
+        WatchingSession session = new WatchingSession(watcherId, actualContentId, Instant.now());
+
+        when(repository.findByWatcherId(watcherId)).thenReturn(Optional.of(session));
+
+        // when & then
+        assertThatThrownBy(() -> service.getWatchingSessionPayload(requestedContentId, watcherId, status))
                 .isInstanceOf(WatchingSessionNotFoundException.class);
     }
 }

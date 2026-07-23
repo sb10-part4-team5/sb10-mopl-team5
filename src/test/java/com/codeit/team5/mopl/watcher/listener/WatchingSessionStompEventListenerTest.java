@@ -76,7 +76,7 @@ class WatchingSessionStompEventListenerTest {
         when(sessionStore.getAllDestination(userId)).thenReturn(destinations);
 
         WatchingSessionPayload payload = mock(WatchingSessionPayload.class);
-        when(queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE))
+        when(queryService.getWatchingSessionPayload(any(UUID.class), eq(userId), eq(WatcherStatus.LEAVE)))
                 .thenReturn(payload);
         when(objectMapper.writeValueAsString(any())).thenReturn("dummy_json");
 
@@ -90,7 +90,7 @@ class WatchingSessionStompEventListenerTest {
 
         // then
         verify(sessionStore).getAllDestination(userId);
-        verify(queryService).getWatchingSessionPayload(userId, WatcherStatus.LEAVE);
+        verify(queryService).getWatchingSessionPayload(any(UUID.class), eq(userId), eq(WatcherStatus.LEAVE));
         verify(commandService).left(any(UUID.class), eq(userId));
         verify(redisTemplate).convertAndSend(eq(WatcherRedisConstants.WATCHING_SESSION_TOPIC), eq("dummy_json"));
         verify(sessionStore).disconnect(userId);
@@ -237,7 +237,7 @@ class WatchingSessionStompEventListenerTest {
         when(sessionStore.getAllDestination(userId)).thenReturn(destinations);
 
         WatchingSessionPayload payload = mock(WatchingSessionPayload.class);
-        when(queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE))
+        when(queryService.getWatchingSessionPayload(any(UUID.class), eq(userId), eq(WatcherStatus.LEAVE)))
                 .thenReturn(payload);
         when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON error"));
 

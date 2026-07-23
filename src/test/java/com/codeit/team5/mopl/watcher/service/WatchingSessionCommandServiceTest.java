@@ -62,7 +62,7 @@ class WatchingSessionCommandServiceTest {
 
         when(contentRepository.existsById(contentId)).thenReturn(true);
         when(userRepository.existsById(watcherId)).thenReturn(true);
-
+        when(repository.save(any(WatchingSession.class))).thenReturn(true);
 
         // when
         service.join(contentId, watcherId);
