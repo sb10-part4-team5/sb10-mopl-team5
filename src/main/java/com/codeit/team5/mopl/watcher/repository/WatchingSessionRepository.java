@@ -48,7 +48,7 @@ public class WatchingSessionRepository {
     /**
      * 단건 및 페이징 키에 동시에 저장합니다.
      */
-    public void save(WatchingSession session) {
+    public boolean save(WatchingSession session) {
         String singleKey = WATCHER_SESSION_KEY + session.watcherId();
         
         WatchingSession existing = redisTemplate.opsForValue().get(singleKey);
@@ -66,7 +66,8 @@ public class WatchingSessionRepository {
         Instant createdAt = session.createdAt();
         Double score = (createdAt != null) ? createdAt.toEpochMilli() : 0.0;
 
-        stringRedisTemplate.opsForZSet().add(sortedSetKey, session.watcherId().toString(), score);
+        Boolean added = stringRedisTemplate.opsForZSet().add(sortedSetKey, session.watcherId().toString(), score);
+        return Boolean.TRUE.equals(added);
     }
 
     /**

@@ -88,9 +88,14 @@ public class WatchingSessionQueryService {
         }
     }
 
-    public WatchingSessionPayload getWatchingSessionPayload(UUID watcherId, WatcherStatus status) {
+    public WatchingSessionPayload getWatchingSessionPayload(UUID contentId, UUID watcherId, WatcherStatus status) {
         WatchingSession session = repository.findByWatcherId(watcherId).orElseThrow(
                 () -> new WatchingSessionNotFoundException(Map.of("watcherId", watcherId)));
+
+        if (!session.contentId().equals(contentId)) {
+            throw new WatchingSessionNotFoundException(
+                    Map.of("watcherId", watcherId, "contentId", contentId));
+        }
 
         WatchingSessionResponse response = findByWatcherId(watcherId);
         long watcherCount = repository.countByContentId(session.contentId());

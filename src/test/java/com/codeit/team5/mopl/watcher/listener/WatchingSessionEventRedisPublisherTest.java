@@ -45,7 +45,7 @@ class WatchingSessionEventRedisPublisherTest {
         WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherId);
         WatchingSessionPayload payload = mock(WatchingSessionPayload.class);
         
-        when(queryService.getWatchingSessionPayload(watcherId, WatcherStatus.JOIN)).thenReturn(payload);
+        when(queryService.getWatchingSessionPayload(any(UUID.class), eq(watcherId), eq(WatcherStatus.JOIN))).thenReturn(payload);
         when(objectMapper.writeValueAsString(any())).thenReturn("dummy_json");
 
         // when
@@ -63,7 +63,7 @@ class WatchingSessionEventRedisPublisherTest {
         UUID watcherId = UUID.randomUUID();
         WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherId);
         
-        when(queryService.getWatchingSessionPayload(watcherId, WatcherStatus.JOIN)).thenThrow(new RuntimeException("Query failure"));
+        when(queryService.getWatchingSessionPayload(any(UUID.class), eq(watcherId), eq(WatcherStatus.JOIN))).thenThrow(new RuntimeException("Query failure"));
 
         // when
         publisher.onWatcherJoined(event);
@@ -81,7 +81,7 @@ class WatchingSessionEventRedisPublisherTest {
         WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherId);
         WatchingSessionPayload payload = mock(WatchingSessionPayload.class);
         
-        when(queryService.getWatchingSessionPayload(watcherId, WatcherStatus.JOIN)).thenReturn(payload);
+        when(queryService.getWatchingSessionPayload(any(UUID.class), eq(watcherId), eq(WatcherStatus.JOIN))).thenReturn(payload);
         when(objectMapper.writeValueAsString(any())).thenThrow(mock(JsonProcessingException.class));
 
         // when

@@ -41,8 +41,10 @@ public class WatchingSessionCommandService {
         if (!userRepository.existsById(watcherId)) {
             throw new WatchingSessionUserNotFoundException(watcherId);
         }
-        repository.save(new WatchingSession(watcherId, contentId, Instant.now()));
-        eventPublisher.publishEvent(new WatcherJoinedEvent(contentId, watcherId));
+        boolean isNewSession = repository.save(new WatchingSession(watcherId, contentId, Instant.now()));
+        if (isNewSession) {
+            eventPublisher.publishEvent(new WatcherJoinedEvent(contentId, watcherId));
+        }
     }
 
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))

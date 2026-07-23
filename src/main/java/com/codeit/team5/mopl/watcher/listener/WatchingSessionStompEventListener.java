@@ -91,7 +91,7 @@ public class WatchingSessionStompEventListener {
 
     private void leaveWatchingSession(UUID contentId, UUID userId) {
         WatchingSessionPayload payload =
-                queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE);
+                queryService.getWatchingSessionPayload(contentId, userId, WatcherStatus.LEAVE);
         commandService.left(contentId, userId);
         publishToRedis(contentId, payload);
     }

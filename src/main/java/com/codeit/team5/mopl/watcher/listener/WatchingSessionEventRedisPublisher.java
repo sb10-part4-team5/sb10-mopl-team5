@@ -27,7 +27,7 @@ public class WatchingSessionEventRedisPublisher {
     public void onWatcherJoined(WatcherJoinedEvent event) {
         try {
             WatchingSessionPayload payload =
-                    queryService.getWatchingSessionPayload(event.watcherId(), WatcherStatus.JOIN);
+                    queryService.getWatchingSessionPayload(event.contentId(), event.watcherId(), WatcherStatus.JOIN);
             publishEvent(new WatchingSessionRedisMessage(event.contentId(), payload));
         } catch (Exception e) {
             log.error("Failed to process WatcherJoinedEvent for Redis publish", e);
