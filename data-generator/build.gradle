@@ -12,7 +12,9 @@ repositories {
 }
 
 dependencies {
-    implementation project(":")
+    implementation(project(":")) {
+        exclude group: 'org.opensearch.client', module: 'spring-data-opensearch-starter'
+    }
     
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
