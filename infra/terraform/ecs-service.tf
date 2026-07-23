@@ -142,7 +142,8 @@ resource "aws_ecs_service" "mopl" {
   desired_count                     = 2 # 다중 인스턴스 (EC2 2대에 태스크 1개씩)
   health_check_grace_period_seconds = 180
 
-  # 인스턴스 2대 상한 + distinctInstance: 배포 중 old 1대를 내려 빈 자리에 new를 올리도록
+  # 인스턴스 2대 상한 + distinctInstance: 배포 중 old 1대를 내려 빈 자리에 new를 올린다.
+  # 최소 1대(50%)가 계속 트래픽을 받아 서비스는 유지되고, 배포 중 용량만 절반으로 준다.
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 100
 

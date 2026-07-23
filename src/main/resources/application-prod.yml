@@ -58,6 +58,8 @@ server:
 
 # 배포 환경: 이미지를 S3에 저장
 mopl:
+  kafka:
+    topic-replicas: 2 # MSK 브로커 2대(AZ당 1) → SSE 토픽 복제수 2
   storage:
     type: s3
     s3:
