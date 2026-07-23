@@ -39,6 +39,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.1'
 
+    // Search
+    implementation 'org.opensearch.client:spring-data-opensearch-starter:1.8.2'
+
     // Cache
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'com.github.ben-manes.caffeine:caffeine'
@@ -46,6 +49,11 @@ dependencies {
     // Messaging
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.apache.commons:commons-pool2'
+
+    // Scheduler Lock
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:5.13.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.13.0'
 
     // Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -64,6 +72,7 @@ dependencies {
     implementation 'org.springframework:spring-aspects'
     implementation 'org.springframework.modulith:spring-modulith-starter-jpa'
     implementation 'org.springframework.modulith:spring-modulith-starter-core'
+    implementation 'org.springframework.modulith:spring-modulith-events-kafka'
 
     // OAuth2
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
@@ -106,6 +115,8 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy 'jacocoTestReport'
+    // ElasticsearchRepository 빈 생성 시 실제 OpenSearch에 인덱스 생성을 시도하는 걸 막는다.
+    environment 'SPRING_DATA_ELASTICSEARCH_SKIP_REPOSITORY_INIT', 'true'
 }
 
 jacoco {

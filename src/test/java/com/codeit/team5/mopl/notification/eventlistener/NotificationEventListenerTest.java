@@ -1,12 +1,22 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.dm.fixture.DirectMessageTestFixtures;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
@@ -21,19 +31,8 @@ import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
-import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationEventListenerTest {
@@ -48,7 +47,10 @@ class NotificationEventListenerTest {
     private SubscriptionRepository subscriptionRepository;
 
     @Mock
-    private WatchingSessionRepository watchingSessionRepository;
+    private UserRepository userRepository;
+
+    @Mock
+    private ContentRepository contentRepository;
 
     @InjectMocks
     private NotificationEventListener notificationEventListener;
@@ -171,19 +173,21 @@ class NotificationEventListenerTest {
     void onWatchingSessionCreated_createsNotificationForFollowers() {
         // given
         UUID watcherUserId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
         UUID follower1 = UUID.randomUUID();
         UUID follower2 = UUID.randomUUID();
-        WatcherJoinedEvent event = new WatcherJoinedEvent(UUID.randomUUID(), watcherUserId);
+        WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherUserId);
 
         User mockWatcher = mock(User.class);
         Content mockContent = mock(Content.class);
-        WatchingSession mockSession = mock(WatchingSession.class);
+        
         when(mockWatcher.getId()).thenReturn(watcherUserId);
         when(mockWatcher.getName()).thenReturn("다린");
         when(mockContent.getTitle()).thenReturn("콘텐츠A");
-        when(mockSession.getWatcher()).thenReturn(mockWatcher);
-        when(mockSession.getContent()).thenReturn(mockContent);
-        when(watchingSessionRepository.findByWatcherId(watcherUserId)).thenReturn(Optional.of(mockSession));
+        
+        when(contentRepository.findById(contentId)).thenReturn(Optional.of(mockContent));
+        when(userRepository.findById(watcherUserId)).thenReturn(Optional.of(mockWatcher));
+        
         when(followRepository.findFollowerIdsByFolloweeId(watcherUserId))
                 .thenReturn(List.of(follower1, follower2));
 
@@ -198,15 +202,38 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("시청 세션이 존재하지 않으면 WatchingSessionNotFoundException이 발생한다")
-    void onWatchingSessionCreated_throwsWhenSessionNotFound() {
+    @DisplayName("시청 유저가 존재하지 않으면 알림을 생성하지 않고 종료한다")
+    void onWatchingSessionCreated_returnsWhenUserNotFound() {
         // given
         UUID watcherUserId = UUID.randomUUID();
-        WatcherJoinedEvent event = new WatcherJoinedEvent(UUID.randomUUID(), watcherUserId);
-        when(watchingSessionRepository.findByWatcherId(watcherUserId)).thenReturn(Optional.empty());
+        UUID contentId = UUID.randomUUID();
+        WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherUserId);
+        Content mockContent = mock(Content.class);
+        when(contentRepository.findById(contentId)).thenReturn(Optional.of(mockContent));
+        when(userRepository.findById(watcherUserId)).thenReturn(Optional.empty());
 
-        // when & then
-        assertThrows(WatchingSessionNotFoundException.class,
-                () -> notificationEventListener.onWatchingSessionCreated(event));
+        // when
+        notificationEventListener.onWatchingSessionCreated(event);
+
+        // then
+        verify(notificationService, never()).createAll(any());
+    }
+
+    @Test
+    @DisplayName("시청 중인 콘텐츠가 존재하지 않으면 알림을 생성하지 않고 종료한다")
+    void onWatchingSessionCreated_returnsWhenContentNotFound() {
+        // given
+        UUID watcherUserId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
+        WatcherJoinedEvent event = new WatcherJoinedEvent(contentId, watcherUserId);
+        
+        when(contentRepository.findById(contentId)).thenReturn(Optional.empty());
+
+        // when
+        notificationEventListener.onWatchingSessionCreated(event);
+
+        // then
+        verify(notificationService, never()).createAll(any());
+        verify(userRepository, never()).findById(any());
     }
 }

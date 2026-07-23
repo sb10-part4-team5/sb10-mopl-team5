@@ -1,5 +1,6 @@
 package com.codeit.team5.mopl.notification.eventlistener;
 
+import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.dm.dto.response.DirectMessageResponse;
 import com.codeit.team5.mopl.dm.event.DirectMessageNotificationEvent;
 import com.codeit.team5.mopl.follow.event.UserFollowedEvent;
@@ -14,14 +15,14 @@ import com.codeit.team5.mopl.subscription.event.PlaylistSubscribedEvent;
 import com.codeit.team5.mopl.subscription.repository.SubscriptionRepository;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.event.RoleChangedEvent;
-import com.codeit.team5.mopl.watcher.entity.WatchingSession;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.event.WatcherJoinedEvent;
-import com.codeit.team5.mopl.watcher.exception.WatchingSessionNotFoundException;
-import com.codeit.team5.mopl.watcher.repository.WatchingSessionRepository;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -32,13 +33,15 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 // 여러 도메인에서 알림 생성이 트리거 될 때 작업을 수행하는 이벤트 리스너입니다.
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class NotificationEventListener {
     private final NotificationService notificationService;
     private final FollowRepository followRepository;
     private final SubscriptionRepository subscriptionRepository;
-    private final WatchingSessionRepository watchingSessionRepository;
+    private final UserRepository userRepository;
+    private final ContentRepository contentRepository;
 
     // 비활성 대화에 DM이 도착하면 알림을 생성 (SSE 전송과는 독립)
     @Async("dmEventExecutor")
@@ -46,7 +49,7 @@ public class NotificationEventListener {
     public void onDirectMessageNotification(DirectMessageNotificationEvent event){
         DirectMessageResponse message = event.message();
         notificationService.create(new NotificationCreateCommand(
-                message.receiver().userId(), NotificationType.DIRECT_MESSAGE,
+                message.receiver().id(), NotificationType.DIRECT_MESSAGE,
                 "[DM] " + message.sender().name(),
                 StringUtils.truncate(message.content(), 50),
                 NotificationLevel.INFO));
@@ -100,21 +103,23 @@ public class NotificationEventListener {
     // 시청 시작과 리스너 실행 사이에 follow/unfollow가 발생하면 결과가 달라질 수 있으나,
     // 시청 알림 특성상 약간의 오차는 허용되는 것으로 간주합니다.
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onWatchingSessionCreated(WatcherJoinedEvent event){
-        WatchingSession watchingSession = watchingSessionRepository.findByWatcherId(event.watcherId()).orElseThrow(() -> new WatchingSessionNotFoundException(
-            Map.of("watcherId", event.watcherId())));
-
-        String contentTitle = watchingSession.getContent().getTitle();
-        User watcher = watchingSession.getWatcher();
-
-        List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(watcher.getId());
+        Optional<Content> content = contentRepository.findById(event.contentId());
+        if (content.isEmpty()) {
+            log.warn("Content not found for id: {}", event.contentId());
+            return;
+        }
+        Optional<User> watcher = userRepository.findById(event.watcherId());
+        if (watcher.isEmpty()) {
+            log.warn("User not found for id: {}", event.watcherId());
+            return;
+        }
+        List<UUID> followerIds = followRepository.findFollowerIdsByFolloweeId(watcher.get().getId());
         notificationService.createAll(new NotificationBatchCreateCommand(
                 followerIds, NotificationType.WATCHING_ACTIVITY,
-                watcher.getName() + " 님이 컨텐츠 시청중입니다.",
-                contentTitle + " 시청 중",
+                watcher.get().getName() + " 님이 컨텐츠 시청중입니다.",
+                content.get().getTitle() + " 시청 중",
                 NotificationLevel.INFO));
     }
-
-
 }

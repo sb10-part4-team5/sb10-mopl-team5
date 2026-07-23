@@ -16,6 +16,11 @@ public class MoplUserDetails implements UserDetails, MoplPrincipal {
     private final AuthUser authUser;
     private final String password;
 
+    // JWT 인증에서는 비밀번호를 사용하지 않으므로 password는 null
+    public static MoplUserDetails forJwt(AuthUser authUser) {
+        return new MoplUserDetails(authUser, null);
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(

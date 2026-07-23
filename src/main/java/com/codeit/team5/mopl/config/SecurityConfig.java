@@ -88,7 +88,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/*").authenticated()
 
-                        .requestMatchers(HttpMethod.GET, "/api/contents", "/api/contents/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/contents", "/api/contents/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/contents").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/contents/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/contents/*").hasRole("ADMIN")
@@ -100,6 +100,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/notifications/**").authenticated()
                         .requestMatchers("/api/sse/**").authenticated()
                         .requestMatchers("/api/reviews/**").authenticated()
+                        .requestMatchers("/api/playlists/**").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/auth/sign-in").permitAll()

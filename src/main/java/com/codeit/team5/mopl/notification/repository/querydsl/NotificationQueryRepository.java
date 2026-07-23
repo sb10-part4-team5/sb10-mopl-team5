@@ -12,5 +12,5 @@ public interface NotificationQueryRepository {
 
     List<Notification> findPageByReceiverAsc(UUID receiverId, Instant cursor, UUID idAfter, Limit limit);
 
-    List<Notification> findMissedNotifications(UUID receiverId, UUID lastEventId);
+    List<Notification> findMissedNotifications(UUID receiverId, Instant afterCreatedAt, UUID afterId, Limit limit);
 }

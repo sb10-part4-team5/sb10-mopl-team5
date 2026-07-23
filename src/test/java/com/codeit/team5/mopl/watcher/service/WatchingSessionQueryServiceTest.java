@@ -8,20 +8,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Limit;
-import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.Range;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Window;
+import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
+import com.codeit.team5.mopl.user.entity.User;
+import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.codeit.team5.mopl.watcher.constant.WatcherSortByType;
 import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
@@ -39,6 +42,12 @@ class WatchingSessionQueryServiceTest {
     private WatchingSessionRepository repository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private ContentRepository contentRepository;
+
+    @Mock
     private WatchingSessionMapper mapper;
 
     @InjectMocks
@@ -50,11 +59,16 @@ class WatchingSessionQueryServiceTest {
     void findByWatcherId_성공() {
         // given
         UUID watcherId = UUID.randomUUID();
-        WatchingSession session = mock(WatchingSession.class);
+        UUID contentId = UUID.randomUUID();
+        WatchingSession session = new WatchingSession(watcherId, contentId, Instant.now());
+        User user = mock(User.class);
+        Content content = mock(Content.class);
 
         when(repository.findByWatcherId(watcherId)).thenReturn(Optional.of(session));
-        when(mapper.toDto(any(WatchingSession.class)))
-                .thenReturn(WatchingSessionResponse.builder().id(UUID.randomUUID()).build());
+        when(userRepository.findWithProfileImageById(watcherId)).thenReturn(Optional.of(user));
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        when(mapper.toDto(session, user, content))
+                .thenReturn(WatchingSessionResponse.builder().id(watcherId).build());
 
         // when
         WatchingSessionResponse result = service.findByWatcherId(watcherId);
@@ -87,13 +101,20 @@ class WatchingSessionQueryServiceTest {
         WatchingSessionCursorRequest request = new WatchingSessionCursorRequest(null, null, null,
                 10, Sort.Direction.DESC, WatcherSortByType.CREATED_AT.getValue());
 
-        @SuppressWarnings("unchecked")
-        Window<WatchingSession> window = mock(Window.class);
+        UUID watcherId = UUID.randomUUID();
+        WatchingSession session = new WatchingSession(watcherId, contentId, Instant.now());
+        List<WatchingSession> sessions = List.of(session);
+        
+        User user = mock(User.class);
+        when(user.getId()).thenReturn(watcherId);
+        Content content = mock(Content.class);
 
-        when(repository.findByContentId(eq(contentId), any(ScrollPosition.class), any(Limit.class),
-                any(Sort.class))).thenReturn(window);
+        when(repository.findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.closed(0.0, Double.MAX_VALUE))))
+                .thenReturn(sessions);
+        when(userRepository.findWithProfileImageByIdIn(any(Set.class))).thenReturn(List.of(user));
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(repository.countByContentId(contentId)).thenReturn(1L);
-        when(mapper.toCursor(any(), any(), any(), any()))
+        when(mapper.toCursor(any(), eq(false), eq(1L), eq(request.sortBy()), eq(request.sortDirection().toString())))
                 .thenReturn(new CursorResponse<>(null, null, null, false, 1L, null, null));
 
         // when
@@ -102,15 +123,7 @@ class WatchingSessionQueryServiceTest {
 
         // then
         assertThat(result).isNotNull();
-
-        ArgumentCaptor<Sort> sortCaptor = ArgumentCaptor.forClass(Sort.class);
-        verify(repository).findByContentId(eq(contentId), any(ScrollPosition.class),
-                any(Limit.class), sortCaptor.capture());
-
-        Sort capturedSort = sortCaptor.getValue();
-        assertThat(capturedSort.getOrderFor(WatcherSortByType.CREATED_AT.getValue()).getDirection())
-                .isEqualTo(Sort.Direction.DESC);
-        assertThat(capturedSort.getOrderFor("id").getDirection()).isEqualTo(Sort.Direction.DESC);
+        verify(repository).findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.closed(0.0, Double.MAX_VALUE)));
     }
 
     @Test
@@ -118,17 +131,27 @@ class WatchingSessionQueryServiceTest {
     void findCursorByContentId_NextPage_성공() {
         // given
         UUID contentId = UUID.randomUUID();
+        Instant cursorTime = Instant.now();
         WatchingSessionCursorRequest request =
-                new WatchingSessionCursorRequest(null, Instant.now(), UUID.randomUUID(), 10,
+                new WatchingSessionCursorRequest(null, cursorTime, UUID.randomUUID(), 10,
                         Sort.Direction.DESC, WatcherSortByType.CREATED_AT.getValue());
 
-        @SuppressWarnings("unchecked")
-        Window<WatchingSession> window = mock(Window.class);
+        UUID watcherId = UUID.randomUUID();
+        WatchingSession session = new WatchingSession(watcherId, contentId, cursorTime.minusSeconds(1));
+        List<WatchingSession> sessions = List.of(session);
+        
+        User user = mock(User.class);
+        when(user.getId()).thenReturn(watcherId);
+        Content content = mock(Content.class);
 
-        when(repository.findByContentId(eq(contentId), any(ScrollPosition.class), any(Limit.class),
-                any(Sort.class))).thenReturn(window);
+        double expectedMaxScore = (double) cursorTime.toEpochMilli();
+
+        when(repository.findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.rightOpen(0.0, expectedMaxScore))))
+                .thenReturn(sessions);
+        when(userRepository.findWithProfileImageByIdIn(any(Set.class))).thenReturn(List.of(user));
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
         when(repository.countByContentId(contentId)).thenReturn(11L);
-        when(mapper.toCursor(any(), any(), any(), any()))
+        when(mapper.toCursor(any(), eq(false), eq(11L), eq(request.sortBy()), eq(request.sortDirection().toString())))
                 .thenReturn(new CursorResponse<>(null, null, null, false, 11L, null, null));
 
         // when
@@ -137,15 +160,7 @@ class WatchingSessionQueryServiceTest {
 
         // then
         assertThat(result).isNotNull();
-
-        ArgumentCaptor<Sort> sortCaptor = ArgumentCaptor.forClass(Sort.class);
-        verify(repository).findByContentId(eq(contentId), any(ScrollPosition.class),
-                any(Limit.class), sortCaptor.capture());
-
-        Sort capturedSort = sortCaptor.getValue();
-        assertThat(capturedSort.getOrderFor(WatcherSortByType.CREATED_AT.getValue()).getDirection())
-                .isEqualTo(Sort.Direction.DESC);
-        assertThat(capturedSort.getOrderFor("id").getDirection()).isEqualTo(Sort.Direction.DESC);
+        verify(repository).findWatchingSessionsByContentId(eq(contentId), eq(11), eq(Range.rightOpen(0.0, expectedMaxScore)));
     }
 
     // --- READ (ensureWatchingContent) ---
@@ -181,21 +196,27 @@ class WatchingSessionQueryServiceTest {
     void getWatchingSessionPayload_성공() {
         // given
         UUID watcherId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
         WatcherStatus status = WatcherStatus.JOIN;
-        WatchingSession session = mock(WatchingSession.class);
-        WatchingSessionPayload payload = mock(WatchingSessionPayload.class);
+        WatchingSession session = new WatchingSession(watcherId, contentId, Instant.now());
+        User user = mock(User.class);
+        Content content = mock(Content.class);
 
         when(repository.findByWatcherId(watcherId)).thenReturn(Optional.of(session));
-        when(mapper.toPayload(session, status)).thenReturn(payload);
+        // mocked for findByWatcherId call within getWatchingSessionPayload
+        when(userRepository.findWithProfileImageById(watcherId)).thenReturn(Optional.of(user));
+        when(contentRepository.findWithStatsAndTagsById(contentId)).thenReturn(Optional.of(content));
+        
+        when(repository.countByContentId(contentId)).thenReturn(5L);
 
         // when
         WatchingSessionPayload result = service.getWatchingSessionPayload(watcherId, status);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result).isEqualTo(payload);
-        verify(repository).findByWatcherId(watcherId);
-        verify(mapper).toPayload(session, status);
+        assertThat(result.status()).isEqualTo(status);
+        assertThat(result.watcherCount()).isEqualTo(5L);
+        verify(repository).countByContentId(contentId);
     }
 
     @Test

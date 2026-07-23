@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ public class SportsDbEventItemProcessor implements ItemProcessor<SportsDbEventDt
         );
 
         String leagueName = StringUtils.hasText(dto.strLeague())
-                ? dto.strLeague().trim().toLowerCase()
+                ? dto.strLeague().trim().toLowerCase(Locale.ROOT)
                 : null;
 
         return new ContentWithMetaData(content, dto.strThumb(), leagueName != null ? List.of(leagueName) : List.of());

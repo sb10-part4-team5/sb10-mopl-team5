@@ -7,7 +7,7 @@
     "smoke": "k6 run scripts/smoke.ts"
   },
   "devDependencies": {
-    "@types/k6": "^0.50.0",
+    "@types/k6": "^0.50.1",
     "typescript": "^5.4.0"
   }
 }

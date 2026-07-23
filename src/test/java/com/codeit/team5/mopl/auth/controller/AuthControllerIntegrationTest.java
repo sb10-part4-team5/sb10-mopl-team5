@@ -14,13 +14,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeit.team5.mopl.TestcontainersConfiguration;
 import com.codeit.team5.mopl.auth.dto.request.SignInRequest;
 import com.codeit.team5.mopl.auth.entity.TemporaryPassword;
-import com.codeit.team5.mopl.auth.repository.RefreshTokenRepository;
 import com.codeit.team5.mopl.auth.repository.TemporaryPasswordRepository;
+import com.codeit.team5.mopl.auth.service.RefreshTokenStore;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -65,7 +68,7 @@ class AuthControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
+    private RefreshTokenStore refreshTokenStore;
 
     @Autowired
     private TemporaryPasswordRepository temporaryPasswordRepository;
@@ -76,9 +79,12 @@ class AuthControllerIntegrationTest {
     @MockitoBean
     private JavaMailSender mailSender;
 
+    private final Set<UUID> createdUserIds = new HashSet<>();
+
     @AfterEach
     void cleanUp() {
-        refreshTokenRepository.deleteAll();
+        createdUserIds.forEach(refreshTokenStore::deleteByUserId);
+        createdUserIds.clear();
         temporaryPasswordRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -88,6 +94,7 @@ class AuthControllerIntegrationTest {
     void login_success() throws Exception {
         // Given
         SignInRequest request = saveLoginUser("login-flow@example.com", "password1");
+        UUID userId = userRepository.findByEmail(request.username()).orElseThrow().getId();
 
         // When & Then
         MvcResult loginResult = mockMvc.perform(post("/api/auth/sign-in")
@@ -112,14 +119,7 @@ class AuthControllerIntegrationTest {
                 .andReturn();
         String refreshToken = loginResult.getResponse().getCookie("REFRESH_TOKEN").getValue();
 
-        assertThat(refreshTokenRepository.findAll())
-                .singleElement()
-                .satisfies(savedRefreshToken -> {
-                    assertThat(savedRefreshToken.getTokenHash()).isNotBlank();
-                    assertThat(savedRefreshToken.getTokenHash()).isNotEqualTo("refresh-token");
-                    assertThat(savedRefreshToken.getTokenHash()).isNotEqualTo(refreshToken);
-                    assertThat(savedRefreshToken.getTokenHash()).hasSize(64);
-                });
+        assertThat(refreshTokenStore.existsValidToken(userId, refreshToken)).isTrue();
     }
 
     @Test
@@ -139,7 +139,12 @@ class AuthControllerIntegrationTest {
                 .get("accessToken")
                 .asText();
         Cookie refreshTokenCookie = loginResult.getResponse().getCookie("REFRESH_TOKEN");
-        assertThat(refreshTokenRepository.count()).isEqualTo(1);
+        UUID userId = userRepository.findByEmail(request.username()).orElseThrow().getId();
+        assertThat(refreshTokenCookie).isNotNull();
+        assertThat(refreshTokenStore.existsValidToken(
+                userId,
+                refreshTokenCookie.getValue()
+        )).isTrue();
 
         // When & Then
         mockMvc.perform(post("/api/auth/sign-out")
@@ -156,7 +161,10 @@ class AuthControllerIntegrationTest {
                                 Matchers.containsString("SameSite=Lax")
                         )));
 
-        assertThat(refreshTokenRepository.count()).isZero();
+        assertThat(refreshTokenStore.existsValidToken(
+                userId,
+                refreshTokenCookie.getValue()
+        )).isFalse();
     }
 
     @Test
@@ -305,7 +313,15 @@ class AuthControllerIntegrationTest {
         assertThat(oldRefreshTokenCookie).isNotNull();
         assertThat(newRefreshTokenCookie).isNotNull();
         assertThat(newRefreshTokenCookie.getValue()).isNotEqualTo(oldRefreshTokenCookie.getValue());
-        assertThat(refreshTokenRepository.count()).isEqualTo(1);
+        UUID userId = userRepository.findByEmail(request.username()).orElseThrow().getId();
+        assertThat(refreshTokenStore.existsValidToken(
+                userId,
+                oldRefreshTokenCookie.getValue()
+        )).isFalse();
+        assertThat(refreshTokenStore.existsValidToken(
+                userId,
+                newRefreshTokenCookie.getValue()
+        )).isTrue();
 
         // When & Then
         mockMvc.perform(post("/api/auth/refresh")
@@ -325,10 +341,14 @@ class AuthControllerIntegrationTest {
         Cookie latestRefreshTokenCookie = login(request).getResponse().getCookie("REFRESH_TOKEN");
 
         assertThat(latestRefreshTokenCookie).isNotNull();
-        assertThat(refreshTokenRepository.count()).isEqualTo(1);
+        UUID userId = userRepository.findByEmail(request.username()).orElseThrow().getId();
+        assertThat(refreshTokenStore.existsValidToken(
+                userId,
+                latestRefreshTokenCookie.getValue()
+        )).isTrue();
 
         // When & Then
-        mockMvc.perform(post("/api/auth/refresh")
+        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
                         .cookie(latestRefreshTokenCookie))
                 .andExpect(status().isOk())
                 .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
@@ -343,7 +363,20 @@ class AuthControllerIntegrationTest {
                         Matchers.not(Matchers.hasItem(Matchers.containsString("XSRF-TOKEN=")))))
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").doesNotExist())
-                .andExpect(jsonPath("$.userDto.email").value(request.username()));
+                .andExpect(jsonPath("$.userDto.email").value(request.username()))
+                .andReturn();
+        Cookie rotatedRefreshTokenCookie =
+                refreshResult.getResponse().getCookie("REFRESH_TOKEN");
+
+        assertThat(rotatedRefreshTokenCookie).isNotNull();
+        assertThat(refreshTokenStore.existsValidToken(
+                userId,
+                latestRefreshTokenCookie.getValue()
+        )).isFalse();
+        assertThat(refreshTokenStore.existsValidToken(
+                userId,
+                rotatedRefreshTokenCookie.getValue()
+        )).isTrue();
     }
 
     @Test
@@ -378,7 +411,8 @@ class AuthControllerIntegrationTest {
 
     private SignInRequest saveLoginUser(String email, String rawPassword) {
         User user = User.create(email, passwordEncoder.encode(rawPassword), "사용자");
-        userRepository.saveAndFlush(user);
+        User savedUser = userRepository.saveAndFlush(user);
+        createdUserIds.add(savedUser.getId());
         return new SignInRequest(email, rawPassword);
     }
 

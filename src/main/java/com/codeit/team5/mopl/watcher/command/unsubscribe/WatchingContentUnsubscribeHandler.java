@@ -17,7 +17,6 @@ public class WatchingContentUnsubscribeHandler extends AbstractStompUnsubscribeH
     private final WatchingSessionCommandService commandService;
     private final WatchingSessionQueryService queryService;
 
-
     public WatchingContentUnsubscribeHandler(WebSocketSessionStore sessionStore,
             WatchingSessionCommandService commandService,
             WatchingSessionQueryService queryService) {

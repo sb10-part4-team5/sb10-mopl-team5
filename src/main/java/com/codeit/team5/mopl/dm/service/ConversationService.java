@@ -11,7 +11,7 @@ import com.codeit.team5.mopl.dm.repository.ConversationRepository;
 import com.codeit.team5.mopl.dm.repository.DirectMessageRepository;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
 import com.codeit.team5.mopl.dm.util.UuidUtils;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummary;
 import com.codeit.team5.mopl.user.entity.User;
 import com.codeit.team5.mopl.user.exception.UserNotFoundException;
 import com.codeit.team5.mopl.user.mapper.UserMapper;
@@ -109,7 +109,7 @@ public class ConversationService {
     }
 
     private ConversationResponse toConversationResponse(Conversation conversation, User currentUser) {
-        UserSummaryResponse with = userMapper.toSummaryResponse(conversation.getOtherParticipant(currentUser));
+        UserSummary with = userMapper.toSummaryResponse(conversation.getOtherParticipant(currentUser));
         DirectMessageResponse latestMessage = directMessageRepository
                 .findTopByConversationIdOrderByCreatedAtDescIdDesc(conversation.getId())
                 .map(directMessageMapper::toResponse)

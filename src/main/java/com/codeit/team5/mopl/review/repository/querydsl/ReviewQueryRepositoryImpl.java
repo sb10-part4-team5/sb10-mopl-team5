@@ -28,7 +28,7 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
         BooleanExpression cursorCondition = null;
         if (cursor != null) {
             cursorCondition = sortDirection.isDescending()
-                ? r.rating.lt(cursor).or(r.rating.eq(cursor).and(r.id.gt(idAfter)))
+                ? r.rating.lt(cursor).or(r.rating.eq(cursor).and(r.id.lt(idAfter)))
                 : r.rating.gt(cursor).or(r.rating.eq(cursor).and(r.id.gt(idAfter)));
         }
 
@@ -47,7 +47,7 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
         BooleanExpression cursorCondition = null;
         if (cursor != null) {
             cursorCondition = sortDirection.isDescending()
-                ? r.createdAt.lt(cursor).or(r.createdAt.eq(cursor).and(r.id.gt(idAfter)))
+                ? r.createdAt.lt(cursor).or(r.createdAt.eq(cursor).and(r.id.lt(idAfter)))
                 : r.createdAt.gt(cursor).or(r.createdAt.eq(cursor).and(r.id.gt(idAfter)));
         }
 
@@ -61,13 +61,13 @@ public class ReviewQueryRepositoryImpl implements ReviewQueryRepository {
 
     private OrderSpecifier<?>[] ratingOrder(Sort.Direction direction) {
         return direction.isDescending()
-            ? new OrderSpecifier<?>[] {r.rating.desc(), r.id.asc()}
+            ? new OrderSpecifier<?>[] {r.rating.desc(), r.id.desc()}
             : new OrderSpecifier<?>[] {r.rating.asc(), r.id.asc()};
     }
 
     private OrderSpecifier<?>[] createdAtOrder(Sort.Direction direction) {
         return direction.isDescending()
-            ? new OrderSpecifier<?>[] {r.createdAt.desc(), r.id.asc()}
+            ? new OrderSpecifier<?>[] {r.createdAt.desc(), r.id.desc()}
             : new OrderSpecifier<?>[] {r.createdAt.asc(), r.id.asc()};
     }
 }

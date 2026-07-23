@@ -42,7 +42,7 @@ import com.codeit.team5.mopl.review.exception.ReviewForbiddenException;
 import com.codeit.team5.mopl.review.exception.ReviewNotFoundException;
 import com.codeit.team5.mopl.review.service.ReviewService;
 import com.codeit.team5.mopl.user.dto.response.UserResponse;
-import com.codeit.team5.mopl.user.dto.response.UserSummaryResponse;
+import com.codeit.team5.mopl.user.dto.response.UserSummary;
 import com.codeit.team5.mopl.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -113,7 +113,7 @@ class ReviewControllerTest {
     }
 
     private ReviewResponse sampleReviewResponse(UUID reviewId, UUID contentId, UUID authorId) {
-        UserSummaryResponse author = new UserSummaryResponse(authorId, "유저", null);
+        UserSummary author = new UserSummary(authorId, "유저", null);
         return new ReviewResponse(reviewId, contentId, author, "재밌어요", 4.5);
     }
 
@@ -345,7 +345,7 @@ class ReviewControllerTest {
 
         ReviewUpdateRequest request = new ReviewUpdateRequest("수정된 내용", 3.0);
         ReviewResponse response = new ReviewResponse(reviewId, contentId,
-            new UserSummaryResponse(authorId, "유저", null), "수정된 내용", 3.0);
+            new UserSummary(authorId, "유저", null), "수정된 내용", 3.0);
 
         given(reviewService.updateReview(eq(reviewId), eq(authorId), any(ReviewUpdateRequest.class)))
             .willReturn(response);

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.team5.mopl.content.entity.Content;
+import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
@@ -60,6 +61,7 @@ class ReviewServiceTest {
     @Mock
     private ContentStatsRepository contentStatsRepository;
 
+
     @Test
     @DisplayName("다음 페이지가 있으면 limit만큼 자르고 createdAt 기준 nextCursor를 채운다")
     void getReviews_hasNext_createdAtCursor() {
@@ -75,9 +77,11 @@ class ReviewServiceTest {
         given(r1.getId()).willReturn(lastId);
 
         ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.DESC, ReviewSortBy.CREATED_AT);
+        ContentStats stats = mock(ContentStats.class);
+        given(stats.getReviewCount()).willReturn(5);
+        given(contentStatsRepository.findById(contentId)).willReturn(Optional.of(stats));
         given(reviewRepository.findPageByContentIdSortByCreatedAt(contentId, null, null, Limit.of(3), Sort.Direction.DESC))
             .willReturn(List.of(r0, r1, r2));
-        given(reviewRepository.countByContent_Id(contentId)).willReturn(5L);
         given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when
@@ -105,9 +109,11 @@ class ReviewServiceTest {
         given(r1.getId()).willReturn(lastId);
 
         ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.DESC, ReviewSortBy.RATING);
+        ContentStats stats = mock(ContentStats.class);
+        given(stats.getReviewCount()).willReturn(5);
+        given(contentStatsRepository.findById(contentId)).willReturn(Optional.of(stats));
         given(reviewRepository.findPageByContentIdSortByRating(contentId, null, null, Limit.of(3), Sort.Direction.DESC))
             .willReturn(List.of(r0, r1, r2));
-        given(reviewRepository.countByContent_Id(contentId)).willReturn(5L);
         given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when
@@ -127,9 +133,11 @@ class ReviewServiceTest {
 
         Review r0 = mock(Review.class);
         ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.DESC, ReviewSortBy.CREATED_AT);
+        ContentStats stats = mock(ContentStats.class);
+        given(stats.getReviewCount()).willReturn(1);
+        given(contentStatsRepository.findById(contentId)).willReturn(Optional.of(stats));
         given(reviewRepository.findPageByContentIdSortByCreatedAt(contentId, null, null, Limit.of(3), Sort.Direction.DESC))
             .willReturn(List.of(r0));
-        given(reviewRepository.countByContent_Id(contentId)).willReturn(1L);
         given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when
@@ -149,9 +157,11 @@ class ReviewServiceTest {
 
         Review r0 = mock(Review.class);
         ReviewGetRequest request = new ReviewGetRequest(contentId, null, null, 2, Sort.Direction.ASC, ReviewSortBy.CREATED_AT);
+        ContentStats stats = mock(ContentStats.class);
+        given(stats.getReviewCount()).willReturn(1);
+        given(contentStatsRepository.findById(contentId)).willReturn(Optional.of(stats));
         given(reviewRepository.findPageByContentIdSortByCreatedAt(contentId, null, null, Limit.of(3), Sort.Direction.ASC))
             .willReturn(List.of(r0));
-        given(reviewRepository.countByContent_Id(contentId)).willReturn(1L);
         given(reviewMapper.toDto(any(Review.class))).willReturn(mock(ReviewResponse.class));
 
         // when

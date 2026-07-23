@@ -1,6 +1,5 @@
 package com.codeit.team5.mopl.content.entity;
 
-import com.codeit.team5.mopl.content.exception.InvalidContentStatsException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -9,6 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -37,31 +37,20 @@ public class ContentStats {
     @Column(nullable = false)
     private long watcherCount;
 
+    @Column(nullable = false)
+    private double averageRating;
+
+    @Column(nullable = false)
+    private Instant updatedAt;
+
     public static ContentStats create(Content content) {
         ContentStats stats = new ContentStats();
         stats.content = content;
         stats.reviewCount = 0;
         stats.ratingSum = 0.0;
         stats.watcherCount = 0;
+        stats.averageRating = 0.0;
+        stats.updatedAt = Instant.now();
         return stats;
-    }
-
-    public double getAverageRating() {
-        if (reviewCount == 0) return 0.0;
-        return ratingSum / reviewCount;
-    }
-
-    public void updateRating(double newRatingSum, int newReviewCount) {
-        if (newReviewCount < 0) {
-            throw new InvalidContentStatsException("reviewCount는 음수일 수 없습니다.");
-        }
-        if (!Double.isFinite(newRatingSum) || newRatingSum < 0) {
-            throw new InvalidContentStatsException("ratingSum은 음수이거나 비정상 값(NaN, Infinity)일 수 없습니다.");
-        }
-        if (newReviewCount == 0 && newRatingSum != 0) {
-            throw new InvalidContentStatsException("reviewCount가 0이면 ratingSum도 0이어야 합니다.");
-        }
-        this.ratingSum = newRatingSum;
-        this.reviewCount = newReviewCount;
     }
 }

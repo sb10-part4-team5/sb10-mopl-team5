@@ -10,27 +10,25 @@ import com.codeit.team5.mopl.content.dto.request.ContentUpdateRequest;
 import com.codeit.team5.mopl.content.dto.response.ContentResponse;
 import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentStats;
-import com.codeit.team5.mopl.content.entity.ContentTag;
+import com.codeit.team5.mopl.content.event.ContentDeletedEvent;
+import com.codeit.team5.mopl.content.event.ContentUpsertedEvent;
 import com.codeit.team5.mopl.content.exception.ContentNotFoundException;
 import com.codeit.team5.mopl.content.exception.EmptyTagException;
 import com.codeit.team5.mopl.content.exception.TooManyTagsException;
 import com.codeit.team5.mopl.content.mapper.ContentMapper;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
+import com.codeit.team5.mopl.content.finder.ContentCacheFinder;
+import com.codeit.team5.mopl.content.finder.ContentSearchFinder;
 import com.codeit.team5.mopl.global.dto.CursorResponse;
-import com.codeit.team5.mopl.tag.entity.Tag;
-import com.codeit.team5.mopl.tag.repository.TagRepository;
-import com.codeit.team5.mopl.tag.util.TagResolver;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /**
  * 관리자가 직접 등록하는 콘텐츠의 CRUD를 담당하는 서비스.
@@ -47,11 +45,12 @@ public class ContentService {
 
     private final ContentRepository contentRepository;
     private final ContentStatsRepository contentStatsRepository;
-    private final TagRepository tagRepository;
+    private final ContentTagService contentTagService;
     private final ContentMapper contentMapper;
     private final BinaryContentService binaryContentService;
-
-    private static final String SECONDARY_SORT_FIELD = "id";
+    private final ContentCacheFinder contentCacheFinder;
+    private final ContentSearchFinder contentSearchFinder;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 관리자가 콘텐츠를 직접 생성한다.
@@ -70,7 +69,7 @@ public class ContentService {
                 request.description()
         ));
 
-        attachTags(content, request.tags());
+        contentTagService.attachTags(content, normalizeTagNames(request.tags()));
 
         ContentStats stats = contentStatsRepository.save(ContentStats.create(content));
         content.attachStats(stats);
@@ -78,7 +77,7 @@ public class ContentService {
         if (thumbnail != null) {
             content.attachThumbnail(binaryContentService.saveCompleted(thumbnail));
         }
-
+        eventPublisher.publishEvent(new ContentUpsertedEvent(List.of(content.getId())));
         return contentMapper.toDto(content);
     }
 
@@ -101,12 +100,12 @@ public class ContentService {
         List<String> tagNames = normalizeTagNames(request.tags());
 
         content.update(request.title(), request.description());
-        updateTags(content, tagNames);
+        contentTagService.updateTags(content, tagNames);
 
         if (thumbnail != null) {
             content.attachThumbnail(binaryContentService.saveCompleted(thumbnail));
         }
-
+        eventPublisher.publishEvent(new ContentUpsertedEvent(List.of(content.getId())));
         return contentMapper.toDto(content);
     }
 
@@ -126,10 +125,19 @@ public class ContentService {
     /**
      * 커서 기반 페이지네이션으로 콘텐츠 목록을 조회한다.
      *
+     * <p>키워드가 있으면 {@link ContentSearchFinder}(OpenSearch)로 완결한다. 키워드 없이
+     * 필터·커서 없는 기본 첫 페이지는 {@link ContentCacheFinder} 캐시를 태우고, 그 외는 DB에서 조회한다.</p>
+     *
      * @param request 커서·정렬·필터·limit 조건
      * @return 커서 응답 (콘텐츠 목록, hasNext, totalCount 포함)
      */
     public CursorResponse<ContentResponse> findContents(ContentCursorRequest request) {
+        if (StringUtils.hasText(request.keywordLike())) {
+            return contentSearchFinder.search(request);
+        }
+        if (isCacheableFirstPage(request)) {
+            return contentCacheFinder.getFirstPage(request.sortBy(), request.sortDirection());
+        }
         int fetchLimit = request.limit() + 1;
         List<Content> fetched = contentRepository.findContents(request, fetchLimit);
         boolean hasNext = fetched.size() > request.limit();
@@ -153,41 +161,24 @@ public class ContentService {
             oldThumbnail.updateUploadStatus(BinaryContentUploadStatus.DELETED);
         }
         contentRepository.delete(content);
-    }
-
-    private void attachTags(Content content, List<String> rawTagNames) {
-        List<String> tagNames = normalizeTagNames(rawTagNames);
-        insertTags(content, tagNames);
-    }
-
-    private void updateTags(Content content, List<String> requestedNames) {
-        Set<String> currentNames = content.getContentTags().stream()
-                .map(ct -> ct.getTag().getName())
-                .collect(Collectors.toSet());
-
-        Set<String> requestedSet = new HashSet<>(requestedNames);
-        content.getContentTags().removeIf(ct -> !requestedSet.contains(ct.getTag().getName()));
-
-        List<String> toAdd = requestedNames.stream()
-                .filter(name -> !currentNames.contains(name))
-                .toList();
-
-        if (!toAdd.isEmpty()) {
-            insertTags(content, toAdd);
-        }
-    }
-
-    private void insertTags(Content content, List<String> tagNames) {
-        Map<String, Tag> existingTags = TagResolver.resolve(tagNames, tagRepository);
-        tagNames.forEach(name -> content.addTag(ContentTag.create(content, existingTags.get(name))));
+        eventPublisher.publishEvent(new ContentDeletedEvent(content.getId()));
     }
 
     private List<String> normalizeTagNames(List<String> rawTagNames) {
-        List<String> tagNames = TagResolver.normalizeNames(rawTagNames);
+        List<String> tagNames = contentTagService.normalizeNames(rawTagNames);
 
         if (tagNames.isEmpty()) throw new EmptyTagException();
         if (tagNames.size() > 10) throw new TooManyTagsException();
         return tagNames;
+    }
+
+    private boolean isCacheableFirstPage(ContentCursorRequest request) {
+        return request.cursor() == null
+                && request.idAfter() == null
+                && request.typeEqual() == null
+                && !StringUtils.hasText(request.keywordLike())
+                && (request.tagsIn() == null || request.tagsIn().isEmpty())
+                && request.limit() == ContentCacheFinder.FIRST_PAGE_LIMIT;
     }
 
 }

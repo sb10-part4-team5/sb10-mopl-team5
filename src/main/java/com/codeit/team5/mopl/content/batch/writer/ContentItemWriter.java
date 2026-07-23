@@ -7,21 +7,27 @@ import com.codeit.team5.mopl.content.entity.Content;
 import com.codeit.team5.mopl.content.entity.ContentSource;
 import com.codeit.team5.mopl.content.entity.ContentStats;
 import com.codeit.team5.mopl.content.entity.ContentTag;
+import com.codeit.team5.mopl.content.event.ContentUpsertedEvent;
 import com.codeit.team5.mopl.content.repository.ContentRepository;
 import com.codeit.team5.mopl.content.repository.ContentStatsRepository;
 import com.codeit.team5.mopl.tag.entity.Tag;
 import com.codeit.team5.mopl.tag.repository.TagRepository;
-import com.codeit.team5.mopl.tag.util.TagResolver;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -32,6 +38,7 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
     private final ContentStatsRepository contentStatsRepository;
     private final BinaryContentRepository binaryContentRepository;
     private final TagRepository tagRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void write(Chunk<? extends ContentWithMetaData> chunk) {
@@ -99,15 +106,15 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
         }
 
         // 4. 태그 저장
-        List<String> allTagNames = TagResolver.normalizeNames(deduplicatedItems.stream()
+        List<String> allTagNames = normalizeTagNames(deduplicatedItems.stream()
                 .flatMap(item -> item.tagNames().stream())
                 .toList());
 
         if (!allTagNames.isEmpty()) {
-            Map<String, Tag> existingTags = TagResolver.resolve(allTagNames, tagRepository);
+            Map<String, Tag> existingTags = findOrCreateTags(allTagNames);
 
             deduplicatedItems.forEach(item -> item.tagNames().forEach(rawTagName -> {
-                String normalized = TagResolver.normalize(rawTagName);
+                String normalized = normalizeTagName(rawTagName);
                 Tag tag = normalized == null ? null : existingTags.get(normalized);
                 if (tag != null) {
                     item.content().addTag(ContentTag.create(item.content(), tag));
@@ -115,6 +122,51 @@ public class ContentItemWriter implements ItemWriter<ContentWithMetaData> {
             }));
         }
 
+        List<UUID> savedIds = contents.stream()
+                .map(Content::getId)
+                .toList();
+        eventPublisher.publishEvent(new ContentUpsertedEvent(savedIds));
+
         log.info("[Batch] {}건 저장 완료 (청크 원본: {}건)", deduplicatedItems.size(), items.size());
+    }
+
+    // 배치 수집 콘텐츠는 관리자 콘텐츠(ContentService/ContentTagService)와 도메인·검증 규칙이 달라
+    // 태그 정규화/해석 로직을 공유하지 않고 이 클래스 안에서 자체적으로 처리한다.
+
+    private String normalizeTagName(String rawName) {
+        if (rawName == null) {
+            return null;
+        }
+        String trimmed = rawName.trim();
+        return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
+    }
+
+    private List<String> normalizeTagNames(List<String> rawTagNames) {
+        return rawTagNames.stream()
+                .map(this::normalizeTagName)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private Map<String, Tag> findOrCreateTags(List<String> tagNames) {
+        // tagNames는 호출부(write 내 normalizeTagNames)에서 이미 distinct 처리된 목록이다.
+        Map<String, Tag> existingTags = tagRepository.findByNameIn(tagNames).stream()
+                .collect(Collectors.toMap(Tag::getName, Function.identity(), (a, b) -> a, HashMap::new));
+
+        List<String> missingNames = tagNames.stream()
+                .filter(name -> !existingTags.containsKey(name))
+                .toList();
+
+        if (!missingNames.isEmpty()) {
+            missingNames.forEach(Tag::create); // 이름 유효성만 검증 (엔티티 자체는 사용하지 않음)
+
+            tagRepository.insertIfAbsent(missingNames);
+
+            // 동시 요청이 먼저 삽입했을 수 있으므로 삽입을 시도한 이름 기준으로 다시 조회한다.
+            tagRepository.findByNameIn(missingNames).forEach(tag -> existingTags.put(tag.getName(), tag));
+        }
+
+        return existingTags;
     }
 }
