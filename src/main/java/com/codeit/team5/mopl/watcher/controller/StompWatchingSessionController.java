@@ -9,7 +9,6 @@ import com.codeit.team5.mopl.auth.security.details.MoplPrincipal;
 import com.codeit.team5.mopl.global.web.ws.stomp.constant.StompConstants;
 import com.codeit.team5.mopl.watcher.constant.WatcherStatus;
 import com.codeit.team5.mopl.watcher.dto.payload.WatchingSessionPayload;
-import com.codeit.team5.mopl.watcher.provider.WatchingSessionPayloadSender;
 import com.codeit.team5.mopl.watcher.service.WatchingSessionQueryService;
 import lombok.RequiredArgsConstructor;
 
@@ -18,13 +17,10 @@ import lombok.RequiredArgsConstructor;
 public class StompWatchingSessionController {
 
     private final WatchingSessionQueryService service;
-    private final WatchingSessionPayloadSender payloadSender;
 
     @SubscribeMapping(StompConstants.WATCHING_CONTENT)
-    public void subscribe(@DestinationVariable(value = "id") UUID contentId,
+    public WatchingSessionPayload subscribe(@DestinationVariable(value = "id") UUID contentId,
             @AuthenticationPrincipal MoplPrincipal principal) {
-        WatchingSessionPayload payload =
-                service.getWatchingSessionPayload(principal.getId(), WatcherStatus.JOIN);
-        payloadSender.send(contentId, payload);
+        return service.getWatchingSessionPayload(principal.getId(), WatcherStatus.JOIN);
     }
 }
