@@ -139,8 +139,12 @@ resource "aws_ecs_service" "mopl" {
   name                              = var.ecs_service
   cluster                           = aws_ecs_cluster.mopl.id
   task_definition                   = aws_ecs_task_definition.mopl.arn
-  desired_count                     = 1 # 나중에 2로 확장 가능
+  desired_count                     = 2 # 다중 인스턴스 (EC2 2대에 태스크 1개씩)
   health_check_grace_period_seconds = 180
+
+  # 인스턴스 2대 상한 + distinctInstance: 배포 중 old 1대를 내려 빈 자리에 new를 올리도록
+  deployment_minimum_healthy_percent = 50
+  deployment_maximum_percent         = 100
 
   load_balancer {
     target_group_arn = aws_lb_target_group.mopl.arn
