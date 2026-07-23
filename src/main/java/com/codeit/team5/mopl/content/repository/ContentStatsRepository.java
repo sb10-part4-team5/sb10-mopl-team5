@@ -53,4 +53,8 @@ public interface ContentStatsRepository extends JpaRepository<ContentStats, UUID
 
     @Query("SELECT s.id FROM ContentStats s WHERE s.updatedAt >= :since")
     List<UUID> findIdsUpdatedAfter(@Param("since") Instant since);
+
+    @Modifying
+    @Query("UPDATE ContentStats s SET s.watcherCount = 0 WHERE s.watcherCount > 0")
+    void resetAllWatcherCounts();
 }
