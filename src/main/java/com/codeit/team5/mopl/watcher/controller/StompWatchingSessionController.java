@@ -21,6 +21,6 @@ public class StompWatchingSessionController {
     @SubscribeMapping(StompConstants.WATCHING_CONTENT)
     public WatchingSessionPayload subscribe(@DestinationVariable(value = "id") UUID contentId,
             @AuthenticationPrincipal MoplPrincipal principal) {
-        return service.getWatchingSessionPayload(principal.getId(), WatcherStatus.JOIN);
+        return service.getWatchingSessionPayload(contentId, principal.getId(), WatcherStatus.JOIN);
     }
 }

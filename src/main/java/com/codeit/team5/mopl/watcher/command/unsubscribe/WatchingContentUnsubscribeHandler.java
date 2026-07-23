@@ -28,7 +28,7 @@ public class WatchingContentUnsubscribeHandler extends AbstractStompUnsubscribeH
     @Override
     protected void doHandle(UUID contentId, UUID userId, StompHeaderAccessor accessor) {
         WatchingSessionPayload payload =
-                queryService.getWatchingSessionPayload(userId, WatcherStatus.LEAVE);
+                queryService.getWatchingSessionPayload(contentId, userId, WatcherStatus.LEAVE);
         commandService.left(contentId, userId);
         if (accessor.getSessionAttributes() != null) {
             accessor.getSessionAttributes()
