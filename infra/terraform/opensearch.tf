@@ -86,6 +86,11 @@ resource "aws_opensearch_domain" "mopl" {
 resource "aws_opensearch_package_association" "nori" {
   package_id  = "G259293935"
   domain_name = aws_opensearch_domain.mopl.domain_name
+
+  # 플러그인 연결은 도메인 블루-그린 재배포라 기본 10분을 넘긴다
+  timeouts {
+    create = "40m"
+  }
 }
 
 output "opensearch_endpoint" {

@@ -28,7 +28,7 @@ resource "aws_msk_cluster" "mopl" {
   number_of_broker_nodes = 2
 
   broker_node_group_info {
-    instance_type   = "kafka.t3.small"
+    instance_type   = "kafka.m5.large"
     client_subnets  = aws_subnet.private[*].id
     security_groups = [aws_security_group.msk.id]
 
